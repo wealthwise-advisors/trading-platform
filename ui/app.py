@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time as time_type
 import streamlit as st
 import pandas as pd
 
@@ -19,7 +19,12 @@ try:
     _RITHMIC_AVAILABLE = True
 except ImportError:
     _RITHMIC_AVAILABLE = False
-from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy
+try:
+    from src.data.external_csv_provider import ExternalCSVProvider
+    _EXTERNAL_AVAILABLE = True
+except Exception:
+    _EXTERNAL_AVAILABLE = False
+from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy, RSIDivergenceStrategy
 from src.backtesting.engine import BacktestEngine
 from ui.components.charts import (
     candlestick_with_trades, equity_curve, pnl_distribution,
@@ -52,8 +57,18 @@ with st.sidebar:
     st.title("⚙️ Backtest Config")
     st.divider()
 
-    data_source_options = ["Synthetic Data", "Real Data (Rithmic)"]
-    data_source = st.selectbox("Data Source", data_source_options, index=0)
+    data_source_options = ["Synthetic Data", "My Historical Data (CSV)", "Real Data (Rithmic)"]
+    data_source = st.selectbox("Data Source", data_source_options, index=1)
+    if data_source == "My Historical Data (CSV)":
+        import yaml
+        from pathlib import Path as _Path
+        try:
+            _cfg = yaml.safe_load(open(_Path(__file__).parent.parent / "config" / "settings.yaml"))
+            _ext_dir = _cfg.get("data", {}).get("external_dir", "C:/Data")
+        except Exception:
+            _ext_dir = "C:/Data"
+        st.caption(f"Reading from: `{_ext_dir}`")
+        st.caption("Change path in `config/settings.yaml` → `data.external_dir`")
     if data_source == "Real Data (Rithmic)" and not _RITHMIC_AVAILABLE:
         st.warning(
             "pyrithmic package not found.\n\n"
@@ -61,13 +76,20 @@ with st.sidebar:
             "Then restart this app."
         )
 
-    symbol = st.selectbox("Symbol", ["ES", "NQ", "MES", "CL"], index=0)
-    timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "30m", "1h"], index=1)
+    if data_source == "My Historical Data (CSV)" and _EXTERNAL_AVAILABLE:
+        try:
+            _prov_preview = ExternalCSVProvider()
+            _avail_syms = _prov_preview.list_available()
+        except Exception:
+            _avail_syms = ["ES", "NQ", "GC", "CL"]
+        _es_idx = _avail_syms.index("ES") if "ES" in _avail_syms else 0
+        symbol = st.selectbox("Symbol", _avail_syms, index=_es_idx)
+    else:
+        symbol = st.selectbox("Symbol", ["ES", "NQ", "MES", "CL"], index=0)
+    timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "30m", "1h"], index=0)
 
-    strategy_name = st.selectbox(
-        "Strategy",
-        ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)"],
-    )
+    _strategies = ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)", "RSI Divergence"]
+    strategy_name = st.selectbox("Strategy", _strategies, index=_strategies.index("RSI Divergence"))
 
     st.subheader("Strategy Parameters")
     params = {}
@@ -81,6 +103,10 @@ with st.sidebar:
     elif strategy_name == "Breakout (Donchian)":
         params["lookback"] = st.slider("Channel Lookback", 5, 60, 20)
         params["atr_mult"] = st.slider("ATR Stop Multiplier", 0.5, 5.0, 2.0)
+    elif strategy_name == "RSI Divergence":
+        params["rsi_overbought"] = st.slider("RSI Overbought", 80, 99, 94)
+        params["rsi_oversold"]   = st.slider("RSI Oversold",    1, 20,  2)
+        params["swing_lookback"] = st.slider("Swing Lookback (bars)", 2, 20, 5)
 
     st.subheader("Capital & Risk")
     initial_capital = st.number_input("Initial Capital ($)", 10_000, 1_000_000, 100_000, step=10_000)
@@ -91,6 +117,13 @@ with st.sidebar:
     _today = date.today()
     start_date = st.date_input("Start", _today - timedelta(days=1))
     end_date = st.date_input("End", _today)
+
+    st.subheader("Session Hours (EST)")
+    _tc1, _tc2 = st.columns(2)
+    with _tc1:
+        session_start = st.time_input("From", time_type(9, 30))
+    with _tc2:
+        session_end = st.time_input("To", time_type(16, 0))
 
     st.divider()
     run_btn = st.button("▶ Run Backtest", use_container_width=True, type="primary")
@@ -111,7 +144,15 @@ def build_strategy(name: str, p: dict):
         return MACrossoverStrategy(fast=p["fast"], slow=p["slow"])
     if name == "RSI Mean Reversion":
         return RSIMeanReversionStrategy(period=p["period"], oversold=p["oversold"], overbought=p["overbought"])
-    return BreakoutStrategy(lookback=p["lookback"], atr_mult=p["atr_mult"])
+    if name == "Breakout (Donchian)":
+        return BreakoutStrategy(lookback=p["lookback"], atr_mult=p["atr_mult"])
+    if name == "RSI Divergence":
+        return RSIDivergenceStrategy(
+            rsi_overbought=float(p["rsi_overbought"]),
+            rsi_oversold=float(p["rsi_oversold"]),
+            swing_lookback=p["swing_lookback"],
+        )
+    return BreakoutStrategy(lookback=p.get("lookback", 20), atr_mult=p.get("atr_mult", 2.0))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -121,12 +162,14 @@ if "results" not in st.session_state:
     st.session_state.results = None
 
 if run_btn:
-    spinner_msg = (
-        "Downloading real data from Rithmic…" if data_source == "Real Data (Rithmic)"
-        else "Generating synthetic data & running backtest…"
-    )
+    if data_source == "Real Data (Rithmic)":
+        spinner_msg = "Downloading real data from Rithmic…"
+    elif data_source == "My Historical Data (CSV)":
+        spinner_msg = f"Loading {symbol} historical data & running backtest…"
+    else:
+        spinner_msg = "Generating synthetic data & running backtest…"
     with st.spinner(spinner_msg):
-        spec = CONTRACT_SPECS[symbol]
+        spec = CONTRACT_SPECS.get(symbol, dict(tick_size=0.25, tick_value=12.50, point_value=50.0))
 
         if data_source == "Real Data (Rithmic)":
             if not _RITHMIC_AVAILABLE:
@@ -136,6 +179,12 @@ if run_btn:
                 )
                 st.stop()
             provider = RithmicDataProvider(cache_dir="data/historical")
+        elif data_source == "My Historical Data (CSV)":
+            try:
+                provider = ExternalCSVProvider()
+            except FileNotFoundError as e:
+                st.error(str(e))
+                st.stop()
         else:
             tf_min = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60}[timeframe]
             total_minutes = (end_date - start_date).days * 6.5 * 60
@@ -146,7 +195,7 @@ if run_btn:
                 start=datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30),
                 bars=bars,
                 timeframe_minutes=tf_min,
-                base_price=BASE_PRICES[symbol],
+                base_price=BASE_PRICES.get(symbol, 4500.0),
                 tick_size=spec["tick_size"],
                 save_dir="data/historical",
             )
@@ -160,10 +209,13 @@ if run_btn:
             initial_capital=float(initial_capital),
             commission_per_contract=float(commission),
             contracts_per_trade=contracts,
+            session_start=session_start,
+            session_end=session_end,
             **spec,
         )
-        start_dt = datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30)
-        end_dt   = datetime.combine(end_date,   datetime.min.time()).replace(hour=16, minute=0)
+        # Load full day range from provider; session filter is applied inside engine
+        start_dt = datetime.combine(start_date, time_type(0, 0))
+        end_dt   = datetime.combine(end_date,   time_type(23, 59))
         results = engine.run(start=start_dt, end=end_dt)
         st.session_state.results = results
     st.success("Backtest complete!")
@@ -208,12 +260,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 with tab1:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        max_bars = st.slider("Bars to display", 100, min(2000, len(results.price_data)), 400, step=50)
-    with col2:
-        st.write("")  # spacer
-    st.plotly_chart(candlestick_with_trades(results, max_bars=max_bars), use_container_width=True, config=CHART_CONFIG)
+    st.plotly_chart(candlestick_with_trades(results), use_container_width=True, config=CHART_CONFIG)
     st.caption(
         "▲ Green triangle = Long entry  |  ▼ Red triangle = Short entry  |  "
         "✕ Green/Red X = Profitable / Loss exit  |  Dotted line = trade duration"

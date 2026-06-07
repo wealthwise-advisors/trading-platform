@@ -9,7 +9,7 @@ Flow per bar:
   5. Track equity curve
 """
 
-from datetime import datetime
+from datetime import datetime, time as time_type
 from typing import Optional
 import pandas as pd
 from loguru import logger
@@ -36,6 +36,8 @@ class BacktestEngine:
         tick_value: float = 12.50,
         point_value: float = 50.0,
         contracts_per_trade: int = 1,
+        session_start: Optional[time_type] = None,
+        session_end: Optional[time_type] = None,
     ):
         self.data_provider = data_provider
         self.strategy = strategy
@@ -44,6 +46,8 @@ class BacktestEngine:
         self.initial_capital = initial_capital
         self.point_value = point_value
         self.contracts_per_trade = contracts_per_trade
+        self.session_start = session_start
+        self.session_end = session_end
 
         self.broker = PaperBroker(
             initial_capital=initial_capital,
@@ -70,6 +74,21 @@ class BacktestEngine:
         )
 
         df = self.data_provider.load(self.symbol, start, end, self.timeframe)
+
+        # Filter to trading session window (applied per day across the full range)
+        if self.session_start or self.session_end:
+            bar_times = df.index.time
+            mask = pd.Series(True, index=df.index)
+            if self.session_start:
+                mask &= bar_times >= self.session_start
+            if self.session_end:
+                mask &= bar_times <= self.session_end
+            df = df[mask]
+            logger.info(
+                f"Session filter {self.session_start} – {self.session_end} EST: "
+                f"{len(df)} bars remain"
+            )
+
         bars = DataProvider.df_to_bars(df, self.symbol, self.timeframe)
         self.strategy.reset()
 

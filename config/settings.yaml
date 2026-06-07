@@ -44,6 +44,9 @@ contracts:
     margin_initial: 1200.0
     margin_maintenance: 1080.0
 
+data:
+  external_dir: "C:/Data"        # Directory with your own CSV files (ES_FULL.csv, GC_FULL.csv, etc.)
+
 rithmic:
   gateway: "paper"               # "paper" or "live"
   server_url: ""

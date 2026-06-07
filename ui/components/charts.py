@@ -1,10 +1,34 @@
 """Plotly chart builders for the Streamlit dashboard."""
 
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from src.backtesting.results import BacktestResults, Trade
+
+
+# ── Indicator helpers (inline — no talib / pandas-ta) ─────────────────────────
+
+def _calc_rsi(close: pd.Series, period: int) -> pd.Series:
+    delta = close.diff()
+    gain = delta.clip(lower=0)
+    loss = (-delta).clip(lower=0)
+    avg_gain = gain.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, 1e-10)
+    return 100.0 - (100.0 / (1.0 + rs))
+
+
+def _calc_stoch(high: pd.Series, low: pd.Series, close: pd.Series,
+                k_period: int = 14, smooth_k: int = 3, d_period: int = 3):
+    lowest  = low.rolling(k_period).min()
+    highest = high.rolling(k_period).max()
+    rng = (highest - lowest).replace(0, np.nan)
+    raw_k   = 100.0 * (close - lowest) / rng
+    k       = raw_k.rolling(smooth_k).mean()   # Slow %K
+    d       = k.rolling(d_period).mean()        # Slow %D
+    return k, d
 
 
 _GREEN = "#26a69a"
@@ -71,21 +95,34 @@ def _base_layout(title: str, height: int = 500) -> dict:
 
 def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go.Figure:
     """
-    Candlestick chart with EMA overlays and entry/exit markers.
-    - Scroll to zoom, click-drag to pan
-    - Range-selector buttons for 1D / 5D / 1M / 3M / All
-    - Crosshair cursor across subplots
+    Candlestick + EMA overlays + trade markers.
+    Sub-panels (replacing volume): RSI(2) | Stoch K/D | RSI(13)
     """
-    df = results.price_data.tail(max_bars).copy()
+    full_df = results.price_data  # full dataset — used for trade marker lookup
+    df = full_df.copy()
+    # Downsample candles only when the dataset is very large
+    if len(df) > max_bars * 3:
+        step = max(1, len(df) // max_bars)
+        df = df.iloc[::step]
     trades = results.trades
+    # Use the FULL index (pre-downsample) so markers always appear
+    full_idx_set = set(full_df.index)
 
+    # ── Compute indicators ────────────────────────────────────────────
+    rsi2   = _calc_rsi(df["close"], 2)
+    rsi13  = _calc_rsi(df["close"], 13)
+    stk, std = _calc_stoch(df["high"], df["low"], df["close"])
+
+    # ── Layout: 4 rows ────────────────────────────────────────────────
     fig = make_subplots(
-        rows=2, cols=1,
+        rows=4, cols=1,
         shared_xaxes=True,
-        row_heights=[0.75, 0.25],
-        vertical_spacing=0.03,
+        row_heights=[0.55, 0.15, 0.15, 0.15],
+        vertical_spacing=0.02,
+        subplot_titles=("", "RSI(2)", "Stoch K/D", "RSI(13)"),
     )
 
+    # ── Row 1: Candlestick ────────────────────────────────────────────
     fig.add_trace(go.Candlestick(
         x=df.index,
         open=df["open"], high=df["high"], low=df["low"], close=df["close"],
@@ -102,9 +139,11 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             line=dict(color=color, width=1.2),
         ), row=1, col=1)
 
-    long_entries  = [t for t in trades if t.direction == "LONG"  and t.entry_time in df.index]
-    short_entries = [t for t in trades if t.direction == "SHORT" and t.entry_time in df.index]
-    exits         = [t for t in trades if t.exit_time is not None and t.exit_time in df.index]
+    # Trade entry / exit markers
+    full_idx_set = set(df.index)
+    long_entries  = [t for t in trades if t.direction == "LONG"  and t.entry_time in full_idx_set]
+    short_entries = [t for t in trades if t.direction == "SHORT" and t.entry_time in full_idx_set]
+    exits         = [t for t in trades if t.exit_time is not None and t.exit_time in full_idx_set]
 
     if long_entries:
         fig.add_trace(go.Scatter(
@@ -114,7 +153,7 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             marker=dict(symbol="triangle-up", size=13, color=_GREEN,
                         line=dict(color="white", width=1)),
             name="Long Entry",
-            hovertemplate="<b>LONG ENTRY</b><br>%{x}<br>Price: %{y:.2f}<extra></extra>",
+            hovertemplate="<b>LONG ENTRY</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
         ), row=1, col=1)
 
     if short_entries:
@@ -125,7 +164,7 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             marker=dict(symbol="triangle-down", size=13, color=_RED,
                         line=dict(color="white", width=1)),
             name="Short Entry",
-            hovertemplate="<b>SHORT ENTRY</b><br>%{x}<br>Price: %{y:.2f}<extra></extra>",
+            hovertemplate="<b>SHORT ENTRY</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
         ), row=1, col=1)
 
     if exits:
@@ -140,13 +179,15 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             customdata=[(f"${t.pnl:,.0f}", t.direction) for t in exits],
             hovertemplate=(
                 "<b>EXIT (%{customdata[1]})</b><br>"
-                "%{x}<br>Price: %{y:.2f}<br>"
+                "%{x}<br>@ %{y:.2f}<br>"
                 "P&L: %{customdata[0]}<extra></extra>"
             ),
         ), row=1, col=1)
 
     for t in trades:
-        if t.exit_time is None or t.entry_time not in df.index or t.exit_time not in df.index:
+        if t.exit_time is None:
+            continue
+        if t.entry_time not in full_idx_set or t.exit_time not in full_idx_set:
             continue
         color = _GREEN if t.pnl >= 0 else _RED
         fig.add_trace(go.Scatter(
@@ -157,14 +198,44 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             showlegend=False, hoverinfo="skip",
         ), row=1, col=1)
 
-    vol_colors = [_GREEN if c >= o else _RED
-                  for o, c in zip(df["open"], df["close"])]
-    fig.add_trace(go.Bar(
-        x=df.index, y=df["volume"],
-        name="Volume", marker_color=vol_colors, showlegend=False,
+    # ── Row 2: RSI(2) ─────────────────────────────────────────────────
+    fig.add_trace(go.Scatter(
+        x=df.index, y=rsi2,
+        name="RSI(2)", line=dict(color="#ce93d8", width=1.4),
+        hovertemplate="RSI(2): %{y:.1f}<extra></extra>",
     ), row=2, col=1)
+    # Overbought / oversold bands
+    for lvl, color in [(94, _RED), (2, _GREEN)]:
+        fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
+                      row=2, col=1)
 
-    layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=640)
+    # ── Row 3: Stochastic K & D ───────────────────────────────────────
+    fig.add_trace(go.Scatter(
+        x=df.index, y=stk,
+        name="%K", line=dict(color="#4fc3f7", width=1.4),
+        hovertemplate="%%K: %{y:.1f}<extra></extra>",
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=std,
+        name="%D", line=dict(color="#f48fb1", width=1.2, dash="dot"),
+        hovertemplate="%%D: %{y:.1f}<extra></extra>",
+    ), row=3, col=1)
+    for lvl, color in [(80, _RED), (20, _GREEN)]:
+        fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
+                      row=3, col=1)
+
+    # ── Row 4: RSI(13) ────────────────────────────────────────────────
+    fig.add_trace(go.Scatter(
+        x=df.index, y=rsi13,
+        name="RSI(13)", line=dict(color="#ffcc80", width=1.4),
+        hovertemplate="RSI(13): %{y:.1f}<extra></extra>",
+    ), row=4, col=1)
+    for lvl, color in [(70, _RED), (30, _GREEN)]:
+        fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
+                      row=4, col=1)
+
+    # ── Layout ────────────────────────────────────────────────────────
+    layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=820)
     layout.update(
         xaxis=dict(
             gridcolor=_GRID, showgrid=True,
@@ -172,13 +243,20 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             rangeselector=_RANGE_SELECTOR,
             **_SPIKE,
         ),
-        xaxis2=dict(gridcolor=_GRID, showgrid=True, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, showgrid=True, title="Price",
-                   fixedrange=False),
-        yaxis2=dict(gridcolor=_GRID, showgrid=True, title="Volume",
-                    fixedrange=True),   # don't zoom volume panel vertically
+        xaxis2=dict(gridcolor=_GRID, **_SPIKE),
+        xaxis3=dict(gridcolor=_GRID, **_SPIKE),
+        xaxis4=dict(gridcolor=_GRID, **_SPIKE),
+        yaxis =dict(gridcolor=_GRID, showgrid=True, title="Price",   fixedrange=False),
+        yaxis2=dict(gridcolor=_GRID, showgrid=True, title="RSI(2)",  fixedrange=True, range=[0, 100]),
+        yaxis3=dict(gridcolor=_GRID, showgrid=True, title="Stoch",   fixedrange=True, range=[0, 100]),
+        yaxis4=dict(gridcolor=_GRID, showgrid=True, title="RSI(13)", fixedrange=True, range=[0, 100]),
     )
     fig.update_layout(**layout)
+
+    # Style subplot title annotations (small, muted)
+    for ann in fig.layout.annotations:
+        ann.update(font=dict(size=10, color="#8b8ba0"), x=0.01, xanchor="left")
+
     return fig
 
 

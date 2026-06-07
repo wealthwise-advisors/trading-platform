@@ -20,7 +20,7 @@ from plotly.subplots import make_subplots
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
-from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy
+from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy, RSIDivergenceStrategy
 from src.backtesting.replay_engine import ReplayEngine, FrameState
 from src.backtesting.results import Trade
 from ui.components.charts import CHART_CONFIG, _RANGE_SELECTOR, _SPIKE
@@ -90,7 +90,7 @@ with st.sidebar:
 
     strategy_name = st.selectbox(
         "Strategy",
-        ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)"],
+        ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)", "RSI Divergence"],
     )
     params = {}
     if strategy_name == "MA Crossover":
@@ -100,9 +100,13 @@ with st.sidebar:
         params["period"] = st.slider("RSI Period", 5, 30, 14)
         params["oversold"] = st.slider("Oversold", 10, 40, 30)
         params["overbought"] = st.slider("Overbought", 60, 90, 70)
-    else:
+    elif strategy_name == "Breakout (Donchian)":
         params["lookback"] = st.slider("Channel Lookback", 5, 60, 20)
         params["atr_mult"] = st.slider("ATR Multiplier", 0.5, 5.0, 2.0)
+    else:  # RSI Divergence
+        params["rsi_overbought"] = st.slider("RSI Overbought", 80, 99, 94)
+        params["rsi_oversold"]   = st.slider("RSI Oversold",    1, 20,  2)
+        params["swing_lookback"] = st.slider("Swing Lookback (bars)", 2, 20, 5)
 
     st.subheader("Capital")
     initial_capital = st.number_input("Initial Capital ($)", 10_000, 1_000_000, 100_000, step=10_000)
@@ -147,7 +151,15 @@ def _make_strategy():
         return RSIMeanReversionStrategy(
             period=params["period"], oversold=params["oversold"], overbought=params["overbought"]
         )
-    return BreakoutStrategy(lookback=params["lookback"], atr_mult=params["atr_mult"])
+    if strategy_name == "Breakout (Donchian)":
+        return BreakoutStrategy(lookback=params["lookback"], atr_mult=params["atr_mult"])
+    if strategy_name == "RSI Divergence":
+        return RSIDivergenceStrategy(
+            rsi_overbought=float(params["rsi_overbought"]),
+            rsi_oversold=float(params["rsi_oversold"]),
+            swing_lookback=params["swing_lookback"],
+        )
+    return BreakoutStrategy(lookback=params.get("lookback", 20), atr_mult=params.get("atr_mult", 2.0))
 
 
 # ── Load data ─────────────────────────────────────────────────────────────────
