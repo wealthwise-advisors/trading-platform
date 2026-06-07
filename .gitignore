@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local config & secrets — NEVER commit these
+.env
+config/credentials.yaml
+
+# Rithmic credential files
+*.ini
+*.pem
+*.key
+
+# Data files — too large / user-specific
+data/historical/
+data/live/
+
+# Logs
+logs/
+
+# Generated reports — share via email/Slack, don't commit
+reports/*.html
+
+# Streamlit cache
+.streamlit/cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
