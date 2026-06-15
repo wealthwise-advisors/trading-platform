@@ -24,6 +24,11 @@ try:
     _EXTERNAL_AVAILABLE = True
 except Exception:
     _EXTERNAL_AVAILABLE = False
+try:
+    from src.data.schwab_provider import SchwabDataProvider
+    _SCHWAB_AVAILABLE = True
+except Exception:
+    _SCHWAB_AVAILABLE = False
 from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy, RSIDivergenceStrategy
 from src.backtesting.engine import BacktestEngine
 from ui.components.charts import (
@@ -57,7 +62,7 @@ with st.sidebar:
     st.title("⚙️ Backtest Config")
     st.divider()
 
-    data_source_options = ["Synthetic Data", "My Historical Data (CSV)", "Real Data (Rithmic)"]
+    data_source_options = ["Synthetic Data", "My Historical Data (CSV)", "Live Data (Schwab)", "Real Data (Rithmic)"]
     data_source = st.selectbox("Data Source", data_source_options, index=1)
     if data_source == "My Historical Data (CSV)":
         import yaml
@@ -75,6 +80,38 @@ with st.sidebar:
             "Install it with:  `pip install -r requirements.txt`\n\n"
             "Then restart this app."
         )
+    if data_source == "Live Data (Schwab)":
+        _schwab_ready = False
+        if not _SCHWAB_AVAILABLE:
+            st.error("SchwabDataProvider failed to import — check config/credentials.yaml.")
+        else:
+            try:
+                _schwab_prov = SchwabDataProvider()
+                _rt_hours = _schwab_prov.refresh_token_hours_remaining()
+                if not _schwab_prov.is_authenticated():
+                    st.warning("Not authenticated with Schwab. Complete the steps below.")
+                elif _schwab_prov.needs_reauth():
+                    st.warning(f"Schwab token expires in {_rt_hours:.1f} h — re-authenticate now.")
+                else:
+                    st.success(f"Schwab connected  ({_rt_hours:.0f} h remaining)")
+                    _schwab_ready = True
+
+                if not _schwab_ready:
+                    _auth_url = _schwab_prov.get_auth_url()
+                    st.markdown(
+                        f"**Step 1:** [Click here to authorize with Schwab]({_auth_url})\n\n"
+                        "**Step 2:** After approving, copy the full browser URL and paste below."
+                    )
+                    _redirect_url = st.text_input("Paste redirect URL here", key="schwab_redirect")
+                    if st.button("Submit & Save Tokens", key="schwab_submit"):
+                        try:
+                            _schwab_prov.complete_auth(_redirect_url)
+                            st.success("Schwab authenticated successfully! Click Run Backtest.")
+                            st.rerun()
+                        except Exception as _e:
+                            st.error(f"Authentication failed: {_e}")
+            except Exception as _e:
+                st.error(f"Schwab setup error: {_e}")
 
     if data_source == "My Historical Data (CSV)" and _EXTERNAL_AVAILABLE:
         try:
@@ -166,6 +203,8 @@ if run_btn:
         spinner_msg = "Downloading real data from Rithmic…"
     elif data_source == "My Historical Data (CSV)":
         spinner_msg = f"Loading {symbol} historical data & running backtest…"
+    elif data_source == "Live Data (Schwab)":
+        spinner_msg = f"Fetching {symbol} data from Schwab & running backtest…"
     else:
         spinner_msg = "Generating synthetic data & running backtest…"
     with st.spinner(spinner_msg):
@@ -179,6 +218,15 @@ if run_btn:
                 )
                 st.stop()
             provider = RithmicDataProvider(cache_dir="data/historical")
+        elif data_source == "Live Data (Schwab)":
+            try:
+                provider = SchwabDataProvider()
+                if not provider.is_authenticated():
+                    st.error("Not authenticated with Schwab. Complete the re-auth flow in the sidebar.")
+                    st.stop()
+            except Exception as e:
+                st.error(f"Schwab provider error: {e}")
+                st.stop()
         elif data_source == "My Historical Data (CSV)":
             try:
                 provider = ExternalCSVProvider()
