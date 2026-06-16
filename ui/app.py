@@ -120,9 +120,15 @@ with st.sidebar:
         except Exception:
             _avail_syms = ["ES", "NQ", "GC", "CL"]
         _es_idx = _avail_syms.index("ES") if "ES" in _avail_syms else 0
-        symbol = st.selectbox("Symbol", _avail_syms, index=_es_idx)
+        _sym_list = _avail_syms + ["Other…"]
+        _sym_sel = st.selectbox("Symbol", _sym_list, index=_es_idx)
     else:
-        symbol = st.selectbox("Symbol", ["ES", "NQ", "MES", "CL"], index=0)
+        _sym_list = ["ES", "NQ", "MES", "CL", "Other…"]
+        _sym_sel = st.selectbox("Symbol", _sym_list, index=0)
+    if _sym_sel == "Other…":
+        symbol = st.text_input("Enter symbol", placeholder="e.g. GC, ZN, NQ").strip().upper()
+    else:
+        symbol = _sym_sel
     timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "30m", "1h"], index=0)
 
     _strategies = ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)", "RSI Divergence"]
