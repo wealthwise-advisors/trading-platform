@@ -1,9 +1,9 @@
 # AutoTrader
 
-A Python futures auto-trading platform with backtesting, bar-by-bar replay, and live Rithmic integration.
+A Python futures auto-trading platform with backtesting, bar-by-bar replay, and live market data via Schwab or Rithmic.
 
 **Supported instruments:** ES, NQ, MES, MNQ, CL, GC, and more  
-**Broker:** Rithmic (R|API+)  
+**Data sources:** Charles Schwab API, Rithmic (R|API+), your own CSV files, or synthetic data  
 **UI:** Streamlit + Plotly
 
 ---
@@ -30,6 +30,75 @@ python -m streamlit run ui/app.py
 ```
 
 Open http://localhost:8501, select **Synthetic Data**, configure your strategy, and click **Run Backtest**.
+
+---
+
+## Schwab Live Data Setup
+
+Schwab is the recommended data source for live and recent historical bars. It uses OAuth2 — no manual API key rotation needed for daily use, only a browser login every 7 days.
+
+### Step 1 — Create a Schwab developer app
+
+1. Go to [developer.schwab.com](https://developer.schwab.com) and log in with your Schwab account
+2. Click **My Apps → Create App**
+3. Set the **Callback URL** to `https://127.0.0.1`
+4. Copy the **App Key** (32 chars) and **App Secret** (16 chars)
+
+### Step 2 — Add credentials
+
+```bash
+cp config/credentials.yaml.example config/credentials.yaml
+```
+
+Edit `config/credentials.yaml`:
+
+```yaml
+schwab:
+  app_key: "YOUR_32_CHAR_APP_KEY"
+  app_secret: "YOUR_16_CHAR_SECRET"
+  callback_url: "https://127.0.0.1"
+  tokens_file: "config/schwab_tokens.json"
+```
+
+### Step 3 — Authenticate (first time)
+
+Start the app and select **Live Data (Schwab)** in the sidebar. A widget appears:
+
+1. Click the authorization link — your browser opens the Schwab login page
+2. Log in and approve the app
+3. Copy the full URL from the browser address bar (it starts with `https://127.0.0.1?code=...`)
+4. Paste it into the **"Paste redirect URL"** box and click **Submit & Save Tokens**
+
+The app writes `config/schwab_tokens.json` (gitignored) and shows **"Schwab connected"**.
+
+### Step 4 — Run a backtest
+
+Select **Live Data (Schwab)**, choose a symbol (type any futures root like `NQ`, `GC`, `CL` in the **Other…** field if not in the dropdown), set a date range, and click **Run Backtest**.
+
+> **Supported timeframes:** 1m, 5m, 10m, 15m, 30m, 1h  
+> **Futures symbol mapping:** `ES` → `/ES`, `NQ` → `/NQ`, etc. (automatic)  
+> **Data limit:** Up to ~47 days of 1-minute bars per request; longer ranges are chunked automatically.
+
+### Token refresh (every 7 days)
+
+The **access token** (30 min) refreshes automatically in the background — no action needed.
+
+The **refresh token** lasts **7 days**. The sidebar shows a warning 24 hours before it expires. When it does:
+
+1. The sidebar widget re-appears automatically
+2. Click the auth link, approve, paste the redirect URL
+3. Done — no credentials need to change
+
+### Moving to a new computer
+
+Copy these two files from your existing machine:
+
+| File | Purpose |
+|------|---------|
+| `config/credentials.yaml` | App key + secret |
+| `config/schwab_tokens.json` | Active OAuth2 tokens |
+
+Alternatively, just copy `credentials.yaml` and re-authenticate (Step 3) to generate a fresh `schwab_tokens.json`.
 
 ---
 
@@ -106,10 +175,13 @@ Trading/
 │
 ├── src/
 │   ├── data/
+│   │   ├── schwab_provider.py     # Schwab market data (price_history API)
+│   │   ├── schwabdev/             # Schwab API client library
+│   │   ├── external_csv_provider.py # Load your own CSV files (C:\Data)
 │   │   ├── rithmic_provider.py    # Download real bars from Rithmic
 │   │   ├── csv_provider.py        # Load OHLCV from local CSV
 │   │   └── sample_data.py         # Synthetic data generator
-│   ├── strategies/                # MA Crossover, RSI, Breakout
+│   ├── strategies/                # MA Crossover, RSI, Breakout, RSI Divergence
 │   ├── backtesting/               # BacktestEngine, ReplayEngine
 │   └── broker/                    # PaperBroker, RithmicBroker (stub)
 │
@@ -209,5 +281,6 @@ All 5 tests use synthetic data (deterministic seed) — no Rithmic account requi
 ## Notes
 
 - `pandas-ta` is **not** used — incompatible with Python 3.10. All indicators (EMA, RSI, ATR) are computed inline with pandas/numpy.
-- `config/credentials.yaml` and `.env` are gitignored — never commit credentials.
+- `config/credentials.yaml`, `config/schwab_tokens.json`, and `.env` are gitignored — never commit credentials or tokens.
 - `data/historical/` is gitignored — each developer downloads their own data.
+- On Windows use `py -3.10` instead of `python` to ensure the correct interpreter is used.
