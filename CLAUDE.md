@@ -62,60 +62,66 @@ py -3.12 -m pytest tests/ -v
 
 ```
 Trading/
-â”œâ”€â”€ config/
-â”‚   â”œâ”€â”€ settings.yaml              # Contract specs, capital, log level
-â”‚   â”œâ”€â”€ credentials.yaml           # Local credentials (gitignored â€” never commit)
-â”‚   â””â”€â”€ credentials.yaml.example   # Committed template â€” copy and fill in
-â”‚
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ config.py              # Loads settings.yaml + credentials.yaml
-â”‚   â”‚
-â”‚   â”œâ”€â”€ data/
-â”‚   â”‚   â”œâ”€â”€ base_provider.py   # DataProvider ABC + Bar dataclass
-â”‚   â”‚   â”œâ”€â”€ csv_provider.py    # Load OHLCV from CSV files
-â”‚   â”‚   â”œâ”€â”€ rithmic_provider.py# Download real bars from Rithmic
-â”‚   â”‚   â””â”€â”€ sample_data.py     # Synthetic data generator (GBM + regimes)
-â”‚   â”‚
-â”‚   â”œâ”€â”€ strategies/
-â”‚   â”‚   â”œâ”€â”€ base_strategy.py   # BaseStrategy ABC, Signal, SignalType
-â”‚   â”‚   â”œâ”€â”€ ma_crossover.py    # EMA crossover (fast/slow)
-â”‚   â”‚   â”œâ”€â”€ rsi_mean_reversion.py  # RSI oversold/overbought mean reversion
-â”‚   â”‚   â””â”€â”€ breakout.py        # Donchian channel breakout with ATR trailing stop
-â”‚   â”‚
-â”‚   â”œâ”€â”€ backtesting/
-â”‚   â”‚   â”œâ”€â”€ engine.py          # BacktestEngine â€” runs all bars at once
-â”‚   â”‚   â”œâ”€â”€ replay_engine.py   # ReplayEngine â€” step-by-step, drives live UI
-â”‚   â”‚   â”œâ”€â”€ results.py         # BacktestResults + Trade dataclasses
-â”‚   â”‚   â””â”€â”€ metrics.py         # compute_metrics() â€” Sharpe, Sortino, drawdown, etc.
-â”‚   â”‚
-â”‚   â”œâ”€â”€ broker/
-â”‚   â”‚   â”œâ”€â”€ base_broker.py     # BaseBroker ABC, Order, Fill, OrderSide, OrderType
-â”‚   â”‚   â”œâ”€â”€ paper_broker.py    # PaperBroker â€” simulated fills with slippage
-â”‚   â”‚   â””â”€â”€ rithmic_broker.py  # RithmicBroker stub
-â”‚   â”‚
-â”‚   â””â”€â”€ live/
-â”‚       â””â”€â”€ trader.py          # LiveTrader â€” main loop (stub until Rithmic is wired)
-â”‚
-â”œâ”€â”€ ui/
-â”‚   â”œâ”€â”€ app.py                 # Static backtest dashboard
-â”‚   â”œâ”€â”€ live_app.py            # Bar-by-bar replay dashboard
-â”‚   â”œâ”€â”€ report.py              # HTML report generator (shareable, offline)
-â”‚   â””â”€â”€ components/
-â”‚       â”œâ”€â”€ charts.py          # Plotly chart builders (candlestick, equity, etc.)
-â”‚       â””â”€â”€ metrics.py         # Streamlit metric card renderers
-â”‚
-â”œâ”€â”€ scripts/
-â”‚   â”œâ”€â”€ run_backtest.py        # CLI backtest runner
-â”‚   â”œâ”€â”€ generate_data.py       # Generate synthetic CSV data for all symbols
-â”‚   â””â”€â”€ download_rithmic_data.py # Download real Rithmic bars
-â”‚
-â”œâ”€â”€ tests/
-â”‚   â””â”€â”€ test_engine.py         # 5 smoke tests (all passing)
-â”‚
-â”œâ”€â”€ data/
-â”‚   â””â”€â”€ historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
-â”‚
-â””â”€â”€ reports/                   # Generated HTML reports (gitignored)
+├── config/
+│   ├── settings.yaml              # Contract specs, capital, log level, external_dir
+│   ├── credentials.yaml           # Local credentials (gitignored — never commit)
+│   ├── credentials.yaml.example   # Committed template — copy and fill in
+│   └── schwab_tokens.json         # Schwab OAuth2 tokens (gitignored — never commit)
+│
+├── src/
+│   ├── config.py              # Loads settings.yaml + credentials.yaml
+│   │
+│   ├── data/
+│   │   ├── base_provider.py       # DataProvider ABC + Bar dataclass
+│   │   ├── csv_provider.py        # Load OHLCV from data/historical/ CSV files
+│   │   ├── external_csv_provider.py  # Load from C:/Data (chunked, year-file aware)
+│   │   ├── schwab_provider.py     # Schwab price_history API (OAuth2, auto-refresh)
+│   │   ├── schwabdev/             # Schwab API client library (api.py, stream.py)
+│   │   ├── rithmic_provider.py    # Download real bars from Rithmic
+│   │   └── sample_data.py         # Synthetic data generator (GBM + regimes)
+│   │
+│   ├── strategies/
+│   │   ├── base_strategy.py       # BaseStrategy ABC, Signal, SignalType
+│   │   ├── ma_crossover.py        # EMA crossover (fast/slow)
+│   │   ├── rsi_mean_reversion.py  # RSI oversold/overbought mean reversion
+│   │   ├── breakout.py            # Donchian channel breakout with ATR trailing stop
+│   │   └── rsi_divergence.py      # RSI(2) divergence with swing detection
+│   │
+│   ├── backtesting/
+│   │   ├── engine.py          # BacktestEngine — session filter, runs all bars
+│   │   ├── replay_engine.py   # ReplayEngine — step-by-step, drives live UI
+│   │   ├── results.py         # BacktestResults + Trade dataclasses
+│   │   └── metrics.py         # compute_metrics() — Sharpe, Sortino, drawdown, etc.
+│   │
+│   ├── broker/
+│   │   ├── base_broker.py     # BaseBroker ABC, Order, Fill, OrderSide, OrderType
+│   │   ├── paper_broker.py    # PaperBroker — simulated fills with slippage
+│   │   └── rithmic_broker.py  # RithmicBroker stub
+│   │
+│   └── live/
+│       └── trader.py          # LiveTrader — main loop (stub until Rithmic is wired)
+│
+├── ui/
+│   ├── app.py                 # Static backtest dashboard (default: ES, 1m, RSI Divergence)
+│   ├── live_app.py            # Bar-by-bar replay dashboard
+│   ├── report.py              # HTML report generator (shareable, offline)
+│   └── components/
+│       ├── charts.py          # Plotly charts: candlestick + RSI(2)/Stoch/RSI(13) panels
+│       │                      #   + ZigZag overlay via pandas_ta
+│       └── metrics.py         # Streamlit metric card renderers
+│
+├── scripts/
+│   ├── run_backtest.py            # CLI backtest runner
+│   ├── generate_data.py           # Generate synthetic CSV data for all symbols
+│   └── download_rithmic_data.py   # Download real Rithmic bars
+│
+├── tests/
+│   └── test_engine.py         # 5 smoke tests (all passing)
+│
+├── data/
+│   └── historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
+│
+└── reports/                   # Generated HTML reports (gitignored)
 ```
 
 ---
@@ -309,8 +315,89 @@ All must pass before committing. Tests use synthetic data (seed=99) â€” no 
 
 ---
 
+## Data Sources
+
+Four data sources are available in `ui/app.py`:
+
+| Option | Provider | Notes |
+|--------|----------|-------|
+| Synthetic Data | `SampleDataProvider` | GBM-based, no account needed |
+| My Historical Data (CSV) | `ExternalCSVProvider` | Reads from `C:/Data` (configurable in `settings.yaml → data.external_dir`) |
+| Live Data (Schwab) | `SchwabDataProvider` | OAuth2, 30-min access token auto-refreshed, 7-day refresh token |
+| Real Data (Rithmic) | `RithmicDataProvider` | Requires Rithmic account + credentials |
+
+### ExternalCSVProvider
+
+Loads from `C:/Data` (or path in `settings.yaml`). Expected filenames: `ES_FULL.csv`, `ES_FULL_2024.csv`, `FULL_ES.csv`. Year-specific files are preferred (smaller). Input must be 1-minute bars; any coarser timeframe is resampled on the fly.
+
+### SchwabDataProvider
+
+- Credentials in `config/credentials.yaml` under `schwab:` (app_key, app_secret, callback_url)
+- Tokens stored in `config/schwab_tokens.json` (gitignored)
+- Initial auth: `provider.get_auth_url()` → browser → paste redirect URL → `provider.complete_auth(url)`
+- Access token (30 min) is auto-refreshed by a daemon thread inside the `schwabdev.Client`
+- Refresh token lasts 7 days — sidebar widget in `ui/app.py` shows expiry and handles re-auth
+- Symbol mapping: `ES` → `/ES`, `NQ` → `/NQ`, etc. (automatic for known futures roots)
+- Date range is chunked into 30-day windows to stay within Schwab API limits
+
+---
+
+## Strategies
+
+### RSI Divergence (`src/strategies/rsi_divergence.py`)
+
+The primary strategy. Uses RSI(2) divergence with a two-step pre/post-condition entry:
+
+**Bullish setup:**
+1. Price makes a lower low AND RSI makes a higher low (divergence) → pre-condition armed
+2. Price closes above the high of the divergence bar → BUY entry
+3. Exit when RSI > overbought (default 94)
+
+**Bearish setup:**
+1. Price makes a higher high AND RSI makes a lower high → pre-condition armed
+2. Price closes below the low of the divergence bar → SELL entry
+3. Exit when RSI < oversold (default 2)
+
+Key parameters:
+- `rsi_period` — default 2 (very sensitive, designed for short-term mean reversion)
+- `rsi_overbought` / `rsi_oversold` — exit thresholds (default 94 / 2)
+- `swing_lookback` — bars each side to confirm a local swing high/low (default 5)
+- `max_divergence_bars` — max gap between swings to count as divergence (default 60)
+
+---
+
+## Chart Panels
+
+`candlestick_with_trades()` in `ui/components/charts.py` renders 4 rows:
+
+| Row | Content |
+|-----|---------|
+| 1 (55%) | Candlestick + EMA(9) + EMA(21) + ZigZag overlay + trade markers |
+| 2 (15%) | RSI(2) — purple, lines at 94 (red) and 2 (green) |
+| 3 (15%) | Stochastic %K/%D — lines at 80/20 |
+| 4 (15%) | RSI(13) — amber, lines at 70/30 |
+
+### ZigZag overlay
+
+Uses `pandas_ta.zigzag()` (requires Python 3.12). Controlled by sidebar:
+- **Show ZigZag** checkbox (default on)
+- **Deviation %** slider — minimum % price move to confirm a new swing (default 0.1%)
+
+ZigZag is **display only** — it does not affect strategy signals. Red dots = swing highs, green dots = swing lows.
+
+---
+
+## Session Time Filter
+
+`BacktestEngine` accepts `session_start` and `session_end` (`datetime.time` objects). When set, bars outside the window are dropped after loading but before strategy runs. The provider always loads midnight-to-midnight; the engine trims to session hours.
+
+In `ui/app.py` the sidebar has a “Session Hours (EST)” section defaulting to 09:30–16:00.
+
+---
+
 ## Known Constraints
 
 - **pandas_ta** is available (Python 3.12). Use `import pandas_ta as ta` for indicators.
-- **No live Rithmic connection** â€” `RithmicBroker` raises `NotImplementedError` until wired.
-- **Single-symbol backtests** â€” the engine runs one symbol at a time.
+- **No live Rithmic connection** — `RithmicBroker` raises `NotImplementedError` until wired.
+- **Single-symbol backtests** — the engine runs one symbol at a time.
+- **Schwab refresh token** — expires every 7 days; re-auth required via the sidebar widget.
