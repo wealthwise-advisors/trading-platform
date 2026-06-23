@@ -34,59 +34,34 @@ def _calc_stoch(high: pd.Series, low: pd.Series, close: pd.Series,
 def _calc_zigzag(
     high: pd.Series,
     low: pd.Series,
+    close: pd.Series,
     deviation: float = 0.001,
+    legs: int = 3,
 ) -> pd.DataFrame:
     """
-    Return swing highs and lows as a DataFrame with columns [price, type].
-    type is 'H' (swing high) or 'L' (swing low).
-    deviation: minimum fractional move (e.g. 0.001 = 0.1%) to confirm a reversal.
+    Compute zigzag swing points using pandas_ta.
+    Returns DataFrame with columns [price, type] where type is 'H' or 'L'.
     """
-    n = len(high)
-    if n < 3:
+    import pandas_ta as ta
+
+    result = ta.zigzag(
+        high=high, low=low, close=close,
+        legs=legs, deviation=deviation,
+        retrace=True, last_extreme=False, offset=0,
+    )
+    if result is None or result.empty:
         return pd.DataFrame(columns=["price", "type"])
 
-    points: list[tuple] = []   # (timestamp, price, 'H'|'L')
-    direction: str | None = None
-    ext_idx = 0
-    ext_price = high.iloc[0]
+    sig_col = f"ZIGZAGs_{deviation*100:.3f}%_{legs}"
+    if sig_col not in result.columns:
+        sig_col = [c for c in result.columns if c.startswith("ZIGZAGs")][0]
 
-    for i in range(1, n):
-        h, l = high.iloc[i], low.iloc[i]
-        if direction is None:
-            if h > high.iloc[ext_idx]:
-                ext_idx, ext_price = i, h
-            if l < low.iloc[0] * (1 - deviation):
-                direction = "down"
-                ext_idx, ext_price = i, l
-            elif h > high.iloc[0] * (1 + deviation):
-                direction = "up"
-                ext_idx, ext_price = i, h
-        elif direction == "up":
-            if h >= ext_price:
-                ext_idx, ext_price = i, h        # extend current swing
-            elif l <= ext_price * (1 - deviation):  # reversal confirmed
-                points.append((high.index[ext_idx], ext_price, "H"))
-                direction = "down"
-                ext_idx, ext_price = i, l
-        else:  # down
-            if l <= ext_price:
-                ext_idx, ext_price = i, l        # extend current swing
-            elif h >= ext_price * (1 + deviation):  # reversal confirmed
-                points.append((low.index[ext_idx], ext_price, "L"))
-                direction = "up"
-                ext_idx, ext_price = i, h
+    val_col = sig_col.replace("ZIGZAGs", "ZIGZAGv")
 
-    # Append the last unconfirmed extreme
-    if direction == "up":
-        points.append((high.index[ext_idx], ext_price, "H"))
-    elif direction == "down":
-        points.append((low.index[ext_idx], ext_price, "L"))
-
-    if not points:
-        return pd.DataFrame(columns=["price", "type"])
-
-    idx, prices, types = zip(*points)
-    return pd.DataFrame({"price": prices, "type": types}, index=list(idx))
+    df = pd.DataFrame(index=result.index)
+    df["price"] = result[val_col]
+    df["type"]  = result[sig_col].map({1: "L", -1: "H"})
+    return df[df["price"].notna() & df["type"].notna()]
 
 
 _GREEN = "#26a69a"
@@ -204,7 +179,7 @@ def candlestick_with_trades(
 
     # ── ZigZag overlay ────────────────────────────────────────────────
     if show_zigzag:
-        zz = _calc_zigzag(full_df["high"], full_df["low"], deviation=zigzag_deviation)
+        zz = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_deviation)
         if not zz.empty:
             # Connecting line through all swing points
             fig.add_trace(go.Scatter(
