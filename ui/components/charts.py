@@ -31,6 +31,64 @@ def _calc_stoch(high: pd.Series, low: pd.Series, close: pd.Series,
     return k, d
 
 
+def _calc_zigzag(
+    high: pd.Series,
+    low: pd.Series,
+    deviation: float = 0.001,
+) -> pd.DataFrame:
+    """
+    Return swing highs and lows as a DataFrame with columns [price, type].
+    type is 'H' (swing high) or 'L' (swing low).
+    deviation: minimum fractional move (e.g. 0.001 = 0.1%) to confirm a reversal.
+    """
+    n = len(high)
+    if n < 3:
+        return pd.DataFrame(columns=["price", "type"])
+
+    points: list[tuple] = []   # (timestamp, price, 'H'|'L')
+    direction: str | None = None
+    ext_idx = 0
+    ext_price = high.iloc[0]
+
+    for i in range(1, n):
+        h, l = high.iloc[i], low.iloc[i]
+        if direction is None:
+            if h > high.iloc[ext_idx]:
+                ext_idx, ext_price = i, h
+            if l < low.iloc[0] * (1 - deviation):
+                direction = "down"
+                ext_idx, ext_price = i, l
+            elif h > high.iloc[0] * (1 + deviation):
+                direction = "up"
+                ext_idx, ext_price = i, h
+        elif direction == "up":
+            if h >= ext_price:
+                ext_idx, ext_price = i, h        # extend current swing
+            elif l <= ext_price * (1 - deviation):  # reversal confirmed
+                points.append((high.index[ext_idx], ext_price, "H"))
+                direction = "down"
+                ext_idx, ext_price = i, l
+        else:  # down
+            if l <= ext_price:
+                ext_idx, ext_price = i, l        # extend current swing
+            elif h >= ext_price * (1 + deviation):  # reversal confirmed
+                points.append((low.index[ext_idx], ext_price, "L"))
+                direction = "up"
+                ext_idx, ext_price = i, h
+
+    # Append the last unconfirmed extreme
+    if direction == "up":
+        points.append((high.index[ext_idx], ext_price, "H"))
+    elif direction == "down":
+        points.append((low.index[ext_idx], ext_price, "L"))
+
+    if not points:
+        return pd.DataFrame(columns=["price", "type"])
+
+    idx, prices, types = zip(*points)
+    return pd.DataFrame({"price": prices, "type": types}, index=list(idx))
+
+
 _GREEN = "#26a69a"
 _RED   = "#ef5350"
 _BLUE  = "#2196f3"
@@ -93,7 +151,12 @@ def _base_layout(title: str, height: int = 500) -> dict:
     )
 
 
-def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go.Figure:
+def candlestick_with_trades(
+    results: BacktestResults,
+    max_bars: int = 400,
+    show_zigzag: bool = False,
+    zigzag_deviation: float = 0.001,
+) -> go.Figure:
     """
     Candlestick + EMA overlays + trade markers.
     Sub-panels (replacing volume): RSI(2) | Stoch K/D | RSI(13)
@@ -138,6 +201,42 @@ def candlestick_with_trades(results: BacktestResults, max_bars: int = 400) -> go
             x=df.index, y=ema, name=f"EMA{span}",
             line=dict(color=color, width=1.2),
         ), row=1, col=1)
+
+    # ── ZigZag overlay ────────────────────────────────────────────────
+    if show_zigzag:
+        zz = _calc_zigzag(full_df["high"], full_df["low"], deviation=zigzag_deviation)
+        if not zz.empty:
+            # Connecting line through all swing points
+            fig.add_trace(go.Scatter(
+                x=zz.index, y=zz["price"],
+                name="ZigZag",
+                mode="lines",
+                line=dict(color="#f0c040", width=1.5),
+                showlegend=True,
+                hoverinfo="skip",
+            ), row=1, col=1)
+            # Swing highs — red dots
+            highs = zz[zz["type"] == "H"]
+            if not highs.empty:
+                fig.add_trace(go.Scatter(
+                    x=highs.index, y=highs["price"],
+                    name="Swing High",
+                    mode="markers",
+                    marker=dict(symbol="circle", size=7, color=_RED,
+                                line=dict(color="white", width=1)),
+                    hovertemplate="<b>Swing High</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                ), row=1, col=1)
+            # Swing lows — green dots
+            lows = zz[zz["type"] == "L"]
+            if not lows.empty:
+                fig.add_trace(go.Scatter(
+                    x=lows.index, y=lows["price"],
+                    name="Swing Low",
+                    mode="markers",
+                    marker=dict(symbol="circle", size=7, color=_GREEN,
+                                line=dict(color="white", width=1)),
+                    hovertemplate="<b>Swing Low</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                ), row=1, col=1)
 
     # Trade entry / exit markers
     full_idx_set = set(df.index)

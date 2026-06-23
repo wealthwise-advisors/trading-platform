@@ -161,6 +161,10 @@ with st.sidebar:
     start_date = st.date_input("Start", _today - timedelta(days=1))
     end_date = st.date_input("End", _today)
 
+    st.subheader("ZigZag Swings")
+    show_zigzag = st.checkbox("Show ZigZag on chart", value=True)
+    zigzag_deviation = st.slider("Deviation %", 0.05, 2.0, 0.1, step=0.05) / 100.0
+
     st.subheader("Session Hours (EST)")
     _tc1, _tc2 = st.columns(2)
     with _tc1:
@@ -314,7 +318,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 with tab1:
-    st.plotly_chart(candlestick_with_trades(results), use_container_width=True, config=CHART_CONFIG)
+    st.plotly_chart(
+        candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_deviation=zigzag_deviation),
+        use_container_width=True, config=CHART_CONFIG,
+    )
     st.caption(
         "▲ Green triangle = Long entry  |  ▼ Red triangle = Short entry  |  "
         "✕ Green/Red X = Profitable / Loss exit  |  Dotted line = trade duration"
