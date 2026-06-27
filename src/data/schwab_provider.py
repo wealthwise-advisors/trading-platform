@@ -295,12 +295,18 @@ class SchwabDataProvider(DataProvider):
         start: datetime.datetime,
         end: datetime.datetime,
     ) -> pd.DataFrame:
+        from zoneinfo import ZoneInfo
+        _ET = ZoneInfo("America/New_York")
+        # start/end are naive ET datetimes; localize as ET so dt.timestamp()
+        # in schwabdev produces the correct UTC epoch regardless of machine timezone.
+        start_et = start.replace(tzinfo=_ET)
+        end_et   = end.replace(tzinfo=_ET)
         resp = self._client.price_history(
             symbol=symbol,
             frequencyType=freq_type,
             frequency=freq,
-            startDate=start,
-            endDate=end,
+            startDate=start_et,
+            endDate=end_et,
             needExtendedHoursData=True,
         )
         if not resp.ok:
@@ -313,7 +319,11 @@ class SchwabDataProvider(DataProvider):
 
         rows = []
         for c in data["candles"]:
-            ts = datetime.datetime.fromtimestamp(c["datetime"] / 1000, tz=timezone.utc).replace(tzinfo=None)
+            ts = (
+                datetime.datetime.fromtimestamp(c["datetime"] / 1000, tz=timezone.utc)
+                .astimezone(_ET)
+                .replace(tzinfo=None)
+            )
             rows.append({
                 "timestamp": ts,
                 "open":   float(c["open"]),

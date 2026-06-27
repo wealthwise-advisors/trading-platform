@@ -157,20 +157,48 @@ with st.sidebar:
     commission = st.number_input("Commission / Contract ($)", 0.0, 20.0, 2.50, step=0.25)
 
     st.subheader("Date Range")
-    _today = date.today()
-    start_date = st.date_input("Start", _today - timedelta(days=1))
-    end_date = st.date_input("End", _today)
+    _yesterday = date.today() - timedelta(days=1)
+    start_date = st.date_input("Start", _yesterday - timedelta(days=6))
+    end_date = st.date_input("End", _yesterday)
 
     st.subheader("ZigZag Swings")
     show_zigzag = st.checkbox("Show ZigZag on chart", value=True)
     zigzag_deviation = st.slider("Deviation %", 0.05, 2.0, 0.1, step=0.05) / 100.0
 
     st.subheader("Session Hours (EST)")
-    _tc1, _tc2 = st.columns(2)
-    with _tc1:
-        session_start = st.time_input("From", time_type(9, 30))
-    with _tc2:
-        session_end = st.time_input("To", time_type(16, 0))
+    _time_fmt = st.radio("Time Format", ["12-hour", "24-hour"], horizontal=True, index=0)
+
+    _HOURS_12 = [str(h) for h in range(1, 13)]
+    _MINS_5   = [f"{m:02d}" for m in range(0, 60, 5)]
+
+    if _time_fmt == "24-hour":
+        _tc1, _tc2 = st.columns(2)
+        with _tc1:
+            session_start = st.time_input("From", time_type(9, 30))
+            st.caption("AM" if session_start.hour < 12 else "PM")
+        with _tc2:
+            session_end = st.time_input("To", time_type(16, 0))
+            st.caption("AM" if session_end.hour < 12 else "PM")
+    else:
+        # ── From ──
+        st.caption("From")
+        _f1, _f2, _f3 = st.columns([1, 1, 1])
+        _s_hr = _f1.selectbox("Hour",   _HOURS_12, index=8,  key="s_hr", label_visibility="collapsed")
+        _s_mn = _f2.selectbox("Minute", _MINS_5,   index=6,  key="s_mn", label_visibility="collapsed")
+        _s_ap = _f3.radio("AM/PM", ["AM", "PM"],            key="s_ap", label_visibility="collapsed")
+        _s_h24 = int(_s_hr) % 12 + (12 if _s_ap == "PM" else 0)
+        session_start = time_type(_s_h24, int(_s_mn))
+        st.caption(f"→ {_s_h24:02d}:{_s_mn} (24h)")
+
+        # ── To ──
+        st.caption("To")
+        _t1, _t2, _t3 = st.columns([1, 1, 1])
+        _e_hr = _t1.selectbox("Hour",   _HOURS_12, index=3,  key="e_hr", label_visibility="collapsed")
+        _e_mn = _t2.selectbox("Minute", _MINS_5,   index=0,  key="e_mn", label_visibility="collapsed")
+        _e_ap = _t3.radio("AM/PM", ["AM", "PM"], index=1,    key="e_ap", label_visibility="collapsed")
+        _e_h24 = int(_e_hr) % 12 + (12 if _e_ap == "PM" else 0)
+        session_end = time_type(_e_h24, int(_e_mn))
+        st.caption(f"→ {_e_h24:02d}:{_e_mn} (24h)")
 
     st.divider()
     run_btn = st.button("▶ Run Backtest", use_container_width=True, type="primary")
@@ -320,7 +348,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.plotly_chart(
         candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_deviation=zigzag_deviation),
-        use_container_width=True, config=CHART_CONFIG,
+        use_container_width=True, config=CHART_CONFIG, key="chart_candle",
     )
     st.caption(
         "▲ Green triangle = Long entry  |  ▼ Red triangle = Short entry  |  "
@@ -328,7 +356,7 @@ with tab1:
     )
 
 with tab2:
-    st.plotly_chart(equity_curve(results), use_container_width=True, config=CHART_CONFIG)
+    st.plotly_chart(equity_curve(results), use_container_width=True, config=CHART_CONFIG, key="chart_equity")
     render_detail_metrics(results)
 
 with tab3:
@@ -342,7 +370,7 @@ with tab3:
                 return f"background-color: {color}"
             return ""
 
-        styled = df_trades.style.applymap(highlight_pnl, subset=["pnl"])
+        styled = df_trades.style.map(highlight_pnl, subset=["pnl"])
         st.dataframe(styled, use_container_width=True, height=420)
         csv = df_trades.to_csv(index=False).encode("utf-8")
         st.download_button("⬇ Download Trade Log (CSV)", csv, "trades.csv", "text/csv")
@@ -350,7 +378,7 @@ with tab3:
 with tab4:
     c1, c2 = st.columns([1, 1])
     with c1:
-        st.plotly_chart(pnl_distribution(results), use_container_width=True, config=CHART_CONFIG)
+        st.plotly_chart(pnl_distribution(results), use_container_width=True, config=CHART_CONFIG, key="chart_pnl")
     with c2:
         st.subheader("Consecutive Analysis")
         if results.trades:
@@ -371,4 +399,4 @@ with tab4:
             st.metric("Largest Loss", f"${min(pnls):,.0f}")
 
 with tab5:
-    st.plotly_chart(monthly_returns_heatmap(results), use_container_width=True, config=CHART_CONFIG)
+    st.plotly_chart(monthly_returns_heatmap(results), use_container_width=True, config=CHART_CONFIG, key="chart_monthly")

@@ -88,6 +88,17 @@ class BacktestEngine:
                 f"Session filter {self.session_start} – {self.session_end} EST: "
                 f"{len(df)} bars remain"
             )
+            if df.empty:
+                raise ValueError(
+                    f"No bars remain after session filter ({self.session_start}–{self.session_end} EST).\n"
+                    f"The date range {start.date()} → {end.date()} may have no data during market hours.\n"
+                    "Try an earlier date range or extend the session window."
+                )
+
+        if df.empty:
+            raise ValueError(
+                f"No data returned for {self.symbol} between {start.date()} and {end.date()}."
+            )
 
         bars = DataProvider.df_to_bars(df, self.symbol, self.timeframe)
         self.strategy.reset()

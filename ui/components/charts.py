@@ -119,8 +119,9 @@ def _base_layout(title: str, height: int = 500) -> dict:
         dragmode="pan",           # left-click drag pans; scroll-wheel zooms
         hovermode="x unified",    # single crosshair across all subplots
         legend=dict(bgcolor="rgba(0,0,0,0.3)", borderwidth=0),
-        margin=dict(l=65, r=30, t=55, b=45),
+        margin=dict(l=60, r=12, t=36, b=8),
         height=height,
+        autosize=True,
         newshape=dict(line_color="#ffab40"),
         modebar=dict(bgcolor="rgba(0,0,0,0)", color="#6b6b8a", activecolor="#cdd6f4"),
     )
@@ -156,8 +157,7 @@ def candlestick_with_trades(
         rows=4, cols=1,
         shared_xaxes=True,
         row_heights=[0.55, 0.15, 0.15, 0.15],
-        vertical_spacing=0.02,
-        subplot_titles=("", "RSI(2)", "Stoch K/D", "RSI(13)"),
+        vertical_spacing=0.008,
     )
 
     # ── Row 1: Candlestick ────────────────────────────────────────────
@@ -177,41 +177,75 @@ def candlestick_with_trades(
             line=dict(color=color, width=1.2),
         ), row=1, col=1)
 
-    # ── ZigZag overlay ────────────────────────────────────────────────
+    # ── ZigZag overlay with sequential numbering ─────────────────────
+    zz = pd.DataFrame()
     if show_zigzag:
         zz = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_deviation)
         if not zz.empty:
-            # Connecting line through all swing points
+            zz = zz.copy()
+            zz["num"] = range(1, len(zz) + 1)
+
+            # Connecting line
             fig.add_trace(go.Scatter(
                 x=zz.index, y=zz["price"],
-                name="ZigZag",
-                mode="lines",
+                name="ZigZag", mode="lines",
                 line=dict(color="#f0c040", width=1.5),
-                showlegend=True,
-                hoverinfo="skip",
+                showlegend=True, hoverinfo="skip",
             ), row=1, col=1)
-            # Swing highs — red dots
+
+            # Swing highs — outlined circle with number centred inside (ThinkorSwim style)
             highs = zz[zz["type"] == "H"]
             if not highs.empty:
                 fig.add_trace(go.Scatter(
                     x=highs.index, y=highs["price"],
                     name="Swing High",
-                    mode="markers",
-                    marker=dict(symbol="circle", size=7, color=_RED,
-                                line=dict(color="white", width=1)),
-                    hovertemplate="<b>Swing High</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                    mode="markers+text",
+                    marker=dict(symbol="circle", size=26,
+                                color="rgba(30,30,46,0.85)",
+                                line=dict(color=_RED, width=2.5)),
+                    text=[str(n) for n in highs["num"]],
+                    textposition="middle center",
+                    textfont=dict(color=_RED, size=11, family="Arial Black"),
+                    hovertemplate="<b>Swing High #%{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
-            # Swing lows — green dots
+
+            # Swing lows — outlined circle with number centred inside (ThinkorSwim style)
             lows = zz[zz["type"] == "L"]
             if not lows.empty:
                 fig.add_trace(go.Scatter(
                     x=lows.index, y=lows["price"],
                     name="Swing Low",
-                    mode="markers",
-                    marker=dict(symbol="circle", size=7, color=_GREEN,
-                                line=dict(color="white", width=1)),
-                    hovertemplate="<b>Swing Low</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                    mode="markers+text",
+                    marker=dict(symbol="circle", size=26,
+                                color="rgba(30,30,46,0.85)",
+                                line=dict(color=_GREEN, width=2.5)),
+                    text=[str(n) for n in lows["num"]],
+                    textposition="middle center",
+                    textfont=dict(color=_GREEN, size=11, family="Arial Black"),
+                    hovertemplate="<b>Swing Low #%{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
+
+    # ── ZigZag numbers mirrored on RSI(2), Stoch, RSI(13) subplots ──────
+    if not zz.empty:
+        rsi2_s  = rsi2.reindex(zz.index, method="nearest")
+        stk_s   = stk.reindex(zz.index, method="nearest")
+        rsi13_s = rsi13.reindex(zz.index, method="nearest")
+        border_colors = [_RED if t == "H" else _GREEN for t in zz["type"]]
+        nums = [str(n) for n in zz["num"]]
+
+        for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s)):
+            fig.add_trace(go.Scatter(
+                x=zz.index, y=vals.values,
+                mode="markers+text",
+                marker=dict(size=22,
+                            color="rgba(30,30,46,0.85)",
+                            line=dict(color=border_colors, width=2)),
+                text=nums,
+                textposition="middle center",
+                textfont=dict(size=9, color=border_colors, family="Arial Black"),
+                showlegend=False,
+                hovertemplate="<b>Swing #%{text}</b><br>%{y:.1f}<extra></extra>",
+            ), row=row_n, col=1)
 
     # Trade entry / exit markers
     full_idx_set = set(df.index)
@@ -309,7 +343,8 @@ def candlestick_with_trades(
                       row=4, col=1)
 
     # ── Layout ────────────────────────────────────────────────────────
-    layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=820)
+    _ylabel = dict(font=dict(size=9, color="#8b8ba0"), standoff=4)
+    layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=920)
     layout.update(
         xaxis=dict(
             gridcolor=_GRID, showgrid=True,
@@ -320,17 +355,16 @@ def candlestick_with_trades(
         xaxis2=dict(gridcolor=_GRID, **_SPIKE),
         xaxis3=dict(gridcolor=_GRID, **_SPIKE),
         xaxis4=dict(gridcolor=_GRID, **_SPIKE),
-        yaxis =dict(gridcolor=_GRID, showgrid=True, title="Price",   fixedrange=False),
-        yaxis2=dict(gridcolor=_GRID, showgrid=True, title="RSI(2)",  fixedrange=True, range=[0, 100]),
-        yaxis3=dict(gridcolor=_GRID, showgrid=True, title="Stoch",   fixedrange=True, range=[0, 100]),
-        yaxis4=dict(gridcolor=_GRID, showgrid=True, title="RSI(13)", fixedrange=True, range=[0, 100]),
+        yaxis =dict(gridcolor=_GRID, showgrid=True,
+                    title=dict(text="Price",   **_ylabel), fixedrange=False),
+        yaxis2=dict(gridcolor=_GRID, showgrid=True,
+                    title=dict(text="RSI(2)",  **_ylabel), fixedrange=True, range=[0, 100]),
+        yaxis3=dict(gridcolor=_GRID, showgrid=True,
+                    title=dict(text="Stoch",   **_ylabel), fixedrange=True, range=[0, 100]),
+        yaxis4=dict(gridcolor=_GRID, showgrid=True,
+                    title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[0, 100]),
     )
     fig.update_layout(**layout)
-
-    # Style subplot title annotations (small, muted)
-    for ann in fig.layout.annotations:
-        ann.update(font=dict(size=10, color="#8b8ba0"), x=0.01, xanchor="left")
-
     return fig
 
 
