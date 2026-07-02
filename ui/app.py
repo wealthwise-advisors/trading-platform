@@ -163,7 +163,7 @@ with st.sidebar:
 
     st.subheader("ZigZag Swings")
     show_zigzag = st.checkbox("Show ZigZag on chart", value=True)
-    zigzag_deviation = st.slider("Deviation %", 0.05, 2.0, 0.1, step=0.05) / 100.0
+    zigzag_deviation = st.slider("Deviation %", 0.05, 5.0, 1.5, step=0.05) / 100.0
 
     st.subheader("Session Hours (EST)")
     _time_fmt = st.radio("Time Format", ["12-hour", "24-hour"], horizontal=True, index=0)
@@ -317,7 +317,7 @@ render_summary_metrics(results)
 
 action_col1, action_col2, action_col3 = st.columns([2, 2, 4])
 with action_col1:
-    html_report = generate_html_report(results)
+    html_report = generate_html_report(results, zz_deviation=zigzag_deviation)
     st.download_button(
         label="⬇ Export Report (HTML)",
         data=html_report.encode("utf-8"),

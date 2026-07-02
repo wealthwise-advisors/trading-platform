@@ -64,6 +64,62 @@ def _calc_zigzag(
     return df[df["price"].notna() & df["type"].notna()]
 
 
+def _assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
+    """
+    Group ZigZag pivots into swings using a fixed price channel.
+
+    A swing's channel [lower, upper] is set by its FIRST TWO pivots
+    (whichever is smaller becomes `lower`, whichever is bigger becomes
+    `upper`). Every pivot AFTER that — regardless of whether it is itself a
+    High or a Low — is tested against this SAME fixed channel. As long as it
+    stays inside [lower, upper] the swing just keeps counting (1.3, 1.4,
+    1.5...). The moment a pivot's price goes above `upper` or below `lower`,
+    the swing breaks right there and that pivot becomes the first point of
+    the next swing — its own price then starts establishing the NEXT swing's
+    channel together with the pivot right after it.
+
+    Adds columns: swing (int), sub (int), label (str "swing.sub").
+    """
+    if zz.empty:
+        return zz
+    zz = zz.sort_index().copy()
+    prices = zz["price"].tolist()
+
+    swing_nums, sub_nums = [], []
+    swing_num = 1
+    sub_num = 0
+    lower = upper = None   # current swing's established channel
+    pending = None         # swing's first pivot, waiting for the 2nd to set the channel
+
+    for price in prices:
+        if lower is not None and (price > upper or price < lower):
+            # Breaks the current swing -> this pivot starts the next swing
+            swing_num += 1
+            sub_num = 0
+            lower = upper = None
+            pending = price
+        elif lower is None and pending is None:
+            # First pivot of a (new) swing
+            pending = price
+        elif lower is None:
+            # Second pivot of the swing -> establishes the channel
+            lower, upper = min(pending, price), max(pending, price)
+            pending = None
+        # else: pivot stayed inside the established channel -> swing just continues
+
+        swing_nums.append(swing_num)
+        sub_nums.append(sub_num)
+        sub_num += 1
+
+    zz["swing"] = swing_nums
+    zz["sub"]   = sub_nums
+    zz["label"] = [f"{s}.{n}" for s, n in zip(swing_nums, sub_nums)]
+    return zz
+
+
+_SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
+
+
 _GREEN = "#26a69a"
 _RED   = "#ef5350"
 _BLUE  = "#2196f3"
@@ -148,16 +204,22 @@ def candlestick_with_trades(
     full_idx_set = set(full_df.index)
 
     # ── Compute indicators ────────────────────────────────────────────
-    rsi2   = _calc_rsi(df["close"], 2)
-    rsi13  = _calc_rsi(df["close"], 13)
-    stk, std = _calc_stoch(df["high"], df["low"], df["close"])
+    # Use full_df for indicators so ZigZag pivot alignment is exact
+    rsi2   = _calc_rsi(full_df["close"], 2)
+    rsi13  = _calc_rsi(full_df["close"], 13)
+    stk, std = _calc_stoch(full_df["high"], full_df["low"], full_df["close"])
+    # Downsample indicators to match the (possibly thinned) candle series
+    rsi2  = rsi2.reindex(df.index, method="nearest")
+    rsi13 = rsi13.reindex(df.index, method="nearest")
+    stk   = stk.reindex(df.index, method="nearest")
+    std   = std.reindex(df.index, method="nearest")
 
     # ── Layout: 4 rows ────────────────────────────────────────────────
     fig = make_subplots(
         rows=4, cols=1,
         shared_xaxes=True,
         row_heights=[0.55, 0.15, 0.15, 0.15],
-        vertical_spacing=0.008,
+        vertical_spacing=0.035,
     )
 
     # ── Row 1: Candlestick ────────────────────────────────────────────
@@ -177,75 +239,95 @@ def candlestick_with_trades(
             line=dict(color=color, width=1.2),
         ), row=1, col=1)
 
-    # ── ZigZag overlay with sequential numbering ─────────────────────
+    # ── ZigZag overlay with per-swing numbering (resets at each new swing) ──
     zz = pd.DataFrame()
     if show_zigzag:
         zz = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_deviation)
         if not zz.empty:
-            zz = zz.copy()
-            zz["num"] = range(1, len(zz) + 1)
+            # Swing 1 always starts at the FIRST candle of the selected date range.
+            zz = _assign_swing_labels(zz)
 
+        if not zz.empty:
             # Connecting line
             fig.add_trace(go.Scatter(
                 x=zz.index, y=zz["price"],
                 name="ZigZag", mode="lines",
-                line=dict(color="#f0c040", width=1.5),
+                line=dict(color="#f0c040", width=1.5, dash="dot"),
                 showlegend=True, hoverinfo="skip",
             ), row=1, col=1)
 
-            # Swing highs — outlined circle with number centred inside (ThinkorSwim style)
-            highs = zz[zz["type"] == "H"]
-            if not highs.empty:
+            # ── Swing boxes: dotted boundary spanning ALL 4 panels, with a
+            #    "SWING N (X.1 to X.N)" header well above the price chart so
+            #    it clears the title/range-selector, staggered on two height
+            #    levels so adjacent narrow swings don't collide horizontally ──
+            swing_groups = list(zz.groupby("swing"))
+            for i, (swing_num, grp) in enumerate(swing_groups):
+                x0 = grp.index.min()
+                x1 = swing_groups[i + 1][1].index.min() if i + 1 < len(swing_groups) else df.index.max()
+                color = _SWING_COLORS[(swing_num - 1) % len(_SWING_COLORS)]
+
+                # Dotted boundary outline around the swing region (no fill tint)
+                fig.add_shape(
+                    type="rect", xref="x", yref="paper",
+                    x0=x0, x1=x1, y0=0, y1=1,
+                    fillcolor="rgba(0,0,0,0)",
+                    line=dict(color=color, width=1.5, dash="dot"),
+                    layer="below",
+                )
+                # "Swing N" + range, sitting right above the dotted boundary —
+                # all headers on the SAME single line (no up/down stagger)
+                first_label = grp["label"].iloc[0]
+                last_label  = grp["label"].iloc[-1]
+                x_mid = grp.index[len(grp) // 2]
+                fig.add_annotation(
+                    x=x_mid, y=1.005, xref="x", yref="paper", yanchor="bottom",
+                    text=f"<b>Swing {swing_num}</b><br>({first_label} to {last_label})",
+                    showarrow=False, font=dict(color=color, size=11),
+                    align="center",
+                )
+                # Gold star marking the start of each new swing
                 fig.add_trace(go.Scatter(
-                    x=highs.index, y=highs["price"],
-                    name="Swing High",
-                    mode="markers+text",
-                    marker=dict(symbol="circle", size=26,
-                                color="rgba(30,30,46,0.85)",
-                                line=dict(color=_RED, width=2.5)),
-                    text=[str(n) for n in highs["num"]],
-                    textposition="middle center",
-                    textfont=dict(color=_RED, size=11, family="Arial Black"),
-                    hovertemplate="<b>Swing High #%{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                    x=[x0], y=[grp["price"].iloc[0]],
+                    mode="markers", marker=dict(symbol="star", size=10, color=color,
+                                                 line=dict(color="white", width=0.5)),
+                    showlegend=False, hoverinfo="skip",
                 ), row=1, col=1)
 
-            # Swing lows — outlined circle with number centred inside (ThinkorSwim style)
-            lows = zz[zz["type"] == "L"]
-            if not lows.empty:
+            # ── Decimal-labeled circles on the price chart ────────────────
+            for ptype, color in (("H", _RED), ("L", _GREEN)):
+                pts = zz[zz["type"] == ptype]
+                if pts.empty:
+                    continue
                 fig.add_trace(go.Scatter(
-                    x=lows.index, y=lows["price"],
-                    name="Swing Low",
+                    x=pts.index, y=pts["price"],
+                    name="Swing High" if ptype == "H" else "Swing Low",
                     mode="markers+text",
-                    marker=dict(symbol="circle", size=26,
-                                color="rgba(30,30,46,0.85)",
-                                line=dict(color=_GREEN, width=2.5)),
-                    text=[str(n) for n in lows["num"]],
-                    textposition="middle center",
-                    textfont=dict(color=_GREEN, size=11, family="Arial Black"),
-                    hovertemplate="<b>Swing Low #%{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+                    marker=dict(symbol="circle", size=30,
+                                color=_BG,
+                                line=dict(color=color, width=1.8)),
+                    text=pts["label"], textposition="middle center",
+                    textfont=dict(color="white", size=9, family="Arial"),
+                    hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
 
-    # ── ZigZag numbers mirrored on RSI(2), Stoch, RSI(13) subplots ──────
-    if not zz.empty:
-        rsi2_s  = rsi2.reindex(zz.index, method="nearest")
-        stk_s   = stk.reindex(zz.index, method="nearest")
-        rsi13_s = rsi13.reindex(zz.index, method="nearest")
-        border_colors = [_RED if t == "H" else _GREEN for t in zz["type"]]
-        nums = [str(n) for n in zz["num"]]
+            # ── Same decimal labels mirrored on RSI(2), Stoch, RSI(13) ────
+            rsi2_s  = rsi2.reindex(zz.index, method="nearest")
+            stk_s   = stk.reindex(zz.index, method="nearest")
+            rsi13_s = rsi13.reindex(zz.index, method="nearest")
+            border_colors = [_RED if t == "H" else _GREEN for t in zz["type"]]
 
-        for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s)):
-            fig.add_trace(go.Scatter(
-                x=zz.index, y=vals.values,
-                mode="markers+text",
-                marker=dict(size=22,
-                            color="rgba(30,30,46,0.85)",
-                            line=dict(color=border_colors, width=2)),
-                text=nums,
-                textposition="middle center",
-                textfont=dict(size=9, color=border_colors, family="Arial Black"),
-                showlegend=False,
-                hovertemplate="<b>Swing #%{text}</b><br>%{y:.1f}<extra></extra>",
-            ), row=row_n, col=1)
+            for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s)):
+                fig.add_trace(go.Scatter(
+                    x=zz.index, y=vals.values,
+                    mode="markers+text",
+                    marker=dict(size=26,
+                                color=_BG,
+                                line=dict(color=border_colors, width=1.8)),
+                    text=zz["label"], textposition="middle center",
+                    textfont=dict(size=8, color="white", family="Arial"),
+                    showlegend=False,
+                    hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
+                ), row=row_n, col=1)
 
     # Trade entry / exit markers
     full_idx_set = set(df.index)
@@ -345,11 +427,17 @@ def candlestick_with_trades(
     # ── Layout ────────────────────────────────────────────────────────
     _ylabel = dict(font=dict(size=9, color="#8b8ba0"), standoff=4)
     layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=920)
+    _has_swing_headers = show_zigzag and not zz.empty
+    if _has_swing_headers:
+        layout["margin"] = dict(l=60, r=12, t=145, b=8)  # room for range selector + Swing N headers
+    # Visual stacking top-to-bottom: title -> range selector -> swing headers
+    # (sitting right above the dotted boundary, no big gap) -> chart
+    _rangeselector = {**_RANGE_SELECTOR, "y": 1.15} if _has_swing_headers else _RANGE_SELECTOR
     layout.update(
         xaxis=dict(
             gridcolor=_GRID, showgrid=True,
             rangeslider_visible=False,
-            rangeselector=_RANGE_SELECTOR,
+            rangeselector=_rangeselector,
             **_SPIKE,
         ),
         xaxis2=dict(gridcolor=_GRID, **_SPIKE),

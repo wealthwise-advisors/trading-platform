@@ -17,6 +17,10 @@ from plotly.subplots import make_subplots
 import plotly.io as pio
 
 from src.backtesting.results import BacktestResults
+from ui.components.charts import (
+    _calc_zigzag, _assign_swing_labels, _SWING_COLORS,
+    _calc_rsi, _calc_stoch,
+)
 
 _G      = "#3fb950"
 _R      = "#f85149"
@@ -26,6 +30,7 @@ _GRID   = "#21262d"
 _SURFACE = "#161b22"
 _TEXT   = "#e6edf3"
 _MUTED  = "#8b949e"
+_MARKER_BG = "#1e1e2e"  # solid fill so boundary lines don't bleed through circles
 
 # Plotly JS config injected into every chart div.
 # scrollZoom is the key setting — without it mouse-wheel does nothing.
@@ -99,16 +104,19 @@ def _layout(title: str = "", height: int = 500, dragmode: str = "pan",
 # Chart builders
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _candlestick_chart(results: BacktestResults) -> go.Figure:
+def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015) -> go.Figure:
     df = results.price_data
     trades = results.trades
     ts_set = set(df.index)
 
+    # ── 4-panel layout: Price / RSI(2) / Stoch / RSI(13) ────────────────────
     fig = make_subplots(
-        rows=2, cols=1, shared_xaxes=True,
-        row_heights=[0.77, 0.23], vertical_spacing=0.02,
+        rows=4, cols=1, shared_xaxes=True,
+        row_heights=[0.55, 0.15, 0.15, 0.15],
+        vertical_spacing=0.035,
     )
 
+    # Row 1 — Candlestick
     fig.add_trace(go.Candlestick(
         x=df.index, open=df["open"], high=df["high"],
         low=df["low"], close=df["close"],
@@ -172,23 +180,124 @@ def _candlestick_chart(results: BacktestResults) -> go.Figure:
             showlegend=False, hoverinfo="skip",
         ), row=1, col=1)
 
-    vol_colors = [_G if c >= o else _R for o, c in zip(df["open"], df["close"])]
-    fig.add_trace(go.Bar(
-        x=df.index, y=df["volume"], marker_color=vol_colors,
-        name="Volume", showlegend=False,
+    # Row 2 — RSI(2)
+    rsi2 = _calc_rsi(df["close"], 2)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=rsi2, line=dict(color="#bb86fc", width=1.2),
+        name="RSI(2)", showlegend=True,
     ), row=2, col=1)
+    fig.add_hline(y=94, line=dict(color=_R, width=0.8, dash="dash"), row=2, col=1)
+    fig.add_hline(y=2,  line=dict(color=_G, width=0.8, dash="dash"), row=2, col=1)
 
+    # Row 3 — Stochastic
+    stoch_k, stoch_d = _calc_stoch(df["high"], df["low"], df["close"])
+    fig.add_trace(go.Scatter(
+        x=df.index, y=stoch_k, line=dict(color="#42a5f5", width=1.2),
+        name="%K", showlegend=True,
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=stoch_d, line=dict(color="#ef9a9a", width=1.0, dash="dash"),
+        name="%D", showlegend=True,
+    ), row=3, col=1)
+    fig.add_hline(y=80, line=dict(color=_R, width=0.8, dash="dash"), row=3, col=1)
+    fig.add_hline(y=20, line=dict(color=_G, width=0.8, dash="dash"), row=3, col=1)
+
+    # Row 4 — RSI(13)
+    rsi13 = _calc_rsi(df["close"], 13)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=rsi13, line=dict(color="#ffb74d", width=1.2),
+        name="RSI(13)", showlegend=True,
+    ), row=4, col=1)
+    fig.add_hline(y=70, line=dict(color=_R, width=0.8, dash="dash"), row=4, col=1)
+    fig.add_hline(y=30, line=dict(color=_G, width=0.8, dash="dash"), row=4, col=1)
+
+    # ── ZigZag swing overlay ──────────────────────────────────────────────────
+    has_headers = False
+    try:
+        zz = _calc_zigzag(df["high"], df["low"], df["close"], deviation=zz_deviation)
+        if not zz.empty:
+            zz = _assign_swing_labels(zz)
+            has_headers = True
+
+            color_map = {s: _SWING_COLORS[i % len(_SWING_COLORS)]
+                         for i, s in enumerate(sorted(zz["swing"].unique()))}
+            border_colors = [color_map[s] for s in zz["swing"]]
+
+            # ZigZag dotted gold line on price panel
+            fig.add_trace(go.Scatter(
+                x=zz.index, y=zz["price"], mode="lines",
+                line=dict(color="#f0c040", width=1.5, dash="dot"),
+                name="ZigZag", showlegend=True,
+            ), row=1, col=1)
+
+            # Swing circles on price panel
+            fig.add_trace(go.Scatter(
+                x=zz.index, y=zz["price"], mode="markers+text",
+                marker=dict(symbol="circle", size=30, color=_MARKER_BG,
+                            line=dict(color=border_colors, width=1.8)),
+                text=zz["label"], textposition="middle center",
+                textfont=dict(color="white", size=9, family="Arial"),
+                showlegend=False,
+                hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+            ), row=1, col=1)
+
+            # Swing circles on RSI(2), Stoch, RSI(13) panels
+            for row_n, row_y in [(2, rsi2), (3, stoch_k), (4, rsi13)]:
+                vals = row_y.reindex(zz.index)
+                fig.add_trace(go.Scatter(
+                    x=zz.index, y=vals, mode="markers+text",
+                    marker=dict(size=22, color=_MARKER_BG,
+                                line=dict(color=border_colors, width=1.8)),
+                    text=zz["label"], textposition="middle center",
+                    textfont=dict(size=8, color="white", family="Arial"),
+                    showlegend=False,
+                    hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
+                ), row=row_n, col=1)
+
+            # Swing region boundaries + headers
+            for swing_num, grp in zz.groupby("swing"):
+                color = _SWING_COLORS[(swing_num - 1) % len(_SWING_COLORS)]
+                x0 = grp.index[0]
+                x1 = grp.index[-1]
+                x_mid = grp.index[len(grp) // 2]
+                first_label = grp["label"].iloc[0]
+                last_label  = grp["label"].iloc[-1]
+
+                fig.add_shape(
+                    type="rect", xref="x", yref="paper",
+                    x0=x0, x1=x1, y0=0, y1=1,
+                    fillcolor="rgba(0,0,0,0)",
+                    line=dict(color=color, width=1.5, dash="dot"),
+                    layer="below",
+                )
+                fig.add_annotation(
+                    x=x_mid, y=1.005, xref="x", yref="paper", yanchor="bottom",
+                    text=f"<b>Swing {swing_num}</b><br>({first_label} to {last_label})",
+                    showarrow=False, font=dict(color=color, size=11),
+                    align="center",
+                )
+    except Exception:
+        has_headers = False
+
+    _t = 145 if has_headers else 55
+    _rs_y = 1.15 if has_headers else 1.02
+    _ylabel = dict(font=dict(size=9, color=_MUTED), standoff=4)
+    _base = _layout(f"{results.symbol} — {results.strategy_name}", height=920)
+    _base["margin"] = dict(l=60, r=12, t=_t, b=8)
     fig.update_layout(
-        **_layout(f"{results.symbol} — {results.strategy_name}", height=650),
+        **_base,
         xaxis=dict(
-            gridcolor=_GRID,
-            rangeslider_visible=False,
-            rangeselector=_RANGE_SELECTOR,
+            gridcolor=_GRID, rangeslider_visible=False,
+            rangeselector={**_RANGE_SELECTOR, "y": _rs_y},
             **_SPIKE,
         ),
         xaxis2=dict(gridcolor=_GRID, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, title="Price",  fixedrange=False),
-        yaxis2=dict(gridcolor=_GRID, title="Volume", fixedrange=True),
+        xaxis3=dict(gridcolor=_GRID, **_SPIKE),
+        xaxis4=dict(gridcolor=_GRID, **_SPIKE),
+        yaxis =dict(gridcolor=_GRID, title=dict(text="Price",   **_ylabel), fixedrange=False),
+        yaxis2=dict(gridcolor=_GRID, title=dict(text="RSI(2)",  **_ylabel), fixedrange=True, range=[-5, 105]),
+        yaxis3=dict(gridcolor=_GRID, title=dict(text="Stoch",   **_ylabel), fixedrange=True, range=[-5, 105]),
+        yaxis4=dict(gridcolor=_GRID, title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[-5, 105]),
     )
     return fig
 
@@ -388,7 +497,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 {metric_cards}
 </div>
 
-<div class="section-title">Price Chart &amp; Trades</div>
+<div class="section-title">Price Chart, Indicators &amp; Trades</div>
 <div class="chart-box">{chart_candle}</div>
 
 <div class="section-title">Equity Curve</div>
@@ -447,7 +556,8 @@ def _fig_to_div(fig: go.Figure, first: bool = False) -> str:
     )
 
 
-def generate_html_report(results: BacktestResults, output_path: str | None = None) -> str:
+def generate_html_report(results: BacktestResults, output_path: str | None = None,
+                         zz_deviation: float = 0.015) -> str:
     """
     Build a self-contained HTML report from BacktestResults.
 
@@ -491,7 +601,7 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         )
 
     # First chart bundles Plotly.js from CDN; subsequent charts reuse it.
-    chart_candle  = _fig_to_div(_candlestick_chart(r), first=True)
+    chart_candle  = _fig_to_div(_candlestick_chart(r, zz_deviation=zz_deviation), first=True)
     chart_equity  = _fig_to_div(_equity_chart(r))
     chart_pnl     = _fig_to_div(_pnl_hist(r))
     chart_monthly = _fig_to_div(_monthly_heatmap(r))
