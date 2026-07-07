@@ -36,7 +36,7 @@ def _calc_zigzag(
     low: pd.Series,
     close: pd.Series,
     deviation: float = 0.001,
-    legs: int = 3,
+    legs: int = 10,
 ) -> pd.DataFrame:
     """
     Compute zigzag swing points using pandas_ta.
@@ -187,7 +187,8 @@ def candlestick_with_trades(
     results: BacktestResults,
     max_bars: int = 400,
     show_zigzag: bool = False,
-    zigzag_deviation: float = 0.001,
+    zigzag_dev_3: float = 0.003,
+    zigzag_dev_10: float = 0.003,
 ) -> go.Figure:
     """
     Candlestick + EMA overlays + trade markers.
@@ -241,18 +242,41 @@ def candlestick_with_trades(
 
     # ── ZigZag overlay with per-swing numbering (resets at each new swing) ──
     zz = pd.DataFrame()
+    zz3 = pd.DataFrame()
     if show_zigzag:
-        zz = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_deviation)
+        zz  = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_dev_10, legs=10)
+        zz3 = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_dev_3,  legs=3)
+
+        # ── 3-leg ZigZag: yellow dotted line (short-term) ──
+        if not zz3.empty:
+            fig.add_trace(go.Scatter(
+                x=zz3.index, y=zz3["price"],
+                name="ZigZag (3L)", mode="lines",
+                line=dict(color="#f0c040", width=1.2, dash="dot"),
+                showlegend=True, hoverinfo="skip",
+            ), row=1, col=1)
+            for ptype, color in (("H", "#ff6b6b"), ("L", "#69f0ae")):
+                pts = zz3[zz3["type"] == ptype]
+                if not pts.empty:
+                    fig.add_trace(go.Scatter(
+                        x=pts.index, y=pts["price"],
+                        mode="markers",
+                        marker=dict(symbol="circle", size=6, color=color,
+                                    line=dict(color="white", width=1)),
+                        showlegend=False,
+                        hovertemplate=f"<b>{'High' if ptype=='H' else 'Low'} (3L)</b><br>%{{x}}<br>@ %{{y:.2f}}<extra></extra>",
+                    ), row=1, col=1)
+
         if not zz.empty:
             # Swing 1 always starts at the FIRST candle of the selected date range.
             zz = _assign_swing_labels(zz)
 
         if not zz.empty:
-            # Connecting line
+            # ── 10-leg ZigZag: yellow dotted line (long-term) ──
             fig.add_trace(go.Scatter(
                 x=zz.index, y=zz["price"],
-                name="ZigZag", mode="lines",
-                line=dict(color="#f0c040", width=1.5, dash="dot"),
+                name="ZigZag (10L)", mode="lines",
+                line=dict(color="#2196f3", width=1.5, dash="dot"),
                 showlegend=True, hoverinfo="skip",
             ), row=1, col=1)
 

@@ -63,7 +63,7 @@ with st.sidebar:
     st.divider()
 
     data_source_options = ["Synthetic Data", "My Historical Data (CSV)", "Live Data (Schwab)", "Real Data (Rithmic)"]
-    data_source = st.selectbox("Data Source", data_source_options, index=1)
+    data_source = st.selectbox("Data Source", data_source_options, index=2)
     if data_source == "My Historical Data (CSV)":
         import yaml
         from pathlib import Path as _Path
@@ -157,13 +157,21 @@ with st.sidebar:
     commission = st.number_input("Commission / Contract ($)", 0.0, 20.0, 2.50, step=0.25)
 
     st.subheader("Date Range")
-    _yesterday = date.today() - timedelta(days=1)
-    start_date = st.date_input("Start", _yesterday - timedelta(days=6))
-    end_date = st.date_input("End", _yesterday)
+    def _last_trading_day(d: date) -> date:
+        while d.weekday() in (5, 6):   # 5=Saturday, 6=Sunday
+            d -= timedelta(days=1)
+        return d
+    _now = datetime.now()
+    # Before 9:30 AM default to the previous trading day so there's data to show
+    _default_end = date.today() if _now.hour >= 9 and _now.minute >= 30 else date.today() - timedelta(days=1)
+    _default_end = _last_trading_day(_default_end)
+    start_date = st.date_input("Start", _default_end)
+    end_date = st.date_input("End", _default_end)
 
     st.subheader("ZigZag Swings")
     show_zigzag = st.checkbox("Show ZigZag on chart", value=True)
-    zigzag_deviation = st.slider("Deviation %", 0.05, 5.0, 1.5, step=0.05) / 100.0
+    zigzag_dev_3  = st.slider("3-Leg Deviation %",  0.05, 5.0, 0.3, step=0.05) / 100.0
+    zigzag_dev_10 = st.slider("10-Leg Deviation %", 0.05, 5.0, 0.3, step=0.05) / 100.0
 
     st.subheader("Session Hours (EST)")
     _time_fmt = st.radio("Time Format", ["12-hour", "24-hour"], horizontal=True, index=0)
@@ -302,7 +310,11 @@ if run_btn:
         # Load full day range from provider; session filter is applied inside engine
         start_dt = datetime.combine(start_date, time_type(0, 0))
         end_dt   = datetime.combine(end_date,   time_type(23, 59))
-        results = engine.run(start=start_dt, end=end_dt)
+        try:
+            results = engine.run(start=start_dt, end=end_dt)
+        except (ValueError, ImportError, RuntimeError) as exc:
+            st.error(str(exc))
+            st.stop()
         st.session_state.results = results
     st.success("Backtest complete!")
 
@@ -317,7 +329,7 @@ render_summary_metrics(results)
 
 action_col1, action_col2, action_col3 = st.columns([2, 2, 4])
 with action_col1:
-    html_report = generate_html_report(results, zz_deviation=zigzag_deviation)
+    html_report = generate_html_report(results, zz_deviation=zigzag_dev_10)
     st.download_button(
         label="⬇ Export Report (HTML)",
         data=html_report.encode("utf-8"),
@@ -347,7 +359,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.plotly_chart(
-        candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_deviation=zigzag_deviation),
+        candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_dev_3=zigzag_dev_3, zigzag_dev_10=zigzag_dev_10),
         use_container_width=True, config=CHART_CONFIG, key="chart_candle",
     )
     st.caption(
