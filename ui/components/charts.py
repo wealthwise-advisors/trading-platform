@@ -6,115 +6,13 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from src.backtesting.results import BacktestResults, Trade
+from src.analysis.indicators import calc_rsi as _calc_rsi, calc_stoch as _calc_stoch
+from src.analysis.zigzag import calc_zigzag as _calc_zigzag, assign_swing_labels as _assign_swing_labels
 
-
-# ── Indicator helpers (inline — no talib / pandas-ta) ─────────────────────────
-
-def _calc_rsi(close: pd.Series, period: int) -> pd.Series:
-    delta = close.diff()
-    gain = delta.clip(lower=0)
-    loss = (-delta).clip(lower=0)
-    avg_gain = gain.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0, 1e-10)
-    return 100.0 - (100.0 / (1.0 + rs))
-
-
-def _calc_stoch(high: pd.Series, low: pd.Series, close: pd.Series,
-                k_period: int = 14, smooth_k: int = 3, d_period: int = 3):
-    lowest  = low.rolling(k_period).min()
-    highest = high.rolling(k_period).max()
-    rng = (highest - lowest).replace(0, np.nan)
-    raw_k   = 100.0 * (close - lowest) / rng
-    k       = raw_k.rolling(smooth_k).mean()   # Slow %K
-    d       = k.rolling(d_period).mean()        # Slow %D
-    return k, d
-
-
-def _calc_zigzag(
-    high: pd.Series,
-    low: pd.Series,
-    close: pd.Series,
-    deviation: float = 0.001,
-    legs: int = 10,
-) -> pd.DataFrame:
-    """
-    Compute zigzag swing points using pandas_ta.
-    Returns DataFrame with columns [price, type] where type is 'H' or 'L'.
-    """
-    import pandas_ta as ta
-
-    result = ta.zigzag(
-        high=high, low=low, close=close,
-        legs=legs, deviation=deviation,
-        retrace=True, last_extreme=False, offset=0,
-    )
-    if result is None or result.empty:
-        return pd.DataFrame(columns=["price", "type"])
-
-    sig_col = f"ZIGZAGs_{deviation*100:.3f}%_{legs}"
-    if sig_col not in result.columns:
-        sig_col = [c for c in result.columns if c.startswith("ZIGZAGs")][0]
-
-    val_col = sig_col.replace("ZIGZAGs", "ZIGZAGv")
-
-    df = pd.DataFrame(index=result.index)
-    df["price"] = result[val_col]
-    df["type"]  = result[sig_col].map({1: "L", -1: "H"})
-    return df[df["price"].notna() & df["type"].notna()]
-
-
-def _assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
-    """
-    Group ZigZag pivots into swings using a fixed price channel.
-
-    A swing's channel [lower, upper] is set by its FIRST TWO pivots
-    (whichever is smaller becomes `lower`, whichever is bigger becomes
-    `upper`). Every pivot AFTER that — regardless of whether it is itself a
-    High or a Low — is tested against this SAME fixed channel. As long as it
-    stays inside [lower, upper] the swing just keeps counting (1.3, 1.4,
-    1.5...). The moment a pivot's price goes above `upper` or below `lower`,
-    the swing breaks right there and that pivot becomes the first point of
-    the next swing — its own price then starts establishing the NEXT swing's
-    channel together with the pivot right after it.
-
-    Adds columns: swing (int), sub (int), label (str "swing.sub").
-    """
-    if zz.empty:
-        return zz
-    zz = zz.sort_index().copy()
-    prices = zz["price"].tolist()
-
-    swing_nums, sub_nums = [], []
-    swing_num = 1
-    sub_num = 0
-    lower = upper = None   # current swing's established channel
-    pending = None         # swing's first pivot, waiting for the 2nd to set the channel
-
-    for price in prices:
-        if lower is not None and (price > upper or price < lower):
-            # Breaks the current swing -> this pivot starts the next swing
-            swing_num += 1
-            sub_num = 0
-            lower = upper = None
-            pending = price
-        elif lower is None and pending is None:
-            # First pivot of a (new) swing
-            pending = price
-        elif lower is None:
-            # Second pivot of the swing -> establishes the channel
-            lower, upper = min(pending, price), max(pending, price)
-            pending = None
-        # else: pivot stayed inside the established channel -> swing just continues
-
-        swing_nums.append(swing_num)
-        sub_nums.append(sub_num)
-        sub_num += 1
-
-    zz["swing"] = swing_nums
-    zz["sub"]   = sub_nums
-    zz["label"] = [f"{s}.{n}" for s, n in zip(swing_nums, sub_nums)]
-    return zz
+# Re-exported under their old underscore-prefixed names (ui/report.py imports
+# these from this module) -- the actual logic now lives in src/analysis/ so
+# the FastAPI backend can share it without forking. See src/analysis/zigzag.py
+# and src/analysis/indicators.py for the implementations.
 
 
 _SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
@@ -335,9 +233,13 @@ def candlestick_with_trades(
                 ), row=1, col=1)
 
             # ── Same decimal labels mirrored on RSI(2), Stoch, RSI(13) ────
-            rsi2_s  = rsi2.reindex(zz.index, method="nearest")
-            stk_s   = stk.reindex(zz.index, method="nearest")
-            rsi13_s = rsi13.reindex(zz.index, method="nearest")
+            # bfill first: early-session pivots can fall inside an indicator's
+            # warm-up window (Stoch needs 14 bars, RSI13 needs 13) where the
+            # value is still NaN -- that silently drops the marker and makes
+            # the panel look like it starts at 1.1 instead of 1.0.
+            rsi2_s  = rsi2.bfill().reindex(zz.index, method="nearest")
+            stk_s   = stk.bfill().reindex(zz.index, method="nearest")
+            rsi13_s = rsi13.bfill().reindex(zz.index, method="nearest")
             border_colors = [_RED if t == "H" else _GREEN for t in zz["type"]]
 
             for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s)):
@@ -350,6 +252,7 @@ def candlestick_with_trades(
                     text=zz["label"], textposition="middle center",
                     textfont=dict(size=8, color="white", family="Arial"),
                     showlegend=False,
+                    cliponaxis=False,
                     hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
                 ), row=row_n, col=1)
 
@@ -476,6 +379,32 @@ def candlestick_with_trades(
         yaxis4=dict(gridcolor=_GRID, showgrid=True,
                     title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[0, 100]),
     )
+    fig.update_layout(**layout)
+    return fig
+
+
+def win_loss_donut(results: BacktestResults) -> go.Figure:
+    """Win/Loss split as a donut — status colors only (green=good, red=critical),
+    never reused as a categorical identity color elsewhere on the dashboard."""
+    wins, losses = results.winning_trades, results.losing_trades
+    fig = go.Figure(go.Pie(
+        labels=["Wins", "Losses"],
+        values=[wins, losses] if (wins + losses) else [1, 0],
+        hole=0.65,
+        marker=dict(colors=[_GREEN, _RED], line=dict(color=_BG, width=3)),
+        textinfo="none",
+        hovertemplate="<b>%{label}</b><br>%{value} trades (%{percent})<extra></extra>",
+        sort=False,
+    ))
+    fig.add_annotation(
+        text=f"<b>{results.win_rate:.0f}%</b><br><span style='font-size:11px'>Win Rate</span>",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=22, color="#cdd6f4"),
+    )
+    layout = _base_layout("Win / Loss", height=330)
+    layout["margin"] = dict(l=20, r=20, t=45, b=10)
+    layout.update(showlegend=True,
+                  legend=dict(orientation="h", y=-0.08, bgcolor="rgba(0,0,0,0)"))
     fig.update_layout(**layout)
     return fig
 

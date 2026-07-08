@@ -29,13 +29,23 @@ try:
     _SCHWAB_AVAILABLE = True
 except Exception:
     _SCHWAB_AVAILABLE = False
-from src.strategies import MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy, RSIDivergenceStrategy
+from src.strategies import (
+    MACrossoverStrategy, RSIMeanReversionStrategy, BreakoutStrategy,
+    RSIDivergenceStrategy, RegimeAdaptiveStrategy,
+)
 from src.backtesting.engine import BacktestEngine
+from src.backtesting.trade_quality import score_trades
+from src.analysis.candlestick_patterns import detect_candlestick_patterns
+from src.analysis.chart_patterns import find_chart_patterns
 from ui.components.charts import (
     candlestick_with_trades, equity_curve, pnl_distribution,
-    monthly_returns_heatmap, CHART_CONFIG,
+    monthly_returns_heatmap, win_loss_donut, CHART_CONFIG,
 )
 from ui.components.metrics import render_summary_metrics, render_detail_metrics
+from ui.components.insights import (
+    render_performance_summary, render_backtest_details,
+    render_quick_insights, render_ai_insight,
+)
 from ui.report import generate_html_report
 
 
@@ -49,10 +59,126 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-  [data-testid="stAppViewContainer"] { background: #1e1e2e; }
-  [data-testid="stSidebar"] { background: #181825; }
+  [data-testid="stAppViewContainer"] {
+    background: radial-gradient(circle at 15% 0%, #23233a 0%, #1a1a29 45%, #14141f 100%);
+  }
+  [data-testid="stSidebar"] {
+    background: #181825;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  [data-testid="stHeader"] { background: rgba(0,0,0,0); }
   h1, h2, h3 { color: #cdd6f4; }
+  h1 { letter-spacing: 0.01em; }
   .stMetric label { color: #a6adc8; }
+
+  div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: #1e1e2e;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 12px;
+  }
+
+  /* ── buttons: gradient pill, glow on hover ── */
+  .stButton button, .stDownloadButton button, .stLinkButton a {
+    background: linear-gradient(135deg, #3987e5 0%, #9085e9 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 16px -4px rgba(57,135,229,0.55);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .stButton button:hover, .stDownloadButton button:hover, .stLinkButton a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px -4px rgba(144,133,233,0.7);
+    color: white !important;
+  }
+
+  /* ── tabs: pill-style active state instead of the flat default underline ── */
+  [data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 4px; background: #181825; padding: 6px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    /* Responsive: wrap onto multiple lines instead of overflowing behind the
+       ">" scroll chevron once there are more tabs than horizontal space. */
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    font-weight: 600; border-radius: 8px !important; color: #a6adc8;
+  }
+  [data-testid="stTabs"] button[aria-selected="true"] {
+    background: linear-gradient(135deg, #3987e5 0%, #9085e9 100%) !important;
+    color: white !important;
+  }
+  [data-testid="stTabs"] [data-baseweb="tab-highlight"] { display: none; }
+  /* Hide the baseweb scroll-arrow buttons now that tabs wrap instead */
+  [data-testid="stTabs"] [data-baseweb="tab-list"] + div,
+  [data-testid="stTabs"] button[data-baseweb="tab-list-arrow"] { display: none; }
+
+  /* ── Layout/responsiveness fixes — cards, button row, spacing ──────────
+     Pure CSS, no change to chart content, data, or business logic. */
+
+  /* Equal-height cards within any Streamlit column row: make the column's
+     own wrapper a flex column so a taller sibling doesn't leave shorter
+     cards looking misaligned. */
+  div[data-testid="column"] {
+    display: flex;
+    flex-direction: column;
+  }
+  div[data-testid="column"] > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  div[data-testid="column"] .stat-card,
+  div[data-testid="column"] .info-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Button row: consistent gap, no forced growth so both buttons match width */
+  div[data-testid="stHorizontalBlock"] { gap: 12px; }
+  .stButton, .stDownloadButton, .stLinkButton { width: 100%; }
+
+  /* Trim excess vertical whitespace between stacked sections */
+  div[data-testid="stVerticalBlock"] { gap: 0.6rem; }
+  .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+
+  /* Consistent card chrome everywhere (padding/radius/shadow already set per
+     card type — this just guarantees box-sizing so padding never causes
+     overflow/cutoff at small widths) */
+  .stat-card, .info-card, div[data-testid="stVerticalBlockBorderWrapper"] {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  /* Main chart never overflows its container and stays centered */
+  div[data-testid="stPlotlyChart"] {
+    width: 100% !important;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  /* Responsive breakpoints: below 768px, stack stat/info cards to 2 per row
+     instead of forcing 4-across (which is what caused the cramped/overlapping
+     look on narrow widths); below 480px, stack to 1 per row. */
+  @media (max-width: 768px) {
+    .stat-grid, div[data-testid="stHorizontalBlock"] {
+      flex-wrap: wrap;
+    }
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+      min-width: 45% !important;
+      flex: 1 1 45% !important;
+    }
+  }
+  @media (max-width: 480px) {
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+      min-width: 100% !important;
+      flex: 1 1 100% !important;
+    }
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -131,12 +257,18 @@ with st.sidebar:
         symbol = _sym_sel
     timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "30m", "1h"], index=0)
 
-    _strategies = ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)", "RSI Divergence"]
+    _strategies = ["MA Crossover", "RSI Mean Reversion", "Breakout (Donchian)", "RSI Divergence", "Regime Adaptive (Auto)"]
     strategy_name = st.selectbox("Strategy", _strategies, index=_strategies.index("RSI Divergence"))
 
     st.subheader("Strategy Parameters")
     params = {}
-    if strategy_name == "MA Crossover":
+    if strategy_name == "Regime Adaptive (Auto)":
+        st.caption(
+            "Classifies each bar as trending / sideways / high-volatility and "
+            "auto-switches: trend-following in a trend, RSI mean-reversion "
+            "sideways, breakout during volatility expansion. No parameters to tune."
+        )
+    elif strategy_name == "MA Crossover":
         params["fast"] = st.slider("Fast EMA", 3, 50, 9)
         params["slow"] = st.slider("Slow EMA", 10, 200, 21)
     elif strategy_name == "RSI Mean Reversion":
@@ -235,11 +367,14 @@ def build_strategy(name: str, p: dict):
             rsi_oversold=float(p["rsi_oversold"]),
             swing_lookback=p["swing_lookback"],
         )
+    if name == "Regime Adaptive (Auto)":
+        return RegimeAdaptiveStrategy()
     return BreakoutStrategy(lookback=p.get("lookback", 20), atr_mult=p.get("atr_mult", 2.0))
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 st.title("📈 AutoTrader — Backtesting Dashboard")
+st.caption("Analyze. Optimize. Execute with confidence.")
 
 if "results" not in st.session_state:
     st.session_state.results = None
@@ -292,6 +427,7 @@ if run_btn:
                 base_price=BASE_PRICES.get(symbol, 4500.0),
                 tick_size=spec["tick_size"],
                 save_dir="data/historical",
+                tf_label=timeframe,
             )
             provider = CSVDataProvider("data/historical")
         strategy = build_strategy(strategy_name, params)
@@ -316,7 +452,13 @@ if run_btn:
             st.error(str(exc))
             st.stop()
         st.session_state.results = results
-    st.success("Backtest complete!")
+        st.session_state.backtest_id = f"AT-{datetime.now():%Y%m%d-%H%M}"
+        st.session_state.last_updated = datetime.now()
+        st.session_state.bt_session_start = session_start
+        st.session_state.bt_session_end = session_end
+        st.session_state.bt_data_source = data_source
+    st.success(f"✅ Backtest complete — {strategy_name} on {symbol} "
+              f"({start_date} → {end_date}, {session_start.strftime('%H:%M')}–{session_end.strftime('%H:%M')} EST)")
 
 results = st.session_state.results
 
@@ -325,50 +467,77 @@ if results is None:
     st.stop()
 
 # ── Results header + action buttons ──────────────────────────────────────────
-render_summary_metrics(results)
+header_col1, header_col2 = st.columns([3, 1])
+with header_col1:
+    render_summary_metrics(results)
+with header_col2:
+    with st.container(border=True):
+        st.plotly_chart(win_loss_donut(results), use_container_width=True,
+                         config={"displayModeBar": False}, key="chart_donut")
 
-action_col1, action_col2, action_col3 = st.columns([2, 2, 4])
-with action_col1:
+# ── Summary / Details / Insights row (full width — the candlestick chart   ──
+# ── needs its own full width below; squeezing it into a narrow side rail   ──
+# ── made the swing labels overlap and become unreadable) ────────────────────
+insight_col1, insight_col2, insight_col3, insight_col4 = st.columns(4)
+with insight_col1:
+    render_performance_summary(results)
+with insight_col2:
+    render_backtest_details(
+        symbol=results.symbol, strategy_name=results.strategy_name, timeframe=results.timeframe,
+        start_date=start_date, end_date=end_date,
+        session_start=st.session_state.bt_session_start, session_end=st.session_state.bt_session_end,
+        data_source=st.session_state.bt_data_source,
+    )
+with insight_col3:
+    render_quick_insights(results)
+with insight_col4:
+    render_ai_insight(results)
+
+# ── Tabs + chart (full width) ─────────────────────────────────────────────────
+tabrow_col, btn_col1, btn_col2 = st.columns([5, 2, 2])
+with tabrow_col:
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "📊 Price & Trades",
+        "📈 Equity Curve",
+        "📋 Trade Log",
+        "📉 P&L Analysis",
+        "📅 Monthly Returns",
+        "🕯️ Candlestick Patterns",
+        "📐 Chart Patterns",
+    ])
+with btn_col1:
     html_report = generate_html_report(results, zz_deviation=zigzag_dev_10)
     st.download_button(
-        label="⬇ Export Report (HTML)",
+        label="⬇ Export Report",
         data=html_report.encode("utf-8"),
         file_name=f"backtest_{results.symbol}_{results.strategy_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.html",
         mime="text/html",
         help="Download a self-contained HTML file — share via email, Slack, or Google Drive. "
-             "Opens in any browser, no Python needed.",
+            "Opens in any browser, no Python needed.",
         use_container_width=True,
     )
-with action_col2:
+with btn_col2:
     st.link_button(
-        "⚡ Open Live Replay",
+        "⚡ Live Replay",
         url="http://localhost:8502",
         help="Open the bar-by-bar replay dashboard (run: streamlit run ui/live_app.py --server.port 8502)",
         use_container_width=True,
     )
 
-st.divider()
-
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Price & Trades",
-    "📈 Equity Curve",
-    "📋 Trade Log",
-    "📉 P&L Analysis",
-    "📅 Monthly Returns",
-])
-
 with tab1:
-    st.plotly_chart(
-        candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_dev_3=zigzag_dev_3, zigzag_dev_10=zigzag_dev_10),
-        use_container_width=True, config=CHART_CONFIG, key="chart_candle",
-    )
+    with st.container(border=True):
+        st.plotly_chart(
+            candlestick_with_trades(results, show_zigzag=show_zigzag, zigzag_dev_3=zigzag_dev_3, zigzag_dev_10=zigzag_dev_10),
+            use_container_width=True, config=CHART_CONFIG, key="chart_candle",
+        )
     st.caption(
         "▲ Green triangle = Long entry  |  ▼ Red triangle = Short entry  |  "
         "✕ Green/Red X = Profitable / Loss exit  |  Dotted line = trade duration"
     )
 
 with tab2:
-    st.plotly_chart(equity_curve(results), use_container_width=True, config=CHART_CONFIG, key="chart_equity")
+    with st.container(border=True):
+        st.plotly_chart(equity_curve(results), use_container_width=True, config=CHART_CONFIG, key="chart_equity")
     render_detail_metrics(results)
 
 with tab3:
@@ -376,6 +545,20 @@ with tab3:
     if df_trades.empty:
         st.warning("No completed trades in this period.")
     else:
+        quality = score_trades(results)
+        if quality:
+            df_trades = df_trades.copy()
+            df_trades["quality_score"] = pd.NA
+            df_trades["quality_grade"] = pd.NA
+            for q in quality:
+                df_trades.iloc[q.trade_index, df_trades.columns.get_loc("quality_score")] = q.score
+                df_trades.iloc[q.trade_index, df_trades.columns.get_loc("quality_grade")] = q.grade
+            st.caption(
+                "Quality Score (0-100) reflects the entry SETUP — trend alignment, momentum, "
+                "volume, and proximity to a support/resistance zone — not the trade's outcome. "
+                f"Average: {df_trades['quality_score'].mean():.0f}/100"
+            )
+
         def highlight_pnl(val):
             if isinstance(val, float):
                 color = "#1b4332" if val >= 0 else "#4a1010"
@@ -412,3 +595,67 @@ with tab4:
 
 with tab5:
     st.plotly_chart(monthly_returns_heatmap(results), use_container_width=True, config=CHART_CONFIG, key="chart_monthly")
+
+with tab6:
+    st.caption(
+        "Rule-based geometry match on OHLC bars — Doji, Hammer, Bullish/Bearish Engulfing, "
+        "Morning/Evening Star. These patterns are individually weak/noisy signals; use "
+        "confidence and surrounding trend/structure before acting on any one of them."
+    )
+    min_conf = st.slider("Minimum confidence", 0, 100, 70, step=5, key="cs_min_conf")
+    cs_patterns = detect_candlestick_patterns(results.price_data)
+    cs_patterns = [p for p in cs_patterns if p.confidence >= min_conf]
+    if not cs_patterns:
+        st.info("No candlestick patterns at or above this confidence threshold.")
+    else:
+        cs_df = pd.DataFrame([
+            {"timestamp": p.timestamp, "pattern": p.pattern.replace("_", " ").title(),
+             "direction": p.direction, "confidence": p.confidence}
+            for p in cs_patterns
+        ]).sort_values("confidence", ascending=False)
+        st.dataframe(cs_df, use_container_width=True, height=420)
+
+with tab7:
+    st.caption(
+        "Classic reversal patterns detected from confirmed swing pivots — Double Top/Bottom, "
+        "Head & Shoulders. Candidates worth a second look, not signals to trade blind."
+    )
+    chart_patterns = find_chart_patterns(results.price_data, left=2, right=2, min_move=0.0)
+    if not chart_patterns:
+        st.info("No chart patterns detected in this date range.")
+    else:
+        cp_df = pd.DataFrame([
+            {"pattern": p.pattern.replace("_", " ").title(), "direction": p.direction,
+             "start": results.price_data.index[p.start_index],
+             "end": results.price_data.index[p.end_index],
+             "neckline": round(p.neckline, 2), **p.metrics}
+            for p in chart_patterns
+        ]).sort_values("start", ascending=False)
+        st.dataframe(cp_df, use_container_width=True, height=420)
+
+# ── Footer status bar ─────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+  .status-bar { display: flex; flex-wrap: wrap; gap: 28px; align-items: center;
+                background: #181825; border: 1px solid rgba(255,255,255,0.06);
+                border-radius: 10px; padding: 10px 18px; margin-top: 22px;
+                font-size: 0.8rem; color: #a6adc8; }
+  .status-bar .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+                      background: #0ca30c; margin-right: 6px; }
+</style>
+""", unsafe_allow_html=True)
+
+_dur = datetime.combine(date.today(), st.session_state.bt_session_end) - \
+      datetime.combine(date.today(), st.session_state.bt_session_start)
+_dur_h, _dur_rem = divmod(int(_dur.total_seconds()), 3600)
+_dur_m = _dur_rem // 60
+st.markdown(
+    f'<div class="status-bar">'
+    f'<span><span class="dot"></span>Status: <b style="color:#cdd6f4">Completed</b></span>'
+    f'<span>🆔 Backtest ID: <b style="color:#cdd6f4">{st.session_state.backtest_id}</b></span>'
+    f'<span>⏱️ Duration: <b style="color:#cdd6f4">{_dur_h}h {_dur_m}m</b></span>'
+    f'<span>📊 Data Points: <b style="color:#cdd6f4">{len(results.price_data):,}</b></span>'
+    f'<span>🔄 Last updated: <b style="color:#cdd6f4">{st.session_state.last_updated.strftime("%H:%M:%S")}</b></span>'
+    f'</div>',
+    unsafe_allow_html=True,
+)

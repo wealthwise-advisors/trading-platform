@@ -1,0 +1,5 @@
+# FastAPI backend deps — kept separate from requirements.txt so the
+# Streamlit app's install doesn't require these, and vice versa.
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+websockets>=13.0

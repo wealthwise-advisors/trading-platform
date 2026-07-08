@@ -16,6 +16,7 @@ def generate_sample_data(
     volatility: float = 0.0008,
     seed: int = 42,
     save_dir: str = "data/historical",
+    tf_label: str = None,
 ) -> pd.DataFrame:
     """
     Generate synthetic futures OHLCV data using a geometric Brownian motion model
@@ -73,7 +74,7 @@ def generate_sample_data(
     if save_dir:
         path = Path(save_dir)
         path.mkdir(parents=True, exist_ok=True)
-        tf_label = f"{timeframe_minutes}m"
-        df.to_csv(path / f"{symbol}_{tf_label}.csv", index_label="timestamp")
+        label = tf_label or f"{timeframe_minutes}m"
+        df.to_csv(path / f"{symbol}_{label}.csv", index_label="timestamp")
 
     return df

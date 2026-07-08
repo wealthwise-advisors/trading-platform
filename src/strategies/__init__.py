@@ -3,6 +3,7 @@ from .ma_crossover import MACrossoverStrategy
 from .rsi_mean_reversion import RSIMeanReversionStrategy
 from .breakout import BreakoutStrategy
 from .rsi_divergence import RSIDivergenceStrategy
+from .regime_adaptive import RegimeAdaptiveStrategy
 
 __all__ = [
     "BaseStrategy", "Signal", "SignalType",
@@ -10,4 +11,5 @@ __all__ = [
     "RSIMeanReversionStrategy",
     "BreakoutStrategy",
     "RSIDivergenceStrategy",
+    "RegimeAdaptiveStrategy",
 ]

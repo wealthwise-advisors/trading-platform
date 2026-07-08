@@ -1,0 +1,239 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+    /* AutoTrader dark theme — deep navy/blue-black base with a validated
+       blue/purple/cyan accent set (dataviz-skill categorical order kept,
+       intensity boosted per the "premium trading platform" redesign pass). */
+    --background: #060b18;
+    --foreground: #e2e8ff;
+    --card: #0e1424;
+    --card-foreground: #e2e8ff;
+    --popover: #0e1424;
+    --popover-foreground: #e2e8ff;
+    --primary: #4f8ef7;
+    --primary-foreground: #ffffff;
+    --secondary: #131b30;
+    --secondary-foreground: #cdd6f4;
+    --muted: #131b30;
+    --muted-foreground: #8b93b8;
+    --accent: #9d7bf0;
+    --accent-foreground: #ffffff;
+    --destructive: #e0455a;
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 16%);
+    --ring: #4f8ef7;
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(79, 142, 247, 0.10) 0%, transparent 40%),
+      radial-gradient(circle at 85% 15%, rgba(157, 123, 240, 0.08) 0%, transparent 45%),
+      linear-gradient(180deg, #060b18 0%, #0a1020 100%);
+    min-height: 100vh;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+
+/* ── Base shadcn Card — used for chart containers, tables, Win/Loss donut.
+   Subtle blue glass glow applied globally so every card in the app feels
+   consistent without touching each call site. ── */
+[data-slot="card"] {
+  border-radius: 16px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 6px 22px -10px rgba(79, 142, 247, 0.25),
+    0 2px 10px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Stat cards — accent left-border + colored glow, matching the
+   validated palette carried over from the Streamlit build ── */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--stat-accent) 10%, #0e1424) 0%, #0b1120 100%);
+  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  padding: 16px 18px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--stat-accent) 65%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px color-mix(in srgb, var(--stat-accent) 20%, transparent),
+    0 8px 28px -6px color-mix(in srgb, var(--stat-accent) 75%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px color-mix(in srgb, var(--stat-accent) 35%, transparent),
+    0 10px 34px -6px color-mix(in srgb, var(--stat-accent) 90%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.stat-card .stat-label {
+  font-size: 0.72rem;
+  color: #a6adc8;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+}
+.stat-card .stat-value {
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card .stat-sub {
+  font-size: 0.75rem;
+  color: #7f849c;
+  margin-top: 4px;
+}
+
+/* ── Info cards (Performance Summary / Backtest Details / Quick Insights /
+   AI Insight) — port of ui/components/insights.py's _CARD_CSS ── */
+.info-card {
+  position: relative;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--info-accent, #4f8ef7) 8%, #0e1424) 0%, #0b1120 100%);
+  backdrop-filter: blur(6px);
+  border: 1px solid color-mix(in srgb, var(--info-accent, #4f8ef7) 35%, transparent);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px color-mix(in srgb, var(--info-accent, #4f8ef7) 12%, transparent),
+    0 6px 22px -8px color-mix(in srgb, var(--info-accent, #4f8ef7) 45%, transparent),
+    0 4px 16px -6px rgba(0, 0, 0, 0.5);
+  height: 100%;
+  transition: box-shadow 0.15s ease;
+}
+.info-card .info-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e2e8ff;
+  margin-bottom: 10px;
+}
+.info-card .info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.82rem;
+  color: #a6adc8;
+}
+.info-card .info-row .v {
+  font-weight: 700;
+  color: #cdd6f4;
+}
+.info-card .insight-item {
+  font-size: 0.82rem;
+  color: #a6adc8;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.info-card.ai-insight .info-title {
+  color: #cba6f7;
+}
