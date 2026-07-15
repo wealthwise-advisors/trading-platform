@@ -3,9 +3,9 @@
 // and delivered as arrays — this component only handles the plotting/shape/
 // annotation logic, mirroring the Python trace-by-trace.
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Plot from "react-plotly.js"
-import type { Data, Layout, Shape, Annotations } from "plotly.js"
+import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 
 const GREEN = "#2dd4bf"
@@ -109,6 +109,31 @@ export function CandlestickChart({
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  // Tracks the user's current x-axis zoom (range-selector button, scroll
+  // zoom, or pan), null meaning "no interaction yet, use the default 2-hour
+  // window". Needed because the price y-axis range below must be computed
+  // from whatever's actually visible on screen -- without this, the y-range
+  // stayed permanently locked to the initial 2-hour window's price band, so
+  // zooming/panning out (e.g. clicking "All") revealed candles priced
+  // outside that band only as blank space: their x/y data was correct, they
+  // were just plotted above/below the fixed, now-stale y-axis bounds.
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null)
+  useEffect(() => setVisibleRange(null), [bars])
+
+  const handleRelayout = (ev: PlotRelayoutEvent) => {
+    const e = ev as unknown as Record<string, unknown>
+    if (e["xaxis.autorange"]) {
+      if (!bars.length) return
+      setVisibleRange({ start: new Date(bars[0].t).getTime(), end: new Date(bars[bars.length - 1].t).getTime() })
+      return
+    }
+    const r0 = e["xaxis.range[0]"]
+    const r1 = e["xaxis.range[1]"]
+    if (typeof r0 === "string" && typeof r1 === "string") {
+      setVisibleRange({ start: new Date(r0).getTime(), end: new Date(r1).getTime() })
+    }
+  }
 
   const t = bars.map((b) => b.t)
   // 9-minute display candles (down from 12-min, a bit thinner) -- 2-hour
@@ -467,17 +492,26 @@ export function CandlestickChart({
   const DEFAULT_WINDOW_MS = 2 * 60 * 60 * 1000
 
   // Price panel's Y-range must be computed from the bars actually inside
-  // that default 2-hour window, NOT the whole day -- using the full day's
-  // high/low here was the real reason candles looked short/flat by default:
-  // the axis was scaled to fit a much bigger price range than what's
-  // actually visible, so the visible candles only filled a fraction of the
-  // panel's height. Tight 1.5% padding on top of the CORRECT (windowed)
-  // range is what actually makes them read as tall.
+  // the CURRENTLY VISIBLE x-window (the user's zoom/pan via visibleRange,
+  // falling back to the default 2-hour window before any interaction), NOT
+  // the whole day -- using the full day's high/low here was the real reason
+  // candles looked short/flat by default: the axis was scaled to fit a much
+  // bigger price range than what's actually visible, so the visible candles
+  // only filled a fraction of the panel's height. Tight 1.5% padding on top
+  // of the CORRECT (windowed) range is what actually makes them read as
+  // tall. Recomputing this per visibleRange (rather than hardcoding the
+  // 2-hour window every render) is what keeps candles from being plotted
+  // outside the y-axis bounds -- and therefore invisible -- once the user
+  // zooms/pans to a window with a different price band.
   const priceYRange: [number, number] | undefined = bars.length
     ? (() => {
         const lastMs = new Date(bars[bars.length - 1].t).getTime()
-        const windowStartMs = lastMs - DEFAULT_WINDOW_MS
-        const visible = bars.filter((b) => new Date(b.t).getTime() >= windowStartMs)
+        const windowStartMs = visibleRange ? visibleRange.start : lastMs - DEFAULT_WINDOW_MS
+        const windowEndMs = visibleRange ? visibleRange.end : lastMs
+        const visible = bars.filter((b) => {
+          const ms = new Date(b.t).getTime()
+          return ms >= windowStartMs && ms <= windowEndMs
+        })
         const scope = visible.length ? visible : bars
         const lo = Math.min(...scope.map((b) => b.l))
         const hi = Math.max(...scope.map((b) => b.h))
@@ -505,8 +539,15 @@ export function CandlestickChart({
     const last = new Date(t[t.length - 1]).getTime()
     const barMs = (last - first) / (t.length - 1)
     const pad = barMs * 3
-    const windowStart = Math.max(first, last - DEFAULT_WINDOW_MS)
-    return [toNaiveString(windowStart), toNaiveString(last + pad)]
+    // Mirrors priceYRange's fallback: default 2-hour window until the user
+    // zooms/pans, then follow that same visibleRange so x and y never
+    // disagree about which window is showing (a later re-render -- new
+    // trade data, a resize -- would otherwise snap x back to the 2-hour
+    // default while y stayed at the user's wider window, stretching a still
+    // 2-hour-wide slice of candles across a much taller price axis).
+    const windowStart = visibleRange ? Math.max(first, visibleRange.start) : Math.max(first, last - DEFAULT_WINDOW_MS)
+    const windowEnd = visibleRange ? Math.min(last, visibleRange.end) : last
+    return [toNaiveString(windowStart), toNaiveString(windowEnd + pad)]
   })()
 
   const spikeAxis = {
@@ -631,6 +672,7 @@ export function CandlestickChart({
         }}
         style={{ width: "100%", height: "100%" }}
         useResizeHandler
+        onRelayout={handleRelayout}
       />
     </div>
   )
