@@ -11,7 +11,7 @@ from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
-from ui.report import generate_html_report
+from api.report.report import generate_html_report
 
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy, strategy_label
@@ -184,14 +184,47 @@ def get_chart_patterns(backtest_id: str):
 
 
 @router.get("/{backtest_id}/report")
-def get_report(backtest_id: str, zz_dev: float = Query(0.015)):
-    """Self-contained offline HTML report — reuses ui/report.py as-is (no
-    Streamlit dependency in that module), same file the old dashboard's
-    'Export Report' button produced."""
+def get_report(backtest_id: str, zz_dev: float = Query(0.015), zz_dev_3: float = Query(0.003),
+               format: str = Query("html")):
+    """Backtest report, downloadable as HTML (full charts, via
+    api/report/report.py) or as CSV/Excel/PDF/Word (metrics summary + trade
+    log table only -- those formats can't carry interactive Plotly charts)."""
     stored = _get_or_404(backtest_id)
-    html = generate_html_report(stored.results, zz_deviation=zz_dev)
-    filename = f"backtest_{stored.results.symbol}_{stored.results.strategy_name}.html"
+    r = stored.results
+    base_name = f"backtest_{r.symbol}_{r.strategy_name}"
+
+    if format == "html":
+        html = generate_html_report(r, zz_deviation=zz_dev, zz_deviation_3=zz_dev_3)
+        return Response(
+            content=html, media_type="text/html",
+            headers={"Content-Disposition": f'attachment; filename="{base_name}.html"'},
+        )
+
+    if format not in ("csv", "xlsx", "pdf", "docx"):
+        raise HTTPException(400, "format must be one of: html, csv, xlsx, pdf, docx")
+
+    from api.export import formats as fmt
+    from api.export.report_export import build_metrics_df, build_trades_df
+
+    metrics_df = build_metrics_df(r)
+    trades_df = build_trades_df(r)
+    title = f"{r.symbol} — {r.strategy_name}"
+    subtitle = f"{r.start_date.date()} to {r.end_date.date()} · {r.timeframe}"
+    filename = f"{base_name}.{format}"
+
+    if format == "csv":
+        # CSV is single-table -- metrics as a leading block, trade log below.
+        content = (
+            metrics_df.to_csv().encode("utf-8") + b"\n" + trades_df.to_csv().encode("utf-8")
+        )
+    elif format == "xlsx":
+        content = fmt.excel_bytes({"Summary": metrics_df, "Trades": trades_df})
+    elif format == "pdf":
+        content = fmt.pdf_bytes(title, [("Summary", metrics_df), ("Trade Log", trades_df)], subtitle=subtitle)
+    else:
+        content = fmt.docx_bytes(title, [("Summary", metrics_df), ("Trade Log", trades_df)], subtitle=subtitle)
+
     return Response(
-        content=html, media_type="text/html",
+        content=content, media_type=fmt.media_type_for(format),
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

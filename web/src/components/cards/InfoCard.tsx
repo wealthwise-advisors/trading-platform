@@ -17,7 +17,7 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
 
 export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#4f8ef7" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "#2f80ff" }}>
       <div className="info-title">📊 Performance Summary</div>
       <Row icon="🏆" label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
       <Row icon="🔢" label="Total Trades" value={String(s.total_trades)} />
@@ -32,7 +32,7 @@ export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
 
 export function BacktestDetailsCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#9d7bf0" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "#8b5cf6" }}>
       <div className="info-title">🗂️ Backtest Details</div>
       <Row icon="📅" label="Date Range" value={`${s.start_date} → ${s.end_date}`} />
       <Row icon="⏱️" label="Timeframe" value={s.timeframe} />
@@ -56,11 +56,23 @@ export function QuickInsightsCard({ s }: { s: BacktestSummary }) {
 
 export function AiInsightCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#cba6f7" }}>
-      <div className="info-title">
+    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#8b5cf6" }}>
+      <span className="ai-insight-badge">BETA</span>
+      <span className="ai-insight-brain" aria-hidden>🧠</span>
+      <div className="info-title relative z-10">
         🧠 AI Insight <span className="text-[0.65rem] opacity-70">(rule-based, free — no API call)</span>
       </div>
-      <div className="insight-item">{generateAiInsight(s)}</div>
+      <div className="insight-item relative z-10">{generateAiInsight(s)}</div>
+      <svg className="ai-insight-wave" viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden>
+        <path d="M0,25 Q25,5 50,25 T100,25 T150,25 T200,25 T250,25 T300,25 V40 H0 Z"
+              fill="url(#ai-wave-gradient)" />
+        <defs>
+          <linearGradient id="ai-wave-gradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#2f80ff" />
+            <stop offset="100%" stopColor="#8b5cf6" />
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   )
 }

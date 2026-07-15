@@ -10,19 +10,17 @@ import { CandlestickPatternsTable } from "@/components/tables/CandlestickPattern
 import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
 import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
-import {
-  PerformanceSummaryCard, BacktestDetailsCard, QuickInsightsCard, AiInsightCard,
-} from "@/components/cards/InfoCard"
+import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
+import { ElliottWavePanel } from "@/components/tables/ElliottWavePanel"
+import { SwingsPanel } from "@/components/tables/SwingsPanel"
+import { ImpulseWavesPanel } from "@/components/tables/ImpulseWavesPanel"
+import { CorrectiveWavesPanel } from "@/components/tables/CorrectiveWavesPanel"
+import { FibonacciPanel } from "@/components/tables/FibonacciPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { StatusBanner } from "@/components/StatusBanner"
-import { ResultsFooterBar } from "@/components/ResultsFooterBar"
 
 export function ResultsPage() {
   const backtestId = useConfigStore((s) => s.backtestId)
-  const setPage = useConfigStore((s) => s.setPage)
-  const lastRunAt = useConfigStore((s) => s.lastRunAt)
 
   const summaryQ = useQuery({
     queryKey: ["backtest", backtestId, "summary"],
@@ -69,6 +67,11 @@ export function ResultsPage() {
     queryFn: () => api.getChartPatterns(backtestId!),
     enabled: !!backtestId,
   })
+  const elliottWaveQ = useQuery({
+    queryKey: ["backtest", backtestId, "elliott-wave"],
+    queryFn: () => api.getElliottWave(backtestId!),
+    enabled: !!backtestId,
+  })
 
   if (!backtestId) {
     return (
@@ -93,42 +96,42 @@ export function ResultsPage() {
   const retColor = s.total_return_pct >= 0 ? GOOD : CRITICAL
   const winColor = s.win_rate >= 50 ? GOOD : NEUTRAL
 
-  const cumWinPct: number[] = []
-  let wins = 0
-  ;(tradesQ.data ?? []).forEach((t, i) => {
-    wins += t.pnl >= 0 ? 1 : 0
-    cumWinPct.push((100 * wins) / (i + 1))
-  })
-
   return (
-    // Grid layout: Header/Banner/KPIs/Tabs+actions span full width, then a
-    // Large Chart | Right Panel row -- chart fills all remaining space
-    // (1fr), the info-card sidebar stays a fixed 300px regardless of
-    // viewport width. Footer spans full width again below.
-    <div className="space-y-3 p-3 w-full max-w-none">
-      <StatusBanner s={s} lastRunAt={lastRunAt} />
-
-      {/* ── KPI row — every card equal height/width ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-stretch">
+    // Root fills the bounded height App.tsx hands down (its scroll div is
+    // flex-1 min-h-0). KPI row/toolbar/footer stay natural height
+    // (shrink-0); the hero row below is the ONE flex-1 element, so it --
+    // and the chart's already-flex-1 chain inside it -- finally resolves
+    // against a real viewport-derived number instead of a guessed minHeight.
+    <div className="h-full flex flex-col gap-2 p-3 w-full max-w-none">
+      {/* ── KPI row — sparklines/donut removed per explicit request (numbers
+           only, no graphs) so this row is as short as possible, handing
+           the freed vertical space straight to the chart below via the
+           existing flex-1 hero row -- same mechanism every prior round
+           used, just less content generating the height this time.
+           items-start (not items-stretch) -- .stat-card isn't a flex
+           container, so stretching it to match a taller row just left the
+           label+value sitting at the top with dead space below; each card
+           now takes only its own natural (tiny) height instead. ── */}
+      <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-start">
         <StatCard label="Total Return" icon="📈" accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
-                  valueColor={retColor} sub={`$${s.total_pnl.toLocaleString(undefined, { maximumFractionDigits: 0, signDisplay: "always" })}`}
-                  sparklineValues={equity.map((e) => e.equity)} sparklineColor={retColor} />
+                  valueColor={retColor} />
         <StatCard label="Sharpe Ratio" icon="🎯" accent={ACCENTS[1]} value={s.sharpe_ratio.toFixed(2)} />
         <StatCard label="Max Drawdown" icon="📉" accent={ACCENTS[2]}
-                  value={`${s.max_drawdown_pct.toFixed(1)}%`} valueColor={CRITICAL}
-                  sparklineValues={equity.map((e) => e.drawdown_pct)} sparklineColor={CRITICAL} />
+                  value={`${s.max_drawdown_pct.toFixed(1)}%`} valueColor={CRITICAL} />
         <StatCard label="Win Rate" icon="🏆" accent={ACCENTS[3]}
-                  value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor}
-                  sub={`${s.total_trades} trades`} sparklineValues={cumWinPct} sparklineColor={GOOD} />
+                  value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor} />
         <WinLossDonut wins={winLossQ.data?.wins ?? 0} losses={winLossQ.data?.losses ?? 0}
                       winRate={winLossQ.data?.win_rate ?? 0} />
       </div>
 
-      <Tabs defaultValue="price">
-        {/* ── Tabs + action buttons, one toolbar ── */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsList className="flex-wrap h-auto">
+      <Tabs defaultValue="price" className="flex-1 min-h-0 flex flex-col gap-0">
+        {/* ── Tab bar. Export Report + Live Replay now live in the header (App.tsx),
+             next to each other with the requested ~56px gap -- removed the
+             duplicates that used to sit here to avoid two visible "Live Replay"
+             entry points; same setPage("replay")/reportUrl() calls either way. ── */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2">
+          <TabsList>
             <TabsTrigger value="price">📊 Price & Trades</TabsTrigger>
             <TabsTrigger value="equity">📈 Equity Curve</TabsTrigger>
             <TabsTrigger value="trades">📋 Trade Log</TabsTrigger>
@@ -136,35 +139,48 @@ export function ResultsPage() {
             <TabsTrigger value="monthly">📅 Monthly Returns</TabsTrigger>
             <TabsTrigger value="candles">🕯️ Candlestick Patterns</TabsTrigger>
             <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
+            <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
+            {/* Labels renamed to match the exact Python filename each tab is
+                powered by, per explicit request -- not a generic feature
+                name. "elliottwave" tab shows wave_analysis.py's own combined
+                output, so it's labeled "Wave Analysis"; "impulse" tab shows
+                elliott_wave.py's impulse-validation logic, so THAT one is
+                labeled "Elliott Wave" instead. */}
+            <TabsTrigger value="elliottwave">🌊 Wave Analysis</TabsTrigger>
+            <TabsTrigger value="swings">🔀 Swing Identification</TabsTrigger>
+            <TabsTrigger value="impulse">📶 Elliott Wave</TabsTrigger>
+            <TabsTrigger value="corrective">🔁 Corrective Waves</TabsTrigger>
+            <TabsTrigger value="fiblevels">📐 Fibonacci</TabsTrigger>
           </TabsList>
-          <div className="flex gap-2 shrink-0">
-            <Button asChild variant="default" size="sm">
-              <a href={api.reportUrl(backtestId)} download>⬇ Export Report (HTML)</a>
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setPage("replay")}>⚡ Open Live Replay</Button>
-          </div>
         </div>
 
-        {/* ── Hero row: chart (fills remaining space) + fixed-width right panel ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-3 items-start mt-3">
-          <div className="min-w-0 space-y-2">
-            <TabsContent value="price" className="mt-0">
-              <Card className="p-2 border border-white/6 w-full">
+        {/* ── Hero row: chart (fills remaining space) + narrow fixed sidebar ──
+             This is a FLEX row now, not a CSS Grid. Grid rows default to
+             auto-sizing (fit-content) unless grid-template-rows is set
+             explicitly -- items-stretch only stretches items *within* a
+             row's height, so with the old grid the row itself never grew
+             past its content's height, leaving the leftover flex-1 space
+             as blank area below the chart. Flexbox doesn't have that
+             pitfall: a flex-row's children stretch to the container's full
+             cross-size by default, so flex-1 on the chart column now
+             actually reaches the bottom of the available viewport space. ── */}
+        <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-2">
+          <div className="min-w-0 flex-1 flex flex-col space-y-2 overflow-y-auto">
+            <TabsContent value="price" className="mt-0 flex-1 flex flex-col min-h-0">
+              <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && zigzagQ.data && (
-                  <CandlestickChart
-                    symbol={s.symbol}
-                    strategyName={s.strategy_name}
-                    bars={priceDataQ.data.bars}
-                    indicators={priceDataQ.data.indicators}
-                    zigzag={zigzagQ.data}
-                    trades={tradesQ.data ?? []}
-                  />
+                  <div className="flex-1 min-h-0">
+                    <CandlestickChart
+                      symbol={s.symbol}
+                      strategyName={s.strategy_name}
+                      bars={priceDataQ.data.bars}
+                      indicators={priceDataQ.data.indicators}
+                      zigzag={zigzagQ.data}
+                      trades={tradesQ.data ?? []}
+                    />
+                  </div>
                 )}
               </Card>
-              <p className="text-xs text-muted-foreground mt-4">
-                ▲ Green triangle = Long entry &nbsp;|&nbsp; ▼ Red triangle = Short entry &nbsp;|&nbsp;
-                ✕ Green/Red X = Profitable / Loss exit &nbsp;|&nbsp; Dotted line = trade duration
-              </p>
             </TabsContent>
             <TabsContent value="equity" className="mt-0">
               <Card className="p-2 border border-white/6 w-full">
@@ -196,19 +212,49 @@ export function ResultsPage() {
                 <ChartPatternsTable patterns={chartPatternsQ.data ?? []} />
               </Card>
             </TabsContent>
-          </div>
-
-          {/* ── Right panel — fixed width, stays put while the chart flexes ── */}
-          <div className="flex flex-col gap-3 xl:w-[300px] shrink-0">
-            <PerformanceSummaryCard s={s} />
-            <BacktestDetailsCard s={s} />
-            <QuickInsightsCard s={s} />
-            <AiInsightCard s={s} />
+            <TabsContent value="optimizer" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                <OptimizerPanel />
+              </Card>
+            </TabsContent>
+            <TabsContent value="elliottwave" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                {elliottWaveQ.data && priceDataQ.data && (
+                  <ElliottWavePanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+                )}
+              </Card>
+            </TabsContent>
+            <TabsContent value="swings" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                {elliottWaveQ.data && priceDataQ.data && (
+                  <SwingsPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+                )}
+              </Card>
+            </TabsContent>
+            <TabsContent value="impulse" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                {elliottWaveQ.data && priceDataQ.data && (
+                  <ImpulseWavesPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+                )}
+              </Card>
+            </TabsContent>
+            <TabsContent value="corrective" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                {elliottWaveQ.data && priceDataQ.data && (
+                  <CorrectiveWavesPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+                )}
+              </Card>
+            </TabsContent>
+            <TabsContent value="fiblevels" className="mt-0">
+              <Card className="p-4 border border-white/6 w-full">
+                {elliottWaveQ.data && priceDataQ.data && (
+                  <FibonacciPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+                )}
+              </Card>
+            </TabsContent>
           </div>
         </div>
       </Tabs>
-
-      <ResultsFooterBar s={s} lastRunAt={lastRunAt} />
     </div>
   )
 }

@@ -119,29 +119,33 @@ def equity_curve_to_records(results: BacktestResults) -> list[dict]:
 
 
 def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
-    """Both 3-leg and 10-leg zigzags, matching the Streamlit dual-overlay design."""
+    """Both 3-leg and 10-leg zigzags, matching the Streamlit dual-overlay design.
+    Both use the SAME fixed-channel swing-grouping procedure from
+    assign_swing_labels(). Label TEXT differs: 10-leg keeps the original
+    decimal format (1.0, 1.1, 2.0...); 3-leg uses just the 1-indexed
+    position within its swing group (1, 2, 3, then resets to 1 for the next
+    swing, then 1, 2, 3 again...) with no letter/group prefix -- a letter
+    prefix (A1, B1...) was tried first and rejected since it wraps to AA/AB
+    past Z, which read as confusing."""
     zz10 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_10, legs=10)
     zz10 = assign_swing_labels(zz10) if not zz10.empty else zz10
     zz3 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_3, legs=3)
+    zz3 = assign_swing_labels(zz3) if not zz3.empty else zz3
 
-    def to_records(zz: pd.DataFrame, labeled: bool) -> list[dict]:
+    def to_records(zz: pd.DataFrame, per_swing_index: bool) -> list[dict]:
         if zz.empty:
             return []
         out = []
         for ts, row in zz.iterrows():
-            rec = {"t": ts.isoformat(), "price": float(row["price"]), "type": row["type"]}
-            if labeled:
-                rec["swing"] = int(row["swing"])
-                rec["sub"] = int(row["sub"])
-                rec["label"] = row["label"]
-            else:
-                rec["swing"] = 0
-                rec["sub"] = 0
-                rec["label"] = ""
-            out.append(rec)
+            swing, sub = int(row["swing"]), int(row["sub"])
+            label = str(sub + 1) if per_swing_index else row["label"]
+            out.append({
+                "t": ts.isoformat(), "price": float(row["price"]), "type": row["type"],
+                "swing": swing, "sub": sub, "label": label,
+            })
         return out
 
-    return {"zigzag_10": to_records(zz10, labeled=True), "zigzag_3": to_records(zz3, labeled=False)}
+    return {"zigzag_10": to_records(zz10, per_swing_index=False), "zigzag_3": to_records(zz3, per_swing_index=True)}
 
 
 def win_loss(results: BacktestResults) -> dict:

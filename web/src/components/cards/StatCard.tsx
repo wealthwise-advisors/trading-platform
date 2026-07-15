@@ -1,14 +1,13 @@
-import { Sparkline } from "@/components/charts/Sparkline"
-
 // Fixed categorical order — card N always gets slot N, regardless of value.
-// Hue identity kept from the dataviz-skill validated set; lightness/chroma
-// bumped for the "premium trading platform" redesign pass (blue/purple/
-// orange/green, same order, more neon).
-export const ACCENTS = ["#4f8ef7", "#9d7bf0", "#ff7a45", "#22d97e", "#e0a72e", "#f0699a"]
-export const GOOD = "#22d97e"
-export const CRITICAL = "#e0455a"
+// Exact hex values pinned to the reference palette (blue/purple/orange/green).
+// ACCENTS[2] (Max Drawdown's card border) is the palette's orange; CRITICAL
+// stays a true red since it's the general "loss/negative" status color used
+// everywhere else (trade tables, P&L bars, exit markers).
+export const ACCENTS = ["#2F80FF", "#8B5CF6", "#F97316", "#22C55E", "#e0a72e", "#f0699a"]
+export const GOOD = "#22C55E"
+export const CRITICAL = "#EF4444"
 export const NEUTRAL = "#e2e8ff"
-export const CYAN = "#37e0e0"
+export const CYAN = "#14E0D4"
 
 interface StatCardProps {
   label: string
@@ -17,17 +16,19 @@ interface StatCardProps {
   icon?: string
   valueColor?: string
   sub?: string
-  sparklineValues?: number[]
-  sparklineColor?: string
 }
 
+// Sparkline mini-charts removed -- numbers only, per explicit request to
+// free up vertical space for the price chart. This card is now just
+// label + value (+ optional sub line), sized to its own compact content
+// instead of stretching to fill a tall row.
 export function StatCard({
-  label, value, accent, icon, valueColor = NEUTRAL, sub, sparklineValues, sparklineColor,
+  label, value, accent, icon, valueColor = NEUTRAL, sub,
 }: StatCardProps) {
   return (
     <div className="stat-card" style={{ ["--stat-accent" as string]: accent }}>
       {icon && (
-        <span className="float-right -mt-0.5 -mr-0.5 w-8 h-8 rounded-full flex items-center justify-center text-base"
+        <span className="float-right -mt-0.5 -mr-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[0.65rem]"
               style={{
                 background: `color-mix(in srgb, ${accent} 22%, transparent)`,
                 boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 45%, transparent)`,
@@ -38,11 +39,6 @@ export function StatCard({
       <div className="stat-label">{label}</div>
       <div className="stat-value" style={{ color: valueColor }}>{value}</div>
       {sub && <div className="stat-sub">{sub}</div>}
-      {sparklineValues && sparklineValues.length > 1 && (
-        <div className="mt-1.5">
-          <Sparkline values={sparklineValues} color={sparklineColor ?? accent} />
-        </div>
-      )}
     </div>
   )
 }

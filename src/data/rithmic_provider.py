@@ -33,7 +33,7 @@ EXCHANGE_MAP: dict[str, str] = {
     "ES": "CME",  "MES": "CME",  "NQ": "CME",  "MNQ": "CME",
     "RTY": "CME", "MRY": "CME",  "YM": "CBOT", "MYM": "CBOT",
     "CL": "NYMEX","MCL": "NYMEX","NG": "NYMEX",
-    "GC": "COMEX","MGC": "COMEX","SI": "COMEX",
+    "GC": "COMEX","MGC": "COMEX","SI": "COMEX","HG": "COMEX",
     "ZN": "CBOT", "ZB": "CBOT",  "ZF": "CBOT",
 }
 

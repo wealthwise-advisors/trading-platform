@@ -1,6 +1,4 @@
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CYAN, CRITICAL } from "@/components/cards/StatCard"
+import { ACCENTS } from "@/components/cards/StatCard"
 
 interface WinLossDonutProps {
   wins: number
@@ -8,45 +6,24 @@ interface WinLossDonutProps {
   winRate: number
 }
 
+// Same .stat-card markup as the other 4 KPI cards (was a separate shadcn
+// Card with its own styling before -- looked visually different from the
+// rest of the row). ACCENTS[4] is unused by the other cards (0-3), so this
+// stays visually distinct without clashing with any of them.
 export function WinLossDonut({ wins, losses, winRate }: WinLossDonutProps) {
-  const data = wins + losses > 0
-    ? [{ name: "Wins", value: wins }, { name: "Losses", value: losses }]
-    : [{ name: "No trades", value: 1 }]
-  const colors = wins + losses > 0 ? [CYAN, CRITICAL] : ["#45475a"]
-
+  const total = wins + losses
+  const lossRate = total > 0 ? 100 - winRate : 0
   return (
-    <Card className="h-full border border-white/6">
-      <CardHeader className="pb-0">
-        <CardTitle className="text-sm">Win / Loss</CardTitle>
-      </CardHeader>
-      <CardContent className="relative">
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius="65%"
-              outerRadius="90%"
-              stroke="#0b1120"
-              strokeWidth={3}
-              isAnimationActive
-            >
-              {data.map((_, i) => <Cell key={i} fill={colors[i]} />)}
-            </Pie>
-            <Tooltip
-              contentStyle={{ background: "#0b1120", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
-              formatter={(value, name) => [`${value} trades`, name] as [string, string]}
-            />
-            <Legend verticalAlign="bottom" height={24} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-             style={{ transform: "translateY(-14px)" }}>
-          <span className="text-2xl font-extrabold">{winRate.toFixed(0)}%</span>
-          <span className="text-xs text-muted-foreground">Win Rate</span>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="stat-card" style={{ ["--stat-accent" as string]: ACCENTS[4] }}>
+      <span className="float-right -mt-0.5 -mr-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[0.65rem]"
+            style={{
+              background: `color-mix(in srgb, ${ACCENTS[4]} 22%, transparent)`,
+              boxShadow: `0 0 0 1px color-mix(in srgb, ${ACCENTS[4]} 45%, transparent)`,
+            }}>
+        🔄
+      </span>
+      <div className="stat-label">Win % / Loss %</div>
+      <div className="stat-value">{winRate.toFixed(0)}% / {lossRate.toFixed(0)}%</div>
+    </div>
   )
 }

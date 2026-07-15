@@ -84,27 +84,25 @@
 }
 
 .dark {
-    /* AutoTrader dark theme — deep navy/blue-black base with a validated
-       blue/purple/cyan accent set (dataviz-skill categorical order kept,
-       intensity boosted per the "premium trading platform" redesign pass). */
+    /* AutoTrader dark theme — pinned to the exact reference palette. */
     --background: #060b18;
     --foreground: #e2e8ff;
-    --card: #0e1424;
+    --card: #0b1325;
     --card-foreground: #e2e8ff;
-    --popover: #0e1424;
+    --popover: #0b1325;
     --popover-foreground: #e2e8ff;
-    --primary: #4f8ef7;
+    --primary: #2f80ff;
     --primary-foreground: #ffffff;
     --secondary: #131b30;
     --secondary-foreground: #cdd6f4;
     --muted: #131b30;
     --muted-foreground: #8b93b8;
-    --accent: #9d7bf0;
+    --accent: #8b5cf6;
     --accent-foreground: #ffffff;
-    --destructive: #e0455a;
+    --destructive: #ef4444;
     --border: oklch(1 0 0 / 12%);
     --input: oklch(1 0 0 / 16%);
-    --ring: #4f8ef7;
+    --ring: #2f80ff;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -127,13 +125,20 @@
   body {
     @apply bg-background text-foreground;
     background:
-      radial-gradient(circle at 15% 0%, rgba(79, 142, 247, 0.10) 0%, transparent 40%),
-      radial-gradient(circle at 85% 15%, rgba(157, 123, 240, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 15% 0%, rgba(47, 128, 255, 0.10) 0%, transparent 40%),
+      radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
       linear-gradient(180deg, #060b18 0%, #0a1020 100%);
     min-height: 100vh;
+    /* Safety net: a component with non-shrinking content (e.g. shrink-0 +
+       whitespace-nowrap) should never be able to force the WHOLE page wider
+       than the viewport -- that's what was cutting off the sidebar and the
+       right panel simultaneously. Worst case that one component clips at
+       its own edge; the rest of the page stays intact and scrollable normally. */
+    overflow-x: hidden;
     }
   html {
     @apply font-sans;
+    overflow-x: hidden;
     }
 }
 
@@ -143,9 +148,9 @@
 [data-slot="card"] {
   border-radius: 16px !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 6px 22px -10px rgba(79, 142, 247, 0.25),
-    0 2px 10px -4px rgba(0, 0, 0, 0.5);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 28px -10px rgba(47, 128, 255, 0.35),
+    0 2px 10px -4px rgba(0, 0, 0, 0.55);
 }
 
 /* ── Stat cards — accent left-border + colored glow, matching the
@@ -156,8 +161,8 @@
   background:
     linear-gradient(160deg, color-mix(in srgb, var(--stat-accent) 10%, #0e1424) 0%, #0b1120 100%);
   backdrop-filter: blur(6px);
-  border-radius: 16px;
-  padding: 16px 18px 12px;
+  border-radius: 12px;
+  padding: 5px 8px 4px;
   border: 1.5px solid color-mix(in srgb, var(--stat-accent) 65%, transparent);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
@@ -175,54 +180,62 @@
     0 2px 8px rgba(0, 0, 0, 0.6);
 }
 .stat-card .stat-label {
-  font-size: 0.72rem;
+  font-size: 0.56rem;
   color: #a6adc8;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 6px;
+  letter-spacing: 0.06em;
+  margin-bottom: 1px;
+  text-align: center;
 }
 .stat-card .stat-value {
-  font-size: 1.65rem;
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 .stat-card .stat-sub {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   color: #7f849c;
-  margin-top: 4px;
+  margin-top: 1px;
+  text-align: center;
 }
 
 /* ── Info cards (Performance Summary / Backtest Details / Quick Insights /
    AI Insight) — port of ui/components/insights.py's _CARD_CSS ── */
 .info-card {
   position: relative;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--info-accent, #4f8ef7) 8%, #0e1424) 0%, #0b1120 100%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--info-accent, #2f80ff) 8%, #0e1424) 0%, #0b1120 100%);
   backdrop-filter: blur(6px);
-  border: 1px solid color-mix(in srgb, var(--info-accent, #4f8ef7) 35%, transparent);
-  border-radius: 16px;
-  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--info-accent, #2f80ff) 35%, transparent);
+  border-radius: 12px;
+  padding: 6px 7px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px color-mix(in srgb, var(--info-accent, #4f8ef7) 12%, transparent),
-    0 6px 22px -8px color-mix(in srgb, var(--info-accent, #4f8ef7) 45%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--info-accent, #2f80ff) 12%, transparent),
+    0 6px 22px -8px color-mix(in srgb, var(--info-accent, #2f80ff) 45%, transparent),
     0 4px 16px -6px rgba(0, 0, 0, 0.5);
   height: 100%;
   transition: box-shadow 0.15s ease;
 }
 .info-card .info-title {
-  font-size: 0.85rem;
+  font-size: 0.66rem;
   font-weight: 700;
   color: #e2e8ff;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 .info-card .info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
-  font-size: 0.82rem;
+  gap: 6px;
+  padding: 1.5px 0;
+  font-size: 0.6rem;
   color: #a6adc8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.info-card .info-row:last-child {
+  border-bottom: none;
 }
 .info-card .info-row .v {
   font-weight: 700;
@@ -234,6 +247,61 @@
   padding: 3px 0;
   line-height: 1.4;
 }
+/* ── AI Insight card — vivid blue/purple gradient (not just a tinted
+   border like the other info cards), brain illustration, waveform
+   decoration, BETA badge, extra glow. ── */
+.info-card.ai-insight {
+  overflow: hidden;
+  background: linear-gradient(150deg, rgba(47, 128, 255, 0.28) 0%, rgba(139, 92, 246, 0.30) 55%, #0b1325 100%);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(139, 92, 246, 0.18),
+    0 10px 32px -8px rgba(139, 92, 246, 0.55),
+    0 4px 16px -6px rgba(0, 0, 0, 0.5);
+}
 .info-card.ai-insight .info-title {
-  color: #cba6f7;
+  color: #e9defc;
+}
+.ai-insight-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(135deg, #8b5cf6, #2f80ff);
+  padding: 2px 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
+}
+.ai-insight-brain {
+  position: absolute;
+  top: 6px;
+  right: 34px;
+  font-size: 3.2rem;
+  opacity: 0.14;
+  filter: blur(0.3px);
+  pointer-events: none;
+  line-height: 1;
+}
+.ai-insight-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32px;
+  width: 100%;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/* Plotly's default modebar (camera/zoom/pan/home/etc, top-right of the
+   candlestick chart) packs its buttons edge-to-edge -- wider gap between
+   them makes them easier to click without touching the chart's own
+   component styling (Plotly renders the modebar outside React's control). */
+.js-plotly-plot .modebar-btn {
+  margin: 0 3px;
 }

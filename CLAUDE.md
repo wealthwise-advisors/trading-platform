@@ -11,13 +11,16 @@ A **Python futures/options auto-trading platform** with three modes of operation
 
 | Mode | Entry point | Purpose |
 |------|-------------|---------|
-| Backtest (batch) | `ui/app.py` | Run full backtest, explore results, export HTML report |
-| Live Replay | `ui/live_app.py` | Watch strategy trade bar-by-bar in real-time animation |
+| Backtest (batch) | `web/` (React) + `api/` (FastAPI) | Run full backtest, explore results, export HTML report |
+| Live Replay | `web/` "Live Replay" page, driven by `api/routers/replay.py` (WebSocket) | Watch strategy trade bar-by-bar in real-time animation |
 | Live Trading | `src/live/trader.py` | Connect to Rithmic and trade live (stub â€” not yet wired) |
 
-**Asset class:** Futures (ES, NQ, MES, CL). Options support is planned but not implemented.  
-**Broker:** Rithmic (R|API+). The live adapter is stubbed â€” backtesting uses `PaperBroker`.  
-**UI:** Streamlit + Plotly.
+**Asset class:** Futures (ES, NQ, MES, CL). Options support is planned but not implemented.
+**Broker:** Rithmic (R|API+). The live adapter is stubbed â€” backtesting uses `PaperBroker`.
+**UI:** React + Tailwind + shadcn/ui frontend, FastAPI backend, Plotly charts. The original
+Streamlit app (`ui/`) was fully replaced and deleted â€” only `ui/report.py` and
+`ui/components/charts.py` survived (they never depended on Streamlit), now living at
+`api/report/report.py` and `api/report/charts.py`.
 
 ---
 
@@ -40,11 +43,12 @@ py -3.12 -m pip install -r requirements.txt
 ## Run the apps
 
 ```powershell
-# Backtest dashboard (port 8501)
-py -3.12 -m streamlit run ui/app.py
+# FastAPI backend (port 8000) -- run from the repo root
+py -3.12 -m uvicorn api.main:app --reload --port 8000
 
-# Live replay dashboard (port 8502)
-py -3.12 -m streamlit run ui/live_app.py --server.port 8502
+# React frontend (port 5173) -- proxies /api/* to the backend above
+cd web
+npm run dev
 
 # CLI backtest (quick, no UI)
 py -3.12 scripts/run_backtest.py --symbol ES --strategy ma --fast 9 --slow 21
@@ -55,6 +59,8 @@ py -3.12 scripts/generate_data.py
 # Tests
 py -3.12 -m pytest tests/ -v
 ```
+
+Open `http://localhost:5173` in a browser once both are running -- that's the whole app.
 
 ---
 
@@ -101,14 +107,25 @@ Trading/
 │   └── live/
 │       └── trader.py          # LiveTrader — main loop (stub until Rithmic is wired)
 │
-├── ui/
-│   ├── app.py                 # Static backtest dashboard (default: ES, 1m, RSI Divergence)
-│   ├── live_app.py            # Bar-by-bar replay dashboard
-│   ├── report.py              # HTML report generator (shareable, offline)
-│   └── components/
-│       ├── charts.py          # Plotly charts: candlestick + RSI(2)/Stoch/RSI(13) panels
-│       │                      #   + ZigZag overlay via pandas_ta
-│       └── metrics.py         # Streamlit metric card renderers
+├── api/                        # FastAPI backend
+│   ├── main.py                 # App entrypoint, mounts all routers under /api
+│   ├── deps.py                 # Contract specs, config loading
+│   ├── store.py                # In-memory backtest_id -> BacktestResults store
+│   ├── strategy_registry.py    # Strategy id/label/param-schema -> build_strategy()
+│   ├── serializers.py          # BacktestResults/DataFrame -> JSON dicts
+│   ├── routers/                # backtests, replay, schwab, optimize, meta
+│   ├── schemas/                # Pydantic request/response models
+│   └── report/                 # HTML report generator (moved from ui/, no Streamlit dep)
+│       ├── report.py           # generate_html_report()
+│       └── charts.py           # Plotly candlestick + RSI(2)/Stoch/RSI(13) + ZigZag
+│
+├── web/                        # React frontend (Vite + TS + Tailwind + shadcn/ui)
+│   └── src/
+│       ├── App.tsx              # Layout shell, Backtest/Live Replay page switch
+│       ├── features/            # backtest/ (config form, results page), replay/
+│       ├── components/          # charts/, cards/, tables/, ui/ (shadcn primitives)
+│       ├── lib/                 # api.ts (typed fetch client), types.ts, insights.ts
+│       └── store/               # Zustand config store
 │
 ├── scripts/
 │   ├── run_backtest.py            # CLI backtest runner
@@ -137,7 +154,7 @@ Defined in `config/settings.yaml` under `contracts:`. Each symbol has:
 - `margin_initial` / `margin_maintenance` â€” for position sizing (not yet enforced)
 
 When adding a new symbol, add its spec here and in the `CONTRACT_SPECS` dicts inside
-`ui/app.py`, `ui/live_app.py`, and `scripts/run_backtest.py`.
+`api/deps.py` and `scripts/run_backtest.py`.
 
 ### BacktestEngine vs ReplayEngine
 
@@ -150,8 +167,9 @@ ReplayEngine.step()  -> FrameState   # processes one bar, returns snapshot
 ReplayEngine.get_results()           # builds BacktestResults from current state
 ```
 
-`ReplayEngine` is used by `ui/live_app.py`. It is also designed to be driven by a
-live Rithmic bar callback once that is wired up.
+`ReplayEngine` is used by `api/routers/replay.py` (driven bar-by-bar over a WebSocket
+for the React "Live Replay" page). It is also designed to be driven by a live Rithmic
+bar callback once that is wired up.
 
 ### Writing a new strategy
 
@@ -160,7 +178,9 @@ live Rithmic bar callback once that is wired up.
 3. Return `Signal(SignalType.BUY/SELL/CLOSE, ...)`  or `None`
 4. Call `reset()` to clear any state between runs
 5. Register in `src/strategies/__init__.py`
-6. Add to the sidebar dropdown in `ui/app.py` and `ui/live_app.py`
+6. Add to `api/strategy_registry.py`'s `STRATEGIES` list (id/label/param-schema) --
+   the React config form and the Live Replay page both read from that registry,
+   no per-file sidebar wiring needed
 
 ```python
 from src.strategies.base_strategy import BaseStrategy, Signal, SignalType
@@ -199,12 +219,13 @@ Orders are filled on the **next bar's open** (realistic â€” no look-ahead):
 ### HTML report sharing
 
 ```python
-from ui.report import generate_html_report
+from api.report.report import generate_html_report
 html = generate_html_report(results, output_path="reports/my_report.html")
 ```
 
-Or use the "Export Report (HTML)" button in the backtest dashboard. The file is
-~185 KB, fully self-contained (CDN Plotly.js), and opens in any browser. No Python
+Or use the "Export Report (HTML)" button in the React dashboard (calls
+`GET /api/backtests/{id}/report`). The file is ~185 KB, fully self-contained
+(CDN Plotly.js), and opens in any browser. No Python
 or server needed on the recipient's machine.
 
 ---
@@ -272,10 +293,11 @@ df = provider.load("ES", start_dt, end_dt, timeframe="5m")
 **Native bar periods:** 1, 3, 5, 8, 10, 15, 20, 30 minutes.
 For 1h: downloads 30m bars and resamples OHLCV.
 
-### In the Streamlit UI
+### In the React UI
 
 Select **"Real Data (Rithmic)"** in the Data Source dropdown, then run the backtest.
-The provider is imported lazily â€” if `pyrithmic` isn't installed the UI shows a warning.
+The provider is imported lazily â€” if `pyrithmic` isn't installed, `GET /api/data-sources`
+reports it as unavailable and the dropdown option is disabled.
 
 ---
 
@@ -317,7 +339,8 @@ All must pass before committing. Tests use synthetic data (seed=99) â€” no 
 
 ## Data Sources
 
-Four data sources are available in `ui/app.py`:
+Four data sources are available in the React sidebar (`api/routers/meta.py`'s
+`/data-sources` endpoint reports which are actually usable):
 
 | Option | Provider | Notes |
 |--------|----------|-------|
@@ -336,7 +359,8 @@ Loads from `C:/Data` (or path in `settings.yaml`). Expected filenames: `ES_FULL.
 - Tokens stored in `config/schwab_tokens.json` (gitignored)
 - Initial auth: `provider.get_auth_url()` → browser → paste redirect URL → `provider.complete_auth(url)`
 - Access token (30 min) is auto-refreshed by a daemon thread inside the `schwabdev.Client`
-- Refresh token lasts 7 days — sidebar widget in `ui/app.py` shows expiry and handles re-auth
+- Refresh token lasts 7 days — the `SchwabAuthWidget.tsx` sidebar widget (backed by
+  `api/routers/schwab.py`) shows expiry and handles re-auth
 - Symbol mapping: `ES` → `/ES`, `NQ` → `/NQ`, etc. (automatic for known futures roots)
 - Date range is chunked into 30-day windows to stay within Schwab API limits
 
@@ -368,7 +392,10 @@ Key parameters:
 
 ## Chart Panels
 
-`candlestick_with_trades()` in `ui/components/charts.py` renders 4 rows:
+The live candlestick chart is `web/src/components/charts/CandlestickChart.tsx` (React,
+react-plotly.js) -- it's a full-fidelity port of the old `candlestick_with_trades()`.
+The static HTML export version lives at `api/report/charts.py` (same 4-row layout, used
+only by the "Export Report" button). Both render 4 rows:
 
 | Row | Content |
 |-----|---------|
@@ -379,9 +406,11 @@ Key parameters:
 
 ### ZigZag overlay
 
-Uses `pandas_ta.zigzag()` (requires Python 3.12). Controlled by sidebar:
-- **Show ZigZag** checkbox (default on)
-- **Deviation %** slider — minimum % price move to confirm a new swing (default 0.1%)
+The swing-numbering math is shared: `src/analysis/zigzag.py`'s `calc_zigzag()` (wraps
+`pandas_ta.zigzag()`, requires Python 3.12) and `assign_swing_labels()` (the fixed-channel
+per-swing numbering algorithm -- confirmed working, don't change without re-verifying
+against real data). Controlled in the React sidebar:
+- **3-Leg / 10-Leg Deviation %** sliders — minimum % price move to confirm a new swing
 
 ZigZag is **display only** — it does not affect strategy signals. Red dots = swing highs, green dots = swing lows.
 
@@ -391,7 +420,7 @@ ZigZag is **display only** — it does not affect strategy signals. Red dots = s
 
 `BacktestEngine` accepts `session_start` and `session_end` (`datetime.time` objects). When set, bars outside the window are dropped after loading but before strategy runs. The provider always loads midnight-to-midnight; the engine trims to session hours.
 
-In `ui/app.py` the sidebar has a “Session Hours (EST)” section defaulting to 09:30–16:00.
+The React sidebar (`ConfigForm.tsx`) has a "Session Hours (EST)" section defaulting to 09:30–16:00.
 
 ---
 

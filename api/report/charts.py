@@ -18,6 +18,17 @@ from src.analysis.zigzag import calc_zigzag as _calc_zigzag, assign_swing_labels
 _SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
 
 
+def _swing_letter(n: int) -> str:
+    """1 -> A, 2 -> B, ... 26 -> Z, 27 -> AA, ... spreadsheet-column style.
+    Ported from CandlestickChart.tsx's swingLetter() -- keep in sync."""
+    letters = ""
+    x = n
+    while x > 0:
+        x, rem = divmod(x - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
 _GREEN = "#26a69a"
 _RED   = "#ef5350"
 _BLUE  = "#2196f3"
@@ -145,29 +156,65 @@ def candlestick_with_trades(
         zz  = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_dev_10, legs=10)
         zz3 = _calc_zigzag(full_df["high"], full_df["low"], full_df["close"], deviation=zigzag_dev_3,  legs=3)
 
+        if not zz.empty:
+            # Swing 1 always starts at the FIRST candle of the selected date range.
+            zz = _assign_swing_labels(zz)
+
+        # ── 10-leg swing region boundaries, computed up front -- used both
+        # to draw the swing rectangles below AND to letter-label the 3-leg
+        # points region-by-region: each 3-leg point's letter is keyed to
+        # which 10-leg swing region it falls inside (not the 3-leg's own
+        # independent grouping), resetting to A at every 10-leg boundary.
+        # Ported from CandlestickChart.tsx -- keep in sync.
+        swing_groups = list(zz.groupby("swing")) if not zz.empty else []
+        swing_boundaries = []
+        for i, (swing_num, grp) in enumerate(swing_groups):
+            x0 = pd.Timestamp.min.tz_localize(grp.index.tz) if (i == 0 and grp.index.tz is not None) else (pd.Timestamp.min if i == 0 else grp.index.min())
+            if i + 1 < len(swing_groups):
+                x1 = swing_groups[i + 1][1].index.min()
+            else:
+                x1 = df.index.max() if len(df.index) else pd.Timestamp.max
+            swing_boundaries.append((x0, x1))
+
+        zz10_time_set = set(zz.index) if not zz.empty else set()
+
         # ── 3-leg ZigZag: yellow dotted line (short-term) ──
         if not zz3.empty:
             fig.add_trace(go.Scatter(
                 x=zz3.index, y=zz3["price"],
                 name="ZigZag (3L)", mode="lines",
-                line=dict(color="#f0c040", width=1.2, dash="dot"),
+                line=dict(color="#f0c040", width=1.0, dash="dot"),
                 showlegend=True, hoverinfo="skip",
             ), row=1, col=1)
+
+            # Points that coincide with a 10-leg point are already marked by
+            # the 10-leg's own circle -- exclude them here (no letter, no
+            # circle) rather than draw a hidden duplicate underneath it.
+            zz3_labelable = zz3[~zz3.index.isin(zz10_time_set)].sort_index()
+            zz3_label_by_time = {}
+            region_idx, counter = -2, 0
+            for ts in zz3_labelable.index:
+                idx = next((k for k, (x0, x1) in enumerate(swing_boundaries) if x0 <= ts < x1), -1)
+                if idx != region_idx:
+                    region_idx = idx
+                    counter = 0
+                zz3_label_by_time[ts] = _swing_letter(counter + 1)
+                counter += 1
+
             for ptype, color in (("H", "#ff6b6b"), ("L", "#69f0ae")):
-                pts = zz3[zz3["type"] == ptype]
+                pts = zz3_labelable[zz3_labelable["type"] == ptype]
                 if not pts.empty:
                     fig.add_trace(go.Scatter(
                         x=pts.index, y=pts["price"],
-                        mode="markers",
-                        marker=dict(symbol="circle", size=6, color=color,
-                                    line=dict(color="white", width=1)),
+                        mode="markers+text",
+                        marker=dict(symbol="circle", size=23, color=_BG,
+                                    line=dict(color=color, width=1.6)),
+                        text=[zz3_label_by_time.get(ts, "") for ts in pts.index],
+                        textposition="middle center",
+                        textfont=dict(color="white", size=10, family="Arial"),
                         showlegend=False,
-                        hovertemplate=f"<b>{'High' if ptype=='H' else 'Low'} (3L)</b><br>%{{x}}<br>@ %{{y:.2f}}<extra></extra>",
+                        hovertemplate=f"<b>{'High' if ptype=='H' else 'Low'} (3L) %{{text}}</b><br>%{{x}}<br>@ %{{y:.2f}}<extra></extra>",
                     ), row=1, col=1)
-
-        if not zz.empty:
-            # Swing 1 always starts at the FIRST candle of the selected date range.
-            zz = _assign_swing_labels(zz)
 
         if not zz.empty:
             # ── 10-leg ZigZag: yellow dotted line (long-term) ──
@@ -182,7 +229,6 @@ def candlestick_with_trades(
             #    "SWING N (X.1 to X.N)" header well above the price chart so
             #    it clears the title/range-selector, staggered on two height
             #    levels so adjacent narrow swings don't collide horizontally ──
-            swing_groups = list(zz.groupby("swing"))
             for i, (swing_num, grp) in enumerate(swing_groups):
                 x0 = grp.index.min()
                 x1 = swing_groups[i + 1][1].index.min() if i + 1 < len(swing_groups) else df.index.max()

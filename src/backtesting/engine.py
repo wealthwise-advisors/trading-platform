@@ -75,14 +75,22 @@ class BacktestEngine:
 
         df = self.data_provider.load(self.symbol, start, end, self.timeframe)
 
-        # Filter to trading session window (applied per day across the full range)
+        # Filter to trading session window (applied per day across the full range).
+        # An overnight session (session_end < session_start, e.g. 16:00-15:00 for a
+        # near-24h futures session like copper) wraps past midnight -- the valid
+        # window there is time >= start OR time <= end, not AND, since no single
+        # bar's clock time can satisfy both bounds within the same day otherwise.
         if self.session_start or self.session_end:
             bar_times = df.index.time
-            mask = pd.Series(True, index=df.index)
-            if self.session_start:
-                mask &= bar_times >= self.session_start
-            if self.session_end:
-                mask &= bar_times <= self.session_end
+            if self.session_start and self.session_end:
+                if self.session_start <= self.session_end:
+                    mask = (bar_times >= self.session_start) & (bar_times <= self.session_end)
+                else:
+                    mask = (bar_times >= self.session_start) | (bar_times <= self.session_end)
+            elif self.session_start:
+                mask = bar_times >= self.session_start
+            else:
+                mask = bar_times <= self.session_end
             df = df[mask]
             logger.info(
                 f"Session filter {self.session_start} – {self.session_end} EST: "

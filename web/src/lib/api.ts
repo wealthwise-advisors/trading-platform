@@ -8,6 +8,7 @@ import type {
   TradeRecord, PriceDataResponse, EquityPoint, ZigZagResponse, WinLoss,
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
+  OptimizeRequest, OptimizeResponse, ElliottWaveResponse,
 } from "./types"
 
 const BASE = "/api"
@@ -45,7 +46,9 @@ export const api = {
     request<ChartPatternRecord[]>(`/backtests/${id}/chart-patterns`),
   getMonthlyReturns: (id: string) =>
     request<MonthlyReturns>(`/backtests/${id}/monthly-returns`),
-  reportUrl: (id: string) => `${BASE}/backtests/${id}/report`,
+  reportUrl: (id: string, format: string = "html") => `${BASE}/backtests/${id}/report?format=${format}`,
+  dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string }) =>
+    `${BASE}/data/export?symbol=${params.symbol}&timeframe=${params.timeframe}&start=${params.start}&end=${params.end}&data_source=${params.dataSource}&format=${params.format}`,
 
   createReplay: (req: ReplayCreateRequest) =>
     request<ReplayCreateResponse>("/replay", { method: "POST", body: JSON.stringify(req) }),
@@ -58,4 +61,9 @@ export const api = {
   schwabAuthUrl: () => request<{ auth_url: string }>("/schwab/auth-url"),
   schwabCompleteAuth: (redirect_url: string) =>
     request<SchwabStatus>("/schwab/complete-auth", { method: "POST", body: JSON.stringify({ redirect_url }) }),
+
+  runOptimizer: (req: OptimizeRequest) =>
+    request<OptimizeResponse>("/optimize", { method: "POST", body: JSON.stringify(req) }),
+
+  getElliottWave: (id: string) => request<ElliottWaveResponse>(`/backtests/${id}/elliott-wave`),
 }

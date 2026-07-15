@@ -43,6 +43,14 @@ contracts:
     point_value: 5.0
     margin_initial: 1200.0
     margin_maintenance: 1080.0
+  HG:
+    name: "High Grade Copper"
+    exchange: "COMEX"
+    tick_size: 0.0005
+    tick_value: 12.50
+    point_value: 25000.0
+    margin_initial: 4700.0
+    margin_maintenance: 4300.0
 
 data:
   external_dir: "C:/Data"        # Directory with your own CSV files (ES_FULL.csv, GC_FULL.csv, etc.)

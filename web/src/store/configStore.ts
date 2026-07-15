@@ -22,13 +22,13 @@ interface ConfigState {
 
   backtestId: string | null
   lastRunAt: string | null
-  page: "backtest" | "replay"
+  page: "backtest" | "replay" | "export"
 
   setField: <K extends keyof ConfigState>(key: K, value: ConfigState[K]) => void
   setParam: (name: string, value: number) => void
   setParams: (params: Record<string, number>) => void
   setBacktestId: (id: string | null) => void
-  setPage: (page: "backtest" | "replay") => void
+  setPage: (page: "backtest" | "replay" | "export") => void
   setLastRunAt: (iso: string | null) => void
   getSnapshot: () => ConfigSnapshot
   loadSnapshot: (snapshot: ConfigSnapshot) => void

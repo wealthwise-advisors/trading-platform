@@ -225,3 +225,91 @@ export interface SchwabStatus {
   hours_remaining: number
   error: string | null
 }
+
+export interface OptimizeRequest {
+  data_source: string
+  symbol: string
+  timeframe: string
+  strategy_id: string
+  initial_capital: number
+  contracts_per_trade: number
+  commission_per_contract: number
+  start_date: string
+  end_date: string
+  session_start: string
+  session_end: string
+  metric: "sharpe_ratio" | "total_return_pct" | "profit_factor"
+}
+
+export interface OptimizeCombo {
+  params: Record<string, number>
+  total_return_pct: number
+  sharpe_ratio: number
+  win_rate: number
+  total_trades: number
+  profit_factor: number
+  max_drawdown_pct: number
+}
+
+export interface OptimizeResponse {
+  metric: string
+  combos_tested: number
+  results: OptimizeCombo[]
+  best_backtest_id: string | null
+}
+
+export interface WaveSwing {
+  t: string
+  price: number
+  kind: "high" | "low"
+  label: string | null
+}
+
+export interface WaveImpulse {
+  direction: "up" | "down"
+  valid: boolean
+  rules: Record<string, boolean>
+  fib_score: number
+  truncated_fifth: boolean
+  pivots: WaveSwing[]
+}
+
+export interface WaveCorrection {
+  type: string
+  direction: string
+  metrics: Record<string, number | null>
+  pivots: WaveSwing[]
+}
+
+export interface WaveFibDetail {
+  fib_fit: number | null
+  detail: Record<string, { achieved: number; nearest_ideal: number; dist: number }>
+}
+
+export interface WaveTargetZone {
+  center: number
+  low: number
+  high: number
+  strength: number
+  members: { price: number; source: string }[]
+}
+
+export interface WaveAnalysis {
+  degree: string
+  trend: string
+  n_swings: number
+  swings: WaveSwing[]
+  impulse: WaveImpulse | null
+  impulse_fib: WaveFibDetail | null
+  correction: WaveCorrection | null
+  correction_fib: WaveFibDetail | null
+  cycle_position: string
+  bias: string
+  invalidation: number | null
+  target_zones: WaveTargetZone[]
+  alternates: string[]
+  notes: string[]
+}
+
+export type ElliottWaveResponse = Record<string, WaveAnalysis>
+

@@ -24,6 +24,7 @@ CONTRACT_SPECS = {
     "NQ":  dict(tick_size=0.25, tick_value=5.00,  point_value=20.0,   base_price=15000.0),
     "MES": dict(tick_size=0.25, tick_value=1.25,  point_value=5.0,    base_price=4500.0),
     "CL":  dict(tick_size=0.01, tick_value=10.00, point_value=1000.0, base_price=75.0),
+    "HG":  dict(tick_size=0.0005, tick_value=12.50, point_value=25000.0, base_price=6.3),
 }
 
 

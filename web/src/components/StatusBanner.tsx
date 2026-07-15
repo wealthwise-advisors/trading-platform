@@ -1,6 +1,4 @@
 import type { BacktestSummary } from "@/lib/types"
-import { Button } from "@/components/ui/button"
-import { api } from "@/lib/api"
 import { GOOD } from "@/components/cards/StatCard"
 
 function fmtDate(iso: string | null): string {
@@ -13,7 +11,7 @@ export function StatusBanner({ s, lastRunAt }: { s: BacktestSummary; lastRunAt: 
   const message = good ? "Strategy performed well. Great job!" : "Strategy underperformed — see the insights below."
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3"
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-1.5"
          style={{ borderColor: `color-mix(in srgb, ${GOOD} 35%, transparent)`,
                   background: `color-mix(in srgb, ${GOOD} 10%, transparent)` }}>
       <div className="flex items-center gap-2 text-sm">
@@ -23,9 +21,6 @@ export function StatusBanner({ s, lastRunAt }: { s: BacktestSummary; lastRunAt: 
       </div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span>Backtested on: {fmtDate(lastRunAt)} • {s.session_start}–{s.session_end} EST</span>
-        <Button asChild size="sm" variant="secondary">
-          <a href={api.reportUrl(s.backtest_id)} download>📄 View Report</a>
-        </Button>
       </div>
     </div>
   )

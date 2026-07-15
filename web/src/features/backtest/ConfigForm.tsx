@@ -74,7 +74,7 @@ export function ConfigForm() {
         <Select value={cfg.symbol} onValueChange={(v) => cfg.setField("symbol", v)}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {["ES", "NQ", "MES", "CL"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {["ES", "NQ", "MES", "CL", "HG"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -179,14 +179,27 @@ export function ConfigForm() {
       <Label className="text-muted-foreground text-xs uppercase tracking-wide">ZigZag Swings</Label>
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
-          <span>3-Leg Deviation %</span><span className="font-mono text-muted-foreground">{cfg.zigzagDev3.toFixed(2)}</span>
+          {/* Yellow/gold dot matches the chart's "ZigZag (3L)" dotted line
+              color (#f0c040) exactly, so it's clear which slider controls
+              which line on the chart. */}
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#f0c040" }} />
+            3-Leg Deviation % <span className="text-muted-foreground">(yellow line)</span>
+          </span>
+          <span className="font-mono text-muted-foreground">{cfg.zigzagDev3.toFixed(2)}</span>
         </div>
         <Slider min={0.05} max={5} step={0.05} value={[cfg.zigzagDev3]}
                 onValueChange={([v]) => cfg.setField("zigzagDev3", v)} />
       </div>
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
-          <span>10-Leg Deviation %</span><span className="font-mono text-muted-foreground">{cfg.zigzagDev10.toFixed(2)}</span>
+          {/* Blue dot matches the chart's "ZigZag (10L)" dotted line color
+              (#2196f3) exactly. */}
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ background: "#2196f3" }} />
+            10-Leg Deviation % <span className="text-muted-foreground">(blue line)</span>
+          </span>
+          <span className="font-mono text-muted-foreground">{cfg.zigzagDev10.toFixed(2)}</span>
         </div>
         <Slider min={0.05} max={5} step={0.05} value={[cfg.zigzagDev10]}
                 onValueChange={([v]) => cfg.setField("zigzagDev10", v)} />
