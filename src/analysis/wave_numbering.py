@@ -22,12 +22,23 @@ with corrected defects found in the original:
 
   1. Wave 4's retracement gate had two different values across branches
      (78.2% in one, 78.6% everywhere else) -- unified to 78.6% here.
-  2. The reference re-attempts a fresh count from EVERY pivot and lets later
-     attempts silently overwrite earlier ones on overlap (an emergent
-     "last writer wins" effect, not a designed one), which makes labels
-     unstable across recomputes. This module does one deterministic
-     left-to-right pass instead: once a swing is consumed by a kept count,
-     it is never reconsidered.
+  2. The reference re-attempts a fresh count from EVERY pivot -- even
+     pivots already claimed by an earlier successful count -- and lets
+     later attempts silently overwrite earlier ones on overlap. Verified
+     directly against the reference's own code (assign_wave_numbers.py:2391
+     `for i in range(1, len(df))`, combined with the unconditional
+     `df.at[idx, col] = ...` writes at :2398-2401/:2423-2426, which never
+     check whether a value is already present before overwriting). This
+     makes Wave 1 "float" to whichever pivot's attempt happened to be
+     evaluated last for a given stretch of chart, and the same historical
+     candle's label can visibly change between recomputes. Per explicit
+     requirement, this module does NOT replicate that: it's a deliberate,
+     acknowledged deviation from the reference (which has no concept of
+     "prefer the earliest valid start" at all), not an oversight. Once a
+     swing is consumed by a kept count, it is never reconsidered by a
+     later attempt -- so the earliest valid Wave 1 for a given stretch of
+     chart stays Wave 1, and numbering starts as early in the data as a
+     valid count can be found.
   3. The ``.1``/``.2`` confidence suffix (both Fibonacci+pattern conditions
      met vs. pattern-only) is computed in the reference but never actually
      used downstream (chart color is identical either way). Here it's a
