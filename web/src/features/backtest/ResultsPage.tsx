@@ -141,12 +141,12 @@ export function ResultsPage() {
             <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
             <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
             {/* "elliottwave" tab (ElliottWavePanel) shows the continuous,
-                chart-wide wave count from wave_numbering.py -- that's what
-                "Elliott Wave" means to a user, so it gets that label.
-                "impulse" tab (ImpulseWavesPanel) is the narrower, strict
-                single-window rule-checker from elliott_wave.py -- labeled
-                "Impulse Rules" so it isn't mistaken for the main view. */}
-            <TabsTrigger value="elliottwave">📶 Elliott Wave</TabsTrigger>
+                chart-wide wave count from wave_numbering.py -- labeled
+                "Wave Analysis" per explicit request. "impulse" tab
+                (ImpulseWavesPanel) is the narrower, strict single-window
+                rule-checker from elliott_wave.py -- labeled "Impulse Rules"
+                so it isn't mistaken for the main view. */}
+            <TabsTrigger value="elliottwave">🌊 Wave Analysis</TabsTrigger>
             <TabsTrigger value="swings">🔀 Swing Identification</TabsTrigger>
             <TabsTrigger value="impulse">🔍 Impulse Rules</TabsTrigger>
             <TabsTrigger value="corrective">🔁 Corrective Waves</TabsTrigger>
