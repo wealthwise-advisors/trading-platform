@@ -12,10 +12,6 @@ import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap
 import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { ElliottWavePanel } from "@/components/tables/ElliottWavePanel"
-import { SwingsPanel } from "@/components/tables/SwingsPanel"
-import { ImpulseWavesPanel } from "@/components/tables/ImpulseWavesPanel"
-import { CorrectiveWavesPanel } from "@/components/tables/CorrectiveWavesPanel"
-import { FibonacciPanel } from "@/components/tables/FibonacciPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 
@@ -72,7 +68,6 @@ export function ResultsPage() {
     queryFn: () => api.getElliottWave(backtestId!),
     enabled: !!backtestId,
   })
-
   if (!backtestId) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground p-8">
@@ -140,20 +135,7 @@ export function ResultsPage() {
             <TabsTrigger value="candles">🕯️ Candlestick Patterns</TabsTrigger>
             <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
             <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
-            {/* Labels match the exact Python filename each tab is powered
-                by (the five files: elliott_wave.py, corrective_waves.py,
-                swing_identification.py, wave_analysis.py, fibonacci.py).
-                "elliottwave" tab (ElliottWavePanel) is powered by
-                wave_analysis.py's WaveAnalysis (which now includes the
-                continuous wave count from wave_numbering.py), so it's
-                labeled "Wave Analysis". "impulse" tab (ImpulseWavesPanel)
-                is powered directly by elliott_wave.py's ImpulseWave, so
-                it's labeled "Elliott Wave". */}
-            <TabsTrigger value="elliottwave">🌊 Wave Analysis</TabsTrigger>
-            <TabsTrigger value="swings">🔀 Swing Identification</TabsTrigger>
-            <TabsTrigger value="impulse">📶 Elliott Wave</TabsTrigger>
-            <TabsTrigger value="corrective">🔁 Corrective Waves</TabsTrigger>
-            <TabsTrigger value="fiblevels">📐 Fibonacci</TabsTrigger>
+            <TabsTrigger value="elliottwave">📶 Elliott Wave</TabsTrigger>
           </TabsList>
         </div>
 
@@ -224,34 +206,6 @@ export function ResultsPage() {
               <Card className="p-4 border border-white/6 w-full">
                 {elliottWaveQ.data && priceDataQ.data && (
                   <ElliottWavePanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
-                )}
-              </Card>
-            </TabsContent>
-            <TabsContent value="swings" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <SwingsPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
-                )}
-              </Card>
-            </TabsContent>
-            <TabsContent value="impulse" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <ImpulseWavesPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
-                )}
-              </Card>
-            </TabsContent>
-            <TabsContent value="corrective" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <CorrectiveWavesPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
-                )}
-              </Card>
-            </TabsContent>
-            <TabsContent value="fiblevels" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <FibonacciPanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
                 )}
               </Card>
             </TabsContent>

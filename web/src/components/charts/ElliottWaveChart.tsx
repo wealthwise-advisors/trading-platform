@@ -1,14 +1,16 @@
-// A real price chart with Elliott Wave labels drawn on it, matching the
-// style of professional Elliott Wave forecast services (candlesticks + wave
-// pivot labels + an invalidation level line). Labels come straight from the
-// backend's continuous wave_sequence (src/analysis/wave_numbering.py) -- a
-// left-to-right walk of the WHOLE chart, not just one best-fit window, so
-// unlike the old single impulse+correction view this can show many
+// A real price chart with Elliott Wave labels drawn on it. Labels come
+// straight from the backend's continuous wave_sequence
+// (src/analysis/wave_numbering.py, the logic extracted from
+// github.com/wealthwise-advisors/Wealthwise) -- a left-to-right walk of the
+// WHOLE chart, not just one best-fit window, so this can show many
 // consecutive wave counts (each a "run" starting back at Wave 1) across the
-// backtest. Two nested degrees from the backend ("primary", "minor") are
-// distinguished the same way professional services do it: the coarser
-// degree's labels are plain ("3.2"), the finer degree nested inside it gets
-// one level of parentheses ("(3.2)").
+// backtest. Deliberately shows ONLY what that numbering logic produces --
+// no bias box, invalidation line, or correction-type summary, since those
+// come from unrelated pre-existing code, not the GitHub reference. Two
+// nested degrees from the backend ("primary", "minor") are distinguished
+// the same way professional services do it: the coarser degree's labels
+// are plain ("3.2"), the finer degree nested inside it gets one level of
+// parentheses ("(3.2)").
 
 import Plot from "react-plotly.js"
 import type { Data, Layout, Shape, Annotations } from "plotly.js"
@@ -18,7 +20,6 @@ const BG = "#0b1120"
 const GRID = "#1a2340"
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
-const INVALIDATION_COLOR = "#F97316"
 
 // Cycled per wave-count "run" (each run starts back at Wave 1) so
 // consecutive counts across the chart are visually distinguishable -- same
@@ -93,37 +94,8 @@ export function ElliottWaveChart({ symbol, bars, analysis, nested }: ElliottWave
     })
   })
 
-  if (analysis.invalidation !== null) {
-    shapes.push({
-      type: "line", xref: "paper", yref: "y",
-      x0: 0, x1: 1, y0: analysis.invalidation, y1: analysis.invalidation,
-      line: { color: INVALIDATION_COLOR, dash: "dash", width: 1.2 },
-    })
-    annotations.push({
-      x: 1, y: analysis.invalidation, xref: "paper", yref: "y",
-      xanchor: "right", yanchor: "bottom",
-      text: `Invalidation @ ${analysis.invalidation.toFixed(2)}`,
-      showarrow: false, font: { color: INVALIDATION_COLOR, size: 10 },
-    })
-  }
-
-  // Bias indicator box, top-right -- same idea as the reference's
-  // "Turning Down" arrow box, driven off the same bias field the old
-  // card-based summary already showed as a colored badge.
-  const biasColor = analysis.bias === "long" ? GREEN : analysis.bias === "short" ? RED : "#8b93b8"
-  const biasText = analysis.bias === "long" ? "Turning Up ↗" : analysis.bias === "short" ? "Turning Down ↘" : "Neutral"
-  annotations.push({
-    // y:0.99 (inside the plot's own 0-1 range, not above it at 1.05) --
-    // that used to sit in the same margin strip as the title and modebar,
-    // colliding with both. Anchored top-right INSIDE the plot instead.
-    x: 0.99, y: 0.99, xref: "paper", yref: "paper", xanchor: "right", yanchor: "top",
-    text: `<b>${biasText}</b>`, showarrow: false,
-    font: { color: biasColor, size: 12 },
-    bgcolor: "rgba(11,17,32,0.75)", bordercolor: biasColor, borderwidth: 1, borderpad: 4,
-  })
-
   const layout: Partial<Layout> = {
-    title: { text: `${symbol} — ${analysis.degree} degree Elliott Wave · ${analysis.cycle_position}`, font: { size: 13, color: "#cdd6f4" } },
+    title: { text: `${symbol} — ${analysis.degree} degree Elliott Wave`, font: { size: 13, color: "#cdd6f4" } },
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: "#cdd6f4" },
     dragmode: "pan", hovermode: "x unified",

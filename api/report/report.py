@@ -23,18 +23,8 @@ from api.report.charts import (
 )
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
-from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis
-from src.analysis.swing_identification import identify_swings, atr as _wave_atr
 
 import numpy as np
-
-# Same degree configs analyze_degrees() uses internally by default -- kept in
-# sync with api/routers/elliott_wave.py's _DEGREES, since WaveAnalysis itself
-# doesn't expose the full swings list (only n_swings).
-_WAVE_DEGREES = [
-    {"name": "primary", "left": 4, "right": 4, "mm_mult": 2.0},
-    {"name": "minor", "left": 2, "right": 2, "mm_mult": 1.0},
-]
 
 _G      = "#3fb950"
 _R      = "#f85149"
@@ -540,258 +530,6 @@ def _chart_patterns_table(results: BacktestResults) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Elliott Wave charts -- Python/Plotly equivalents of ElliottWaveChart.tsx /
-# WavePivotChart.tsx / FibonacciZonesChart.tsx in the live app. Same source
-# data (wave_analysis.py's analyze_degrees()), same labeling conventions.
-# ─────────────────────────────────────────────────────────────────────────────
-
-_IMPULSE_COLOR = "#2196f3"
-_CORRECTION_COLOR = "#f0c040"
-_INVALIDATION_COLOR = "#F97316"
-_CYAN = "#14E0D4"
-
-_ROMAN_DIGITS = [
-    (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
-    (100, "c"), (90, "xc"), (50, "l"), (40, "xl"),
-    (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i"),
-]
-
-
-def _to_roman(n: int) -> str:
-    """Open-ended roman numeral generator -- keeps counting (viii, ix, x...)
-    past a fixed 7-entry list instead of falling back to a bare number.
-    Ported from ElliottWaveChart.tsx's toRoman(), keep in sync."""
-    out = []
-    for value, symbol in _ROMAN_DIGITS:
-        while n >= value:
-            out.append(symbol)
-            n -= value
-    return "".join(out)
-
-
-def _to_letters(n: int, upper: bool = False) -> str:
-    """Open-ended letter generator (a, b, c... z, aa, ab...) -- ported from
-    ElliottWaveChart.tsx's toLetters() / CorrectiveWavesPanel.tsx's
-    pivotLetter(), keep in sync."""
-    base = 65 if upper else 97
-    letters = ""
-    x = n
-    while x > 0:
-        x, rem = divmod(x - 1, 26)
-        letters = chr(base + rem) + letters
-    return letters
-
-
-def _wrap(label: str, nested: bool) -> str:
-    return f"({label})" if nested else label
-
-
-def _pivot_labels(pivots: list, kind: str, nested: bool) -> list[str]:
-    """kind: 'roman', 'letters' (lowercase a/b/c -- combined Wave Analysis
-    chart's correction leg), or 'letters_upper' (A/B/C -- standalone
-    Corrective Waves chart, matches CorrectiveWavesPanel.tsx)."""
-    if kind == "roman":
-        gen = _to_roman
-    elif kind == "letters_upper":
-        gen = lambda i: _to_letters(i, upper=True)
-    else:
-        gen = lambda i: _to_letters(i)
-    return ["" if i == 0 else _wrap(gen(i), nested) for i in range(len(pivots))]
-
-
-def _base_candles(df: pd.DataFrame) -> go.Figure:
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=df.index, open=df["open"], high=df["high"], low=df["low"], close=df["close"],
-        increasing_line_color=_G, decreasing_line_color=_R, name="Price", showlegend=False,
-    ))
-    return fig
-
-
-def _wave_pivot_chart(df: pd.DataFrame, pivots: list, labels: list[str], color: str,
-                       series_name: str, title: str, dash: bool = False) -> go.Figure:
-    fig = _base_candles(df)
-    if pivots:
-        xs = [p.timestamp if hasattr(p, "timestamp") else df.index[p.index] for p in pivots]
-        ys = [p.price for p in pivots]
-        fig.add_trace(go.Scatter(
-            x=xs, y=ys, mode="lines+markers",
-            line=dict(color=color, width=1.5, dash="dot" if dash else "solid"),
-            marker=dict(size=6, color=color), name=series_name, showlegend=True,
-            text=labels, hovertemplate="%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
-        ))
-        for x, y, label, p in zip(xs, ys, labels, pivots):
-            if not label:
-                continue
-            up = getattr(p, "kind", None)
-            up = (up.value if hasattr(up, "value") else up) == "high" if up is not None else True
-            fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                                font=dict(color=color, size=11), yshift=16 if up else -16)
-    fig.update_layout(
-        **_layout(title, height=420),
-        xaxis=dict(gridcolor=_GRID, rangeslider_visible=False, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, title="Price", fixedrange=False),
-    )
-    return fig
-
-
-def _fibonacci_zones_chart(df: pd.DataFrame, zones: list, title: str) -> go.Figure:
-    fig = _base_candles(df)
-    max_strength = max([z.strength for z in zones] + [1])
-    for z in zones:
-        opacity = 0.12 + 0.28 * (z.strength / max_strength)
-        fig.add_shape(
-            type="rect", xref="paper", yref="y", x0=0, x1=1, y0=z.low, y1=z.high,
-            fillcolor=f"rgba(20,224,212,{opacity:.2f})",
-            line=dict(color=_CYAN, width=1, dash="dot"), layer="below",
-        )
-        fig.add_annotation(
-            x=1, y=z.center, xref="paper", yref="y", xanchor="right", yanchor="middle",
-            text=f"{z.center:.2f} ×{z.strength}", showarrow=False,
-            font=dict(color=_CYAN, size=10), bgcolor="rgba(13,17,23,0.7)",
-        )
-    layout_kwargs = _layout(title, height=420)
-    layout_kwargs["margin"] = dict(l=65, r=90, t=55, b=45)
-    fig.update_layout(
-        **layout_kwargs,
-        xaxis=dict(gridcolor=_GRID, rangeslider_visible=False, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, title="Price", fixedrange=False),
-    )
-    return fig
-
-
-def _wave_analysis_chart(df: pd.DataFrame, a: WaveAnalysis, nested: bool, symbol: str) -> go.Figure:
-    fig = _base_candles(df)
-
-    if a.impulse and len(a.impulse.pivots) > 1:
-        pivots = a.impulse.pivots
-        labels = _pivot_labels(pivots, "roman", nested)
-        xs = [df.index[p.index] for p in pivots]
-        ys = [p.price for p in pivots]
-        fig.add_trace(go.Scatter(
-            x=xs, y=ys, mode="lines+markers", line=dict(color=_IMPULSE_COLOR, width=1.5),
-            marker=dict(size=6, color=_IMPULSE_COLOR), name=f"Impulse ({a.impulse.direction})",
-            text=labels, hovertemplate="%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
-        ))
-        for x, y, label, p in zip(xs, ys, labels, pivots):
-            if not label:
-                continue
-            up = p.kind.value == "high"
-            fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                                font=dict(color=_IMPULSE_COLOR, size=12), yshift=16 if up else -16)
-
-    if a.correction and len(a.correction.pivots) > 1:
-        pivots = a.correction.pivots
-        labels = _pivot_labels(pivots, "letters", nested)
-        xs = [df.index[p.index] for p in pivots]
-        ys = [p.price for p in pivots]
-        fig.add_trace(go.Scatter(
-            x=xs, y=ys, mode="lines+markers", line=dict(color=_CORRECTION_COLOR, width=1.5, dash="dot"),
-            marker=dict(size=6, color=_CORRECTION_COLOR), name=f"Correction ({a.correction.type.value.replace('_', ' ')})",
-            text=labels, hovertemplate="%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
-        ))
-        for x, y, label, p in zip(xs, ys, labels, pivots):
-            if not label:
-                continue
-            up = p.kind.value == "high"
-            fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                                font=dict(color=_CORRECTION_COLOR, size=12), yshift=16 if up else -16)
-
-    if a.invalidation is not None:
-        fig.add_shape(type="line", xref="paper", yref="y", x0=0, x1=1,
-                       y0=a.invalidation, y1=a.invalidation,
-                       line=dict(color=_INVALIDATION_COLOR, dash="dash", width=1.2))
-        fig.add_annotation(x=1, y=a.invalidation, xref="paper", yref="y", xanchor="right", yanchor="bottom",
-                            text=f"Invalidation @ {a.invalidation:.2f}",
-                            showarrow=False, font=dict(color=_INVALIDATION_COLOR, size=10))
-
-    bias_color = _G if a.bias == "long" else (_R if a.bias == "short" else "#8b93b8")
-    bias_text = "Turning Up ↗" if a.bias == "long" else ("Turning Down ↘" if a.bias == "short" else "Neutral")
-    fig.add_annotation(x=0.99, y=0.99, xref="paper", yref="paper", xanchor="right", yanchor="top",
-                        text=f"<b>{bias_text}</b>", showarrow=False, font=dict(color=bias_color, size=12),
-                        bgcolor="rgba(13,17,23,0.75)", bordercolor=bias_color, borderwidth=1, borderpad=4)
-
-    layout_kwargs = _layout(f"{symbol} — {a.degree} degree Elliott Wave · {a.cycle_position}", height=480)
-    layout_kwargs["legend"] = dict(orientation="h", y=-0.08, bgcolor="rgba(0,0,0,0)")
-    fig.update_layout(
-        **layout_kwargs,
-        xaxis=dict(gridcolor=_GRID, rangeslider_visible=False, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, title="Price", fixedrange=False),
-    )
-    return fig
-
-
-def _wave_analysis_sections(results: BacktestResults) -> dict:
-    """Builds the HTML for all 5 Elliott Wave tabs (Wave Analysis, Swing
-    Identification, Elliott Wave, Corrective Waves, Fibonacci), one degree's
-    chart per section per degree -- mirrors ElliottWavePanel.tsx and friends
-    in the live app exactly, same wave_analysis.py data underneath."""
-    df = results.price_data
-    symbol = results.symbol
-    try:
-        degrees = analyze_degrees(df)
-    except Exception:
-        degrees = {}
-
-    try:
-        med = float(np.nanmedian(_wave_atr(df["high"], df["low"], df["close"], 14)))
-        swings_by_degree = {
-            d["name"]: identify_swings(df, left=d["left"], right=d["right"], min_move=d["mm_mult"] * med)
-            for d in _WAVE_DEGREES
-        }
-    except Exception:
-        swings_by_degree = {}
-
-    wave_analysis_html, swings_html, impulse_html, corrective_html, fib_html = [], [], [], [], []
-
-    def _box(html: str) -> str:
-        return f'<div class="chart-box">{html}</div>'
-
-    # Mirrors ImpulseWavesPanel.tsx's WAVE_LABELS -- plain numbers, origin IS
-    # labeled "0" here (unlike the other wave charts, which skip the origin).
-    _WAVE_LABELS = ["0", "1", "2", "3", "4", "5", "6", "7"]
-
-    for name, a in degrees.items():
-        nested = name == "minor"
-        wave_analysis_html.append(_box(_fig_to_div(_wave_analysis_chart(df, a, nested, symbol))))
-
-        swing_pivots = swings_by_degree.get(name, [])
-        swing_labels = [s.label.value if s.label else "" for s in swing_pivots]
-        swings_html.append(_box(_fig_to_div(_wave_pivot_chart(
-            df, swing_pivots, swing_labels, "#8b93b8", "Swings", f"{symbol} — {name} degree swings"))))
-
-        if a.impulse:
-            imp_labels = [_WAVE_LABELS[j] if j < len(_WAVE_LABELS) else str(j)
-                          for j in range(len(a.impulse.pivots))]
-            color = _G if a.impulse.valid else _R
-            impulse_html.append(_box(_fig_to_div(_wave_pivot_chart(
-                df, a.impulse.pivots, imp_labels, color, f"Impulse ({a.impulse.direction})",
-                f"{symbol} — {name} degree impulse ({'valid' if a.impulse.valid else 'invalid'})"))))
-
-        if a.correction:
-            corr_labels = _pivot_labels(a.correction.pivots, "letters_upper", False)
-            corrective_html.append(_box(_fig_to_div(_wave_pivot_chart(
-                df, a.correction.pivots, corr_labels, _CORRECTION_COLOR,
-                f"Correction ({a.correction.type.value.replace('_', ' ')})",
-                f"{symbol} — {name} degree correction — {a.correction.type.value.replace('_', ' ')}", dash=True))))
-
-        if a.target_zones:
-            fib_html.append(_box(_fig_to_div(_fibonacci_zones_chart(
-                df, a.target_zones, f"{symbol} — {name} degree Fibonacci confluence zones"))))
-
-    def _joined(parts: list, empty_msg: str) -> str:
-        return "".join(parts) if parts else f'<p style="color:#8b949e;padding:12px">{empty_msg}</p>'
-
-    return {
-        "wave_analysis": _joined(wave_analysis_html, "No wave structure detected in this backtest's price data."),
-        "swings": _joined(swings_html, "No swings detected in this backtest's price data."),
-        "impulse": _joined(impulse_html, "No structurally valid impulse wave found in this backtest's price data."),
-        "corrective": _joined(corrective_html, "No correction detected yet following the impulse."),
-        "fibonacci": _joined(fib_html, "No confluence zones formed yet."),
-    }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # HTML template
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -955,11 +693,6 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   <a href="#trade-log">📋 Trade Log</a>
   <a href="#candlestick-patterns">🕯️ Candlesticks</a>
   <a href="#chart-patterns">📐 Chart Patterns</a>
-  <a href="#wave-analysis">🌊 Wave Analysis</a>
-  <a href="#swing-identification">🔀 Swings</a>
-  <a href="#elliott-wave">📶 Elliott Wave</a>
-  <a href="#corrective-waves">🔁 Corrective</a>
-  <a href="#fibonacci">📐 Fibonacci</a>
 </nav>
 
 <!-- ── controls hint ── -->
@@ -1014,21 +747,6 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div class="section-title" id="chart-patterns"><span class="icon">📐</span> Chart Patterns</div>
 <div class="chart-box" style="padding:0">{chart_patterns_table}</div>
-
-<div class="section-title" id="wave-analysis"><span class="icon">🌊</span> Wave Analysis</div>
-{wave_analysis_charts}
-
-<div class="section-title" id="swing-identification"><span class="icon">🔀</span> Swing Identification</div>
-{swings_charts}
-
-<div class="section-title" id="elliott-wave"><span class="icon">📶</span> Elliott Wave</div>
-{impulse_charts}
-
-<div class="section-title" id="corrective-waves"><span class="icon">🔁</span> Corrective Waves</div>
-{corrective_charts}
-
-<div class="section-title" id="fibonacci"><span class="icon">📐</span> Fibonacci</div>
-{fibonacci_charts}
 
 <footer><b>AutoTrader</b> Backtest Report &mdash; {title} &mdash; Generated {generated}</footer>
 </div>
@@ -1112,7 +830,6 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     # not just the original 4 charts + trade log.
     candlestick_patterns_table = _candlestick_patterns_table(r)
     chart_patterns_table = _chart_patterns_table(r)
-    wave_sections = _wave_analysis_sections(r)
 
     title = f"{r.strategy_name} — {r.symbol}"
     html = _HTML_TEMPLATE.format(
@@ -1131,11 +848,6 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         trade_rows="\n".join(trade_rows),
         candlestick_patterns_table=candlestick_patterns_table,
         chart_patterns_table=chart_patterns_table,
-        wave_analysis_charts=wave_sections["wave_analysis"],
-        swings_charts=wave_sections["swings"],
-        impulse_charts=wave_sections["impulse"],
-        corrective_charts=wave_sections["corrective"],
-        fibonacci_charts=wave_sections["fibonacci"],
     )
 
     if output_path:

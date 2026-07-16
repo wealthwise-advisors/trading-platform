@@ -34,6 +34,23 @@ with corrected defects found in the original:
      real field (``WaveLabel.sub``) meant to drive visual confidence (e.g. a
      dimmer marker for ``.2``).
 
+Two non-obvious rules verified line-by-line against the reference's actual
+code (not just its comments, which are occasionally stale/misleading) and
+carried over faithfully, since they're real and consistent, not one-off typos:
+
+  * Wave 4's floor/ceiling is **Wave 2**, not Wave 1 (confirmed identical in
+    both the uptrend and downtrend paths -- ``df.iloc[start_idx + 1]``, which
+    is Wave 2's index, despite one stale comment nearby literally saying
+    "start_value"). Reads as "each retracement wave (2, 4) must stay within
+    the immediately-preceding impulse leg" -- Wave 2 within [origin, Wave 1],
+    Wave 4 within [Wave 2, Wave 3] -- rather than the textbook "no overlap
+    with Wave 1".
+  * Wave 5's pattern gate requires exceeding **Wave 3**, not Wave 4
+    (``df.iloc[i] > df.iloc[i-2]``, which resolves to Wave 3's value) --
+    mirrors Wave 3's own gate (must exceed Wave 1): each new impulse leg must
+    clear the prior impulse leg, not just the immediately preceding
+    retracement.
+
 Fibonacci gates (as tuned/validated in the reference, not textbook defaults)
 -----------------------------------------------------------------------------
   Wave 2 retraces   38.2% -  85.1% of Wave 1
@@ -159,8 +176,15 @@ def _grow_count(swings: List[Swing], start: int) -> Optional[tuple[List[WaveLabe
     # ---- Wave 4: gated retracement of Wave 1 (measured off Wave 3), one
     # skip-ahead retry. Failure here still keeps the 1-2-3 partial count. ----
     def _w4_ok(c: Swing) -> bool:
+        # Floor/ceiling is Wave 2, not Wave 1 -- confirmed against the
+        # reference's actual code (assign_wave_numbers.py's Wave 4 gate
+        # compares against df.iloc[start_idx + 1], which is Wave 2's index,
+        # in both the uptrend and downtrend paths). Matches a "each
+        # retracement wave must stay within the leg it's correcting" pattern
+        # (Wave 2 stays within [origin, Wave 1]; Wave 4 stays within
+        # [Wave 2, Wave 3]) rather than the textbook "no overlap with Wave 1".
         return (c.kind == origin.kind
-                and sign * (c.price - w1.price) > 0    # w4_no_overlap_w1
+                and sign * (c.price - w2.price) > 0    # stays above wave 2 (up) / below (down)
                 and sign * (w3.price - c.price) > 0)   # genuine pullback off wave 3
 
     idx4 = _first_hit(swings, cursor + 1, _w4_ok)
@@ -177,7 +201,13 @@ def _grow_count(swings: List[Swing], start: int) -> Optional[tuple[List[WaveLabe
     len4 = sign * (w3.price - w4.price)
 
     def _w5_ok(c: Swing) -> bool:
-        return c.kind == w1.kind and sign * (c.price - w4.price) > 0
+        # Gate is "exceeds Wave 3", not "exceeds Wave 4" -- confirmed against
+        # the reference's actual code (its Wave 5 gate is
+        # `df.iloc[i] > df.iloc[i-2]`, which resolves to Wave 3's value, not
+        # Wave 4's). Mirrors Wave 3's own gate (must exceed Wave 1): each new
+        # impulse leg must exceed the prior impulse leg, not just the
+        # immediately preceding retracement.
+        return c.kind == w1.kind and sign * (c.price - w3.price) > 0
 
     idx5 = _first_hit(swings, cursor + 1, _w5_ok)
     if idx5 is None:
