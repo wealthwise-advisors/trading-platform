@@ -8,7 +8,8 @@ other module into one read of the market.
 Pipeline per call
 ------------------
   swing_identification  -> confirmed pivots + structure (HH/HL/LH/LL, trend)
-  elliott_wave          -> validated impulse (hard rules)
+  wave_numbering         -> continuous chart-wide wave count (Wave 1, 2.1, 3.1...)
+  elliott_wave          -> validated impulse (hard rules), single best window
   corrective_waves      -> the following correction's type (zigzag/flat/combo)
   fibonacci             -> proportion quality + projected confluence zones
   -> a WaveAnalysis: cycle position, bias, invalidation, target zones, ALTERNATES
@@ -43,6 +44,7 @@ from .fibonacci import (
     score_impulse_fib, score_correction_fib, correction_end_zone,
     project_correction_c, fib_projections, find_confluence, ClusterZone,
 )
+from .wave_numbering import WaveLabel, label_wave_sequence
 
 
 @dataclass
@@ -60,6 +62,7 @@ class WaveAnalysis:
     target_zones: List[ClusterZone] = field(default_factory=list)
     alternates: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
+    wave_sequence: List[WaveLabel] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------- #
@@ -129,6 +132,7 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
             min_move: float = 0.0, degree: str = "minor") -> WaveAnalysis:
     swings = identify_swings(df, left=left, right=right, min_move=min_move)
     trend = trend_state(swings)
+    wave_sequence = label_wave_sequence(swings)
 
     valid = [w for w in find_impulses(swings) if w.valid]
     impulse = max(valid, key=lambda w: w.end_index) if valid else None
@@ -178,6 +182,7 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
         correction=correction, correction_fib=correction_fib,
         cycle_position=cycle, bias=bias, invalidation=invalidation,
         target_zones=zones, alternates=alternates, notes=notes,
+        wave_sequence=wave_sequence,
     )
 
 

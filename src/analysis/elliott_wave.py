@@ -28,6 +28,11 @@ This validates the *classic* impulse and a simple ABC zigzag only. It does NOT
 model extensions, diagonals, truncations beyond a flag, or complex corrections
 (flats, triangles, combinations). Treat a "valid" result as a rule-checked
 candidate to act on with confirmation -- not as ground truth.
+
+This module is the strict single-window validator -- "is THIS specific
+6-pivot window a legal impulse?". For a continuous, chart-wide wave count
+("walking the whole chart, what would Wave 1, 2, 3... be, in sequence?"),
+see ``wave_numbering.py``.
 """
 
 from __future__ import annotations

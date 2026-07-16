@@ -1,60 +1,49 @@
 // A real price chart with Elliott Wave labels drawn on it, matching the
 // style of professional Elliott Wave forecast services (candlesticks + wave
-// pivot labels + an invalidation level line) instead of the old text/card
-// summary. Two nested degrees from the backend ("primary", "minor") are
-// distinguished the same way those services do it: the coarser degree's
-// labels are plain (i, ii, iii...), the finer degree nested inside it gets
-// one level of parentheses ((i), (ii)...).
+// pivot labels + an invalidation level line). Labels come straight from the
+// backend's continuous wave_sequence (src/analysis/wave_numbering.py) -- a
+// left-to-right walk of the WHOLE chart, not just one best-fit window, so
+// unlike the old single impulse+correction view this can show many
+// consecutive wave counts (each a "run" starting back at Wave 1) across the
+// backtest. Two nested degrees from the backend ("primary", "minor") are
+// distinguished the same way professional services do it: the coarser
+// degree's labels are plain ("3.2"), the finer degree nested inside it gets
+// one level of parentheses ("(3.2)").
 
 import Plot from "react-plotly.js"
 import type { Data, Layout, Shape, Annotations } from "plotly.js"
-import type { OHLCVRecord, WaveAnalysis, WaveSwing } from "@/lib/types"
+import type { OHLCVRecord, WaveAnalysis, WaveLabel } from "@/lib/types"
 
 const BG = "#0b1120"
 const GRID = "#1a2340"
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
-const IMPULSE_COLOR = "#2196f3"
-const CORRECTION_COLOR = "#f0c040"
 const INVALIDATION_COLOR = "#F97316"
+
+// Cycled per wave-count "run" (each run starts back at Wave 1) so
+// consecutive counts across the chart are visually distinguishable -- same
+// idea as CandlestickChart.tsx's SWING_COLORS cycling per swing group.
+const RUN_COLORS = ["#2196f3", "#f0c040", "#7ee787", "#c77dff", "#4cc9f0", "#ff8a65"]
 
 function wrap(label: string, nested: boolean) {
   return nested ? `(${label})` : label
 }
 
-const ROMAN_DIGITS: [number, string][] = [
-  [1000, "m"], [900, "cm"], [500, "d"], [400, "cd"],
-  [100, "c"], [90, "xc"], [50, "l"], [40, "xl"],
-  [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"],
-]
-// Open-ended roman numeral generator -- ROMAN used to be a fixed 7-entry
-// array (i..vii) that fell back to a bare number ("8") past that, which
-// looked like a broken sequence. Generating on demand means it keeps
-// counting (viii, ix, x...) no matter how many waves there are.
-function toRoman(n: number): string {
-  let x = n, out = ""
-  for (const [value, symbol] of ROMAN_DIGITS) {
-    while (x >= value) { out += symbol; x -= value }
-  }
-  return out
+function waveText(w: WaveLabel): string {
+  return w.sub ? `${w.wave}.${w.sub}` : w.wave
 }
 
-// Open-ended letter generator (a, b, c... z, aa, ab...) -- same fix as
-// toRoman() above, for the correction's a/b/c labels.
-function toLetters(n: number): string {
-  let x = n, out = ""
-  while (x > 0) {
-    const rem = (x - 1) % 26
-    out = String.fromCharCode(97 + rem) + out
-    x = Math.floor((x - 1) / 26)
+// Groups the flat wave_sequence into runs: a new run starts every time the
+// count resets back to Wave 1 (label "1" with no sub), matching how
+// wave_numbering.py's label_wave_sequence() starts a fresh left-to-right
+// attempt after a prior count closes or fails.
+function groupRuns(sequence: WaveLabel[]): WaveLabel[][] {
+  const runs: WaveLabel[][] = []
+  for (const w of sequence) {
+    if (w.wave === "1" || runs.length === 0) runs.push([w])
+    else runs[runs.length - 1].push(w)
   }
-  return out
-}
-
-// pivots[0] is always the wave's own origin (not itself a numbered/lettered
-// point) -- pivots[1..] are the actual wave-end points, labeled in order.
-function pivotLabels(pivots: WaveSwing[], kind: "roman" | "letters", nested: boolean): string[] {
-  return pivots.map((_, i) => (i === 0 ? "" : wrap(kind === "roman" ? toRoman(i) : toLetters(i), nested)))
+  return runs
 }
 
 interface ElliottWaveChartProps {
@@ -78,45 +67,31 @@ export function ElliottWaveChart({ symbol, bars, analysis, nested }: ElliottWave
     increasing: { line: { color: GREEN, width: 1.2 } }, decreasing: { line: { color: RED, width: 1.2 } },
   } as unknown as Data)
 
-  if (analysis.impulse && analysis.impulse.pivots.length > 1) {
-    const pivots = analysis.impulse.pivots
-    const labels = pivotLabels(pivots, "roman", nested)
+  const runs = groupRuns(analysis.wave_sequence)
+  runs.forEach((run, i) => {
+    const color = RUN_COLORS[i % RUN_COLORS.length]
+    // sub === 2 means only the pattern condition held, not the Fibonacci
+    // gate -- a real (not vestigial, see wave_numbering.py's module
+    // docstring) lower-confidence signal, shown as a dimmer marker.
+    const opacities = run.map((w) => (w.sub === 2 ? 0.45 : 1.0))
     data.push({
-      type: "scatter", mode: "lines+markers", x: pivots.map((p) => p.t), y: pivots.map((p) => p.price),
-      line: { color: IMPULSE_COLOR, width: 1.5 }, marker: { size: 5, color: IMPULSE_COLOR },
-      name: `Impulse (${analysis.impulse.direction})`, showlegend: true,
-      hovertemplate: "%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>", text: labels,
+      type: "scatter", mode: "lines+markers",
+      x: run.map((w) => w.t), y: run.map((w) => w.price),
+      line: { color, width: 1.5 },
+      marker: { size: 6, color, opacity: opacities },
+      name: `Wave count ${i + 1} (${run[0].direction})`, showlegend: false,
+      hovertemplate: "%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
+      text: run.map((w) => wrap(waveText(w), nested)),
     } as unknown as Data)
-    pivots.forEach((p, i) => {
-      if (i === 0) return
+    run.forEach((w) => {
       annotations.push({
-        x: p.t, y: p.price, xref: "x", yref: "y",
-        text: `<b>${labels[i]}</b>`, showarrow: false,
-        font: { color: IMPULSE_COLOR, size: 12 },
-        yshift: p.kind === "high" ? 16 : -16,
+        x: w.t, y: w.price, xref: "x", yref: "y",
+        text: `<b>${wrap(waveText(w), nested)}</b>`, showarrow: false,
+        font: { color, size: 11 },
+        yshift: w.kind === "high" ? 14 : -14,
       })
     })
-  }
-
-  if (analysis.correction && analysis.correction.pivots.length > 1) {
-    const pivots = analysis.correction.pivots
-    const labels = pivotLabels(pivots, "letters", nested)
-    data.push({
-      type: "scatter", mode: "lines+markers", x: pivots.map((p) => p.t), y: pivots.map((p) => p.price),
-      line: { color: CORRECTION_COLOR, width: 1.5, dash: "dot" }, marker: { size: 5, color: CORRECTION_COLOR },
-      name: `Correction (${analysis.correction.type.replace(/_/g, " ")})`, showlegend: true,
-      hovertemplate: "%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>", text: labels,
-    } as unknown as Data)
-    pivots.forEach((p, i) => {
-      if (i === 0) return
-      annotations.push({
-        x: p.t, y: p.price, xref: "x", yref: "y",
-        text: `<b>${labels[i]}</b>`, showarrow: false,
-        font: { color: CORRECTION_COLOR, size: 12 },
-        yshift: p.kind === "high" ? 16 : -16,
-      })
-    })
-  }
+  })
 
   if (analysis.invalidation !== null) {
     shapes.push({
@@ -152,8 +127,7 @@ export function ElliottWaveChart({ symbol, bars, analysis, nested }: ElliottWave
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: "#cdd6f4" },
     dragmode: "pan", hovermode: "x unified",
-    showlegend: true,
-    legend: { orientation: "h", y: -0.08, bgcolor: "rgba(0,0,0,0)" },
+    showlegend: false,
     margin: { l: 50, r: 20, t: 55, b: 40 },
     autosize: true,
     xaxis: { gridcolor: GRID, showgrid: true, rangeslider: { visible: false } },

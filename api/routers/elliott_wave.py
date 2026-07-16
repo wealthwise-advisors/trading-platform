@@ -13,6 +13,7 @@ from src.analysis.swing_identification import Swing, identify_swings, atr
 from src.analysis.elliott_wave import ImpulseWave
 from src.analysis.corrective_waves import Correction
 from src.analysis.fibonacci import ClusterZone
+from src.analysis.wave_numbering import WaveLabel
 from api import store
 
 router = APIRouter(prefix="/backtests", tags=["elliott-wave"])
@@ -63,6 +64,17 @@ def _correction_to_dict(c: Correction, timestamps) -> dict:
     }
 
 
+def _wave_label_to_dict(w: WaveLabel, timestamps) -> dict:
+    return {
+        "t": timestamps[w.index].isoformat(),
+        "price": _safe(round(w.price, 4)),
+        "kind": w.swing.kind.value,
+        "wave": w.wave,
+        "sub": w.sub,
+        "direction": w.direction,
+    }
+
+
 def _zone_to_dict(z: ClusterZone) -> dict:
     return {
         "center": _safe(z.center), "low": _safe(z.low), "high": _safe(z.high),
@@ -87,6 +99,7 @@ def _analysis_to_dict(a: WaveAnalysis, timestamps, swings: list) -> dict:
         "target_zones": [_zone_to_dict(z) for z in a.target_zones],
         "alternates": a.alternates,
         "notes": a.notes,
+        "wave_sequence": [_wave_label_to_dict(w, timestamps) for w in a.wave_sequence],
     }
 
 

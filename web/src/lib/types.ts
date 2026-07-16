@@ -294,6 +294,15 @@ export interface WaveTargetZone {
   members: { price: number; source: string }[]
 }
 
+export interface WaveLabel {
+  t: string
+  price: number
+  kind: "high" | "low"
+  wave: string          // "1".."11" or "a"/"b"/"c"
+  sub: 1 | 2 | null      // confidence tier: 1 = fib+pattern both met, 2 = pattern only
+  direction: "up" | "down"
+}
+
 export interface WaveAnalysis {
   degree: string
   trend: string
@@ -309,6 +318,7 @@ export interface WaveAnalysis {
   target_zones: WaveTargetZone[]
   alternates: string[]
   notes: string[]
+  wave_sequence: WaveLabel[]
 }
 
 export type ElliottWaveResponse = Record<string, WaveAnalysis>
