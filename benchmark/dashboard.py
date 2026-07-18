@@ -127,7 +127,7 @@ def build_dashboard(conn: sqlite3.Connection, output_path: Path = None) -> Path:
         n_cases=agreement["n"], n_real=ds["by_category"].get("real_market_regime", 0),
         total_cases=ds["total_cases"], generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
         agreement_pct=f"{agreement['primary_agreement_pct']:.0%}",
-        agreement_label=f"{agreement['n']} synthetic archetypes, 95% CI [{agreement['primary_agreement_ci_95']['lower']:.0%}, {agreement['primary_agreement_ci_95']['upper']:.0%}]",
+        agreement_label=f"{agreement['n']} synthetic archetypes, 95% CI [{agreement['primary_agreement_ci_95']['lower']:.0%}, {agreement['primary_agreement_ci_95']['upper']:.0%}]",  # noqa: E501
         robustness_pct=f"{rr['resolved_structure_pct']:.0%}",
         robustness_label=f"{rr['n']} real-market windows resolve a structure cleanly (not an accuracy metric)",
         repro_pct=f"{repro['deterministic_pct']:.0%}",

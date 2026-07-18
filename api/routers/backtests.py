@@ -80,7 +80,16 @@ def run_backtest(req: BacktestRequest):
     spec = get_contract_spec(req.symbol)
     provider = _build_provider(req.data_source, req.symbol, req.timeframe,
                                req.start_date, req.end_date, spec)
-    strategy = build_strategy(req.strategy_id, req.params)
+    # Task 10.1 verification found this crashed with a raw, unhandled
+    # KeyError (500) instead of a clean validation error when `params` is
+    # missing a required strategy param (e.g. ma_crossover needs
+    # fast/slow) -- build_strategy() indexes params["fast"] directly with
+    # no default. Same try/except-to-HTTPException(400) pattern already
+    # used below for engine.run().
+    try:
+        strategy = build_strategy(req.strategy_id, req.params)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(400, f"Invalid or missing strategy parameter for '{req.strategy_id}': {exc}")
 
     engine = BacktestEngine(
         data_provider=provider,

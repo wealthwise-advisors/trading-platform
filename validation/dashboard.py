@@ -150,8 +150,12 @@ def build_dashboard(conn: sqlite3.Connection, output_path: Path = None) -> Path:
 
     error_flags = ["false_positive", "false_negative", "mis_numbering", "wrong_degree",
                   "missed_triangle", "missed_diagonal", "wrong_correction"]
-    error_counts_rows = fetch_all(conn, f"SELECT {', '.join('SUM('+f+') as '+f for f in error_flags)} FROM reviews")
-    error_counts = [error_counts_rows[0][f] or 0 for f in error_flags] if error_counts_rows and error_counts_rows[0][error_flags[0]] is not None else [0] * len(error_flags)
+    # Suppressed below (bandit B608, SQL-injection-shaped f-string): every
+    # interpolated name comes from `error_flags` above, a hardcoded
+    # literal list defined two lines up, never from request/user input.
+    # Verified in docs/SECURITY_AUDIT.md.
+    error_counts_rows = fetch_all(conn, f"SELECT {', '.join('SUM('+f+') as '+f for f in error_flags)} FROM reviews")  # nosec B608
+    error_counts = [error_counts_rows[0][f] or 0 for f in error_flags] if error_counts_rows and error_counts_rows[0][error_flags[0]] is not None else [0] * len(error_flags)  # noqa: E501
 
     ra = summary["reviewer_agreement"]
     if review_count == 0:

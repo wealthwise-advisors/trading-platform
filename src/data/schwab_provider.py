@@ -32,6 +32,7 @@ import requests
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
+from ..config import resolve_config_dir
 
 
 _FUTURES_ROOTS = {
@@ -66,9 +67,7 @@ class SchwabDataProvider(DataProvider):
         self._app_key      = creds["app_key"]
         self._app_secret   = creds["app_secret"]
         self._callback_url = creds.get("callback_url", "https://127.0.0.1")
-        _default_tokens = str(
-            Path(__file__).parent.parent.parent / "config" / "schwab_tokens.json"
-        )
+        _default_tokens = str(resolve_config_dir() / "schwab_tokens.json")
         self._tokens_file = tokens_file or creds.get("tokens_file", _default_tokens)
         self._client = None   # lazily created after initial auth
 
@@ -80,7 +79,7 @@ class SchwabDataProvider(DataProvider):
     def _load_credentials() -> dict:
         try:
             import yaml
-            cfg_path = Path(__file__).parent.parent.parent / "config" / "credentials.yaml"
+            cfg_path = resolve_config_dir() / "credentials.yaml"
             with open(cfg_path) as f:
                 cfg = yaml.safe_load(f)
             schwab = cfg.get("schwab", {})

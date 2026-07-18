@@ -113,9 +113,13 @@ def precision_recall_f1(conn: sqlite3.Connection, structure_flag_column: str) ->
       - True positive        = Correct/Acceptable Alternate verdict where
                                the corresponding miss-flag was NOT set.
     """
+    # Suppressed below (bandit B608): structure_flag_column is only ever
+    # called with a hardcoded literal from a fixed internal dict (see
+    # full_summary() below), never request/user input. Verified in
+    # docs/SECURITY_AUDIT.md.
     rows = fetch_all(
         conn,
-        f"SELECT r.verdict as verdict, r.{structure_flag_column} as miss_flag, "
+        f"SELECT r.verdict as verdict, r.{structure_flag_column} as miss_flag, "  # nosec B608
         f"r.false_positive as fp FROM reviews r",
     )
     if not rows:
@@ -166,8 +170,11 @@ def quality_score_distribution(conn: sqlite3.Connection) -> dict:
     """Does NOT need review data -- direct engine output, available for
     all 369+ populated analyses immediately."""
     out = {}
+    # Suppressed below (bandit B608): `col` iterates a hardcoded literal
+    # tuple on the line above, never request/user input. Verified in
+    # docs/SECURITY_AUDIT.md.
     for col in ("impulse_quality", "corrective_quality", "triangle_quality", "diagonal_quality", "confidence"):
-        rows = [r[col] for r in fetch_all(conn, f"SELECT {col} FROM analyses WHERE {col} IS NOT NULL")]
+        rows = [r[col] for r in fetch_all(conn, f"SELECT {col} FROM analyses WHERE {col} IS NOT NULL")]  # nosec B608
         if rows:
             rows_sorted = sorted(rows)
             n = len(rows_sorted)

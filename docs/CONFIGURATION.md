@@ -15,6 +15,28 @@ the required `app`/`backtesting`/`contracts` sections, and prints the
 effective merged config with all secret-like fields redacted
 (`***SET***` / `(not set)` rather than the real value).
 
+### How `config/` is located
+
+`src.data.schwab_provider.py` and `external_csv_provider.py` (the two
+providers that read `config/` directly, outside the CLI's own
+`--settings`/`--credentials` flags) use `src.config.resolve_config_dir()`,
+checked in order:
+
+1. `AUTOTRADER_CONFIG_DIR` env var, if set — explicit override, always wins.
+2. `<current working directory>/config` — correct for `uvicorn
+   api.main:app` run from the repo root (the documented dev workflow)
+   and for the Docker image (`WORKDIR /app`, `config/` bind-mounted at
+   `/app/config`, cwd is `/app` at container startup).
+3. A package-relative fallback (two directories up from `src/config.py`)
+   for editable installs.
+
+Task 10.1 verification found the two providers originally hardcoded only
+the package-relative form, which resolves correctly for `pip install -e .`
+(where `__file__` still points at the repo) but silently pointed outside
+any real `config/` directory under a true `pip install .` or the built
+Docker image (both install into `site-packages`). Fixed by routing both
+through the shared, multi-candidate `resolve_config_dir()` above.
+
 ## `config/credentials.yaml` (gitignored, never commit)
 
 ```bash

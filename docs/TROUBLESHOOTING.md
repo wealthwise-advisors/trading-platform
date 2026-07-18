@@ -62,6 +62,23 @@ proxies `/api/*` to the API — see `web/nginx.conf`) avoids this entirely
 because the browser only ever talks to one origin; you'll only hit this if
 you deploy the API and frontend as genuinely separate origins.
 
+## `elliott benchmark` fails with "no such table: charts" or similar on a bare install
+
+Expected, and specific to the real-market tier only. `elliott benchmark`
+has two tiers: 104 synthetic archetype cases (work standalone, no external
+data needed) and 369 real-market robustness cases, which require
+`validation/validation.db` to already exist. That database is built from
+~11 MB of real Schwab-fetched market data that is deliberately not
+committed to git (too large, regeneratable in principle) — but "regenerate"
+means running `validation/populate.py` against a live, credentialed Schwab
+connection, not something a bare `pip install` can do on its own. A repo
+checkout that already has `validation/validation.db` (e.g. from a prior
+`validation/populate.py` run) works fully; a fresh install elsewhere only
+gets the synthetic tier until that database is rebuilt or copied over. The
+synthetic tier alone (`104 synthetic_archetype cases populated`) is not an
+error — it's the full benchmark run correctly, minus the real-market
+robustness numbers.
+
 ## Live trading doesn't do anything
 
 By design — `src/live/trader.py` and `src/broker/rithmic_broker.py` are a

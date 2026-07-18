@@ -74,6 +74,7 @@ Frontend at http://localhost:8080 (reverse-proxies `/api/*` to the backend
 | [Release Notes](docs/RELEASE_NOTES.md) | What's in v1.0.0 |
 | [CHANGELOG](CHANGELOG.md) | Version history |
 | [Release Audit](docs/RELEASE_AUDIT.md) | Task 10's full audit: findings, fixes, known limitations, readiness score |
+| [Verification Report](docs/VERIFICATION_REPORT.md) | Task 10.1's Gold Certification: every release claim actually executed and re-verified |
 | [Security Audit](docs/SECURITY_AUDIT.md) | Dependency CVEs, secret handling, input validation review |
 | [CONTRIBUTING](CONTRIBUTING.md) | Dev workflow, code style, PR expectations |
 

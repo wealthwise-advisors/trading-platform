@@ -39,7 +39,9 @@ h1 {{ font-size: 20px; }}
 </style>
 </head><body><div class="wrap">
 <h1>Elliott Wave Benchmark -- Discrepancy Report</h1>
-<p style="color:#52514e; font-size:13px;">Every case where the engine's top-level structure did not match the archetype's documented definition. Each includes a real rendered chart (not a placeholder) and the same evidence-grounded recommendation basis stored in benchmark_comparisons.</p>
+<p style="color:#52514e; font-size:13px;">Every case where the engine's top-level structure did not match the
+archetype's documented definition. Each includes a real rendered chart (not a placeholder) and the same
+evidence-grounded recommendation basis stored in benchmark_comparisons.</p>
 {cases}
 </div></body></html>
 """
