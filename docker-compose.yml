@@ -1,0 +1,54 @@
+# AutoTrader / Elliott Wave engine -- production deployment (Task 10, v1.0.0).
+#
+#   docker compose up --build
+#
+# Frontend (web, port 8080) reverse-proxies /api/* to the api service, so
+# the browser only ever talks to one origin -- see web/nginx.conf. The api
+# service is not published to the host by default (only reachable from the
+# web container's proxy and other compose services); uncomment its `ports:`
+# below if you need to hit it directly (e.g. from Postman) during a
+# deployment smoke test.
+#
+# config/ is mounted read-only: credentials.yaml (gitignored, never built
+# into the image) must exist on the host before startup if you need Schwab
+# or Rithmic. Without it, the API still runs -- synthetic data, backtesting,
+# replay, and the Elliott Wave engine all work with zero external
+# credentials; see docs/CONFIGURATION.md.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: autotrader-api:1.0.0
+    restart: unless-stopped
+    environment:
+      AUTOTRADER_CORS_ORIGINS: "http://localhost:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - autotrader-data:/app/data
+      - autotrader-logs:/app/logs
+    # ports:
+    #   - "8000:8000"   # uncomment to reach the API directly on the host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: web
+      dockerfile: Dockerfile
+    image: autotrader-web:1.0.0
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+
+volumes:
+  autotrader-data:
+  autotrader-logs:

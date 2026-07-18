@@ -14,7 +14,7 @@ from src.analysis.chart_patterns import find_chart_patterns
 from api.report.report import generate_html_report
 
 from api.deps import get_contract_spec, BASE_PRICES
-from api.strategy_registry import build_strategy, strategy_label
+from api.strategy_registry import build_strategy
 from api import store, serializers
 from api.schemas.backtest import BacktestRequest
 

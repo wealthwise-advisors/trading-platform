@@ -36,15 +36,17 @@ import pandas as pd
 from .swing_identification import (
     Swing, SwingType, identify_swings, trend_state, atr,
 )
+from .indicators import calc_rsi
 from .elliott_wave import ImpulseWave, find_impulses
 from .corrective_waves import (
-    Correction, CorrectionType, classify_abc, find_combinations,
+    Correction, CorrectionType, classify_abc, detect_triangle, find_combinations,
 )
 from .fibonacci import (
     score_impulse_fib, score_correction_fib, correction_end_zone,
     project_correction_c, fib_projections, find_confluence, ClusterZone,
 )
 from .wave_numbering import WaveLabel, label_wave_sequence
+from . import structure_classification
 
 
 @dataclass
@@ -62,6 +64,13 @@ class WaveAnalysis:
     target_zones: List[ClusterZone] = field(default_factory=list)
     alternates: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
+    # Distinct from ``notes`` (general interpretive commentary): each entry
+    # here explains a SPECIFIC count that stopped short of completion because
+    # of a rule the numbering couldn't confirm (currently: Wave 5 momentum
+    # divergence -- see wave_numbering.label_wave_sequence's ``warnings``
+    # return). Kept separate so the UI can style these as actionable
+    # warnings rather than mixing them into general notes.
+    warnings: List[str] = field(default_factory=list)
     wave_sequence: List[WaveLabel] = field(default_factory=list)
 
 
@@ -132,7 +141,27 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
             min_move: float = 0.0, degree: str = "minor") -> WaveAnalysis:
     swings = identify_swings(df, left=left, right=right, min_move=min_move)
     trend = trend_state(swings)
-    wave_sequence = label_wave_sequence(swings)
+    # RSI(14): textbook Elliott Wave momentum-divergence gate for Wave 5 (see
+    # wave_numbering.py docstring). Deliberately NOT bfilled -- per explicit
+    # requirement, Wave 5 must not complete when momentum can't genuinely be
+    # evaluated, and bfilling the warm-up NaNs would borrow a future value
+    # and mask exactly that "insufficient data" case label_wave_sequence is
+    # now designed to detect and warn about.
+    rsi14 = calc_rsi(df["close"], 14)
+    # Opt in to recursive structural verification (Task 4) for this call
+    # only -- swings.index values here are bar offsets in `df` itself, so
+    # this is the one place in the pipeline where the coordinate spaces
+    # genuinely line up. Tightly scoped (set immediately before, reset
+    # immediately after) so the nested minor-degree hierarchy pass
+    # (_nested_minor_wave_sequence, which calls label_wave_sequence again
+    # but on a DIFFERENT, slice-local `df`) never sees this context and
+    # never risks a coordinate mismatch. wave_numbering.py itself is
+    # unmodified and never calls set_recursion_context.
+    _recursion_token = structure_classification.set_recursion_context(df)
+    try:
+        wave_sequence, wave_warnings, wave_alternates = label_wave_sequence(swings, rsi=rsi14)
+    finally:
+        structure_classification.reset_recursion_context(_recursion_token)
 
     valid = [w for w in find_impulses(swings) if w.valid]
     impulse = max(valid, key=lambda w: w.end_index) if valid else None
@@ -148,6 +177,11 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
     price = float(df["close"].iloc[-1])
     cycle, bias, invalidation, alternates, notes = _interpret(
         impulse, correction, price, trend)
+    # wave_alternates: competitive-but-not-chosen counts from the scored
+    # selection over the continuous wave_sequence (see wave_numbering.py's
+    # _select_best_counts) -- a different axis from _interpret()'s single-
+    # window alternates above, both surfaced the same way to the UI.
+    alternates = alternates + wave_alternates
 
     # ---- confluence target zones (mingle impulse + corrective levels) ----
     zones: List[ClusterZone] = []
@@ -182,23 +216,323 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
         correction=correction, correction_fib=correction_fib,
         cycle_position=cycle, bias=bias, invalidation=invalidation,
         target_zones=zones, alternates=alternates, notes=notes,
+        warnings=wave_warnings,
         wave_sequence=wave_sequence,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Degree hierarchy (2026-07-19): Minor must nest inside Primary
+# --------------------------------------------------------------------------- #
+# Previously "primary" and "minor" were two independent flat scans of the
+# WHOLE chart at different pivot sensitivities, with zero relationship
+# between them -- a Minor wave count could span, start, or end anywhere,
+# regardless of what Primary found covering the same bars. That's not
+# Elliott degree structure, it's just two unrelated readings of the same
+# price series. Real Elliott theory is fractal: a Primary impulse leg (Wave
+# 1, 3, 5...) is ITSELF composed of exactly 5 Minor sub-waves; a Primary
+# corrective leg (Wave 2, 4, A, B, C) is composed of a Minor A-B-C. The
+# child never exists outside the parent's own price/time boundaries.
+#
+# Enforcement below is structural, not a filter bolted on after the fact:
+#   1. Containment -- Minor's swings and candidates are generated ONLY from
+#      the bars inside [leg_start, leg_end] (a literal df slice). There is
+#      no code path by which a nested Minor label's bar index can fall
+#      outside its parent leg -- it's not filtered afterward, it never
+#      existed outside that range to begin with.
+#   2. Elliott-consistent subdivision -- each Primary leg's ROLE (impulse:
+#      1/3/5/odd-continuation, expects 5 Minor waves; corrective:
+#      2/4/even-continuation/a/b/c, expects a Minor A-B-C) is compared
+#      against what the nested scan actually found and reported either way
+#      (not forced -- manufacturing a fake 5th wave when only 3 genuine
+#      sub-pivots exist would be false precision, not accuracy).
+#   3. No conflicting counts -- among the Minor sub-runs found inside a
+#      leg's slice, only ones whose overall direction matches the parent
+#      leg are kept; a Minor reading that disagrees with its own parent's
+#      direction is dropped, never surfaced as if it were a real nesting.
+#   4. Post-hoc validation -- every leg produces a ``_LegHierarchyCheck``
+#      regardless of whether a usable subdivision was found, so the result
+#      is auditable, not just "whatever happened to come out."
+#
+# Corrective sub-typing (2026-07-19): a corrective Primary leg's Minor
+# subdivision is now classified by corrective_waves.py's own machinery
+# (zigzag/flat variants, triangle, double/triple three) instead of assuming
+# every correction is a plain zigzag-shaped A-B-C. Tried in order of
+# structural specificity -- combination > triangle > simple ABC, since a
+# leg that genuinely fits a WXY is a more specific, stronger claim than "it
+# happened to also pass as *some* ABC" -- with a direction check identical
+# in spirit to impulse legs' (requirement 3 applies here too: a
+# classification whose net direction disagrees with the parent leg is
+# rejected). IMPULSE legs are completely untouched by this -- they still go
+# through wave_numbering.label_wave_sequence exactly as before, and if a
+# corrective leg's shape doesn't cleanly match any corrective_waves.py
+# pattern, it falls back to the same label_wave_sequence-based ABC reading
+# used previously, so nothing regresses; this only ADDS a preferred, more
+# specific reading when one is available.
+# --------------------------------------------------------------------------- #
+
+def _leg_role(wave: str) -> str:
+    """Impulse legs (1, 3, 5, and odd continuation waves 7/9/11) are motive
+    -- Elliott's rule says they subdivide into 5. Corrective legs (2, 4,
+    even continuation waves 6/8/10, and a/b/c) subdivide into 3 (A-B-C)."""
+    if wave.isdigit():
+        return "impulse" if int(wave) % 2 == 1 else "corrective"
+    return "corrective"   # a, b, c
+
+
+def _group_wave_runs(sequence: List[WaveLabel]) -> List[List[WaveLabel]]:
+    """Same grouping rule used by the API/frontend/report: a new run starts
+    every time the count resets back to Wave 1."""
+    runs: List[List[WaveLabel]] = []
+    for w in sequence:
+        if w.wave == "1" or not runs:
+            runs.append([w])
+        else:
+            runs[-1].append(w)
+    return runs
+
+
+def _origin_before(label: WaveLabel, swings: List[Swing]) -> Optional[Swing]:
+    """The swing immediately preceding ``label`` in the full swing series --
+    mirrors what wave_numbering._grow_count uses internally as a run's
+    origin (swings[start-1]), recovered here since the flat WaveLabel
+    sequence doesn't carry the origin explicitly."""
+    earlier = [s for s in swings if s.index < label.swing.index]
+    return max(earlier, key=lambda s: s.index) if earlier else None
+
+
+@dataclass
+class _LegHierarchyCheck:
+    parent_wave: str
+    role: str
+    bar_start: int
+    bar_end: int
+    minor_found: bool
+    matches_theory: bool
+    note: str
+
+
+def _classify_corrective_leg(slice_swings: List[Swing], expected_dir: str) -> Optional[Correction]:
+    """Best-effort shape classification for a corrective Primary leg's own
+    swings, tried most-specific-first: combination (double/triple three) >
+    triangle > simple zigzag/flat variants. Returns None if nothing fits or
+    the only fit disagrees in direction with the parent leg (see module
+    section docstring, "Corrective sub-typing").
+
+    Each corrective_waves.py function answers a different question:
+    ``find_combinations`` SCANS the whole list for an 8- or 12-pivot WXY/
+    WXYXZ window anywhere inside it, so results are filtered here to ones
+    starting at this leg's own first pivot -- a combination found only
+    somewhere in the MIDDLE of the leg doesn't describe the leg itself.
+    ``detect_triangle``/``classify_abc`` take an explicit pivot list and
+    don't scan, so they're handed exactly the leg's first 6 / first 4
+    pivots -- "does this leg, from its own start, look like a triangle /
+    simple ABC."
+    """
+    combos = [c for c in find_combinations(slice_swings)
+             if c.pivots[0] is slice_swings[0] and c.direction == expected_dir]
+    if combos:
+        return max(combos, key=lambda c: len(c.pivots))   # prefer triple three over double three if both fit
+
+    if len(slice_swings) >= 6:
+        tri = detect_triangle(slice_swings[:6])
+        if tri and tri.direction == expected_dir:
+            return tri
+
+    if len(slice_swings) >= 4:
+        abc = classify_abc(slice_swings[:4])
+        if abc.direction == expected_dir:
+            return abc
+
+    return None
+
+
+def _correction_boundary_labels(correction: Correction, direction: str) -> List[WaveLabel]:
+    """Map a classified Correction onto WaveLabels at its TOP level: a
+    zigzag/flat's own A/B/C, a triangle's A..E, or a combination's W/X/Y
+    connector boundaries. Sub-corrections inside a combination (W's and
+    Y's/Z's own internal A-B-C) are NOT recursively re-labeled in this pass
+    -- documented as a follow-on in the module docstring, not silently
+    dropped.
+    """
+    p = correction.pivots
+    if correction.type == CorrectionType.TRIANGLE:
+        boundary = list(zip(["a", "b", "c", "d", "e"], p[1:6]))
+    elif correction.type == CorrectionType.DOUBLE_THREE:
+        boundary = [("w", p[3]), ("x", p[4]), ("y", p[7])]
+    elif correction.type == CorrectionType.TRIPLE_THREE:
+        boundary = [("w", p[3]), ("x", p[4]), ("y", p[7]), ("x", p[8]), ("z", p[11])]
+    else:   # zigzag / regular / expanded / running flat -- simple A, B, C
+        boundary = list(zip(["a", "b", "c"], p[1:4]))
+    return [WaveLabel(swing=swing, wave=label, sub=None, direction=direction)
+            for label, swing in boundary]
+
+
+def _nested_minor_wave_sequence(
+    df: pd.DataFrame,
+    primary_sequence: List[WaveLabel],
+    primary_swings: List[Swing],
+    minor_left: int, minor_right: int, minor_min_move: float,
+) -> tuple[List[WaveLabel], List[str], List[str], List[_LegHierarchyCheck]]:
+    """Build the Minor-degree wave_sequence leg-by-leg WITHIN each selected
+    Primary wave, instead of independently over the whole chart. Returns
+    (labels, warnings, alternates, checks) -- see module section docstring
+    above for what each enforcement point means.
+    """
+    out: List[WaveLabel] = []
+    warnings: List[str] = []
+    alternates: List[str] = []
+    checks: List[_LegHierarchyCheck] = []
+
+    MIN_LEG_BARS = 4   # too short to meaningfully subdivide at all
+
+    for run in _group_wave_runs(primary_sequence):
+        origin = _origin_before(run[0], primary_swings)
+        pivots = ([origin] if origin else []) + [w.swing for w in run]
+        end_waves = (["1"] if origin else []) + [w.wave for w in run]
+
+        for i in range(len(pivots) - 1):
+            leg_start, leg_end = pivots[i], pivots[i + 1]
+            end_wave = end_waves[i + 1]
+            role = _leg_role(end_wave)
+            bar_start, bar_end = leg_start.index, leg_end.index
+            expected_dir = "up" if leg_end.price > leg_start.price else "down"
+
+            if bar_end - bar_start < MIN_LEG_BARS:
+                checks.append(_LegHierarchyCheck(
+                    end_wave, role, bar_start, bar_end, minor_found=False, matches_theory=False,
+                    note=f"Primary Wave {end_wave} ({role}, bars {bar_start}-{bar_end}): "
+                         f"too short to carry a Minor subdivision.",
+                ))
+                continue
+
+            leg_label = f"Primary Wave {end_wave} ({role}, bars {bar_start}-{bar_end})"
+            slice_df = df.iloc[bar_start:bar_end + 1].reset_index(drop=True)
+            slice_swings = identify_swings(slice_df, left=minor_left, right=minor_right,
+                                           min_move=minor_min_move)
+
+            # Corrective legs: prefer corrective_waves.py's own shape
+            # classification (zigzag/flat/triangle/combination) over the
+            # generic impulse-numbering fallback below -- see "Corrective
+            # sub-typing" in the module section docstring.
+            if role == "corrective":
+                shape = _classify_corrective_leg(slice_swings, expected_dir)
+                if shape is not None:
+                    offset_labels = [
+                        WaveLabel(
+                            swing=Swing(index=w.swing.index + bar_start,
+                                       confirm_index=w.swing.confirm_index + bar_start,
+                                       price=w.swing.price, kind=w.swing.kind, label=w.swing.label),
+                            wave=w.wave, sub=w.sub, direction=w.direction,
+                        )
+                        for w in _correction_boundary_labels(shape, expected_dir)
+                    ]
+                    out.extend(offset_labels)
+                    checks.append(_LegHierarchyCheck(
+                        end_wave, role, bar_start, bar_end, minor_found=True, matches_theory=True,
+                        note=f"{leg_label}: Minor subdivision recognized as a "
+                             f"{shape.type.value.replace('_', ' ')}.",
+                    ))
+                    continue
+
+            slice_rsi = calc_rsi(slice_df["close"], 14) if "close" in slice_df.columns else None
+            sub_seq, sub_warnings, sub_alternates = label_wave_sequence(slice_swings, rsi=slice_rsi)
+            sub_runs = _group_wave_runs(sub_seq)
+
+            # Enforcement #3: only keep sub-runs whose OWN direction agrees
+            # with the parent leg's direction -- a disagreeing reading is
+            # dropped outright, not shown as a false nesting.
+            consistent = [r for r in sub_runs if r[0].direction == expected_dir]
+            chosen = max(consistent, key=lambda r: r[-1].index - r[0].index) if consistent else None
+
+            if chosen is None:
+                conflicted = len(sub_runs) > 0
+                checks.append(_LegHierarchyCheck(
+                    end_wave, role, bar_start, bar_end, minor_found=False, matches_theory=False,
+                    note=f"{leg_label}: " + (
+                        "Minor subdivision(s) were found but all conflicted in direction with "
+                        "this Primary wave, so none were kept."
+                        if conflicted else "no Minor subdivision found (no valid pivots inside this leg)."
+                    ),
+                ))
+                continue
+
+            offset_labels = [
+                WaveLabel(
+                    swing=Swing(index=w.swing.index + bar_start,
+                               confirm_index=w.swing.confirm_index + bar_start,
+                               price=w.swing.price, kind=w.swing.kind, label=w.swing.label),
+                    wave=w.wave, sub=w.sub, direction=w.direction,
+                )
+                for w in chosen
+            ]
+            out.extend(offset_labels)
+            warnings.extend(sub_warnings)
+            alternates.extend(f"[{leg_label}] {a}" for a in sub_alternates)
+
+            reached = offset_labels[-1].wave
+            highest_core = max((int(w.wave) for w in offset_labels
+                                if w.wave.isdigit() and int(w.wave) <= 5), default=0)
+            matches = (role == "impulse" and highest_core == 5) or (role == "corrective" and reached == "c")
+            checks.append(_LegHierarchyCheck(
+                end_wave, role, bar_start, bar_end, minor_found=True, matches_theory=matches,
+                note=f"{leg_label}: Minor subdivision reaches wave {reached}" + (
+                    "" if matches else
+                    f" -- Elliott theory expects "
+                    f"{'a complete 5-wave impulse' if role == 'impulse' else 'a full A-B-C correction'} here."
+                ),
+            ))
+
+    out.sort(key=lambda w: w.swing.index)
+    return out, warnings, alternates, checks
 
 
 # --------------------------------------------------------------------------- #
 # Multi-degree (fractal) analysis
 # --------------------------------------------------------------------------- #
 def analyze_degrees(df: pd.DataFrame, degrees=None) -> dict:
-    """Run analysis at several sensitivities. Coarse = larger waves, fine = sub-waves."""
+    """Run analysis at several sensitivities. Coarse = larger waves, fine =
+    sub-waves. When both "primary" and "minor" are present, Minor's
+    wave_sequence is rebuilt to nest inside Primary's structure (see the
+    "Degree hierarchy" section above) instead of being computed
+    independently -- any other/custom-named degree falls back to the
+    original flat, unnested analysis.
+    """
     if degrees is None:
         degrees = [
             {"name": "primary", "left": 4, "right": 4, "mm_mult": 2.0},
             {"name": "minor",   "left": 2, "right": 2, "mm_mult": 1.0},
         ]
     med = float(np.nanmedian(atr(df["high"], df["low"], df["close"], 14)))
-    return {d["name"]: analyze(df, d["left"], d["right"], d["mm_mult"] * med, d["name"])
-            for d in degrees}
+
+    primary_cfg = next((d for d in degrees if d["name"] == "primary"), None)
+    minor_cfg = next((d for d in degrees if d["name"] == "minor"), None)
+
+    results: dict = {}
+    if primary_cfg:
+        results["primary"] = analyze(df, primary_cfg["left"], primary_cfg["right"],
+                                     primary_cfg["mm_mult"] * med, "primary")
+
+    if minor_cfg:
+        minor_analysis = analyze(df, minor_cfg["left"], minor_cfg["right"],
+                                 minor_cfg["mm_mult"] * med, "minor")
+        if primary_cfg:
+            primary_swings = identify_swings(df, primary_cfg["left"], primary_cfg["right"],
+                                             primary_cfg["mm_mult"] * med)
+            nested_seq, nested_warn, nested_alt, checks = _nested_minor_wave_sequence(
+                df, results["primary"].wave_sequence, primary_swings,
+                minor_cfg["left"], minor_cfg["right"], minor_cfg["mm_mult"] * med,
+            )
+            minor_analysis.wave_sequence = nested_seq
+            minor_analysis.warnings = minor_analysis.warnings + nested_warn
+            minor_analysis.alternates = minor_analysis.alternates + nested_alt
+            minor_analysis.notes = minor_analysis.notes + [c.note for c in checks]
+        results["minor"] = minor_analysis
+
+    for d in degrees:
+        if d["name"] not in results:
+            results[d["name"]] = analyze(df, d["left"], d["right"], d["mm_mult"] * med, d["name"])
+    return results
 
 
 # --------------------------------------------------------------------------- #

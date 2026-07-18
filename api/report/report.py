@@ -23,8 +23,9 @@ from api.report.charts import (
 )
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
+from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis
+from api.report.wave_layout import tier_of, tier_filter_run, declutter_static, WaveItem
 
-import numpy as np
 
 _G      = "#3fb950"
 _R      = "#f85149"
@@ -35,6 +36,16 @@ _SURFACE = "#161b22"
 _TEXT   = "#e6edf3"
 _MUTED  = "#8b949e"
 _MARKER_BG = "#1e1e2e"  # solid fill so boundary lines don't bleed through circles
+
+# Elliott Wave chart -- cycled per wave-count "run", same palette as
+# ElliottWaveChart.tsx's RUN_COLORS (keep in sync).
+_EW_RUN_COLORS = ["#2196f3", "#f0c040", "#7ee787", "#c77dff", "#4cc9f0", "#ff8a65"]
+# Per-tier visual weight, matching ElliottWaveChart.tsx's TIER_STYLE.
+_EW_TIER_STYLE = {
+    0: dict(font_size=13,   marker_size=7,   opacity=1.0,  bold=True),   # Core: 1,3,5,a,c
+    1: dict(font_size=10.5, marker_size=5.5, opacity=0.8,  bold=False),  # Secondary: 2,4,b
+    2: dict(font_size=9,    marker_size=4.5, opacity=0.55, bold=False),  # Tertiary: 6..11
+}
 
 # Plotly JS config injected into every chart div.
 # scrollZoom is the key setting — without it mouse-wheel does nothing.
@@ -456,6 +467,111 @@ def _monthly_heatmap(results: BacktestResults) -> go.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Elliott Wave chart -- static-report counterpart of
+# web/src/components/charts/ElliottWaveChart.tsx. Missing from the export
+# until 2026-07-17 (the live React tab had it, the HTML export didn't).
+# Renders one chart per degree ("primary"/"minor") at a single fixed detail
+# level (see wave_layout.py) since there's no client-side zoom handler here
+# to progressively reveal more -- the exported chart is still pannable/
+# zoomable via Plotly's native controls, it just doesn't re-declutter live.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _group_wave_runs(sequence):
+    """Same grouping rule as ElliottWaveChart.tsx's groupRuns(): a new run
+    starts every time the count resets back to Wave 1."""
+    runs = []
+    for w in sequence:
+        if w.wave == "1" or not runs:
+            runs.append([w])
+        else:
+            runs[-1].append(w)
+    return runs
+
+
+def _wave_label_text(wave: str, sub: int | None) -> str:
+    return f"{wave}.{sub}" if sub else wave
+
+
+def _elliott_wave_chart(df: pd.DataFrame, analysis: WaveAnalysis, degree_name: str,
+                        nested: bool, symbol: str) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=df.index, open=df["open"], high=df["high"],
+        low=df["low"], close=df["close"],
+        increasing_line_color=_G, decreasing_line_color=_R,
+        name="Price", showlegend=False,
+    ))
+
+    runs = _group_wave_runs(analysis.wave_sequence)
+    all_items: list[WaveItem] = []
+    run_items_by_run: list[list[dict]] = []
+
+    for i, run in enumerate(runs):
+        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
+        items = [
+            {
+                "t": df.index[w.swing.index].timestamp(),
+                "ts": df.index[w.swing.index],
+                "price": w.price,
+                "wave": w.wave,
+                "sub": w.sub,
+                "kind": w.swing.kind.value,
+                "color": color,
+            }
+            for w in run
+        ]
+        run_items_by_run.append(items)
+        all_items.extend(items)
+
+    for i, items in enumerate(run_items_by_run):
+        if not items:
+            continue
+        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
+        visible = tier_filter_run(items)
+        marker_sizes = [_EW_TIER_STYLE[tier_of(it["wave"])]["marker_size"] for it in visible]
+        opacities = [0.45 if it["sub"] == 2 else 1.0 for it in visible]
+        labels = [_wave_label_text(it["wave"], it["sub"]) for it in visible]
+        if nested:
+            labels = [f"({label})" for label in labels]
+        fig.add_trace(go.Scatter(
+            x=[it["ts"] for it in visible], y=[it["price"] for it in visible],
+            mode="lines+markers",
+            line=dict(color=color, width=1.4),
+            marker=dict(size=marker_sizes, color=color, opacity=opacities,
+                        line=dict(color=_BG, width=0.5)),
+            name=f"Wave count {i + 1} ({items[0]['kind']})", showlegend=False,
+            hovertemplate="%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
+            text=labels,
+        ))
+
+    if all_items:
+        t_span = max(it["t"] for it in all_items) - min(it["t"] for it in all_items)
+        p_span = max(it["price"] for it in all_items) - min(it["price"] for it in all_items)
+        shown = declutter_static(all_items, t_span, p_span)
+        for it in shown:
+            style = _EW_TIER_STYLE[tier_of(it["wave"])]
+            label = _wave_label_text(it["wave"], it["sub"])
+            text = f"<b>{label}</b>" if style["bold"] else label
+            if nested:
+                text = f"<b>({label})</b>" if style["bold"] else f"({label})"
+            fig.add_annotation(
+                x=it["ts"], y=it["price"], xref="x", yref="y",
+                text=text, showarrow=False,
+                font=dict(color=it["color"], size=style["font_size"]),
+                opacity=style["opacity"],
+                yshift=(10 + style["font_size"]) if it["kind"] == "high" else -(10 + style["font_size"]),
+            )
+
+    fig.update_layout(
+        **_layout(f"{symbol} — {degree_name} degree Elliott Wave", height=520),
+        xaxis=dict(gridcolor=_GRID, rangeslider_visible=False,
+                   rangeselector=_RANGE_SELECTOR, **_SPIKE),
+        yaxis=dict(gridcolor=_GRID, title=dict(text="Price", font=dict(size=9, color=_MUTED))),
+    )
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Pattern tables (candlestick / chart patterns) -- mirrors
 # CandlestickPatternsTable.tsx / ChartPatternsTable.tsx in the live app.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -687,6 +803,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <nav class="toc">
   <a href="#price-chart">📊 Price &amp; Trades</a>
+  <a href="#elliott-wave">🌊 Elliott Wave</a>
   <a href="#equity-curve">📈 Equity</a>
   <a href="#pnl-distribution">📈 P&amp;L</a>
   <a href="#monthly-returns">📅 Monthly</a>
@@ -712,6 +829,9 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div class="section-title" id="price-chart"><span class="icon">📊</span> Price Chart, Indicators &amp; Trades</div>
 <div class="chart-box">{chart_candle}</div>
+
+<div class="section-title" id="elliott-wave"><span class="icon">🌊</span> Elliott Wave</div>
+{chart_elliott}
 
 <div class="section-title" id="equity-curve"><span class="icon">📈</span> Equity Curve</div>
 <div class="chart-box">{chart_equity}</div>
@@ -831,6 +951,20 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     candlestick_patterns_table = _candlestick_patterns_table(r)
     chart_patterns_table = _chart_patterns_table(r)
 
+    # Elliott Wave -- one chart per degree ("primary", "minor"), same source
+    # (analyze_degrees) and same tier/color scheme as the live React tab.
+    # Was missing from the export entirely until 2026-07-17.
+    if not r.price_data.empty:
+        degrees = analyze_degrees(r.price_data)
+        chart_elliott = "".join(
+            f'<div class="chart-box">'
+            f'{_fig_to_div(_elliott_wave_chart(r.price_data, a, name, nested=(name == "minor"), symbol=r.symbol))}'
+            f'</div>'
+            for name, a in degrees.items()
+        )
+    else:
+        chart_elliott = '<p style="color:#8b949e;padding:12px">No price data available for wave analysis.</p>'
+
     title = f"{r.strategy_name} — {r.symbol}"
     html = _HTML_TEMPLATE.format(
         title=title,
@@ -841,6 +975,7 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         generated=datetime.now().strftime("%Y-%m-%d %H:%M"),
         metric_cards="\n".join(cards),
         chart_candle=chart_candle,
+        chart_elliott=chart_elliott,
         chart_equity=chart_equity,
         chart_pnl=chart_pnl,
         chart_monthly=chart_monthly,

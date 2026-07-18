@@ -1,5 +1,6 @@
 import type { ElliottWaveResponse, OHLCVRecord } from "@/lib/types"
 import { ElliottWaveChart } from "@/components/charts/ElliottWaveChart"
+import { WaveWarningsCard, AlternateCountsCard } from "@/components/tables/WaveNotesPanel"
 
 interface ElliottWavePanelProps {
   data: ElliottWaveResponse
@@ -16,7 +17,11 @@ export function ElliottWavePanel({ data, bars, symbol }: ElliottWavePanelProps) 
   return (
     <div className="space-y-4">
       {degrees.map((a, i) => (
-        <ElliottWaveChart key={i} symbol={symbol} bars={bars} analysis={a} nested={a.degree === "minor"} />
+        <div key={i} className="space-y-2">
+          <ElliottWaveChart symbol={symbol} bars={bars} analysis={a} nested={a.degree === "minor"} />
+          <WaveWarningsCard notes={a.notes} warnings={a.warnings} />
+          <AlternateCountsCard alternates={a.alternates} />
+        </div>
       ))}
     </div>
   )

@@ -99,6 +99,7 @@ def _analysis_to_dict(a: WaveAnalysis, timestamps, swings: list) -> dict:
         "target_zones": [_zone_to_dict(z) for z in a.target_zones],
         "alternates": a.alternates,
         "notes": a.notes,
+        "warnings": a.warnings,
         "wave_sequence": [_wave_label_to_dict(w, timestamps) for w in a.wave_sequence],
     }
 

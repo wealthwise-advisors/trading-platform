@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autotrader"
+version = "1.0.0"
+description = "Futures/options backtesting platform with an integrated Elliott Wave analysis engine (recursive structural validation, unified impulse/correction/triangle/complex-correction/diagonal classification)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary - All Rights Reserved" }
+authors = [{ name = "WealthWise Advisors" }]
+classifiers = [
+    "Private :: Do Not Upload",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+# Verified against actual `import` statements across src/, api/, benchmark/,
+# validation/, scripts/ (Task 10 release audit) -- not copied from the prior,
+# stale requirements.txt. Two corrections made from that audit:
+#   * fastapi / uvicorn / pydantic / openpyxl / reportlab / python-docx were
+#     USED (api/ is a real FastAPI service; api/export/formats.py does
+#     PDF/Word/Excel export) but were MISSING here entirely -- a fresh
+#     `pip install` could not have run the API or hit the export endpoints.
+#   * streamlit and scipy were listed but have zero remaining imports
+#     anywhere in the repo (the Streamlit UI was fully removed per
+#     CLAUDE.md) -- dropped as stale.
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pandas_ta>=0.4.71b0",
+    "plotly>=5.15.0",
+    "pyyaml>=6.0",
+    "loguru>=0.7.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "websockets>=11.0",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.0.0",
+    "openpyxl>=3.1.0",
+    "reportlab>=4.0.0",
+    "python-docx>=1.1.0",
+    # Security pin (Task 10 audit, pip-audit): reportlab pulls Pillow
+    # transitively; versions <12.3.0 carry 8 known CVEs (decompression-bomb
+    # bypasses in font/EPS parsing, a shell-injection in WindowsViewer, a
+    # native heap OOB write) -- see docs/SECURITY_AUDIT.md.
+    "Pillow>=12.3.0",
+]
+
+[project.optional-dependencies]
+# Real/live market data via Rithmic -- requires a licensed Rithmic account
+# and credentials; not needed for backtesting, replay, or the Elliott Wave
+# engine on synthetic/CSV/Schwab data. Kept optional so a default install
+# doesn't pull in a broker SDK nobody without an account can use anyway.
+live = ["pyrithmic>=0.1.0"]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.15.0",
+    "mypy>=1.8.0",
+    "vulture>=2.11",
+    "bandit>=1.7.0",
+    "pip-audit>=2.7.0",
+]
+
+[project.scripts]
+elliott = "cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["src*", "api*", "benchmark*", "validation*", "cli*"]
+exclude = ["*.__pycache__", "*.__pycache__.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = ["src/data/schwabdev"]   # vendored third-party client, kept as-imported from upstream
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+# E741 (ambiguous 1-char names) and E731 (lambda-assign) are pre-existing,
+# audited findings inside src/analysis/ (the Elliott engine) -- see
+# docs/RELEASE_AUDIT.md. Not auto-fixed per Task 10's explicit "do not
+# modify Elliott Wave algorithms" instruction; suppressed here so CI lint
+# reflects that decision instead of failing on it every run.
+ignore = ["E741", "E731"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+exclude = ["src/data/schwabdev"]

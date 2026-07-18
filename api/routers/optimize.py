@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from src.backtesting.engine import BacktestEngine
 
 from api.deps import get_contract_spec
-from api.strategy_registry import STRATEGIES, build_strategy, strategy_label
+from api.strategy_registry import STRATEGIES, build_strategy
 from api.routers.backtests import _build_provider
 from api import store, serializers
 from api.schemas.optimize import OptimizeRequest, OptimizeResponse, OptimizeCombo

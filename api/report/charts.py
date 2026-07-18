@@ -1,11 +1,10 @@
 """Plotly chart builders for the Streamlit dashboard."""
 
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from src.backtesting.results import BacktestResults, Trade
+from src.backtesting.results import BacktestResults
 from src.analysis.indicators import calc_rsi as _calc_rsi, calc_stoch as _calc_stoch
 from src.analysis.zigzag import calc_zigzag as _calc_zigzag, assign_swing_labels as _assign_swing_labels
 
