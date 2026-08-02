@@ -16,8 +16,9 @@ Pipeline per call
 
 Depth features
 --------------
-* Multi-degree (fractal) analysis: run detection at coarse ("primary") and fine
-  ("minor") sensitivity and relate sub-waves to their parent wave.
+* Multi-degree (fractal) analysis: run detection recursively down a ladder of
+  sensitivities (Primary -> Intermediate -> Minor -> Minute -> ...), each level
+  confined to its parent's own wave legs -- see DEFAULT_DEGREE_LADDER.
 * Alternate counts: Elliott is probabilistic; we surface competing reads and the
   price that invalidates the primary one, rather than pretending to one answer.
 
@@ -27,7 +28,7 @@ subsequent price. Structure + Fibonacci raise the odds; they do not remove risk.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import List, Optional
 
 import numpy as np
@@ -152,8 +153,8 @@ def analyze(df: pd.DataFrame, left: int = 2, right: int = 2,
     # only -- swings.index values here are bar offsets in `df` itself, so
     # this is the one place in the pipeline where the coordinate spaces
     # genuinely line up. Tightly scoped (set immediately before, reset
-    # immediately after) so the nested minor-degree hierarchy pass
-    # (_nested_minor_wave_sequence, which calls label_wave_sequence again
+    # immediately after) so the nested child-degree hierarchy pass
+    # (_nested_wave_sequence, which calls label_wave_sequence again
     # but on a DIFFERENT, slice-local `df`) never sees this context and
     # never risks a coordinate mismatch. wave_numbering.py itself is
     # unmodified and never calls set_recursion_context.
@@ -368,16 +369,23 @@ def _correction_boundary_labels(correction: Correction, direction: str) -> List[
             for label, swing in boundary]
 
 
-def _nested_minor_wave_sequence(
+def _nested_wave_sequence(
     df: pd.DataFrame,
-    primary_sequence: List[WaveLabel],
-    primary_swings: List[Swing],
-    minor_left: int, minor_right: int, minor_min_move: float,
+    parent_sequence: List[WaveLabel],
+    parent_swings: List[Swing],
+    child_left: int, child_right: int, child_min_move: float,
+    parent_degree_name: str = "primary", child_degree_name: str = "minor",
 ) -> tuple[List[WaveLabel], List[str], List[str], List[_LegHierarchyCheck]]:
-    """Build the Minor-degree wave_sequence leg-by-leg WITHIN each selected
-    Primary wave, instead of independently over the whole chart. Returns
-    (labels, warnings, alternates, checks) -- see module section docstring
-    above for what each enforcement point means.
+    """Build a child-degree wave_sequence leg-by-leg WITHIN each of the
+    parent degree's own selected waves, instead of independently over the
+    whole chart. Generic over WHICH two adjacent degrees are being nested
+    (Primary->Intermediate, Intermediate->Minor, Minor->Minute, ...) --
+    ``analyze_degrees`` calls this once per adjacent pair down the degree
+    ladder, feeding each level's own nested output back in as the next
+    level's ``parent_sequence``/``parent_swings``, which is what makes the
+    nesting genuinely recursive rather than hardcoded to exactly two
+    levels. Returns (labels, warnings, alternates, checks) -- see module
+    section docstring above for what each enforcement point means.
     """
     out: List[WaveLabel] = []
     warnings: List[str] = []
@@ -385,9 +393,11 @@ def _nested_minor_wave_sequence(
     checks: List[_LegHierarchyCheck] = []
 
     MIN_LEG_BARS = 4   # too short to meaningfully subdivide at all
+    parent_label = parent_degree_name.capitalize()
+    child_label = child_degree_name.capitalize()
 
-    for run in _group_wave_runs(primary_sequence):
-        origin = _origin_before(run[0], primary_swings)
+    for run in _group_wave_runs(parent_sequence):
+        origin = _origin_before(run[0], parent_swings)
         pivots = ([origin] if origin else []) + [w.swing for w in run]
         end_waves = (["1"] if origin else []) + [w.wave for w in run]
 
@@ -401,15 +411,15 @@ def _nested_minor_wave_sequence(
             if bar_end - bar_start < MIN_LEG_BARS:
                 checks.append(_LegHierarchyCheck(
                     end_wave, role, bar_start, bar_end, minor_found=False, matches_theory=False,
-                    note=f"Primary Wave {end_wave} ({role}, bars {bar_start}-{bar_end}): "
-                         f"too short to carry a Minor subdivision.",
+                    note=f"{parent_label} Wave {end_wave} ({role}, bars {bar_start}-{bar_end}): "
+                         f"too short to carry a {child_label} subdivision.",
                 ))
                 continue
 
-            leg_label = f"Primary Wave {end_wave} ({role}, bars {bar_start}-{bar_end})"
+            leg_label = f"{parent_label} Wave {end_wave} ({role}, bars {bar_start}-{bar_end})"
             slice_df = df.iloc[bar_start:bar_end + 1].reset_index(drop=True)
-            slice_swings = identify_swings(slice_df, left=minor_left, right=minor_right,
-                                           min_move=minor_min_move)
+            slice_swings = identify_swings(slice_df, left=child_left, right=child_right,
+                                           min_move=child_min_move)
 
             # Corrective legs: prefer corrective_waves.py's own shape
             # classification (zigzag/flat/triangle/combination) over the
@@ -430,7 +440,7 @@ def _nested_minor_wave_sequence(
                     out.extend(offset_labels)
                     checks.append(_LegHierarchyCheck(
                         end_wave, role, bar_start, bar_end, minor_found=True, matches_theory=True,
-                        note=f"{leg_label}: Minor subdivision recognized as a "
+                        note=f"{leg_label}: {child_label} subdivision recognized as a "
                              f"{shape.type.value.replace('_', ' ')}.",
                     ))
                     continue
@@ -450,9 +460,9 @@ def _nested_minor_wave_sequence(
                 checks.append(_LegHierarchyCheck(
                     end_wave, role, bar_start, bar_end, minor_found=False, matches_theory=False,
                     note=f"{leg_label}: " + (
-                        "Minor subdivision(s) were found but all conflicted in direction with "
-                        "this Primary wave, so none were kept."
-                        if conflicted else "no Minor subdivision found (no valid pivots inside this leg)."
+                        f"{child_label} subdivision(s) were found but all conflicted in direction with "
+                        f"this {parent_label} wave, so none were kept."
+                        if conflicted else f"no {child_label} subdivision found (no valid pivots inside this leg)."
                     ),
                 ))
                 continue
@@ -476,7 +486,7 @@ def _nested_minor_wave_sequence(
             matches = (role == "impulse" and highest_core == 5) or (role == "corrective" and reached == "c")
             checks.append(_LegHierarchyCheck(
                 end_wave, role, bar_start, bar_end, minor_found=True, matches_theory=matches,
-                note=f"{leg_label}: Minor subdivision reaches wave {reached}" + (
+                note=f"{leg_label}: {child_label} subdivision reaches wave {reached}" + (
                     "" if matches else
                     f" -- Elliott theory expects "
                     f"{'a complete 5-wave impulse' if role == 'impulse' else 'a full A-B-C correction'} here."
@@ -490,48 +500,101 @@ def _nested_minor_wave_sequence(
 # --------------------------------------------------------------------------- #
 # Multi-degree (fractal) analysis
 # --------------------------------------------------------------------------- #
+# Traditional Elliott degree ladder, from the top level a typical backtest
+# window can meaningfully represent down through as many finer levels as the
+# data supports. Grand Supercycle/Supercycle/Cycle are deliberately NOT
+# included -- those correspond to years/decades of real price history a
+# bar-level backtest window can't represent, and forcing those labels onto a
+# few weeks of intraday bars would be dishonest labeling, not real degree
+# analysis. "primary"/"intermediate" keep the exact sensitivity values this
+# module used historically for its original two levels (then named "primary"
+# and "minor" -- "minor" was the wrong adjacent rung; the correct name for
+# the level directly below Primary is Intermediate, which this ladder now
+# includes explicitly). Sensitivities below that are a reasoned geometric-ish
+# decay (smaller pivot window, smaller min-move threshold at each finer
+# level), not empirically calibrated against real data the way some other
+# constants in this codebase are -- a reasonable default, not a claim of
+# precision.
+DEFAULT_DEGREE_LADDER = [
+    {"name": "primary",      "left": 4, "right": 4, "mm_mult": 2.00},
+    {"name": "intermediate", "left": 2, "right": 2, "mm_mult": 1.00},
+    {"name": "minor",        "left": 2, "right": 2, "mm_mult": 0.65},
+    {"name": "minute",       "left": 1, "right": 1, "mm_mult": 0.45},
+    {"name": "minuette",     "left": 1, "right": 1, "mm_mult": 0.30},
+    {"name": "subminuette",  "left": 1, "right": 1, "mm_mult": 0.20},
+]
+
+
 def analyze_degrees(df: pd.DataFrame, degrees=None) -> dict:
-    """Run analysis at several sensitivities. Coarse = larger waves, fine =
-    sub-waves. When both "primary" and "minor" are present, Minor's
-    wave_sequence is rebuilt to nest inside Primary's structure (see the
-    "Degree hierarchy" section above) instead of being computed
-    independently -- any other/custom-named degree falls back to the
-    original flat, unnested analysis.
+    """Run analysis recursively down a ladder of degree sensitivities --
+    ``DEFAULT_DEGREE_LADDER`` (traditional Elliott names) when ``degrees``
+    isn't supplied, or a custom ordered list of the same
+    ``{"name","left","right","mm_mult"}`` shape otherwise. The FIRST entry
+    is an independent whole-chart scan (unchanged from before); every entry
+    after that is nested INSIDE its immediate predecessor's own wave legs
+    (see the "Degree hierarchy" section above / ``_nested_wave_sequence``),
+    each level's own nested output feeding the NEXT level as its parent --
+    genuinely recursive, not hardcoded to exactly two levels. Recursion
+    stops early, before exhausting the ladder, the moment a level produces
+    no subdivisions at all (nothing left to nest a finer level into) --
+    "recursive until no smaller valid wave exists," not a fixed depth.
+
+    The SECOND ladder entry also gets an independent, whole-chart-scan
+    "<name>_global" sibling for comparison (matching the original design's
+    "minor_global") -- deeper levels don't, to keep recursion cost bounded.
     """
     if degrees is None:
-        degrees = [
-            {"name": "primary", "left": 4, "right": 4, "mm_mult": 2.0},
-            {"name": "minor",   "left": 2, "right": 2, "mm_mult": 1.0},
-        ]
+        degrees = DEFAULT_DEGREE_LADDER
+    if not degrees:
+        return {}
     med = float(np.nanmedian(atr(df["high"], df["low"], df["close"], 14)))
 
-    primary_cfg = next((d for d in degrees if d["name"] == "primary"), None)
-    minor_cfg = next((d for d in degrees if d["name"] == "minor"), None)
+    top_cfg = degrees[0]
+    results: dict = {
+        top_cfg["name"]: analyze(df, top_cfg["left"], top_cfg["right"],
+                                 top_cfg["mm_mult"] * med, top_cfg["name"]),
+    }
+    if len(degrees) == 1:
+        return results
 
-    results: dict = {}
-    if primary_cfg:
-        results["primary"] = analyze(df, primary_cfg["left"], primary_cfg["right"],
-                                     primary_cfg["mm_mult"] * med, "primary")
+    parent_name = top_cfg["name"]
+    parent_sequence = results[parent_name].wave_sequence
+    parent_swings = identify_swings(df, top_cfg["left"], top_cfg["right"], top_cfg["mm_mult"] * med)
 
-    if minor_cfg:
-        minor_analysis = analyze(df, minor_cfg["left"], minor_cfg["right"],
-                                 minor_cfg["mm_mult"] * med, "minor")
-        if primary_cfg:
-            primary_swings = identify_swings(df, primary_cfg["left"], primary_cfg["right"],
-                                             primary_cfg["mm_mult"] * med)
-            nested_seq, nested_warn, nested_alt, checks = _nested_minor_wave_sequence(
-                df, results["primary"].wave_sequence, primary_swings,
-                minor_cfg["left"], minor_cfg["right"], minor_cfg["mm_mult"] * med,
-            )
-            minor_analysis.wave_sequence = nested_seq
-            minor_analysis.warnings = minor_analysis.warnings + nested_warn
-            minor_analysis.alternates = minor_analysis.alternates + nested_alt
-            minor_analysis.notes = minor_analysis.notes + [c.note for c in checks]
-        results["minor"] = minor_analysis
+    for depth, cfg in enumerate(degrees[1:], start=1):
+        name = cfg["name"]
+        level_analysis = analyze(df, cfg["left"], cfg["right"], cfg["mm_mult"] * med, name)
 
-    for d in degrees:
-        if d["name"] not in results:
-            results[d["name"]] = analyze(df, d["left"], d["right"], d["mm_mult"] * med, d["name"])
+        if depth == 1:
+            # Independent, whole-chart-scan sibling -- identical code path
+            # to the top level's own analyze() call, run over the complete
+            # df, first candle to last. Saved here, before the nesting step
+            # below overwrites level_analysis.wave_sequence in place --
+            # otherwise this exact same result is computed and immediately
+            # discarded. Kept ONLY at this one level (matching the original
+            # "minor_global" design) to keep recursion cost bounded.
+            results[f"{name}_global"] = replace(level_analysis, degree=f"{name}_global")
+
+        nested_seq, nested_warn, nested_alt, checks = _nested_wave_sequence(
+            df, parent_sequence, parent_swings,
+            cfg["left"], cfg["right"], cfg["mm_mult"] * med,
+            parent_degree_name=parent_name, child_degree_name=name,
+        )
+        level_analysis.wave_sequence = nested_seq
+        level_analysis.warnings = level_analysis.warnings + nested_warn
+        level_analysis.alternates = level_analysis.alternates + nested_alt
+        level_analysis.notes = level_analysis.notes + [c.note for c in checks]
+        results[name] = level_analysis
+
+        if not nested_seq:
+            break   # nothing to recurse further into -- stop the ladder here
+
+        # Descend one more level: this level's own nested sequence becomes
+        # the parent for the next one.
+        parent_name = name
+        parent_sequence = nested_seq
+        parent_swings = identify_swings(df, cfg["left"], cfg["right"], cfg["mm_mult"] * med)
+
     return results
 
 
@@ -585,7 +648,7 @@ if __name__ == "__main__":
 
     print("================ SINGLE-DEGREE, IN-DEPTH ================")
     med = float(np.nanmedian(atr(df["high"], df["low"], df["close"], 14)))
-    print(describe(analyze(df, left=2, right=2, min_move=med, degree="minor")))
+    print(describe(analyze(df, left=2, right=2, min_move=med, degree="intermediate")))
 
     print("\n================ MULTI-DEGREE (FRACTAL) ================")
     degs = analyze_degrees(df)
@@ -593,13 +656,13 @@ if __name__ == "__main__":
         print(describe(a))
         print()
 
-    # relate degrees: how many minor sub-pivots fall inside the primary impulse?
-    prim, minor = degs["primary"], degs["minor"]
+    # relate degrees: how many intermediate sub-pivots fall inside the primary impulse?
+    prim, inter = degs["primary"], degs["intermediate"]
     if prim.impulse:
         lo, hi = prim.impulse.start_index, prim.impulse.end_index
         subs = [s for s in identify_swings(df, 2, 2, med) if lo <= s.index <= hi]
         print(f"fractal link: primary impulse spans bars {lo}-{hi}; "
-              f"minor degree finds {len(subs)} sub-pivots inside it")
+              f"intermediate degree finds {len(subs)} sub-pivots inside it")
 
     print("\nNOTE: candidate reads only -- confirm/invalidate with subsequent price;"
           " not financial advice.")

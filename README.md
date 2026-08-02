@@ -66,6 +66,7 @@ Frontend at http://localhost:8080 (reverse-proxies `/api/*` to the backend
 | [Installation](docs/INSTALLATION.md) | pip / editable / Docker install, Python version, verifying the install |
 | [Quick Start](docs/QUICKSTART.md) | First backtest, first Elliott Wave analysis, first CLI command |
 | [Architecture](docs/ARCHITECTURE.md) | How `src/`, `api/`, `web/`, `benchmark/`, `validation/` fit together |
+| [Elliott Wave Notation](docs/ELLIOTT_WAVE_NOTATION.md) | Classical (Frost & Prechter / EWF) notation, why it's decoupled from the engine's internal numbering |
 | [Developer Guide](docs/DEVELOPER_GUIDE.md) | Writing a strategy, running tests, the Elliott engine's internal layering |
 | [API Guide](docs/API_GUIDE.md) | FastAPI endpoints, OpenAPI docs, auth, CORS |
 | [Configuration](docs/CONFIGURATION.md) | `settings.yaml`, `credentials.yaml`, environment variables, Schwab/Rithmic setup |

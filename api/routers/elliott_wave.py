@@ -8,7 +8,7 @@ import math
 import numpy as np
 from fastapi import APIRouter, HTTPException
 
-from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis
+from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis, DEFAULT_DEGREE_LADDER
 from src.analysis.swing_identification import Swing, identify_swings, atr
 from src.analysis.elliott_wave import ImpulseWave
 from src.analysis.corrective_waves import Correction
@@ -17,14 +17,6 @@ from src.analysis.wave_numbering import WaveLabel
 from api import store
 
 router = APIRouter(prefix="/backtests", tags=["elliott-wave"])
-
-# Same degree configs analyze_degrees() uses internally by default -- kept in
-# sync here so the standalone "full swings list" (which wave_analysis.py's
-# WaveAnalysis doesn't itself expose) matches exactly what each degree saw.
-_DEGREES = [
-    {"name": "primary", "left": 4, "right": 4, "mm_mult": 2.0},
-    {"name": "minor", "left": 2, "right": 2, "mm_mult": 1.0},
-]
 
 
 def _safe(x):
@@ -117,10 +109,22 @@ def get_elliott_wave(backtest_id: str):
     timestamps = df.index
 
     med = float(np.nanmedian(atr(df["high"], df["low"], df["close"], 14)))
-    swings_by_degree = {
+    # Same ladder analyze_degrees() uses internally by default -- imported
+    # directly (rather than a hand-duplicated list) so the standalone "full
+    # swings list" (which WaveAnalysis doesn't itself expose) matches
+    # exactly what each degree saw. `degrees`' actual keys may also include
+    # a "<second-level>_global" sibling -- same swings as its base level,
+    # just analyzed independently over the whole chart instead of nested
+    # inside its parent's own leg boundaries (see wave_analysis.py's
+    # analyze_degrees()) -- handled generically below rather than assuming
+    # it's specifically "minor_global".
+    swings_by_degree: dict[str, list] = {
         d["name"]: identify_swings(df, left=d["left"], right=d["right"], min_move=d["mm_mult"] * med)
-        for d in _DEGREES
+        for d in DEFAULT_DEGREE_LADDER
     }
+    for name in degrees:
+        if name.endswith("_global") and name[: -len("_global")] in swings_by_degree:
+            swings_by_degree[name] = swings_by_degree[name[: -len("_global")]]
 
     return {
         name: _analysis_to_dict(a, timestamps, swings_by_degree.get(name, []))

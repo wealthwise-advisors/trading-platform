@@ -154,12 +154,15 @@ explains a given stretch of chart. Diagonal candidates use the SAME "1".."5"
 wave labels an impulse does (a diagonal IS a motive-wave pattern, just one
 that permits Wave 4 to overlap Wave 1) and are mutually exclusive with
 impulse candidates BY CONSTRUCTION on any given window, since a diagonal
-requires the overlap an impulse's own hard rule forbids. Simple zigzag/flat
-corrections are still NOT generated as top-level candidates here (only as
-the closing a/b/c of an impulse, or as complex-correction W/Y/Z sub-parts)
--- see ``complex_corrections.py``'s module docstring for why triangle/
-combination/diagonal candidates aren't gated the same way impulse
-candidates are.
+requires the overlap an impulse's own hard rule forbids. PLUS (2026-07-25)
+standalone simple zigzag/flat corrections (``_try_simple_correction``),
+generated whenever ``classify_structure_detailed`` picks
+``POTENTIAL_CORRECTION`` as the winner at a position and the alternation +
+Fibonacci shape gate (shared with an impulse's own closing a/b/c via
+``_validate_simple_correction``) passes -- previously this hypothesis could
+win the classifier's vote but nothing was ever built for it, leaving a
+chart that opens with (or contains) a standalone correction with no
+candidate at all covering that stretch.
 """
 
 from __future__ import annotations
@@ -170,11 +173,14 @@ from typing import Callable, List, Literal, Optional
 import pandas as pd
 
 from .swing_identification import Swing, SwingType, identify_swings
-from .structure_classification import classify_structure_detailed, StructureType
+from .structure_classification import (
+    classify_structure_detailed, StructureType, _simple_correction_confidence,
+)
 from .complex_corrections import (
     CorrectiveCandidate, find_complex_correction_candidates, find_triangle_candidates,
 )
 from .diagonal_waves import DiagonalCandidate, find_diagonal_candidates
+from .corrective_waves import classify_abc, Correction
 
 Direction = Literal["up", "down"]
 
@@ -382,12 +388,67 @@ def _grow_count(swings: List[Swing], start: int,
     return labels, cursor + 1, warnings
 
 
+def _validate_simple_correction(start: Swing, a: Swing, b: Swing, c: Swing) -> Optional[Correction]:
+    """Shared alternation + shape/Fibonacci gate for a standalone zigzag/flat
+    A-B-C, reused by both ``_extend_or_close`` (an impulse's own trailing
+    close) and ``_try_simple_correction`` (a fresh top-level correction
+    candidate) so the same bar applies whether the correction follows an
+    impulse or stands alone. Returns the classified ``Correction`` (real
+    shape + ratios) on pass, ``None`` on fail -- alternation must hold, B
+    must retrace at least ``WAVE4_RETRACE[0]`` (0.146, reused from Wave 4's
+    own retracement floor -- see module docstring) of A, and C must make a
+    genuine new extreme beyond A in the correction's own direction.
+    """
+    trend_kind = start.kind
+    if not (a.kind != trend_kind and b.kind == trend_kind and c.kind != trend_kind):
+        return None
+    shape = classify_abc([start, a, b, c])
+    sign = 1.0 if shape.direction == "up" else -1.0
+    if sign * (c.price - a.price) > 0 and shape.metrics["b_retrace_of_A"] >= WAVE4_RETRACE[0]:
+        return shape
+    return None
+
+
+def _try_simple_correction(swings: List[Swing], origin_pos: int) -> Optional[CorrectiveCandidate]:
+    """A standalone zigzag/flat A-B-C starting at ``swings[origin_pos]`` as
+    the correction's own (unlabeled) Start pivot -- the missing top-level
+    candidate type. Previously, ``StructureType.POTENTIAL_CORRECTION`` could
+    WIN ``classify_structure_detailed``'s vote at a position, but
+    ``_generate_candidates`` did nothing with that win, so a chart that
+    genuinely opens with (or contains) a standalone correction not
+    immediately preceded by a completed impulse got NO candidate at all
+    covering it -- exactly why a real chart's earliest labelable structure
+    could go completely unlabeled even though it was legitimately detected.
+    Reuses the SAME ``CorrectiveCandidate`` shape triangle/combo candidates
+    already use, with ``start_pos``/``end_pos`` following their SAME
+    convention (the structure's own origin pivot / its last labeled point),
+    so it slots into ``_generate_candidates`` and ``_select_best_counts``
+    with no changes to either.
+    """
+    if origin_pos + 3 >= len(swings):
+        return None
+    start, a, b, c = (swings[origin_pos], swings[origin_pos + 1],
+                     swings[origin_pos + 2], swings[origin_pos + 3])
+    shape = _validate_simple_correction(start, a, b, c)
+    if shape is None:
+        return None
+    return CorrectiveCandidate(
+        correction=shape,
+        boundary=[("a", a), ("b", b), ("c", c)],
+        start_pos=origin_pos, end_pos=origin_pos + 3,
+        quality=_simple_correction_confidence(shape),
+        kind="simple_correction",
+    )
+
+
 def _extend_or_close(swings: List[Swing], cursor: int, sign: float, direction: Direction,
                      labels: List[WaveLabel]) -> int:
     """After Wave 5 (swings[cursor]), keep numbering 6..MAX_CONTINUATION while
     price keeps making new extremes in the trend direction; once that stops,
     label one more alternating triple as a closing a/b/c if it shows a clean
-    reversal. Returns the new cursor (index of the last consumed swing).
+    reversal AND a plausible zigzag/flat retracement shape (classify_abc --
+    see the plausible_shape comment below). Returns the new cursor (index
+    of the last consumed swing).
     """
     n = len(swings)
     trend_kind = swings[cursor].kind
@@ -407,10 +468,10 @@ def _extend_or_close(swings: List[Swing], cursor: int, sign: float, direction: D
 
     if cursor + 3 < n:
         a, b, c = swings[cursor + 1], swings[cursor + 2], swings[cursor + 3]
-        reversal = (a.kind != trend_kind and sign * (last_trend_price - a.price) > 0
-                    and b.kind == trend_kind and c.kind != trend_kind
-                    and sign * (c.price - a.price) < 0)
-        if reversal:
+        # Alternation + shape/Fibonacci gate, shared with the standalone
+        # top-level correction path (_try_simple_correction) via
+        # _validate_simple_correction -- see that function's docstring.
+        if sign * (last_trend_price - a.price) > 0 and _validate_simple_correction(swings[cursor], a, b, c):
             labels.append(WaveLabel(a, "a", None, direction))
             labels.append(WaveLabel(b, "b", None, direction))
             labels.append(WaveLabel(c, "c", None, direction))
@@ -520,7 +581,19 @@ def _score_candidate(labels: List[WaveLabel], total_span: int) -> float:
 # median final score in line with the other three types instead of
 # systematically outscoring them. See the Task 5 Improvement response for
 # the full before/after win-rate table.
-_CORRECTIVE_COMPLETION_BONUS = {"triangle": 0.55, "double_three": 0.35, "triple_three": 0.25}
+# "simple_correction" (2026-07-25, standalone-correction candidate fix):
+# deliberately LOWER than triangle/double_three -- a bare 4-pivot zigzag/flat
+# is the LEAST specific shape of all the corrective types (any alternating 4
+# swings can produce one, unlike a triangle's 6-pivot convergence or a
+# combo's chained joints), so it should win primarily on
+# _simple_correction_confidence's fit-quality and on size, not a large flat
+# completion bonus. A reasoned default, NOT calibrated against real data
+# (matching how _DIAGONAL_COMPLETION_BONUS was first introduced before its
+# own later real-data recalibration) -- revisit once real selection-rate
+# data is available, the same way triangle/double/triple_three were.
+_CORRECTIVE_COMPLETION_BONUS = {
+    "triangle": 0.55, "double_three": 0.35, "triple_three": 0.25, "simple_correction": 0.30,
+}
 
 # Half of impulse's _SIZE_WEIGHT (0.5) -- see calibration note above, cause 1.
 _CORRECTIVE_SIZE_WEIGHT = 0.25
@@ -612,8 +685,11 @@ def _generate_candidates(swings: List[Swing], rsi: Optional[pd.Series]
          -> ``_grow_count`` (unchanged); POTENTIAL_TRIANGLE/
          POTENTIAL_COMPLEX_CORRECTION/POTENTIAL_DIAGONAL -> the already-
          computed candidate from step 1, unpacked into a ``_Candidate`` the
-         SAME way Tasks 5-6 already did; anything else -> nothing attempted
-         at this position.
+         SAME way Tasks 5-6 already did; POTENTIAL_CORRECTION -> a fresh
+         standalone zigzag/flat attempt at this exact position
+         (``_try_simple_correction``, 2026-07-25 -- previously this
+         hypothesis could win and nothing was built for it at all); anything
+         else (SIDEWAYS/UNKNOWN) -> nothing attempted at this position.
     ``_grow_count``'s own hard rules, ``_score_candidate``/
     ``_score_corrective_candidate``/``_score_diagonal_candidate``'s scoring,
     and ``_select_best_counts``'s selection are all UNCHANGED (Task 7,
@@ -688,48 +764,133 @@ def _generate_candidates(swings: List[Swing], rsi: Optional[pd.Series]
                 warnings=[], score=_score_diagonal_candidate(dcand, swings, total_span),
             ))
 
-        # POTENTIAL_CORRECTION / SIDEWAYS / UNKNOWN -- nothing attempted at
-        # this position, matching the pre-Task-7 impulse-only gate's own
-        # "don't seed here" behavior, now generalized to all four detectors.
+        elif decision.winner == StructureType.POTENTIAL_CORRECTION:
+            # 2026-07-25 fix: previously nothing was attempted here at all,
+            # which meant a standalone (not impulse-tail, not triangle, not
+            # combo) simple correction anywhere in the chart -- including
+            # right at its start -- had no candidate covering it, so its
+            # swings were never selected or labeled by anything. See
+            # _try_simple_correction's docstring.
+            cand = _try_simple_correction(swings, origin_pos)
+            if cand is not None:
+                labels = [WaveLabel(swing=sw, wave=lab, sub=None, direction=cand.correction.direction)
+                         for lab, sw in cand.boundary]
+                out.append(_Candidate(
+                    labels=labels, start_index=cand.start_pos, end_index=cand.end_pos,
+                    warnings=[], score=_score_corrective_candidate(cand, swings, total_span),
+                ))
+
+        # SIDEWAYS / UNKNOWN -- nothing attempted at this position; no
+        # detector claims to know what's happening here at all.
 
     return out, any_attempted
 
 
+def _ends_in_correction(c: _Candidate) -> bool:
+    """True if this candidate's LAST label is a letter -- i.e. it finishes
+    inside a corrective phase, whether it's a pure corrective candidate
+    (triangle/double/triple three, whose every label is a letter) or an
+    impulse candidate that already bundled its own closing a/b/c (still
+    ends in a letter, even though it STARTS with digit "1")."""
+    return not c.labels[-1].wave.isdigit()
+
+
+def _starts_with_correction(c: _Candidate) -> bool:
+    """True if this candidate's FIRST label is a letter -- a fresh
+    corrective structure (triangle/double/triple three) beginning here,
+    as opposed to an impulse/diagonal, which always starts with digit "1"."""
+    return not c.labels[0].wave.isdigit()
+
+
 def _select_best_counts(candidates: List[_Candidate],
                         n_swings: int) -> tuple[List[_Candidate], List[str]]:
-    """Weighted interval scheduling over swing-index spans: choose the
-    subset of NON-OVERLAPPING candidates that maximizes total NET score
-    (each candidate's quality score minus _FRAGMENTATION_PENALTY -- see
-    that constant's comment for why the penalty is required, not optional).
-    Classic resource-scheduling DP; O(n + candidates) here since swing
-    indices are already a dense integer sequence, so no binary search is
-    needed -- for each position k, dp[k] is either "don't use any candidate
-    ending here" (dp[k-1]) or "use one that does" (its net score + the best
-    achievable before its own start).
+    """Maximum-weight CONTIGUOUS-and-alternating selection over swing-index
+    spans -- NOT plain interval scheduling. Interval scheduling only forbids
+    candidates from OVERLAPPING; it happily selects two candidates side by
+    side (or with a gap) purely because each scored well independently in
+    its own stretch, with nothing requiring them to relate to each other at
+    all. That's precisely how two totally independent corrective candidates
+    (e.g. a Triple Three immediately followed by an unrelated WXY
+    Correction, with nothing alternating between them) used to end up
+    selected adjacent to each other -- a real Elliott Wave impossibility
+    (you cannot have two separate corrections against the trend with no
+    counter-move between them).
+
+    Fixed with TWO parallel running-best arrays instead of one (still one
+    O(n + candidates) forward pass, same shape as the original single-array
+    DP -- ``best_any``/``choice_any`` play the exact role the old
+    ``dp``/``choice`` did):
+
+      * ``best_any[k]`` -- the TRUE best achievable net score using any
+        valid selection within swings ``[0, k)``. This is the real answer,
+        backtracked from ``best_any[n_swings]`` at the end, same as before.
+      * ``best_noncorr[k]`` -- the best achievable net score within
+        ``[0, k)`` such that the selection does NOT end in a corrective
+        candidate touching exactly position ``k`` (either nothing touches
+        k at all -- a genuine gap right before it -- or the thing touching
+        k is an impulse/diagonal). This is the ONLY base a corrective
+        candidate is allowed to attach onto.
+
+    The rule that actually fixes the bug: a candidate whose OWN first label
+    is a letter (``_starts_with_correction`` -- a fresh corrective
+    structure) may only extend ``best_noncorr[its own start_index]``, never
+    ``best_any[...]`` directly -- so it can never attach itself right after
+    whatever the unconstrained best happens to be if that unconstrained
+    best itself ends in a correction exactly there. An impulse/diagonal
+    candidate (first label a digit) has no such restriction and may always
+    extend ``best_any[...]``, since an impulse is always allowed to follow
+    either a correction or another impulse's continuation. Symmetrically,
+    a candidate only ever CONTRIBUTES to ``best_noncorr[its own end_index]``
+    when its own LAST label is a digit (``not _ends_in_correction``) --
+    i.e. an impulse candidate that already bundled its own closing a/b/c
+    still counts as "corrective-ending" here and is excluded from
+    ``best_noncorr``, exactly like a pure corrective candidate would be.
+
+    A genuine multi-part complex correction (W-X-Y-X-Z) is already
+    represented as ONE candidate by ``complex_corrections.py``, not two
+    chained ones, so this loses nothing real -- it only forbids gluing
+    together two INDEPENDENTLY detected corrections that don't actually
+    belong together, while a real gap (nothing valid detected at all)
+    still renders as an honest gap, never an invented connection.
     """
     by_end: dict[int, List[_Candidate]] = {}
     for c in candidates:
         by_end.setdefault(c.end_index, []).append(c)
 
-    dp = [0.0] * (n_swings + 1)
-    choice: List[Optional[_Candidate]] = [None] * (n_swings + 1)
-    for k in range(1, n_swings + 1):
-        dp[k] = dp[k - 1]
-        for c in by_end.get(k - 1, []):
-            total = (c.score - _FRAGMENTATION_PENALTY) + dp[c.start_index]
-            if total > dp[k]:
-                dp[k] = total
-                choice[k] = c
+    best_any = [0.0] * (n_swings + 1)
+    best_noncorr = [0.0] * (n_swings + 1)
+    choice_any: List[Optional[_Candidate]] = [None] * (n_swings + 1)
+    choice_noncorr: List[Optional[_Candidate]] = [None] * (n_swings + 1)
 
+    for k in range(1, n_swings + 1):
+        best_any[k] = best_any[k - 1]
+        best_noncorr[k] = best_noncorr[k - 1]
+        for c in by_end.get(k - 1, []):
+            base = best_noncorr[c.start_index] if _starts_with_correction(c) else best_any[c.start_index]
+            total = (c.score - _FRAGMENTATION_PENALTY) + base
+            if total > best_any[k]:
+                best_any[k] = total
+                choice_any[k] = c
+            if not _ends_in_correction(c) and total > best_noncorr[k]:
+                best_noncorr[k] = total
+                choice_noncorr[k] = c
+
+    # Backtrack from the true answer (best_any[n_swings]). At each step, the
+    # NEXT (earlier) position to continue from -- and which of the two
+    # arrays to read there -- is fully determined by whether the candidate
+    # just appended is itself corrective-starting (it must have used
+    # best_noncorr as its own base, so keep reading best_noncorr going
+    # backward) or not (it used best_any).
     selected: List[_Candidate] = []
-    k = n_swings
+    k, which = n_swings, "any"
     while k > 0:
-        c = choice[k]
+        c = (choice_any if which == "any" else choice_noncorr)[k]
         if c is None:
             k -= 1
-        else:
-            selected.append(c)
-            k = c.start_index
+            continue
+        selected.append(c)
+        which = "noncorr" if _starts_with_correction(c) else "any"
+        k = c.start_index
     selected.reverse()
 
     # Runners-up: a candidate that lost is compared against the TOTAL net

@@ -24,7 +24,7 @@ from api.report.charts import (
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
 from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis
-from api.report.wave_layout import tier_of, tier_filter_run, declutter_static, WaveItem
+from api.report.wave_layout import tier_filter_run, declutter_static, split_into_segments, display_wave, label_segments
 
 
 _G      = "#3fb950"
@@ -37,15 +37,14 @@ _TEXT   = "#e6edf3"
 _MUTED  = "#8b949e"
 _MARKER_BG = "#1e1e2e"  # solid fill so boundary lines don't bleed through circles
 
-# Elliott Wave chart -- cycled per wave-count "run", same palette as
-# ElliottWaveChart.tsx's RUN_COLORS (keep in sync).
+# Elliott Wave chart -- cycled per detected structure (segment), same
+# palette as ElliottWaveChart.tsx's SEGMENT_COLORS (keep in sync).
 _EW_RUN_COLORS = ["#2196f3", "#f0c040", "#7ee787", "#c77dff", "#4cc9f0", "#ff8a65"]
-# Per-tier visual weight, matching ElliottWaveChart.tsx's TIER_STYLE.
-_EW_TIER_STYLE = {
-    0: dict(font_size=13,   marker_size=7,   opacity=1.0,  bold=True),   # Core: 1,3,5,a,c
-    1: dict(font_size=10.5, marker_size=5.5, opacity=0.8,  bold=False),  # Secondary: 2,4,b
-    2: dict(font_size=9,    marker_size=4.5, opacity=0.55, bold=False),  # Tertiary: 6..11
-}
+# Uniform label styling, matching ElliottWaveChart.tsx's LABEL_STYLE --
+# Wave 1 through Wave 5 must all be EQUALLY visible, not a tiered
+# hierarchy. tier_of() is still used for collision-priority ordering only
+# (see wave_layout.py's module docstring), never for size/weight/opacity.
+_EW_LABEL_STYLE = dict(font_size=12, marker_size=6, opacity=1.0, bold=True)
 
 # Plotly JS config injected into every chart div.
 # scrollZoom is the key setting — without it mouse-wheel does nothing.
@@ -62,6 +61,13 @@ _CHART_CFG = {
         "scale": 2,
     },
 }
+
+# Default initial view for the candlestick chart -- see _candlestick_chart's
+# _initial_range for why this exists (avoids opening on the fully-crammed
+# "All" view for anything longer than a few weeks of bars). ~150 bars reads
+# comfortably regardless of timeframe (5m, 1h, 1d, ...) -- the "All" range
+# button still shows everything, this only changes the FIRST render.
+_DEFAULT_VIEW_BARS = 150
 
 # Quick-jump buttons rendered above each time-series chart.
 _RANGE_SELECTOR = dict(
@@ -358,11 +364,23 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
     _ylabel = dict(font=dict(size=9, color=_MUTED), standoff=4)
     _base = _layout(f"{results.symbol} — {results.strategy_name}", height=920)
     _base["margin"] = dict(l=60, r=12, t=_t, b=8)
+    # Default view: the most recent DEFAULT_VIEW_BARS bars, not the whole
+    # series -- with no explicit range, Plotly renders every bar (and every
+    # swing header, which are pinned to a shared paper-space strip) crammed
+    # into one view, which for anything longer than a few weeks makes the
+    # candles themselves shrink to invisible slivers behind the swing
+    # overlay. The full series is still one click away via the "All" range
+    # button (unchanged) -- this only changes what's shown on first render.
+    _initial_range = (
+        [df.index[max(0, len(df) - _DEFAULT_VIEW_BARS)], df.index[-1]]
+        if len(df) > _DEFAULT_VIEW_BARS else None
+    )
     fig.update_layout(
         **_base,
         xaxis=dict(
             gridcolor=_GRID, rangeslider_visible=False,
             rangeselector={**_RANGE_SELECTOR, "y": _rs_y},
+            range=_initial_range,
             **_SPIKE,
         ),
         xaxis2=dict(gridcolor=_GRID, **_SPIKE),
@@ -478,7 +496,9 @@ def _monthly_heatmap(results: BacktestResults) -> go.Figure:
 
 def _group_wave_runs(sequence):
     """Same grouping rule as ElliottWaveChart.tsx's groupRuns(): a new run
-    starts every time the count resets back to Wave 1."""
+    starts every time the count resets back to Wave 1. Input to
+    split_into_segments(), which splits each run further into its own
+    genuine structural segments (see that function's docstring)."""
     runs = []
     for w in sequence:
         if w.wave == "1" or not runs:
@@ -486,10 +506,6 @@ def _group_wave_runs(sequence):
         else:
             runs[-1].append(w)
     return runs
-
-
-def _wave_label_text(wave: str, sub: int | None) -> str:
-    return f"{wave}.{sub}" if sub else wave
 
 
 def _elliott_wave_chart(df: pd.DataFrame, analysis: WaveAnalysis, degree_name: str,
@@ -503,12 +519,18 @@ def _elliott_wave_chart(df: pd.DataFrame, analysis: WaveAnalysis, degree_name: s
     ))
 
     runs = _group_wave_runs(analysis.wave_sequence)
-    all_items: list[WaveItem] = []
-    run_items_by_run: list[list[dict]] = []
+    all_items: list[dict] = []
+    segments: list[list[dict]] = []
+    # Raw (real-label) segments, kept parallel to `segments` (same index)
+    # so label_segments() can compute each segment's real type from the
+    # UNMODIFIED labels -- the loop below overwrites "wave" with the
+    # display-transformed value (uppercased letters, digits unchanged),
+    # which would otherwise lose that signal. See label_segments()'s
+    # docstring for the label/range/naming design.
+    raw_segments: list[list[dict]] = []
 
-    for i, run in enumerate(runs):
-        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
-        items = [
+    for run in runs:
+        raw_items = [
             {
                 "t": df.index[w.swing.index].timestamp(),
                 "ts": df.index[w.swing.index],
@@ -516,54 +538,215 @@ def _elliott_wave_chart(df: pd.DataFrame, analysis: WaveAnalysis, degree_name: s
                 "wave": w.wave,
                 "sub": w.sub,
                 "kind": w.swing.kind.value,
-                "color": color,
             }
             for w in run
         ]
-        run_items_by_run.append(items)
+        # Real Elliott Wave notation (numbers for motive waves, letters for
+        # corrective waves -- see wave_layout.py's module docstring):
+        # splits this run into segments at every genuine structural
+        # boundary; each item's displayed "wave" is display_wave() applied
+        # to its own real label (uppercases corrective letters, passes
+        # digits through) -- zero engine changes, analysis.wave_sequence
+        # itself is untouched, this rewrites only the per-item dicts built
+        # for this chart.
+        for seg in split_into_segments(raw_items):
+            raw_segments.append(seg)
+            items = []
+            for it0 in seg:
+                it = dict(it0)
+                it["wave"] = display_wave(it0["wave"])
+                items.append(it)
+            segments.append(items)
+
+    # This chart is always solo (report.py has no merged Global+Nested
+    # mode) -- always 1-indexed "Wave N", matching ElliottWaveChart.tsx's
+    # solo mode.
+    segment_labels = label_segments(raw_segments, zero_indexed=False)
+
+    for i, items in enumerate(segments):
+        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
+        for it in items:
+            it["color"] = color
         all_items.extend(items)
 
-    for i, items in enumerate(run_items_by_run):
+    # Numbers only (required, reversing an earlier "Structure N" header/
+    # legend addition -- see ElliottWaveChart.tsx's module docstring for the
+    # full history): the ONLY things distinguishing one detected structure
+    # from the next are color, cycled per segment, a full boxed region
+    # around each structure's own price+time extent, and a header -- a
+    # plain "Wave N" for impulse/diagonal segments, or the actual detected
+    # corrective type (ABC Correction/Triangle/WXY Correction/Triple Three,
+    # see wave_layout.py's describe_structure_type(), 2026-07-20) for
+    # corrective segments, never anything about the classical wave position
+    # inside it, which the "1".."5" numbers below already say). No legend
+    # entries, no colored fill.
+    #
+    # FULL WAVE REGION, 2026-07-19 -- a first attempt at this box used
+    # xref="x"/yref="paper", y0=0, y1=1 (full plot height), copying
+    # charts.py's own ZigZag swing rectangles literally -- but that's wrong
+    # for THIS chart: every box's top/bottom edges then land at the exact
+    # same two lines (the very top and bottom of the whole plot), since
+    # "paper" y is chart-wide, not per-box. All those coincident top/bottom
+    # edges visually merge into what looks like just two horizontal lines
+    # shared by the whole chart, leaving only each box's own left/right
+    # edges as visually distinct elements -- reported back, correctly, as
+    # "you only added two vertical dashed lines." Swing regions get away
+    # with paper-y boxes because they're meant to tile the FULL vertical
+    # height of a shared multi-panel chart; an Elliott structure's box
+    # instead needs to hug ONLY that structure's own price swing. Fixed by
+    # switching to yref="y" (data/price space): y0/y1 are now THIS
+    # segment's own min/max price, padded a little so the box doesn't clip
+    # flush against the extreme points. fillcolor stays fully transparent
+    # (rgba(0,0,0,0), NOT a tinted fill -- an earlier translucent-color
+    # version was explicitly rejected as unwanted background noise), dotted
+    # border in the segment's own color.
+    #
+    # The header is "Wave N", anchored just above THIS box's own top edge
+    # (not a chart-wide shared strip, so it visibly "belongs" to its own
+    # region) using the same collision-avoidance recipe validated for
+    # ElliottWaveChart.tsx's per-peak headers: an ABSOLUTE time duration
+    # (not a fraction of the visible range -- a header's pixel width
+    # doesn't scale with how many weeks of history are on screen) compared
+    # against EVERY recently-placed header (not just the immediate
+    # predecessor, so a broken chain can't coincidentally land on a
+    # different chain's tail), stacking collisions onto a shared rising
+    # ceiling in DATA space (price units, never a raw pixel offset -- a
+    # pixel offset on top of a different price anchor can get silently
+    # cancelled by the price gap between two peaks). The step fraction
+    # (0.15) is deliberately generous: since the y-axis auto-expands to fit
+    # the tallest stacked header, a dense cluster's stack compresses the
+    # effective pixels-per-price-unit for the WHOLE chart, so a step that
+    # looks fine in isolation can still visually collide once other
+    # clusters push the axis range taller -- confirmed by hand against real
+    # multi-week data at 0.06 (too tight) before landing on 0.15.
+    _HEADER_COLLISION_SECONDS = 24 * 60 * 60
+    _HEADER_PRICE_STEP_FRACTION = 0.15
+    box_price_span = (max(it["price"] for it in all_items) - min(it["price"] for it in all_items)) if all_items else 1.0
+    box_price_span = box_price_span or 1.0
+    placed_headers: list[dict] = []
+    # How many times each corrective type occurs across this WHOLE
+    # structure-set, so a type that recurs (e.g. three separate corrections)
+    # gets a disambiguating "#N" suffix -- see label_segments()'s docstring.
+    for i, items in enumerate(segments):
         if not items:
             continue
         color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
+        seg_start = items[0]["ts"]
+        seg_end = items[-1]["ts"]
+        x_mid = items[len(items) // 2]["ts"]
+        x_mid_t = items[len(items) // 2]["t"]
+        seg_prices = [it["price"] for it in items]
+        price_min = min(seg_prices)
+        price_max = max(seg_prices)
+        # Floor RAISED 0.02 -> 0.06 (2026-07-26): the header's x-anchor is
+        # this segment's OWN middle point (items[len(items)//2] below), which
+        # for a 4-point run is literally the same swing as point label "3" --
+        # confirmed directly against a real report's rendered annotations
+        # (header at data-y 6892.2, point "3" at data-y 6876.0, same
+        # timestamp). Point labels sit a FIXED 22px above/below their own
+        # anchor (_EW_LABEL_STYLE-driven yshift in the per-point loop below),
+        # a pixel budget that doesn't shrink just because this particular
+        # segment's own price move is small -- the old 2% floor cleared that
+        # 22px gap for large segments (where the *0.15 term dominates instead)
+        # but not for small ones, which is exactly why only the tiny early
+        # structures (not the big Wave-1-to-11 run) showed the collision.
+        box_pad = max((price_max - price_min) * 0.15, box_price_span * 0.06)
+
+        # Full detail, every point, always (see wave_layout.py's module
+        # docstring, bug 1) -- tier_filter_run is now a passthrough, kept
+        # as a named call so this reads as deliberate, not forgotten.
         visible = tier_filter_run(items)
-        marker_sizes = [_EW_TIER_STYLE[tier_of(it["wave"])]["marker_size"] for it in visible]
         opacities = [0.45 if it["sub"] == 2 else 1.0 for it in visible]
-        labels = [_wave_label_text(it["wave"], it["sub"]) for it in visible]
-        if nested:
-            labels = [f"({label})" for label in labels]
+        labels = [it["wave"] for it in visible]
+        technical = segment_labels[i]["technical"]
+
+        # This segment's line extended to ALSO touch the very first point of
+        # the NEXT segment (if any) -- confirmed design (2026-07-20, matching
+        # ElliottWaveChart.tsx's identical fix): the connector between two
+        # structures reads as a continuous colored path in the OUTGOING
+        # segment's own color, not a separate neutral line, so the handoff
+        # to the next (differently colored) structure is seamless. Split
+        # into its own trace (was combined "lines+markers") specifically so
+        # this extra endpoint doesn't also draw a duplicate marker/label at
+        # the next segment's first point -- that segment already draws its
+        # own marker there.
+        next_first = segments[i + 1][0] if i + 1 < len(segments) else None
+        line_ts = [it["ts"] for it in visible]
+        line_price = [it["price"] for it in visible]
+        if next_first is not None:
+            line_ts.append(next_first["ts"])
+            line_price.append(next_first["price"])
+        fig.add_trace(go.Scatter(
+            x=line_ts, y=line_price,
+            mode="lines",
+            line=dict(color=color, width=1.4),
+            showlegend=False, hoverinfo="skip",
+        ))
+        # The real Elliott type name (e.g. "Triple Three"), not shown on the
+        # header anymore per the simplified naming (see label_segments()'s
+        # docstring), surfaces here on hover instead -- available on
+        # demand, not deleted. Numeric segments (technical is None) keep
+        # the original "Wave N" phrasing.
+        hover = (
+            f"{technical} — point %{{text}}<br>%{{x}}<br>@ %{{y:.2f}}<extra></extra>"
+            if technical else "Wave %{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>"
+        )
         fig.add_trace(go.Scatter(
             x=[it["ts"] for it in visible], y=[it["price"] for it in visible],
-            mode="lines+markers",
-            line=dict(color=color, width=1.4),
-            marker=dict(size=marker_sizes, color=color, opacity=opacities,
+            mode="markers",
+            marker=dict(size=_EW_LABEL_STYLE["marker_size"], color=color, opacity=opacities,
                         line=dict(color=_BG, width=0.5)),
-            name=f"Wave count {i + 1} ({items[0]['kind']})", showlegend=False,
-            hovertemplate="%{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>",
+            showlegend=False,
+            hovertemplate=hover,
             text=labels,
         ))
+
+        fig.add_shape(
+            type="rect", xref="x", yref="y",
+            x0=seg_start, x1=seg_end, y0=price_min - box_pad, y1=price_max + box_pad,
+            fillcolor="rgba(0,0,0,0)",
+            line=dict(color=color, width=1.3, dash="dot"), opacity=0.85,
+            layer="below",
+        )
+
+        colliders = [p for p in placed_headers if abs(p["t"] - x_mid_t) < _HEADER_COLLISION_SECONDS]
+        header_y = (
+            max(price_max + box_pad, max(c["y"] for c in colliders) + _HEADER_PRICE_STEP_FRACTION * box_price_span)
+            if colliders else price_max + box_pad
+        )
+        placed_headers.append({"t": x_mid_t, "y": header_y})
+
+        header_label = segment_labels[i]["display"]
+
+        fig.add_annotation(
+            x=x_mid, y=header_y, xref="x", yref="y", yanchor="bottom",
+            text=f"<b>{header_label}</b>", showarrow=False,
+            font=dict(color=color, size=10), align="center",
+            yshift=4,
+        )
 
     if all_items:
         t_span = max(it["t"] for it in all_items) - min(it["t"] for it in all_items)
         p_span = max(it["price"] for it in all_items) - min(it["price"] for it in all_items)
+        # Never hides a candidate -- collisions fan outward via
+        # stack_index instead (see wave_layout.py's module docstring, bug 1).
         shown = declutter_static(all_items, t_span, p_span)
         for it in shown:
-            style = _EW_TIER_STYLE[tier_of(it["wave"])]
-            label = _wave_label_text(it["wave"], it["sub"])
-            text = f"<b>{label}</b>" if style["bold"] else label
-            if nested:
-                text = f"<b>({label})</b>" if style["bold"] else f"({label})"
+            text = f"<b>{it['wave']}</b>" if _EW_LABEL_STYLE["bold"] else it["wave"]
+            stack_gap = _EW_LABEL_STYLE["font_size"] + 3
+            base_offset = 10 + _EW_LABEL_STYLE["font_size"] + it["stack_index"] * stack_gap
             fig.add_annotation(
                 x=it["ts"], y=it["price"], xref="x", yref="y",
                 text=text, showarrow=False,
-                font=dict(color=it["color"], size=style["font_size"]),
-                opacity=style["opacity"],
-                yshift=(10 + style["font_size"]) if it["kind"] == "high" else -(10 + style["font_size"]),
+                font=dict(color=it["color"], size=_EW_LABEL_STYLE["font_size"]),
+                opacity=_EW_LABEL_STYLE["opacity"],
+                yshift=base_offset if it["kind"] == "high" else -base_offset,
             )
 
+    # _layout()'s "margin" key needs overriding here (more top space for the
     fig.update_layout(
         **_layout(f"{symbol} — {degree_name} degree Elliott Wave", height=520),
+        showlegend=False,
         xaxis=dict(gridcolor=_GRID, rangeslider_visible=False,
                    rangeselector=_RANGE_SELECTOR, **_SPIKE),
         yaxis=dict(gridcolor=_GRID, title=dict(text="Price", font=dict(size=9, color=_MUTED))),
@@ -951,17 +1134,34 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     candlestick_patterns_table = _candlestick_patterns_table(r)
     chart_patterns_table = _chart_patterns_table(r)
 
-    # Elliott Wave -- one chart per degree ("primary", "minor"), same source
-    # (analyze_degrees) and same tier/color scheme as the live React tab.
-    # Was missing from the export entirely until 2026-07-17.
+    # Elliott Wave -- one chart per degree (primary, intermediate, minor,
+    # ... down the ladder -- see wave_analysis.py's DEFAULT_DEGREE_LADDER),
+    # same source (analyze_degrees) and same tier/color scheme as the live
+    # React tab. Was missing from the export entirely until 2026-07-17. A
+    # one-line description per chart (2026-07-21, matching
+    # ElliottWavePanel.tsx's identical addition on the live side) --
+    # name-based throughout, not hardcoded to any specific degree name, so
+    # any ladder depth gets the same treatment automatically.
+    def _elliott_description(name: str, degrees: dict) -> str:
+        base = name.replace("_global", "")
+        label = base[0].upper() + base[1:]
+        if name.endswith("_global"):
+            return f"Shows higher-level {label} structures across the entire chart."
+        if f"{name}_global" in degrees:
+            return f"Shows smaller {label} structures detected inside the larger trend."
+        return "Shows the highest-level Elliott Wave structures detected for this timeframe."
+
     if not r.price_data.empty:
         degrees = analyze_degrees(r.price_data)
-        chart_elliott = "".join(
-            f'<div class="chart-box">'
-            f'{_fig_to_div(_elliott_wave_chart(r.price_data, a, name, nested=(name == "minor"), symbol=r.symbol))}'
-            f'</div>'
-            for name, a in degrees.items()
-        )
+
+        def _elliott_chart_box(name: str, a) -> str:
+            is_nested = name != "primary" and not name.endswith("_global")
+            fig_div = _fig_to_div(_elliott_wave_chart(r.price_data, a, name, nested=is_nested, symbol=r.symbol))
+            desc = _elliott_description(name, degrees)
+            return (f'<div class="chart-box">{fig_div}'
+                    f'<p style="color:#8b949e;font-size:0.8rem;padding:4px 8px 0">{desc}</p></div>')
+
+        chart_elliott = "".join(_elliott_chart_box(name, a) for name, a in degrees.items())
     else:
         chart_elliott = '<p style="color:#8b949e;padding:12px">No price data available for wave analysis.</p>'
 

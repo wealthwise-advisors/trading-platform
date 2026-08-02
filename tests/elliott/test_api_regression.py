@@ -43,8 +43,8 @@ def test_elliott_wave_endpoint_returns_valid_structure():
     resp = client.get(f"/api/backtests/{backtest_id}/elliott-wave")
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert "primary" in body and "minor" in body
-    for degree in ("primary", "minor"):
+    assert "primary" in body and "intermediate" in body
+    for degree in ("primary", "intermediate"):
         assert "n_swings" in body[degree]
         assert "wave_sequence" in body[degree]
         assert "warnings" in body[degree]
@@ -76,7 +76,7 @@ def test_elliott_wave_endpoint_deterministic_across_repeated_requests():
         body = resp.json()
         return tuple(
             tuple((w["wave"], round(w["price"], 6), w["t"]) for w in body[degree]["wave_sequence"])
-            for degree in ("primary", "minor")
+            for degree in ("primary", "intermediate")
         )
 
     assert_deterministic(fetch, runs=3)
