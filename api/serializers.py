@@ -10,7 +10,7 @@ import pandas as pd
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
 from src.analysis.indicators import calc_rsi, calc_stoch
-from src.analysis.zigzag import calc_zigzag, assign_swing_labels
+from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 
 
 def _safe(x):
@@ -119,33 +119,30 @@ def equity_curve_to_records(results: BacktestResults) -> list[dict]:
 
 
 def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
-    """Both 3-leg and 10-leg zigzags, matching the Streamlit dual-overlay design.
-    Both use the SAME fixed-channel swing-grouping procedure from
-    assign_swing_labels(). Label TEXT differs: 10-leg keeps the original
-    decimal format (1.0, 1.1, 2.0...); 3-leg uses just the 1-indexed
-    position within its swing group (1, 2, 3, then resets to 1 for the next
-    swing, then 1, 2, 3 again...) with no letter/group prefix -- a letter
-    prefix (A1, B1...) was tried first and rejected since it wraps to AA/AB
-    past Z, which read as confusing."""
+    """10-leg (major) and 3-leg (minor) zigzags. The 10-leg zigzag is grouped
+    into swings via assign_swing_labels()'s fixed-channel procedure (decimal
+    labels: 1.0, 1.1, 2.0...). The 3-leg zigzag is NOT computed independently
+    over the whole series -- calc_nested_zigzag() runs it separately within
+    each 10-leg swing's own bar window, so every minor pivot's `swing` field
+    is its true parent major swing, and its `label` (a letter: A, B, C...)
+    always resets at the start of a new parent swing. This makes containment
+    a property of the data itself, not a client-side rendering heuristic."""
     zz10 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_10, legs=10)
     zz10 = assign_swing_labels(zz10) if not zz10.empty else zz10
-    zz3 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_3, legs=3)
-    zz3 = assign_swing_labels(zz3) if not zz3.empty else zz3
+    zz3 = calc_nested_zigzag(df["high"], df["low"], df["close"], zz10, deviation=dev_3, legs=3)
 
-    def to_records(zz: pd.DataFrame, per_swing_index: bool) -> list[dict]:
+    def to_records(zz: pd.DataFrame) -> list[dict]:
         if zz.empty:
             return []
-        out = []
-        for ts, row in zz.iterrows():
-            swing, sub = int(row["swing"]), int(row["sub"])
-            label = str(sub + 1) if per_swing_index else row["label"]
-            out.append({
+        return [
+            {
                 "t": ts.isoformat(), "price": float(row["price"]), "type": row["type"],
-                "swing": swing, "sub": sub, "label": label,
-            })
-        return out
+                "swing": int(row["swing"]), "sub": int(row["sub"]), "label": row["label"],
+            }
+            for ts, row in zz.iterrows()
+        ]
 
-    return {"zigzag_10": to_records(zz10, per_swing_index=False), "zigzag_3": to_records(zz3, per_swing_index=True)}
+    return {"zigzag_10": to_records(zz10), "zigzag_3": to_records(zz3)}
 
 
 def win_loss(results: BacktestResults) -> dict:

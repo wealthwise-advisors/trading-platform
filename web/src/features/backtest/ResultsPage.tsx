@@ -11,7 +11,6 @@ import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
 import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
-import { ElliottWavePanel } from "@/components/tables/ElliottWavePanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 
@@ -61,11 +60,6 @@ export function ResultsPage() {
   const chartPatternsQ = useQuery({
     queryKey: ["backtest", backtestId, "chart-patterns"],
     queryFn: () => api.getChartPatterns(backtestId!),
-    enabled: !!backtestId,
-  })
-  const elliottWaveQ = useQuery({
-    queryKey: ["backtest", backtestId, "elliott-wave"],
-    queryFn: () => api.getElliottWave(backtestId!),
     enabled: !!backtestId,
   })
   if (!backtestId) {
@@ -135,7 +129,6 @@ export function ResultsPage() {
             <TabsTrigger value="candles">🕯️ Candlestick Patterns</TabsTrigger>
             <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
             <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
-            <TabsTrigger value="elliottwave">📶 Elliott Wave</TabsTrigger>
           </TabsList>
         </div>
 
@@ -200,13 +193,6 @@ export function ResultsPage() {
             <TabsContent value="optimizer" className="mt-0">
               <Card className="p-4 border border-white/6 w-full">
                 <OptimizerPanel />
-              </Card>
-            </TabsContent>
-            <TabsContent value="elliottwave" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <ElliottWavePanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
-                )}
               </Card>
             </TabsContent>
           </div>

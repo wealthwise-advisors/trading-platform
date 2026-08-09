@@ -1,15 +1,14 @@
-# AutoTrader / Elliott Wave engine -- production API image (Task 10, v1.0.0).
+# AutoTrader -- production API image (Task 10, v1.0.0).
 #
 # Builds and runs the FastAPI service (api.main:app), which wraps the
-# Elliott Wave engine (src/analysis/), backtesting engine, and CLI. The
-# React frontend (web/) is built and served separately -- see web/Dockerfile
+# backtesting engine and analysis modules (src/analysis/). The React
+# frontend (web/) is built and served separately -- see web/Dockerfile
 # and docker-compose.yml, which puts both behind one origin so the browser
 # never needs cross-origin requests in the default deployment.
 #
 # Live trading (src/live/, src/broker/rithmic_broker.py) is a documented
 # stub -- see docs/RELEASE_AUDIT.md "Known limitations" -- this image runs
-# backtesting, replay, and Elliott Wave analysis; it does not place live
-# trades.
+# backtesting and replay; it does not place live trades.
 
 FROM python:3.12-slim AS base
 
@@ -30,15 +29,12 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY src/ src/
 COPY api/ api/
-COPY cli/ cli/
-COPY benchmark/ benchmark/
-COPY validation/ validation/
 COPY config/settings.yaml config/settings.yaml
 COPY config/credentials.yaml.example config/credentials.yaml.example
 COPY pyproject.toml README.md ./
 
-# Editable-less install of the same package the CLI/pyproject.toml define,
-# so `elliott` and `import api.main` resolve identically to a dev checkout.
+# Editable-less install of the same package pyproject.toml defines,
+# so `import api.main` resolves identically to a dev checkout.
 RUN pip install --no-cache-dir --no-deps .
 
 # Non-root: this process only ever reads config/ (mounted read-only in

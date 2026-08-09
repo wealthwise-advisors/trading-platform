@@ -8,7 +8,7 @@ import type {
   TradeRecord, PriceDataResponse, EquityPoint, ZigZagResponse, WinLoss,
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
-  OptimizeRequest, OptimizeResponse, ElliottWaveResponse,
+  OptimizeRequest, OptimizeResponse,
 } from "./types"
 
 const BASE = "/api"
@@ -64,6 +64,4 @@ export const api = {
 
   runOptimizer: (req: OptimizeRequest) =>
     request<OptimizeResponse>("/optimize", { method: "POST", body: JSON.stringify(req) }),
-
-  getElliottWave: (id: string) => request<ElliottWaveResponse>(`/backtests/${id}/elliott-wave`),
 }

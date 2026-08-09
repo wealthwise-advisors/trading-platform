@@ -5,6 +5,47 @@ versioning follows [Semantic Versioning](https://semver.org/). Entries
 before v1.0.0 summarize development milestones rather than individual
 commits — this is the first release with a formal changelog process.
 
+## [Unreleased]
+
+### Removed
+
+- The entire Elliott Wave analysis engine (`src/analysis/elliott_wave.py`,
+  `wave_analysis.py`, `wave_numbering.py`, `diagonal_waves.py`,
+  `recursive_structure.py`, `structure_classification.py`,
+  `complex_corrections.py`, `corrective_waves.py`, `fibonacci.py`),
+  its FastAPI endpoint (`api/routers/elliott_wave.py`, `/api/backtests/{id}/elliott-wave`),
+  its static-report chart layout (`api/report/wave_layout.py`), its React
+  UI (`ElliottWavePanel.tsx`, `ElliottWaveChart.tsx`, `WaveNotesPanel.tsx`,
+  the "Elliott Wave" results tab), its independent benchmark (`benchmark/`),
+  its expert chart-validation framework (`validation/`), the `elliott`
+  production CLI (`cli/`), and its regression suite (`tests/elliott/`).
+- `swing_identification.py` is retained (also used by
+  `src/backtesting/trade_quality.py`); its docstrings/comments were
+  reworded to drop Elliott-specific phrasing.
+- The from-scratch replacement Elliott Wave engine that had been built
+  after the above removal is itself now removed, in full: the six-layer
+  package (`src/analysis/elliott_wave/` — `models.py`, `hierarchy.py`,
+  `impulse.py`, `correction.py`, `advanced.py`, `scoring.py`,
+  `pipeline.py`), its API surface (`GET /api/backtests/{id}/elliott-wave`,
+  `api/serializers.py::elliott_wave_to_records()`, the `show_elliott_wave`
+  / `ew_beam_width` / `ew_max_depth` report query parameters and the
+  matching `generate_html_report()` / `_candlestick_chart()` parameters,
+  `api/report/report.py::_add_elliott_wave_overlay()`), its React UI (the
+  `🌊 Elliott Wave` results tab, `ElliottWaveChart.tsx`, `api.getElliottWave()`,
+  and the `ElliottWaveResponse` / `ElliottWaveStructure` / `ScoringEvidence` /
+  `TargetZoneRecord` TypeScript interfaces), its 196-test suite
+  (`tests/test_elliott_wave_*.py`, 7 files), and its design documentation
+  (`docs/ELLIOTT_WAVE_ARCHITECTURE.md`, `docs/ELLIOTT_WAVE_SRS.md`,
+  `docs/ELLIOTT_WAVE_V1_RELEASE.md`). No replacement was built.
+- Dead `COPY cli/ benchmark/ validation/` lines dropped from the
+  `Dockerfile` — all three directories were Elliott-only and had already
+  been deleted, so the image build referenced paths that no longer existed.
+- `src/analysis/swing_identification.py`, `src/analysis/zigzag.py`, the
+  Swing (10-Leg) / 3-Leg Deviation overlay, and
+  `tests/test_swing_zigzag_regression.py` are all untouched by this
+  removal — the Elliott engine consumed `identify_swings()`/`atr()`, it
+  never owned them.
+
 ## [1.0.0] — Version 1.0 Gold
 
 Full production release audit: repository/code-quality audit, packaging

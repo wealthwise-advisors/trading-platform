@@ -193,7 +193,7 @@ def get_chart_patterns(backtest_id: str):
 
 
 @router.get("/{backtest_id}/report")
-def get_report(backtest_id: str, zz_dev: float = Query(0.015), zz_dev_3: float = Query(0.003),
+def get_report(backtest_id: str, zz_dev: float = Query(0.003), zz_dev_3: float = Query(0.003),
                format: str = Query("html")):
     """Backtest report, downloadable as HTML (full charts, via
     api/report/report.py) or as CSV/Excel/PDF/Word (metrics summary + trade
