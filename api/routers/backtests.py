@@ -11,12 +11,18 @@ from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
+from src.analysis.elliott_wave import (
+    DEFAULT_RATIO,
+    DEFAULT_SCALES,
+    DEFAULT_THETA_BASE,
+)
 from api.report.report import generate_html_report
 
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
 from api import store, serializers
 from api.schemas.backtest import BacktestRequest
+from api.schemas.elliott_wave import ElliottWaveResponse
 
 try:
     from src.data.external_csv_provider import ExternalCSVProvider
@@ -154,6 +160,33 @@ def get_equity_curve(backtest_id: str):
 def get_zigzag(backtest_id: str, dev_3: float = Query(0.003), dev_10: float = Query(0.003)):
     stored = _get_or_404(backtest_id)
     return serializers.zigzag_to_records(stored.results.price_data, dev_3, dev_10)
+
+
+@router.get("/{backtest_id}/elliott-wave", response_model=ElliottWaveResponse)
+def get_elliott_wave(
+    backtest_id: str,
+    theta_base: float = Query(DEFAULT_THETA_BASE, gt=0, lt=1),
+    ratio: float = Query(DEFAULT_RATIO, gt=1),
+    scales: int = Query(DEFAULT_SCALES, ge=1, le=8),
+):
+    """Elliott Wave analysis of a stored backtest's price data.
+
+    Read-only: reads `price_data` from the in-memory store, never re-runs the
+    backtest and never re-fetches market data.
+
+    The only query parameters are the pivot ladder's D-13 values -- the sole
+    configurable knobs the SRS defines (FR-1e.3 / API-1.4). Defaults are the
+    engine's own, and FR-1e.4 requires those two to stay in lockstep.
+
+    The response deliberately surfaces what was NOT evaluated: every wave
+    carries `state` and `blocked_by`, and the payload carries `blocked_rules`
+    plus `notes`. A client must never be able to render a partial analysis as
+    though it were complete (FE-3).
+    """
+    stored = _get_or_404(backtest_id)
+    return serializers.elliott_wave_to_records(
+        stored.results.price_data, theta_base, ratio, scales
+    )
 
 
 @router.get("/{backtest_id}/win-loss")

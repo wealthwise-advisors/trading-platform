@@ -145,6 +145,87 @@ def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
     return {"zigzag_10": to_records(zz10), "zigzag_3": to_records(zz3)}
 
 
+def elliott_wave_to_records(
+    df: pd.DataFrame,
+    theta_base: float,
+    ratio: float,
+    scales: int,
+) -> dict:
+    """Run the Elliott Wave engine and flatten it for the API.
+
+    Deliberately faithful to what the engine reports, including its gaps:
+
+    * every wave carries its lifecycle ``state`` and ``blocked_by``, so a
+      client can distinguish a confirmed structure from one whose acceptance
+      depends on an unresolved Open Question (FE-3.1);
+    * ``blocked_rules`` and ``notes`` are passed through verbatim, so a partial
+      analysis can never be rendered as if it were complete (FE-3.2);
+    * no confidence/score field is produced or derivable (FR-7.4).
+    """
+    from src.analysis.elliott_wave import EngineConfig, run_analysis
+
+    cfg = EngineConfig(theta_base=theta_base, ratio=ratio, scales=scales)
+    res = run_analysis(df, cfg)
+
+    pivots = [
+        {
+            "index": p.index,
+            "confirm_index": p.confirm_index,
+            "t": p.timestamp.isoformat() if hasattr(p.timestamp, "isoformat") else str(p.timestamp),
+            "price": _safe(p.price),
+            "kind": p.kind.value,
+            "scale": p.scale,
+        }
+        for p in res.pivots
+    ]
+
+    waves = [
+        {
+            "id": w.id,
+            "scale": w.scale,
+            "state": w.state.value,
+            "label": w.label,
+            "structure_type": w.structure_type.value if w.structure_type else None,
+            "direction": w.direction.value if w.direction else None,
+            "start_t": w.start_pivot.timestamp.isoformat()
+            if hasattr(w.start_pivot.timestamp, "isoformat") else str(w.start_pivot.timestamp),
+            "start_price": _safe(w.start_pivot.price),
+            "end_t": w.end_pivot.timestamp.isoformat()
+            if hasattr(w.end_pivot.timestamp, "isoformat") else str(w.end_pivot.timestamp),
+            "end_price": _safe(w.end_pivot.price),
+            "parent_id": w.parent_id,
+            "child_ids": list(w.child_ids),
+            "measurements": {k: _safe(v) for k, v in w.measurements.items()},
+            "blocked_by": list(w.blocked_by),
+        }
+        for w in res.waves
+    ]
+
+    structures = [w for w in waves if w["structure_type"] is not None]
+    by_type: dict[str, int] = {}
+    by_state: dict[str, int] = {}
+    for w in structures:
+        by_type[w["structure_type"]] = by_type.get(w["structure_type"], 0) + 1
+        by_state[w["state"]] = by_state.get(w["state"], 0) + 1
+
+    return {
+        "engine_version": res.engine_version,
+        "config": res.config,
+        "pivots": pivots,
+        "waves": waves,
+        "blocked_rules": res.blocked_rules,
+        "notes": res.notes,
+        "counts": {
+            "pivots": len(pivots),
+            "waves": len(waves),
+            "structures": len(structures),
+            "structures_by_type": by_type,
+            "structures_by_state": by_state,
+            "blocked_rule_ids": sum(len(e["rules"]) for e in res.blocked_rules),
+        },
+    }
+
+
 def win_loss(results: BacktestResults) -> dict:
     return {
         "wins": results.winning_trades,
