@@ -3,47 +3,27 @@
 ## `ModuleNotFoundError` after a fresh install
 
 Run `pip install -e ".[dev]"` (not just `pip install -r requirements.txt`)
-so the `autotrader` package itself (and the `elliott` console script) get
-registered. If you only ran the plain `requirements.txt` install, also run
-`pip install -e . --no-deps`.
-
-## `elliott` command not found after install
-
-The console script installs into your active virtual environment's
-`Scripts/` (Windows) or `bin/` (macOS/Linux) directory. Confirm you're in
-the same venv you installed into (`pip show autotrader` should succeed);
-if it does but `elliott` still isn't found, that directory likely isn't on
-your `PATH` — use `python -m cli.main <command>` as a workaround, which
-always works from the repo root regardless of `PATH`.
-
-## `elliott config` fails with "settings.yaml not found"
-
-Run it from the repo root — `config/settings.yaml` is a relative path.
-Same applies to `uvicorn api.main:app` and any `scripts/*.py`.
+so the `autotrader` package itself gets registered. If you only ran the
+plain `requirements.txt` install, also run `pip install -e . --no-deps`.
 
 ## A synthetic test fixture's expected pivot never shows up in the swings list
 
-This is the single most common gotcha in this codebase, documented in
-three separate places because it's been rediscovered three times: N-bar
-fractal pivot detection (`identify_swings`, default `left=2, right=2`)
-needs CONFIRMING bars on **both sides** of a pivot. A price series that
-starts or ends exactly at its own intended first/last pivot never gives
-that pivot the confirming bars it needs — it's silently dropped, not
-flagged. If you're building a new OHLC fixture (test, benchmark case,
-manual CSV), add a few small leading/trailing bars that pull back toward
-(not past) the endpoint pivots. See `tests/elliott/conftest.py`'s
-`ohlc_from_pivots` for the reference implementation and
-`benchmark/pipeline.py`'s docstring for the exact sign-convention pitfall
-(it's easy to get the pull-back direction backwards).
+N-bar fractal pivot detection (`identify_swings`, default `left=2,
+right=2`) needs CONFIRMING bars on **both sides** of a pivot. A price
+series that starts or ends exactly at its own intended first/last pivot
+never gives that pivot the confirming bars it needs — it's silently
+dropped, not flagged. If you're building a new OHLC fixture, add a few
+small leading/trailing bars that pull back toward (not past) the endpoint
+pivots.
 
 ## Schwab "Live Data" shows unavailable even with credentials set
 
-`GET /api/data-sources` now actually tries to construct a
+`GET /api/data-sources` actually tries to construct a
 `SchwabDataProvider()` (fixed in the Task 10 audit — it previously
 reported `True` unconditionally, regardless of configuration). If it's
-`False`, check `elliott config --show` confirms `schwab` section values
-are `***SET***`, and that `config/schwab_tokens.json` exists (or complete
-the auth flow once via the UI).
+`False`, check that `config/credentials.yaml`'s `schwab` section is filled
+in, and that `config/schwab_tokens.json` exists (or complete the auth flow
+once via the UI).
 
 ## Schwab returns implausible prices for BTC or no data for EURUSD
 
@@ -62,23 +42,6 @@ proxies `/api/*` to the API — see `web/nginx.conf`) avoids this entirely
 because the browser only ever talks to one origin; you'll only hit this if
 you deploy the API and frontend as genuinely separate origins.
 
-## `elliott benchmark` fails with "no such table: charts" or similar on a bare install
-
-Expected, and specific to the real-market tier only. `elliott benchmark`
-has two tiers: 104 synthetic archetype cases (work standalone, no external
-data needed) and 369 real-market robustness cases, which require
-`validation/validation.db` to already exist. That database is built from
-~11 MB of real Schwab-fetched market data that is deliberately not
-committed to git (too large, regeneratable in principle) — but "regenerate"
-means running `validation/populate.py` against a live, credentialed Schwab
-connection, not something a bare `pip install` can do on its own. A repo
-checkout that already has `validation/validation.db` (e.g. from a prior
-`validation/populate.py` run) works fully; a fresh install elsewhere only
-gets the synthetic tier until that database is rebuilt or copied over. The
-synthetic tier alone (`104 synthetic_archetype cases populated`) is not an
-error — it's the full benchmark run correctly, minus the real-market
-robustness numbers.
-
 ## Live trading doesn't do anything
 
 By design — `src/live/trader.py` and `src/broker/rithmic_broker.py` are a
@@ -94,7 +57,7 @@ unavailable rather than crashing if it's not installed, and the "Real Data
 
 ## `pytest` fails only in CI, not locally
 
-Confirm you're on Python 3.12 — `elliott validate` / `pytest` behavior
-around fractal pivot detection has floating-point sensitivity that's been
-observed to differ across pandas/numpy versions; CI pins the same 3.12 +
-current `requirements.txt` versions this was verified against.
+Confirm you're on Python 3.12 — fractal pivot detection has
+floating-point sensitivity that's been observed to differ across
+pandas/numpy versions; CI pins the same 3.12 + current `requirements.txt`
+versions this was verified against.

@@ -4,23 +4,14 @@
 
 App name/version/logging, backtesting defaults (capital, commission,
 slippage), and per-symbol contract specs (tick size/value, margins).
-Validate it any time with:
-
-```bash
-elliott config --show
-```
-
-This loads the same `src.config.load_config()` the API uses, checks for
-the required `app`/`backtesting`/`contracts` sections, and prints the
-effective merged config with all secret-like fields redacted
-(`***SET***` / `(not set)` rather than the real value).
+Loaded via `src.config.load_config()`, which the API uses on startup and
+checks for the required `app`/`backtesting`/`contracts` sections.
 
 ### How `config/` is located
 
 `src.data.schwab_provider.py` and `external_csv_provider.py` (the two
-providers that read `config/` directly, outside the CLI's own
-`--settings`/`--credentials` flags) use `src.config.resolve_config_dir()`,
-checked in order:
+providers that read `config/` directly) use
+`src.config.resolve_config_dir()`, checked in order:
 
 1. `AUTOTRADER_CONFIG_DIR` env var, if set — explicit override, always wins.
 2. `<current working directory>/config` — correct for `uvicorn
@@ -44,7 +35,7 @@ cp config/credentials.yaml.example config/credentials.yaml
 ```
 
 Only needed for Schwab or Rithmic — synthetic data, your own CSVs,
-backtesting, replay, and the Elliott Wave engine all work without it.
+backtesting, and replay all work without it.
 
 ### Schwab (live/recent historical data)
 

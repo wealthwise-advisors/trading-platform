@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
-from api.routers import meta, backtests, replay, schwab, optimize, elliott_wave, data_export
+from api.routers import meta, backtests, replay, schwab, optimize, data_export
 
 try:
     _version = _pkg_version("autotrader")
@@ -55,5 +55,4 @@ app.include_router(backtests.router, prefix="/api")
 app.include_router(replay.router, prefix="/api")
 app.include_router(schwab.router, prefix="/api")
 app.include_router(optimize.router, prefix="/api")
-app.include_router(elliott_wave.router, prefix="/api")
 app.include_router(data_export.router, prefix="/api")

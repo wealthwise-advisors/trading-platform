@@ -15,8 +15,7 @@ pip install -e ".[dev]"
 ```
 
 This installs the core runtime dependencies plus dev tooling (pytest,
-ruff, mypy, vulture, bandit, pip-audit, black) and registers the `elliott`
-console script.
+ruff, mypy, vulture, bandit, pip-audit, black).
 
 For live/real Rithmic data, add the `live` extra:
 
@@ -34,12 +33,11 @@ pip install -e . --no-deps
 ## Verifying the install
 
 ```bash
-elliott version
-elliott validate          # runs the 56-test Elliott Wave regression suite
+pytest tests/ -v
 ```
 
-Both should complete with no errors. `elliott validate` exits non-zero if
-any test fails — safe to use as an install smoke test in a script.
+Exits non-zero if any test fails — safe to use as an install smoke test in
+a script.
 
 ## Building a wheel
 
@@ -50,9 +48,8 @@ pip install dist/autotrader-1.0.0-py3-none-any.whl
 ```
 
 The v1.0.0 wheel is ~248 KB. This was verified end-to-end during the Task
-10 release audit: built, installed into a clean virtual environment with
-no other files present, and `elliott version` ran correctly from the
-installed wheel alone.
+10 release audit: built and installed into a clean virtual environment
+with no other files present.
 
 ## Docker
 
@@ -65,7 +62,7 @@ Starts two services:
 | Service | Port | What it is |
 |---|---|---|
 | `web` | 8080 | React frontend (nginx), reverse-proxies `/api/*` to `api` |
-| `api` | (internal only by default) | FastAPI backend + Elliott Wave engine |
+| `api` | (internal only by default) | FastAPI backend |
 
 Open http://localhost:8080. To reach the API directly (e.g. for a Postman
 smoke test), uncomment the `ports:` mapping under `api` in
@@ -85,8 +82,8 @@ smoke test), uncomment the `ports:` mapping under `api` in
 `config/` is mounted read-only into the `api` container. Copy
 `config/credentials.yaml.example` to `config/credentials.yaml` on the host
 *before* `docker compose up` if you need Schwab or Rithmic — without it,
-synthetic data, backtesting, replay, and the Elliott Wave engine all work
-with zero external credentials.
+synthetic data, backtesting, and replay all work with zero external
+credentials.
 
 ## Uninstall
 

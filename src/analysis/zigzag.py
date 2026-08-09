@@ -48,6 +48,99 @@ def calc_zigzag(
     return df[df["price"].notna() & df["type"].notna()]
 
 
+def spreadsheet_letter(n: int) -> str:
+    """1 -> A, 2 -> B, ... 26 -> Z, 27 -> AA, ... spreadsheet-column style."""
+    letters = ""
+    x = n
+    while x > 0:
+        x, rem = divmod(x - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
+def calc_nested_zigzag(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    zz10: pd.DataFrame,
+    deviation: float = 0.003,
+    legs: int = 3,
+) -> pd.DataFrame:
+    """
+    The minor (3-leg) zigzag, computed INDEPENDENTLY per major (10-leg) swing
+    rather than once continuously across the whole series -- each major swing
+    in `zz10` (already run through assign_swing_labels(), so it has a `swing`
+    column) owns its own, self-contained minor zigzag: `calc_zigzag()` runs
+    separately on just that swing's own bar window [swing_start,
+    next_swing_start), so no minor pivot from one swing's window can ever
+    fall inside the next swing's boundary.
+
+    Tradeoff (explicit, accepted -- structural containment matters more than
+    this): pandas_ta.zigzag's fractal detection needs confirming bars on both
+    sides of a pivot. Cutting the series at each major swing boundary means
+    the last few bars of every swing lose the right-side confirming context
+    a single continuous run would have had, so a minor pivot very close to a
+    boundary may go undetected that a continuous computation would have
+    caught.
+
+    Returns a DataFrame indexed by timestamp with columns [price, type,
+    swing, sub, label] -- `swing` is the PARENT major swing number (not an
+    independent grouping of the minor zigzag's own price channel), `sub` is
+    the minor pivot's 0-indexed position within that parent swing (resets
+    for every new parent swing), and `label` is the spreadsheet-style letter
+    (A, B, ... Z, AA, ...) for that position.
+    """
+    empty = pd.DataFrame(columns=["price", "type", "swing", "sub", "label"])
+    if zz10.empty:
+        return empty
+
+    full_index = high.index
+    swing_groups = list(zz10.groupby("swing"))
+    frames = []
+
+    for i, (swing_num, grp) in enumerate(swing_groups):
+        # x0 is always this swing's OWN first major pivot's timestamp -- the
+        # same boundary the visual swing box itself is drawn from (see
+        # CandlestickChart.tsx's swingGroups.forEach). The first swing is NOT
+        # special-cased to "start of data": bars before the very first major
+        # pivot belong to no swing yet, so they get no minor label at all,
+        # rather than being folded into swing 1's own count (which used to
+        # make its first visible letter start before its own box's left edge).
+        x0 = grp.index.min()
+        x1 = swing_groups[i + 1][1].index.min() if i + 1 < len(swing_groups) else None
+        window = full_index[(full_index >= x0) & (full_index < x1)] if x1 is not None else full_index[full_index >= x0]
+        if len(window) < 2:
+            continue
+
+        zz_minor = calc_zigzag(high.loc[window], low.loc[window], close.loc[window], deviation=deviation, legs=legs)
+        if zz_minor.empty:
+            continue
+
+        zz_minor = zz_minor.sort_index().copy()
+        # A minor pivot that exactly coincides with one of THIS swing's own
+        # major pivots (most commonly its own closing pivot, e.g. "1.1") is
+        # already marked by the major overlay's own circle, so it's dropped
+        # here -- BEFORE labeling -- rather than only at render time. Doing
+        # this after labeling (the previous behavior) let "A" get assigned to
+        # a point that was then hidden, silently shifting every visible
+        # letter down one (the sequence would visually start at "B").
+        # Dropping first means the label sequence is assigned only to pivots
+        # that actually get their own circle, so the first visible letter is
+        # always "A".
+        zz_minor = zz_minor[~zz_minor.index.isin(grp.index)]
+        if zz_minor.empty:
+            continue
+
+        zz_minor["swing"] = swing_num
+        zz_minor["sub"] = range(len(zz_minor))
+        zz_minor["label"] = [spreadsheet_letter(n + 1) for n in range(len(zz_minor))]
+        frames.append(zz_minor)
+
+    if not frames:
+        return empty
+    return pd.concat(frames).sort_index()
+
+
 def assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
     """
     Group ZigZag pivots into swings using a fixed price channel.

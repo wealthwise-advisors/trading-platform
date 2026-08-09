@@ -24,7 +24,6 @@ signatures and Pydantic schemas): `GET /docs`. Raw OpenAPI schema: `GET
 | POST | `/api/backtests` | Run a backtest, returns a summary + `backtest_id` |
 | GET | `/api/backtests/{id}` | Fetch a stored result |
 | GET | `/api/backtests/{id}/report` | Self-contained HTML report export |
-| GET | `/api/backtests/{id}/elliott-wave` | Elliott Wave analysis (both "primary" and "minor" degree) on that backtest's price data |
 
 Request/response shapes: `api/schemas/backtest.py`. Validation errors
 return `400` with a message describing what's wrong (e.g. "No data
@@ -82,7 +81,7 @@ multi-tenant or public-facing deployment.
 
 ## Known gap
 
-Most endpoints (`backtests`, `elliott_wave`, `data_export`) return raw
+Most endpoints (`backtests`, `data_export`) return raw
 dicts rather than typed Pydantic `response_model`s — request bodies ARE
 typed (`api/schemas/`), but response shapes aren't fully reflected in the
 generated OpenAPI schema for those routes. Documented as a known

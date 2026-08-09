@@ -81,6 +81,16 @@ class BacktestEngine:
         # window there is time >= start OR time <= end, not AND, since no single
         # bar's clock time can satisfy both bounds within the same day otherwise.
         if self.session_start or self.session_end:
+            # Captured before filtering so a "no bars remain" error can show what
+            # the data provider actually returned -- a session-window mismatch
+            # (bars exist, just outside the window, e.g. a Sunday-evening Globex
+            # reopen against a 09:30-16:00 RTH window) looks identical to "no data
+            # at all" once the filter has already dropped everything, unless the
+            # pre-filter state is captured here first.
+            bars_before = len(df)
+            first_ts = df.index.min() if bars_before else None
+            last_ts = df.index.max() if bars_before else None
+
             bar_times = df.index.time
             if self.session_start and self.session_end:
                 if self.session_start <= self.session_end:
@@ -97,10 +107,28 @@ class BacktestEngine:
                 f"{len(df)} bars remain"
             )
             if df.empty:
+                window = f"{self.session_start}–{self.session_end} EST"
+                if bars_before == 0:
+                    explanation = (
+                        "No bars were returned by the data provider for this date "
+                        "range at all -- this happened before the session filter "
+                        "was even applied."
+                    )
+                else:
+                    explanation = (
+                        f"The data provider returned {bars_before} bar(s) "
+                        f"({first_ts} → {last_ts}), but the session filter removed "
+                        f"all of them -- none of their timestamps fell inside {window}."
+                    )
                 raise ValueError(
-                    f"No bars remain after session filter ({self.session_start}–{self.session_end} EST).\n"
-                    f"The date range {start.date()} → {end.date()} may have no data during market hours.\n"
-                    "Try an earlier date range or extend the session window."
+                    "No bars remain after applying the session filter.\n"
+                    f"Date range: {start.date()} → {end.date()}\n"
+                    f"Session window applied: {window}\n"
+                    f"Bars fetched before filtering: {bars_before}\n"
+                    "Bars remaining after filtering: 0\n"
+                    f"{explanation}\n"
+                    "Try widening the session window, or choose a date/session "
+                    "combination that contains data for this symbol."
                 )
 
         if df.empty:

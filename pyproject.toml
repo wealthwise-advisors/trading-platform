@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "autotrader"
 version = "1.0.0"
-description = "Futures/options backtesting platform with an integrated Elliott Wave analysis engine (recursive structural validation, unified impulse/correction/triangle/complex-correction/diagonal classification)."
+description = "Futures/options backtesting platform with bar-by-bar replay and live market data (Schwab / Rithmic)."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Proprietary - All Rights Reserved" }
@@ -17,8 +17,8 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 
-# Verified against actual `import` statements across src/, api/, benchmark/,
-# validation/, scripts/ (Task 10 release audit) -- not copied from the prior,
+# Verified against actual `import` statements across src/, api/,
+# scripts/ (Task 10 release audit) -- not copied from the prior,
 # stale requirements.txt. Two corrections made from that audit:
 #   * fastapi / uvicorn / pydantic / openpyxl / reportlab / python-docx were
 #     USED (api/ is a real FastAPI service; api/export/formats.py does
@@ -52,9 +52,9 @@ dependencies = [
 
 [project.optional-dependencies]
 # Real/live market data via Rithmic -- requires a licensed Rithmic account
-# and credentials; not needed for backtesting, replay, or the Elliott Wave
-# engine on synthetic/CSV/Schwab data. Kept optional so a default install
-# doesn't pull in a broker SDK nobody without an account can use anyway.
+# and credentials; not needed for backtesting or replay on synthetic/CSV/
+# Schwab data. Kept optional so a default install doesn't pull in a broker
+# SDK nobody without an account can use anyway.
 live = ["pyrithmic>=0.1.0"]
 dev = [
     "pytest>=7.4.0",
@@ -65,42 +65,20 @@ dev = [
     "vulture>=2.11",
     "bandit>=1.7.0",
     "pip-audit>=2.7.0",
-    # Task 10.1 found this missing by actually running the regression
-    # suite in a genuinely clean environment: starlette's TestClient (used
-    # by tests/elliott/test_api_regression.py) requires httpx2 and does
-    # NOT pull it in as a transitive dependency of starlette/fastapi
-    # themselves. Task 10's own test runs happened to pass only because an
-    # httpx-compatible package was already present from unrelated prior
-    # installs in that dev environment -- never actually verified clean.
     "httpx2>=2.0.0",
 ]
 
-[project.scripts]
-elliott = "cli.main:main"
-
 [tool.setuptools.packages.find]
-include = ["src*", "api*", "benchmark*", "validation*", "cli*"]
+include = ["src*", "api*"]
 exclude = ["*.__pycache__", "*.__pycache__.*"]
-
-[tool.setuptools.package-data]
-# Task 10.1 verification: `pip install .` (non-editable) followed by
-# actually running `elliott benchmark` from OUTSIDE the repo failed --
-# benchmark/db.py and validation/db.py both load a .sql schema file via
-# Path(__file__).parent, and setuptools does NOT package non-.py files by
-# default. This never surfaced under Task 10's `pip install -e .` testing
-# because an editable install's __file__ still points at the original
-# source tree, where schema.sql is right there -- masking the bug. Fixed
-# by declaring both as real package data.
-benchmark = ["schema.sql"]
-validation = ["schema.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.ruff]
 # Task 10.1 verification found the CI lint job (`ruff check .`) actually
-# FAILS at 120 -- 68 E501 violations across benchmark/, api/, validation/,
-# cli/, tests/, and src/broker/paper_broker.py, never caught in Task 10
+# FAILS at 120 -- 68 E501 violations across api/, tests/, and
+# src/broker/paper_broker.py, never caught in Task 10
 # because that audit always ran ruff with a narrow --select filter, not
 # the full default ruleset this config applies. 160 was chosen by
 # measuring the real distribution (121-289 chars, 65/68 findings are
@@ -116,30 +94,16 @@ exclude = ["src/data/schwabdev"]   # vendored third-party client, kept as-import
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 # E741 (ambiguous 1-char names) and E731 (lambda-assign) are pre-existing,
-# individually audited findings inside src/analysis/ (the Elliott engine)
-# -- see docs/RELEASE_AUDIT.md. Not auto-fixed per Task 10's explicit "do
-# not modify Elliott Wave algorithms" instruction; suppressed repo-wide
-# since both are purely stylistic (never indicate a real bug the way an
-# unused import/variable can) and every existing occurrence is already in
-# a protected or vendored file.
+# individually audited findings -- see docs/RELEASE_AUDIT.md. Suppressed
+# repo-wide since both are purely stylistic (never indicate a real bug the
+# way an unused import/variable can).
 ignore = ["E741", "E731"]
 
 [tool.ruff.lint.per-file-ignores]
 # F401/F841 (unused import / unused local) are NOT repo-wide-ignored --
 # unlike E741/E731 these catch real mistakes, so the check stays live for
-# every file except the exact ones with an already-audited, intentional
-# exception (docs/RELEASE_AUDIT.md): the Elliott engine (protected, not
-# modified) and one live strategy (left untouched rather than risk
-# removing a value that may have been meant to gate a now-missing
-# condition). Task 10.1 found this table didn't exist at all, so CI lint
-# was failing on every run for findings Task 10 had already decided not
-# to fix -- this closes that gap without silencing F401/F841 anywhere else.
-"src/analysis/chart_patterns.py" = ["F401"]
-"src/analysis/corrective_waves.py" = ["F401"]
-"src/analysis/elliott_wave.py" = ["F401", "F841"]
-"src/analysis/fibonacci.py" = ["F401"]
-"src/analysis/structure_classification.py" = ["F401"]
-"src/analysis/wave_analysis.py" = ["F401", "F841"]
+# every file except an already-audited, intentional exception (see
+# docs/RELEASE_AUDIT.md).
 "src/strategies/rsi_divergence.py" = ["F841"]
 
 [tool.mypy]

@@ -40,19 +40,6 @@ htmlcov/
 # Generated reports — share via email/Slack, don't commit
 reports/*.html
 
-# Generated benchmark/validation data (regeneratable via `elliott benchmark`
-# / validation/populate.py; consistent with data/historical/ above -- too
-# large and derived to belong in git history). Source code in benchmark/
-# and validation/ IS committed; only their generated output is excluded.
-benchmark/charts/
-benchmark/*.db
-benchmark/exports/
-benchmark/dashboard.html
-benchmark/discrepancy_report.html
-validation/charts/
-validation/*.db
-validation/dashboard.html
-
 # Streamlit cache
 .streamlit/cache/
 

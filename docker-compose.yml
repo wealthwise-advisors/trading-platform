@@ -1,4 +1,4 @@
-# AutoTrader / Elliott Wave engine -- production deployment (Task 10, v1.0.0).
+# AutoTrader -- production deployment (Task 10, v1.0.0).
 #
 #   docker compose up --build
 #
@@ -12,8 +12,8 @@
 # config/ is mounted read-only: credentials.yaml (gitignored, never built
 # into the image) must exist on the host before startup if you need Schwab
 # or Rithmic. Without it, the API still runs -- synthetic data, backtesting,
-# replay, and the Elliott Wave engine all work with zero external
-# credentials; see docs/CONFIGURATION.md.
+# and replay all work with zero external credentials; see
+# docs/CONFIGURATION.md.
 
 services:
   api:

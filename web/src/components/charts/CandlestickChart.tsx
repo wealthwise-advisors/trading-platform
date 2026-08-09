@@ -201,78 +201,35 @@ export function CandlestickChart({
   const zz10 = showZigzag ? zigzag.zigzag_10 : []
   const zz3 = showZigzag ? zigzag.zigzag_3 : []
 
-  // 10-leg swing group boundaries, computed once up front -- used both to
-  // draw the swing rectangles further below AND to letter-label the 3-leg
-  // points region-by-region (see zz3LabelByTime): each 3-leg point's letter
-  // is keyed to which 10-leg swing region it temporally falls inside, NOT
-  // the 3-leg's own independent swing-grouping (that was tried and
-  // explicitly rejected -- the letters need to reset at every 10-leg swing
-  // boundary, e.g. swing 1's region gets a,b,c..., then swing 2's region
-  // starts back at a,b,c... again).
+  // 10-leg swing group boundaries, computed once up front -- used to draw
+  // the swing rectangles further below. The 3-leg zigzag's own `swing` field
+  // is its TRUE parent major swing -- computed server-side by
+  // calc_nested_zigzag() (api/serializers.py), which runs the minor zigzag
+  // independently within each major swing's own bar window, so containment
+  // (never bleeding into the next swing) and the letter reset are already
+  // guaranteed by construction. No client-side time-boundary lookup needed.
   const bySwing10 = new Map<number, ZigZagPoint[]>()
   for (const p of zz10) {
     if (!bySwing10.has(p.swing)) bySwing10.set(p.swing, [])
     bySwing10.get(p.swing)!.push(p)
   }
   const swingGroups = [...bySwing10.entries()].sort((a, b) => a[0] - b[0])
-  const swingBoundaries = swingGroups.map(([, grp], i) => {
-    // First region's lower bound is unbounded (-Infinity), not the swing's
-    // own start time -- otherwise any 3-leg point occurring before swing 1
-    // technically begins fell into its own separate "no region" bucket and
-    // got its own reset-to-A sequence, which showed up as an extra/orphan
-    // "A" outside any visible swing rectangle before the real sequence
-    // started. Now anything before swing 1 just extends swing 1's own
-    // lettering instead of forming a phantom region.
-    const x0 = i === 0 ? -Infinity : new Date(grp[0].t).getTime()
-    const x1 = i + 1 < swingGroups.length
-      ? new Date(swingGroups[i + 1][1][0].t).getTime()
-      : (t.length ? new Date(t[t.length - 1]).getTime() : Infinity)
-    return { x0, x1 }
-  })
-
-  function swingLetter(n: number): string {
-    let letters = ""
-    let x = n
-    while (x > 0) {
-      const rem = (x - 1) % 26
-      letters = String.fromCharCode(65 + rem) + letters
-      x = Math.floor((x - 1) / 26)
-    }
-    return letters
-  }
 
   // Every 10-leg point is ALSO a 3-leg point at the exact same price/time
-  // (verified against real data -- a major swing extreme is always also a
-  // minor one). That shared point is always the very first 3-leg point in
-  // its region (the region boundary itself), and it's already labeled by
-  // the 10-leg overlay's own circle -- so it's excluded here entirely (no
-  // letter, no circle) rather than drawn a second time. The next real
-  // 3-leg point in that region becomes the new "A" instead of "B".
+  // (a major swing extreme is always also a minor one) -- that shared point
+  // is already labeled by the 10-leg overlay's own circle, so it's excluded
+  // here entirely (no letter, no circle) rather than drawn a second time.
   const zz10TimeSet = new Set(zz10.map((p) => p.t))
-  const zz3LabelByTime = new Map<string, string>()
-  // Per 10-leg region, the ordered list of 3-leg letters assigned inside it
-  // (same indexing as swingGroups/swingBoundaries) -- lets the swing header
-  // show "3 Leg Dev (A to H)" alongside the existing "(1.1 to 1.5)" range.
-  const regionLetters: string[][] = swingBoundaries.map(() => [])
-  {
-    const sorted = [...zz3]
-      .filter((p) => !zz10TimeSet.has(p.t))
-      .sort((a, b) => new Date(a.t).getTime() - new Date(b.t).getTime())
-    let regionIdx = -2 // distinct from any real findIndex result (-1 included) so the first point always starts a fresh counter
-    let counter = 0
-    for (const p of sorted) {
-      const pMs = new Date(p.t).getTime()
-      const idx = swingBoundaries.findIndex((b) => pMs >= b.x0 && pMs < b.x1)
-      if (idx !== regionIdx) {
-        regionIdx = idx
-        counter = 0
-      }
-      const label = swingLetter(counter + 1)
-      zz3LabelByTime.set(p.t, label)
-      if (idx >= 0) regionLetters[idx].push(label)
-      counter++
-    }
+  const zz3Labelable = zz3.filter((p) => !zz10TimeSet.has(p.t))
+  // Per parent swing, the ordered list of 3-leg letters inside it -- lets
+  // the swing header show "3 Leg Dev (A to H)" alongside the existing
+  // "(1.1 to 1.5)" range.
+  const regionLettersBySwing = new Map<number, string[]>()
+  for (const p of zz3Labelable) {
+    if (!regionLettersBySwing.has(p.swing)) regionLettersBySwing.set(p.swing, [])
+    regionLettersBySwing.get(p.swing)!.push(p.label)
   }
+  const regionLetters: string[][] = swingGroups.map(([swingNum]) => regionLettersBySwing.get(swingNum) ?? [])
 
   if (zz3.length) {
     data.push({
@@ -280,19 +237,13 @@ export function CandlestickChart({
       name: "ZigZag (3L)", line: { color: "#f0c040", width: 1.0, dash: "dot" },
       hoverinfo: "skip", xaxis: "x", yaxis: "y",
     } as unknown as Data)
-    // Circles/letters skip any point that coincides with a 10-leg point --
-    // that point is already marked by the 10-leg's own circle, so drawing
-    // a second overlapping one here would just sit hidden underneath it
-    // regardless of trace order. zz3LabelByTime already excludes these
-    // (see above), so filtering pts the same way here keeps the circles
-    // and their labels in sync.
     for (const [ptype, color] of [["H", "#ff6b6b"], ["L", "#69f0ae"]] as const) {
-      const pts = zz3.filter((p) => p.type === ptype && !zz10TimeSet.has(p.t))
+      const pts = zz3Labelable.filter((p) => p.type === ptype)
       if (pts.length) {
         data.push({
           type: "scatter", mode: "text+markers", x: pts.map((p) => p.t), y: pts.map((p) => p.price),
           marker: { symbol: "circle", size: 23, color: BG, line: { color, width: 1.6 } },
-          text: pts.map((p) => zz3LabelByTime.get(p.t) ?? ""), textposition: "middle center",
+          text: pts.map((p) => p.label), textposition: "middle center",
           textfont: { color: "white", size: 10, family: "Arial" },
           showlegend: false,
           hovertemplate: `<b>${ptype === "H" ? "High" : "Low"} (3L) %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>`,
@@ -302,6 +253,17 @@ export function CandlestickChart({
     }
   }
 
+  // Hoisted out of the `if` block below so the layout/margin/title code
+  // further down (which needs to reserve enough vertical room for however
+  // many swing-header rows collision avoidance actually produced) can read
+  // the final value. HEADER_LEVEL_HEIGHT is hoisted alongside it so the
+  // title/range-selector's own upward scaling grows at the EXACT same rate
+  // as the header rows themselves -- two independent literals here drifting
+  // apart is exactly what caused the title-collides-with-tallest-header bug
+  // this was fixed for (2026-08-02).
+  let maxHeaderLevel = 0
+  const HEADER_LEVEL_HEIGHT = 0.036
+
   if (zz10.length) {
     data.push({
       type: "scatter", mode: "lines", x: zz10.map((p) => p.t), y: zz10.map((p) => p.price),
@@ -310,6 +272,40 @@ export function CandlestickChart({
     } as unknown as Data)
 
     // ── Swing boundary rectangles + headers (span all 4 panels via yref="paper") ──
+
+    const totalSpanMs = t.length > 1 ? new Date(t[t.length - 1]).getTime() - new Date(t[0]).getTime() : 0
+
+    // ── Collision avoidance for swing headers ──────────────────────────
+    // Every swing gets a header (never omitted), placed at the base row by
+    // default. A header only moves to a HIGHER row when it's genuinely
+    // close enough in time to an already-placed header to collide with it
+    // -- never as a blanket "every other swing" rule (tried and reverted:
+    // that changed swing 2's treatment for no reason tied to swing 2
+    // itself). This is the same proximity-based stacking pattern used
+    // elsewhere in this codebase for decluttering point labels, applied
+    // here to header annotations instead.
+    // How close two headers' xMid positions can be (as a fraction of the
+    // whole chart's visible time range) before they're considered a real
+    // collision needing a row bump -- text content/format never changes,
+    // only which row a header lands on. 0.03 (tuned back when short swings
+    // got an abbreviated, narrower header) was too small once EVERY header
+    // became full-length text (2026-08-02, full-audit): dense clusters of
+    // full "Swing N (X to Y) | 3 Leg Dev (...)" headers still overlapped
+    // on the same row because the threshold didn't reflect how much wider
+    // full-length text actually needs. Widened to a value that keeps
+    // typical full-header text clear of its neighbor at realistic chart
+    // widths -- an approximation (no live text-width measurement is
+    // available before Plotly renders), not a pixel-exact bound.
+    const MIN_HEADER_SPACING_FRACTION = 0.08
+    const placedHeaderXs: { xMs: number; level: number }[] = []
+    function placeHeaderLevel(xMs: number): number {
+      const thresholdMs = totalSpanMs * MIN_HEADER_SPACING_FRACTION
+      const colliders = placedHeaderXs.filter((p) => Math.abs(p.xMs - xMs) < thresholdMs)
+      const level = colliders.length ? Math.max(...colliders.map((p) => p.level)) + 1 : 0
+      placedHeaderXs.push({ xMs, level })
+      maxHeaderLevel = Math.max(maxHeaderLevel, level)
+      return level
+    }
 
     swingGroups.forEach(([swingNum, grp], i) => {
       const x0 = grp[0].t
@@ -326,29 +322,33 @@ export function CandlestickChart({
       const firstLabel = grp[0].label
       const lastLabel = grp[grp.length - 1].label
       const xMid = grp[Math.floor(grp.length / 2)].t
-      // Swing headers all sit on ONE consistent line (paper y=1.015, same
-      // coordinate space the title uses at y:1.05, kept clearly below it).
-      // A 2-way vertical stagger was tried here to avoid horizontal
-      // collisions between adjacent labels, but it made alternating swings
-      // float up into the toolbar row while the rest stayed low -- visibly
-      // inconsistent, and worse than the crowding it was meant to fix.
-      // Density thinning (skip every other label once there are enough
-      // swings that horizontal crowding is a real risk) is the one
-      // collision mitigation kept -- the boundary rect + star marker still
-      // render for every swing either way, only the floating text is thinned.
-      const DENSITY_THRESHOLD = 10
-      const skipLabel = swingGroups.length > DENSITY_THRESHOLD && i % 2 === 1
-      if (!skipLabel) {
-        const letters = regionLetters[i]
-        const legPart = letters.length
-          ? ` | 3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
-          : ""
-        annotations.push({
-          x: xMid, y: 1.015, xref: "x", yref: "paper", yanchor: "bottom",
-          text: `<b>Swing ${swingNum}</b><br>(${firstLabel} to ${lastLabel})${legPart}`,
-          showarrow: false, font: { color, size: 10 }, align: "center",
-        })
-      }
+      // Every swing header uses the IDENTICAL format, font, color, and
+      // alignment -- full text always, no abbreviation. The only thing that
+      // ever varies is which row it sits on, when a real neighbor is too
+      // close (placeHeaderLevel(), below).
+      //
+      // A 2-way vertical stagger was tried and reverted (made alternating
+      // swings float inconsistently into the toolbar row) because it
+      // staggered EVERY swing by parity, not just the ones that actually
+      // collided. An arbitrary "every other swing" skip/abbreviate rule was
+      // also tried and reverted, as was a proportional width-based
+      // abbreviation rule (2026-08-02): both made SOME swings render a
+      // shorter header than others (including swing 1 itself, once it was
+      // narrow enough) -- inconsistent formatting read as a bug regardless
+      // of how principled the underlying rule was. Collision avoidance is
+      // now handled ENTIRELY by row placement instead: text format is never
+      // the variable, so every header is always identical to swing 1's.
+      const letters = regionLetters[i]
+      const legPart = letters.length
+        ? ` | 3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
+        : ""
+      const headerText = `<b>Swing ${swingNum}</b><br>(${firstLabel} to ${lastLabel})${legPart}`
+      const headerLevel = placeHeaderLevel(new Date(xMid).getTime())
+      annotations.push({
+        x: xMid, y: 1.015 + headerLevel * HEADER_LEVEL_HEIGHT, xref: "x", yref: "paper", yanchor: "bottom",
+        text: headerText,
+        showarrow: false, font: { color, size: 10 }, align: "center",
+      })
       data.push({
         type: "scatter", mode: "markers", x: [x0], y: [grp[0].price],
         marker: { symbol: "star", size: 10, color, line: { color: "white", width: 0.6 } },
@@ -474,15 +474,23 @@ export function CandlestickChart({
   }
 
   const hasSwingHeaders = showZigzag && zz10.length > 0
+  // maxHeaderLevel (set above by placeHeaderLevel() while building swing
+  // headers) is how many EXTRA rows collision avoidance actually needed --
+  // 0 when no two headers were ever close enough to collide. Everything
+  // below that used to assume swing headers always occupy exactly one row
+  // now needs to reserve room for however many rows were really used, or a
+  // stacked header would just collide with the range-selector/title instead
+  // of a neighboring swing.
+  const extraHeaderRows = hasSwingHeaders ? maxHeaderLevel : 0
   // The range-selector's y is relative to the price axis's own (smaller)
   // domain, while the title's y=1.05 is relative to the whole plot area --
   // so this needs a bigger raw number than the title to land at roughly the
   // same physical height (hand-tuned, not exact). Nudged up from 1.09 to
   // 1.13 to sit closer to where Plotly's native modebar (camera/zoom/pan/
   // home icons, top-right) naturally renders. Swing headers sit lower still
-  // (y=1.015, single line -- see above) so nothing in this compact top
-  // strip overlaps.
-  const rangeSelectorY = hasSwingHeaders ? 1.13 : 1.02
+  // (y=1.015 + stacked rows -- see placeHeaderLevel() above) so nothing in
+  // this compact top strip overlaps, even when headers stack.
+  const rangeSelectorY = (hasSwingHeaders ? 1.13 : 1.02) + extraHeaderRows * HEADER_LEVEL_HEIGHT
 
   // Default view opens on the last ~2 hours instead of the whole day --
   // aggregation alone couldn't make candles look wide on a full-day view,
@@ -626,7 +634,14 @@ export function CandlestickChart({
     // still offset.
     title: { text: `${symbol} — ${strategyName} · ${dateLabel}`, font: { size: 14, color: "#cdd6f4" },
              xref: "paper", yref: "paper", x: 0.5, xanchor: "center",
-             y: hasSwingHeaders ? 1.075 : 1.05, yanchor: "bottom" },
+             // Gap above the header base (1.015) widened 0.06 -> 0.11
+             // (2026-08-02, full-audit): both title and headers scale by the
+             // same extraHeaderRows*HEADER_LEVEL_HEIGHT amount, so the GAP
+             // between them stays constant at any stack depth -- 0.06 was
+             // only ever enough clearance for a single-line header; a 2-line
+             // header (the common case) needs more room at the same gap, or
+             // the title visually collides with the tallest stacked row.
+             y: (hasSwingHeaders ? 1.125 : 1.05) + extraHeaderRows * HEADER_LEVEL_HEIGHT, yanchor: "bottom" },
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: "#cdd6f4" },
     dragmode: "pan", hovermode: "x unified",
@@ -642,7 +657,9 @@ export function CandlestickChart({
     // range-selector/title strip, closer to the top edge of the chart. b
     // trimmed 32 -> 24 too -- the bottom axis now shows time-only labels
     // (no more redundant date), which need less reserved height.
-    margin: hasSwingHeaders ? { l: 50, r: 20, t: 94, b: 24 } : { l: 50, r: 20, t: 45, b: 24 },
+    margin: hasSwingHeaders
+      ? { l: 50, r: 20, t: 94 + extraHeaderRows * 23, b: 24 }
+      : { l: 50, r: 20, t: 45, b: 24 },
     // No fixed height here on purpose -- the wrapping container stretches to
     // fill the available vertical space (matching the taller right-panel
     // column), and autosize + the Plot's own height:100% style pick that up.

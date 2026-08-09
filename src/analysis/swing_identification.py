@@ -2,7 +2,7 @@
 swing_identification.py
 =======================
 
-Swing (pivot) detection for price-action, Elliott-wave and divergence strategies.
+Swing (pivot) detection for price-action and divergence strategies.
 
 Design goals
 ------------
@@ -24,13 +24,12 @@ Adaptive filtering (2026-07-20)
 ``filter_swings`` used to accept one absolute ``min_move`` number, computed by
 the caller as a single GLOBAL statistic over the whole series (typically
 ``k * median(ATR)``) and applied identically to every candidate counter-swing
-everywhere in the data. Audited and found to actively erase genuine Elliott
-pivots: a real, valid Wave 4 (e.g. a ~3% retracement of a much larger Wave 3 --
-comfortably inside Elliott's own 14.6-38.2% guideline) can be smaller in
-absolute price terms than a threshold sized off the whole series' volatility,
-which is dominated by the big Wave 1/3 legs elsewhere in the same chart --
-verified directly: constructed exactly this case and watched the Wave 4 pivot
-vanish from the filtered list entirely.
+everywhere in the data. Audited and found to actively erase genuine minor
+pivots: a real, valid small retracement (e.g. a ~3% pullback against a much
+larger prior swing) can be smaller in absolute price terms than a threshold
+sized off the whole series' volatility, which is dominated by the big legs
+elsewhere in the same chart -- verified directly: constructed exactly this
+case and watched the minor pivot vanish from the filtered list entirely.
 
 The filter now evaluates each candidate counter-swing against its own LOCAL
 context instead of one number for the whole chart, combining three signals
@@ -366,9 +365,9 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 70)
     print("OLD (pure global min_move) vs NEW (local-adaptive):")
-    print("a genuine, guideline-valid Wave 4 (15% of Wave 3, inside Elliott's")
-    print("own 14.6-38.2% range) sitting in the SAME series as an unrelated,")
-    print("much more volatile stretch elsewhere in the chart -- exactly the")
+    print("a genuine, valid minor retracement (15% of the prior swing) sitting")
+    print("in the SAME series as an unrelated, much more volatile stretch")
+    print("elsewhere in the chart -- exactly the")
     print("real-world case (e.g. one volatile news day inflating a whole")
     print("year's ATR median) that erases a valid pivot under a single global")
     print("threshold, but not under a threshold evaluated locally.")

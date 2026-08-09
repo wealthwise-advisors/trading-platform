@@ -4,9 +4,7 @@ chart_patterns.py
 
 Rule-based classic chart pattern detection built on the confirmed swing
 pivots from swing_identification.py: Double Top, Double Bottom, Head &
-Shoulders (regular and inverse). Triangle detection is already implemented
-in corrective_waves.detect_triangle -- re-exported here for convenience so
-callers have one place to get "all chart patterns."
+Shoulders (regular and inverse).
 
 Honesty: these are geometric pattern-matches on confirmed pivots, not a
 forecast. A "detected" pattern is a candidate worth a second look, not a
@@ -20,7 +18,6 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from .swing_identification import Swing, SwingType, identify_swings
-from .corrective_waves import detect_triangle  # re-exported
 
 
 @dataclass

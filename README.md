@@ -1,18 +1,14 @@
 # AutoTrader
 
-A futures/options backtesting platform with bar-by-bar replay, live market
-data (Schwab / Rithmic), and an integrated **Elliott Wave analysis engine**
-— recursive structural validation, unified impulse/correction/triangle/
-complex-correction/diagonal classification, an automated regression suite,
-an expert chart-validation framework, and an independent industry
-benchmark. **v1.0.0.**
+A futures/options backtesting platform with bar-by-bar replay and live market
+data (Schwab / Rithmic). **v1.0.0.**
 
 **Stack:** FastAPI (`api/`) + React/TypeScript (`web/`) + a Python analysis
 core (`src/`). The original Streamlit UI was fully retired on 2026-07-15.
 
 > Live trading (`src/live/`, `src/broker/rithmic_broker.py`) is a
-> documented, intentional **stub** — not part of this release. Backtesting,
-> replay, and the Elliott Wave engine are the certified v1.0.0 scope. See
+> documented, intentional **stub** — not part of this release. Backtesting
+> and replay are the certified v1.0.0 scope. See
 > [docs/RELEASE_AUDIT.md](docs/RELEASE_AUDIT.md) for the full readiness
 > report.
 
@@ -37,17 +33,6 @@ cd web && npm install && npm run dev
 Open http://localhost:5173. Select **Synthetic Data** and run a backtest —
 no credentials needed. Full walkthrough: [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
-### The `elliott` CLI
-
-```bash
-elliott version                     # environment / version info
-elliott config --show               # validate + display config (secrets redacted)
-elliott analyze path/to/ohlc.csv    # run the Elliott Wave engine on a CSV
-elliott export path/to/ohlc.csv --format json
-elliott validate                    # run the regression suite (56 tests)
-elliott benchmark --report-only     # summarize the industry benchmark (473 cases)
-```
-
 ### Docker
 
 ```bash
@@ -64,10 +49,9 @@ Frontend at http://localhost:8080 (reverse-proxies `/api/*` to the backend
 | Guide | Covers |
 |---|---|
 | [Installation](docs/INSTALLATION.md) | pip / editable / Docker install, Python version, verifying the install |
-| [Quick Start](docs/QUICKSTART.md) | First backtest, first Elliott Wave analysis, first CLI command |
-| [Architecture](docs/ARCHITECTURE.md) | How `src/`, `api/`, `web/`, `benchmark/`, `validation/` fit together |
-| [Elliott Wave Notation](docs/ELLIOTT_WAVE_NOTATION.md) | Classical (Frost & Prechter / EWF) notation, why it's decoupled from the engine's internal numbering |
-| [Developer Guide](docs/DEVELOPER_GUIDE.md) | Writing a strategy, running tests, the Elliott engine's internal layering |
+| [Quick Start](docs/QUICKSTART.md) | First backtest, first CLI command |
+| [Architecture](docs/ARCHITECTURE.md) | How `src/`, `api/`, `web/` fit together |
+| [Developer Guide](docs/DEVELOPER_GUIDE.md) | Writing a strategy, running tests |
 | [API Guide](docs/API_GUIDE.md) | FastAPI endpoints, OpenAPI docs, auth, CORS |
 | [Configuration](docs/CONFIGURATION.md) | `settings.yaml`, `credentials.yaml`, environment variables, Schwab/Rithmic setup |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common errors and fixes |
@@ -86,9 +70,8 @@ Frontend at http://localhost:8080 (reverse-proxies `/api/*` to the backend
 ```
 trading-platform/
 ├── src/                    # Core engine (no FastAPI/React dependency)
-│   ├── analysis/           # Elliott Wave engine -- swings, impulses, corrections,
-│   │                       #   triangles, complex corrections, diagonals, recursive
-│   │                       #   verification, unified structure classification
+│   ├── analysis/           # Swing/pivot detection, candlestick + chart patterns,
+│   │                       #   regime classification
 │   ├── backtesting/        # BacktestEngine, ReplayEngine, metrics
 │   ├── strategies/         # MA Crossover, RSI, Breakout, RSI Divergence, regime-adaptive
 │   ├── broker/              # PaperBroker (live), RithmicBroker (stub)
@@ -96,16 +79,10 @@ trading-platform/
 │   └── live/                 # Live trading loop (stub -- not wired to a broker)
 ├── api/                     # FastAPI service -- routers, schemas, report/export generation
 ├── web/                     # React + TypeScript + Tailwind + shadcn/ui frontend
-├── cli/                     # `elliott` production CLI
-├── benchmark/                # Independent industry benchmark (473 cases; see its own README)
-├── validation/               # Expert chart-validation framework (369 real-chart reviews)
-├── tests/
-│   ├── test_engine.py         # 5 backtest engine smoke tests
-│   └── elliott/                # 56-test Elliott Wave regression suite
 ├── scripts/                    # CLI utility scripts (data generation, downloads)
 ├── config/                      # settings.yaml (committed) + credentials.yaml (gitignored)
 ├── Dockerfile, web/Dockerfile, docker-compose.yml
-└── .github/workflows/ci.yml     # lint, typecheck, tests, benchmark, build, security
+└── .github/workflows/ci.yml     # lint, typecheck, tests, build, security
 ```
 
 ---
@@ -113,9 +90,7 @@ trading-platform/
 ## Tests
 
 ```bash
-pytest tests/ -v                          # everything (61 tests)
-pytest tests/elliott -v --cov=src/analysis  # Elliott Wave suite + coverage
-elliott validate                            # same suite, via the CLI
+pytest tests/ -v
 ```
 
 ---
