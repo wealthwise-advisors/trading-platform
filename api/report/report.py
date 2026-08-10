@@ -18,13 +18,11 @@ import plotly.io as pio
 
 from src.backtesting.results import BacktestResults
 from api.report.charts import (
-    _calc_zigzag, _assign_swing_labels, _SWING_COLORS,
-    _calc_rsi, _calc_stoch, _swing_letter,
+    _calc_zigzag, _assign_swing_labels, _calc_nested_zigzag, _SWING_COLORS,
+    _calc_rsi, _calc_stoch,
 )
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
-from src.analysis.wave_analysis import analyze_degrees, WaveAnalysis
-from api.report.wave_layout import tier_filter_run, declutter_static, split_into_segments, display_wave, label_segments
 
 
 _G      = "#3fb950"
@@ -36,15 +34,6 @@ _SURFACE = "#161b22"
 _TEXT   = "#e6edf3"
 _MUTED  = "#8b949e"
 _MARKER_BG = "#1e1e2e"  # solid fill so boundary lines don't bleed through circles
-
-# Elliott Wave chart -- cycled per detected structure (segment), same
-# palette as ElliottWaveChart.tsx's SEGMENT_COLORS (keep in sync).
-_EW_RUN_COLORS = ["#2196f3", "#f0c040", "#7ee787", "#c77dff", "#4cc9f0", "#ff8a65"]
-# Uniform label styling, matching ElliottWaveChart.tsx's LABEL_STYLE --
-# Wave 1 through Wave 5 must all be EQUALLY visible, not a tiered
-# hierarchy. tier_of() is still used for collision-priority ordering only
-# (see wave_layout.py's module docstring), never for size/weight/opacity.
-_EW_LABEL_STYLE = dict(font_size=12, marker_size=6, opacity=1.0, bold=True)
 
 # Plotly JS config injected into every chart div.
 # scrollZoom is the key setting — without it mouse-wheel does nothing.
@@ -125,7 +114,7 @@ def _layout(title: str = "", height: int = 500, dragmode: str = "pan",
 # Chart builders
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
+def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.003,
                         zz_deviation_3: float = 0.003) -> go.Figure:
     df = results.price_data
     trades = results.trades
@@ -241,41 +230,24 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
             zz = _assign_swing_labels(zz)
             has_headers = True
 
-            # ── 3-Leg ZigZag: short-term overlay, letter-labeled (A, B, C...)
-            # region-by-region against the 10-leg swing boundaries above --
-            # ported from CandlestickChart.tsx's swingLetter()/zz3LabelByTime
-            # logic, keep in sync. Points that coincide with a 10-leg pivot
-            # are excluded (already marked by the 10-leg's own circle).
-            zz3 = _calc_zigzag(df["high"], df["low"], df["close"], deviation=zz_deviation_3, legs=3)
+            # ── 3-Leg ZigZag: short-term overlay, letter-labeled (A, B, C...),
+            # computed INDEPENDENTLY within each 10-leg swing's own window
+            # (calc_nested_zigzag) -- containment is a property of the data
+            # itself, not a post-hoc time-boundary lookup. Points that
+            # coincide with a 10-leg pivot are excluded (already marked by
+            # the 10-leg's own circle).
+            zz3 = _calc_nested_zigzag(df["high"], df["low"], df["close"], zz, deviation=zz_deviation_3, legs=3)
             region_letters_by_swingnum: dict = {}
             if not zz3.empty:
-                swing_groups_3 = list(zz.groupby("swing"))
-                swing_boundaries_3 = []
-                for i, (_sn, grp) in enumerate(swing_groups_3):
-                    x0 = pd.Timestamp.min if i == 0 else grp.index.min()
-                    x1 = (swing_groups_3[i + 1][1].index.min() if i + 1 < len(swing_groups_3)
-                          else (df.index.max() if len(df.index) else pd.Timestamp.max))
-                    swing_boundaries_3.append((x0, x1))
-
                 zz10_time_set = set(zz.index)
                 zz3_labelable = zz3[~zz3.index.isin(zz10_time_set)].sort_index()
-                zz3_label_by_time = {}
-                # Per 10-leg region (keyed by swing_num), the ordered list of
+                # Per parent swing (keyed by swing_num), the ordered list of
                 # 3-leg letters inside it -- lets the swing header show
                 # "3 Leg Dev (A to H)" alongside the existing "(1.1 to 1.5)"
-                # range. Ported from CandlestickChart.tsx, keep in sync.
-                region_letters_by_swingnum.update({sn: [] for sn, _ in swing_groups_3})
-                region_idx, counter = -2, 0
-                for ts in zz3_labelable.index:
-                    idx = next((k for k, (x0, x1) in enumerate(swing_boundaries_3) if x0 <= ts < x1), -1)
-                    if idx != region_idx:
-                        region_idx = idx
-                        counter = 0
-                    label = _swing_letter(counter + 1)
-                    zz3_label_by_time[ts] = label
-                    if idx >= 0:
-                        region_letters_by_swingnum[swing_groups_3[idx][0]].append(label)
-                    counter += 1
+                # range.
+                region_letters_by_swingnum = {
+                    sn: list(grp["label"]) for sn, grp in zz3_labelable.groupby("swing")
+                }
 
                 fig.add_trace(go.Scatter(
                     x=zz3.index, y=zz3["price"], mode="lines",
@@ -290,7 +262,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
                             x=pts.index, y=pts["price"], mode="markers+text",
                             marker=dict(symbol="circle", size=23, color=_MARKER_BG,
                                         line=dict(color=color, width=1.6)),
-                            text=[zz3_label_by_time.get(ts, "") for ts in pts.index],
+                            text=pts["label"],
                             textposition="middle center",
                             textfont=dict(color="white", size=10, family="Arial"),
                             showlegend=False,
@@ -332,7 +304,17 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
                     hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
                 ), row=row_n, col=1)
 
-            # Swing region boundaries + headers
+            # Swing region boundaries + headers.
+            #
+            # PERFORMANCE: these are accumulated into lists and applied in ONE
+            # update_layout call rather than via per-swing add_shape/
+            # add_annotation. Both of those are quadratic in plotly.py -- each
+            # call re-validates the whole layout -- and a large backtest
+            # produces a lot of swings. Measured: 1,000 add_annotation calls
+            # take 141s, and a 78k-bar backtest yields 2,509 swings (~890s
+            # extrapolated), which is what made /report time out. The single
+            # assignment below does 2,000 in 0.4s. Output is unchanged.
+            swing_shapes, swing_annotations = [], []
             for swing_num, grp in zz.groupby("swing"):
                 color = _SWING_COLORS[(swing_num - 1) % len(_SWING_COLORS)]
                 x0 = grp.index[0]
@@ -341,20 +323,28 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
                 first_label = grp["label"].iloc[0]
                 last_label  = grp["label"].iloc[-1]
 
-                fig.add_shape(
+                swing_shapes.append(dict(
                     type="rect", xref="x", yref="paper",
                     x0=x0, x1=x1, y0=0, y1=1,
                     fillcolor="rgba(0,0,0,0)",
                     line=dict(color=color, width=1.5, dash="dot"),
                     layer="below",
-                )
+                ))
                 letters = region_letters_by_swingnum.get(swing_num, [])
                 leg_part = f" | 3 Leg Dev ({letters[0]} to {letters[-1]})" if letters else ""
-                fig.add_annotation(
+                swing_annotations.append(dict(
                     x=x_mid, y=1.005, xref="x", yref="paper", yanchor="bottom",
                     text=f"<b>Swing {swing_num}</b><br>({first_label} to {last_label}){leg_part}",
                     showarrow=False, font=dict(color=color, size=11),
                     align="center",
+                ))
+
+            # Append, never replace: the RSI/Stoch hlines added earlier are
+            # also layout shapes and must survive.
+            if swing_shapes or swing_annotations:
+                fig.update_layout(
+                    shapes=list(fig.layout.shapes) + swing_shapes,
+                    annotations=list(fig.layout.annotations) + swing_annotations,
                 )
     except Exception:
         has_headers = False
@@ -392,6 +382,157 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.015,
         yaxis4=dict(gridcolor=_GRID, title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[-5, 105]),
     )
     return fig
+
+
+_EW_COLORS = {
+    "impulse": "#ff8c42",
+    "leading_diagonal": "#c084fc",
+    "ending_diagonal": "#f472b6",
+    "zigzag": "#38bdf8",
+    "flat": "#a3e635",
+    "flat_running": "#fbbf24",
+}
+_EW_PRETTY = {
+    "impulse": "Impulse",
+    "leading_diagonal": "Leading Diagonal",
+    "ending_diagonal": "Ending Diagonal",
+    "zigzag": "Zigzag",
+    "flat": "Flat",
+    "flat_running": "Running Flat",
+}
+
+
+def _elliott_wave_chart(results: BacktestResults, ew: dict) -> go.Figure:
+    """Single-panel Elliott Wave chart for the static report.
+
+    Mirrors the live tab: candlesticks plus one connected path per structure,
+    running from its start through each labelled leg in order, so the wave
+    sequence reads as a sequence rather than as scattered points.
+
+    FE-3 applies here exactly as it does live -- a partial analysis must not
+    look complete in the exported file either. Confirmed structures draw
+    solid; UNDECIDABLE ones draw dashed, dimmed, are labelled "(undecidable)"
+    in the legend, and carry their blocked_by reasons in the hover text.
+
+    ``ew`` is the SAME payload the live endpoint returns (produced by
+    api/serializers.py::elliott_wave_to_records). The report never runs a
+    second, separately-configured analysis -- that is the live/report
+    classification-parity requirement.
+    """
+    df = results.price_data
+    fig = go.Figure()
+
+    fig.add_trace(go.Candlestick(
+        x=df.index, open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+        increasing_line_color=_G, decreasing_line_color=_R,
+        name="Price", showlegend=False,
+    ))
+
+    by_id = {w["id"]: w for w in ew["waves"]}
+    structures = [w for w in ew["waves"] if w["structure_type"]]
+    seen_legend: set[str] = set()
+
+    for s in structures:
+        legs = [by_id[c] for c in s["child_ids"] if c in by_id]
+        if not legs:
+            continue
+        xs = [s["start_t"]] + [leg["end_t"] for leg in legs]
+        ys = [s["start_price"]] + [leg["end_price"] for leg in legs]
+        labels = [""] + [leg["label"] or "" for leg in legs]
+
+        undecided = s["state"] == "undecidable"
+        stype = s["structure_type"]
+        color = _EW_COLORS.get(stype, "#94a3b8")
+        pretty = _EW_PRETTY.get(stype, stype)
+        legend_name = f"{pretty} (undecidable)" if undecided else pretty
+
+        blocked = (f"<br><b>Blocked by:</b> {', '.join(s['blocked_by'])}"
+                   if s["blocked_by"] else "")
+        measures = "".join(
+            f"<br>{k}: {v:.3f}" if isinstance(v, float) else f"<br>{k}: {v}"
+            for k, v in s["measurements"].items()
+        )
+
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, mode="lines+markers+text",
+            text=labels, textposition="top center",
+            textfont=dict(color=color, size=9, family="Arial"),
+            line=dict(color=color, width=1.2 if undecided else 2.2,
+                      dash="dot" if undecided else "solid"),
+            marker=dict(symbol="circle-open" if undecided else "diamond",
+                        size=7 if undecided else 9,
+                        color=color if undecided else _BG,
+                        line=dict(color=color, width=1.6)),
+            opacity=0.55 if undecided else 1.0,
+            name=legend_name, legendgroup=legend_name,
+            showlegend=legend_name not in seen_legend,
+            hovertemplate=(f"<b>{pretty}</b> — scale {s['scale']}"
+                           f"<br>state: <b>{s['state']}</b>{blocked}{measures}"
+                           "<br>%{x}<br>%{y:.2f}<extra></extra>"),
+        ))
+        seen_legend.add(legend_name)
+
+    base = _layout(f"{results.symbol} — Elliott Wave "
+                   f"(engine {ew['engine_version']})", height=620)
+    base["margin"] = dict(l=60, r=12, t=55, b=8)
+    fig.update_layout(
+        **base,
+        xaxis=dict(gridcolor=_GRID, rangeslider=dict(visible=False),
+                   rangeselector=_RANGE_SELECTOR, **_SPIKE),
+        yaxis=dict(gridcolor=_GRID, title=dict(text="Price"), **_SPIKE),
+    )
+    return fig
+
+
+def _elliott_wave_panel(ew: dict) -> str:
+    """The completeness panel that sits beside the Elliott chart.
+
+    FE-3.2: blocked_rules and scope notes are surfaced in the static report,
+    not left in the API payload, so a reader of the exported file can see what
+    was NOT evaluated rather than assuming the analysis is complete.
+    """
+    counts = ew["counts"]
+    gated = counts["structures_by_state"].get("gated", 0)
+    undecidable = counts["structures_by_state"].get("undecidable", 0)
+
+    by_type = "".join(
+        f"<tr><td>{_EW_PRETTY.get(k, k)}</td><td style='text-align:right'>{v}</td></tr>"
+        for k, v in sorted(counts["structures_by_type"].items())
+    ) or "<tr><td colspan='2' style='color:#8b949e'>No structures found</td></tr>"
+
+    notes = "".join(f"<li>{n}</li>" for n in ew["notes"])
+    blocked = "".join(
+        f"<li><code style='color:#ffcc80'>{b['oq']}</code> "
+        f"<span style='color:#8b949e'>{', '.join(b['rules'])}</span><br>"
+        f"<span style='color:#6e7681'>{b['reason']}</span></li>"
+        for b in ew["blocked_rules"]
+    )
+
+    return f"""
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+  <div>
+    <h4 style="margin:0 0 8px">Structures found</h4>
+    <table style="width:100%;border-collapse:collapse">{by_type}
+      <tr style="border-top:1px solid #21262d">
+        <td><b>Confirmed</b></td><td style="text-align:right"><b>{gated}</b></td></tr>
+      <tr><td style="color:#8b949e">Undecidable (dashed on chart)</td>
+        <td style="text-align:right;color:#8b949e">{undecidable}</td></tr>
+    </table>
+    <p style="color:#8b949e;margin-top:12px">
+      This analysis is <b style="color:#e6edf3">partial by design</b>.
+      <b style="color:#e6edf3">{counts['blocked_rule_ids']}</b> reference rules could not be
+      evaluated because the source material does not define them precisely enough.
+      Structures shown dashed are <b>undecidable</b>: they passed every gate the engine can
+      evaluate, but acceptance depends on a blocked rule.
+    </p>
+    <h4 style="margin:14px 0 6px">Scope notes</h4>
+    <ul style="color:#8b949e;padding-left:18px;margin:0">{notes}</ul>
+  </div>
+  <div>
+    <h4 style="margin:0 0 8px">Unevaluated rules ({len(ew['blocked_rules'])} groups)</h4>
+    <ul style="padding-left:18px;margin:0;max-height:460px;overflow-y:auto">{blocked}</ul>
+  </div>
+</div>"""
 
 
 def _equity_chart(results: BacktestResults) -> go.Figure:
@@ -480,276 +621,6 @@ def _monthly_heatmap(results: BacktestResults) -> go.Figure:
                   dragmode="zoom", hovermode="closest"),
         xaxis=dict(gridcolor=_GRID, fixedrange=False),
         yaxis=dict(gridcolor=_GRID, fixedrange=False),
-    )
-    return fig
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Elliott Wave chart -- static-report counterpart of
-# web/src/components/charts/ElliottWaveChart.tsx. Missing from the export
-# until 2026-07-17 (the live React tab had it, the HTML export didn't).
-# Renders one chart per degree ("primary"/"minor") at a single fixed detail
-# level (see wave_layout.py) since there's no client-side zoom handler here
-# to progressively reveal more -- the exported chart is still pannable/
-# zoomable via Plotly's native controls, it just doesn't re-declutter live.
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _group_wave_runs(sequence):
-    """Same grouping rule as ElliottWaveChart.tsx's groupRuns(): a new run
-    starts every time the count resets back to Wave 1. Input to
-    split_into_segments(), which splits each run further into its own
-    genuine structural segments (see that function's docstring)."""
-    runs = []
-    for w in sequence:
-        if w.wave == "1" or not runs:
-            runs.append([w])
-        else:
-            runs[-1].append(w)
-    return runs
-
-
-def _elliott_wave_chart(df: pd.DataFrame, analysis: WaveAnalysis, degree_name: str,
-                        nested: bool, symbol: str) -> go.Figure:
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=df.index, open=df["open"], high=df["high"],
-        low=df["low"], close=df["close"],
-        increasing_line_color=_G, decreasing_line_color=_R,
-        name="Price", showlegend=False,
-    ))
-
-    runs = _group_wave_runs(analysis.wave_sequence)
-    all_items: list[dict] = []
-    segments: list[list[dict]] = []
-    # Raw (real-label) segments, kept parallel to `segments` (same index)
-    # so label_segments() can compute each segment's real type from the
-    # UNMODIFIED labels -- the loop below overwrites "wave" with the
-    # display-transformed value (uppercased letters, digits unchanged),
-    # which would otherwise lose that signal. See label_segments()'s
-    # docstring for the label/range/naming design.
-    raw_segments: list[list[dict]] = []
-
-    for run in runs:
-        raw_items = [
-            {
-                "t": df.index[w.swing.index].timestamp(),
-                "ts": df.index[w.swing.index],
-                "price": w.price,
-                "wave": w.wave,
-                "sub": w.sub,
-                "kind": w.swing.kind.value,
-            }
-            for w in run
-        ]
-        # Real Elliott Wave notation (numbers for motive waves, letters for
-        # corrective waves -- see wave_layout.py's module docstring):
-        # splits this run into segments at every genuine structural
-        # boundary; each item's displayed "wave" is display_wave() applied
-        # to its own real label (uppercases corrective letters, passes
-        # digits through) -- zero engine changes, analysis.wave_sequence
-        # itself is untouched, this rewrites only the per-item dicts built
-        # for this chart.
-        for seg in split_into_segments(raw_items):
-            raw_segments.append(seg)
-            items = []
-            for it0 in seg:
-                it = dict(it0)
-                it["wave"] = display_wave(it0["wave"])
-                items.append(it)
-            segments.append(items)
-
-    # This chart is always solo (report.py has no merged Global+Nested
-    # mode) -- always 1-indexed "Wave N", matching ElliottWaveChart.tsx's
-    # solo mode.
-    segment_labels = label_segments(raw_segments, zero_indexed=False)
-
-    for i, items in enumerate(segments):
-        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
-        for it in items:
-            it["color"] = color
-        all_items.extend(items)
-
-    # Numbers only (required, reversing an earlier "Structure N" header/
-    # legend addition -- see ElliottWaveChart.tsx's module docstring for the
-    # full history): the ONLY things distinguishing one detected structure
-    # from the next are color, cycled per segment, a full boxed region
-    # around each structure's own price+time extent, and a header -- a
-    # plain "Wave N" for impulse/diagonal segments, or the actual detected
-    # corrective type (ABC Correction/Triangle/WXY Correction/Triple Three,
-    # see wave_layout.py's describe_structure_type(), 2026-07-20) for
-    # corrective segments, never anything about the classical wave position
-    # inside it, which the "1".."5" numbers below already say). No legend
-    # entries, no colored fill.
-    #
-    # FULL WAVE REGION, 2026-07-19 -- a first attempt at this box used
-    # xref="x"/yref="paper", y0=0, y1=1 (full plot height), copying
-    # charts.py's own ZigZag swing rectangles literally -- but that's wrong
-    # for THIS chart: every box's top/bottom edges then land at the exact
-    # same two lines (the very top and bottom of the whole plot), since
-    # "paper" y is chart-wide, not per-box. All those coincident top/bottom
-    # edges visually merge into what looks like just two horizontal lines
-    # shared by the whole chart, leaving only each box's own left/right
-    # edges as visually distinct elements -- reported back, correctly, as
-    # "you only added two vertical dashed lines." Swing regions get away
-    # with paper-y boxes because they're meant to tile the FULL vertical
-    # height of a shared multi-panel chart; an Elliott structure's box
-    # instead needs to hug ONLY that structure's own price swing. Fixed by
-    # switching to yref="y" (data/price space): y0/y1 are now THIS
-    # segment's own min/max price, padded a little so the box doesn't clip
-    # flush against the extreme points. fillcolor stays fully transparent
-    # (rgba(0,0,0,0), NOT a tinted fill -- an earlier translucent-color
-    # version was explicitly rejected as unwanted background noise), dotted
-    # border in the segment's own color.
-    #
-    # The header is "Wave N", anchored just above THIS box's own top edge
-    # (not a chart-wide shared strip, so it visibly "belongs" to its own
-    # region) using the same collision-avoidance recipe validated for
-    # ElliottWaveChart.tsx's per-peak headers: an ABSOLUTE time duration
-    # (not a fraction of the visible range -- a header's pixel width
-    # doesn't scale with how many weeks of history are on screen) compared
-    # against EVERY recently-placed header (not just the immediate
-    # predecessor, so a broken chain can't coincidentally land on a
-    # different chain's tail), stacking collisions onto a shared rising
-    # ceiling in DATA space (price units, never a raw pixel offset -- a
-    # pixel offset on top of a different price anchor can get silently
-    # cancelled by the price gap between two peaks). The step fraction
-    # (0.15) is deliberately generous: since the y-axis auto-expands to fit
-    # the tallest stacked header, a dense cluster's stack compresses the
-    # effective pixels-per-price-unit for the WHOLE chart, so a step that
-    # looks fine in isolation can still visually collide once other
-    # clusters push the axis range taller -- confirmed by hand against real
-    # multi-week data at 0.06 (too tight) before landing on 0.15.
-    _HEADER_COLLISION_SECONDS = 24 * 60 * 60
-    _HEADER_PRICE_STEP_FRACTION = 0.15
-    box_price_span = (max(it["price"] for it in all_items) - min(it["price"] for it in all_items)) if all_items else 1.0
-    box_price_span = box_price_span or 1.0
-    placed_headers: list[dict] = []
-    # How many times each corrective type occurs across this WHOLE
-    # structure-set, so a type that recurs (e.g. three separate corrections)
-    # gets a disambiguating "#N" suffix -- see label_segments()'s docstring.
-    for i, items in enumerate(segments):
-        if not items:
-            continue
-        color = _EW_RUN_COLORS[i % len(_EW_RUN_COLORS)]
-        seg_start = items[0]["ts"]
-        seg_end = items[-1]["ts"]
-        x_mid = items[len(items) // 2]["ts"]
-        x_mid_t = items[len(items) // 2]["t"]
-        seg_prices = [it["price"] for it in items]
-        price_min = min(seg_prices)
-        price_max = max(seg_prices)
-        # Floor RAISED 0.02 -> 0.06 (2026-07-26): the header's x-anchor is
-        # this segment's OWN middle point (items[len(items)//2] below), which
-        # for a 4-point run is literally the same swing as point label "3" --
-        # confirmed directly against a real report's rendered annotations
-        # (header at data-y 6892.2, point "3" at data-y 6876.0, same
-        # timestamp). Point labels sit a FIXED 22px above/below their own
-        # anchor (_EW_LABEL_STYLE-driven yshift in the per-point loop below),
-        # a pixel budget that doesn't shrink just because this particular
-        # segment's own price move is small -- the old 2% floor cleared that
-        # 22px gap for large segments (where the *0.15 term dominates instead)
-        # but not for small ones, which is exactly why only the tiny early
-        # structures (not the big Wave-1-to-11 run) showed the collision.
-        box_pad = max((price_max - price_min) * 0.15, box_price_span * 0.06)
-
-        # Full detail, every point, always (see wave_layout.py's module
-        # docstring, bug 1) -- tier_filter_run is now a passthrough, kept
-        # as a named call so this reads as deliberate, not forgotten.
-        visible = tier_filter_run(items)
-        opacities = [0.45 if it["sub"] == 2 else 1.0 for it in visible]
-        labels = [it["wave"] for it in visible]
-        technical = segment_labels[i]["technical"]
-
-        # This segment's line extended to ALSO touch the very first point of
-        # the NEXT segment (if any) -- confirmed design (2026-07-20, matching
-        # ElliottWaveChart.tsx's identical fix): the connector between two
-        # structures reads as a continuous colored path in the OUTGOING
-        # segment's own color, not a separate neutral line, so the handoff
-        # to the next (differently colored) structure is seamless. Split
-        # into its own trace (was combined "lines+markers") specifically so
-        # this extra endpoint doesn't also draw a duplicate marker/label at
-        # the next segment's first point -- that segment already draws its
-        # own marker there.
-        next_first = segments[i + 1][0] if i + 1 < len(segments) else None
-        line_ts = [it["ts"] for it in visible]
-        line_price = [it["price"] for it in visible]
-        if next_first is not None:
-            line_ts.append(next_first["ts"])
-            line_price.append(next_first["price"])
-        fig.add_trace(go.Scatter(
-            x=line_ts, y=line_price,
-            mode="lines",
-            line=dict(color=color, width=1.4),
-            showlegend=False, hoverinfo="skip",
-        ))
-        # The real Elliott type name (e.g. "Triple Three"), not shown on the
-        # header anymore per the simplified naming (see label_segments()'s
-        # docstring), surfaces here on hover instead -- available on
-        # demand, not deleted. Numeric segments (technical is None) keep
-        # the original "Wave N" phrasing.
-        hover = (
-            f"{technical} — point %{{text}}<br>%{{x}}<br>@ %{{y:.2f}}<extra></extra>"
-            if technical else "Wave %{text}<br>%{x}<br>@ %{y:.2f}<extra></extra>"
-        )
-        fig.add_trace(go.Scatter(
-            x=[it["ts"] for it in visible], y=[it["price"] for it in visible],
-            mode="markers",
-            marker=dict(size=_EW_LABEL_STYLE["marker_size"], color=color, opacity=opacities,
-                        line=dict(color=_BG, width=0.5)),
-            showlegend=False,
-            hovertemplate=hover,
-            text=labels,
-        ))
-
-        fig.add_shape(
-            type="rect", xref="x", yref="y",
-            x0=seg_start, x1=seg_end, y0=price_min - box_pad, y1=price_max + box_pad,
-            fillcolor="rgba(0,0,0,0)",
-            line=dict(color=color, width=1.3, dash="dot"), opacity=0.85,
-            layer="below",
-        )
-
-        colliders = [p for p in placed_headers if abs(p["t"] - x_mid_t) < _HEADER_COLLISION_SECONDS]
-        header_y = (
-            max(price_max + box_pad, max(c["y"] for c in colliders) + _HEADER_PRICE_STEP_FRACTION * box_price_span)
-            if colliders else price_max + box_pad
-        )
-        placed_headers.append({"t": x_mid_t, "y": header_y})
-
-        header_label = segment_labels[i]["display"]
-
-        fig.add_annotation(
-            x=x_mid, y=header_y, xref="x", yref="y", yanchor="bottom",
-            text=f"<b>{header_label}</b>", showarrow=False,
-            font=dict(color=color, size=10), align="center",
-            yshift=4,
-        )
-
-    if all_items:
-        t_span = max(it["t"] for it in all_items) - min(it["t"] for it in all_items)
-        p_span = max(it["price"] for it in all_items) - min(it["price"] for it in all_items)
-        # Never hides a candidate -- collisions fan outward via
-        # stack_index instead (see wave_layout.py's module docstring, bug 1).
-        shown = declutter_static(all_items, t_span, p_span)
-        for it in shown:
-            text = f"<b>{it['wave']}</b>" if _EW_LABEL_STYLE["bold"] else it["wave"]
-            stack_gap = _EW_LABEL_STYLE["font_size"] + 3
-            base_offset = 10 + _EW_LABEL_STYLE["font_size"] + it["stack_index"] * stack_gap
-            fig.add_annotation(
-                x=it["ts"], y=it["price"], xref="x", yref="y",
-                text=text, showarrow=False,
-                font=dict(color=it["color"], size=_EW_LABEL_STYLE["font_size"]),
-                opacity=_EW_LABEL_STYLE["opacity"],
-                yshift=base_offset if it["kind"] == "high" else -base_offset,
-            )
-
-    # _layout()'s "margin" key needs overriding here (more top space for the
-    fig.update_layout(
-        **_layout(f"{symbol} — {degree_name} degree Elliott Wave", height=520),
-        showlegend=False,
-        xaxis=dict(gridcolor=_GRID, rangeslider_visible=False,
-                   rangeselector=_RANGE_SELECTOR, **_SPIKE),
-        yaxis=dict(gridcolor=_GRID, title=dict(text="Price", font=dict(size=9, color=_MUTED))),
     )
     return fig
 
@@ -986,13 +857,13 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <nav class="toc">
   <a href="#price-chart">📊 Price &amp; Trades</a>
-  <a href="#elliott-wave">🌊 Elliott Wave</a>
   <a href="#equity-curve">📈 Equity</a>
   <a href="#pnl-distribution">📈 P&amp;L</a>
   <a href="#monthly-returns">📅 Monthly</a>
   <a href="#trade-log">📋 Trade Log</a>
   <a href="#candlestick-patterns">🕯️ Candlesticks</a>
   <a href="#chart-patterns">📐 Chart Patterns</a>
+  <a href="#elliott-wave">🌊 Elliott Wave</a>
 </nav>
 
 <!-- ── controls hint ── -->
@@ -1012,9 +883,6 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div class="section-title" id="price-chart"><span class="icon">📊</span> Price Chart, Indicators &amp; Trades</div>
 <div class="chart-box">{chart_candle}</div>
-
-<div class="section-title" id="elliott-wave"><span class="icon">🌊</span> Elliott Wave</div>
-{chart_elliott}
 
 <div class="section-title" id="equity-curve"><span class="icon">📈</span> Equity Curve</div>
 <div class="chart-box">{chart_equity}</div>
@@ -1051,6 +919,10 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="section-title" id="chart-patterns"><span class="icon">📐</span> Chart Patterns</div>
 <div class="chart-box" style="padding:0">{chart_patterns_table}</div>
 
+<div class="section-title" id="elliott-wave"><span class="icon">🌊</span> Elliott Wave <span class="tag">{ew_tag}</span></div>
+<div class="chart-box">{chart_elliott}</div>
+<div class="chart-box">{elliott_panel}</div>
+
 <footer><b>AutoTrader</b> Backtest Report &mdash; {title} &mdash; Generated {generated}</footer>
 </div>
 </body>
@@ -1079,9 +951,13 @@ def _fig_to_div(fig: go.Figure, first: bool = False) -> str:
 
 
 def generate_html_report(results: BacktestResults, output_path: str | None = None,
-                         zz_deviation: float = 0.015, zz_deviation_3: float = 0.003) -> str:
+                         zz_deviation: float = 0.003, zz_deviation_3: float = 0.003) -> str:
     """
-    Build a self-contained HTML report from BacktestResults.
+    Build a self-contained HTML report from BacktestResults. Defaults match
+    the live chart's own hardcoded query (ResultsPage.tsx's api.getZigZag
+    call) -- previously 0.015/0.003 here vs 0.003/0.003 live, so a report
+    generated for the same backtest showed a DIFFERENT major-swing structure
+    than what the live chart displayed for it (2026-08-02, full-audit).
 
     Returns the HTML string. Optionally writes it to output_path.
     """
@@ -1123,7 +999,9 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         )
 
     # First chart bundles Plotly.js from CDN; subsequent charts reuse it.
-    chart_candle  = _fig_to_div(_candlestick_chart(r, zz_deviation=zz_deviation, zz_deviation_3=zz_deviation_3), first=True)
+    chart_candle  = _fig_to_div(_candlestick_chart(
+        r, zz_deviation=zz_deviation, zz_deviation_3=zz_deviation_3,
+    ), first=True)
     chart_equity  = _fig_to_div(_equity_chart(r))
     chart_pnl     = _fig_to_div(_pnl_hist(r))
     chart_monthly = _fig_to_div(_monthly_heatmap(r))
@@ -1134,36 +1012,32 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     candlestick_patterns_table = _candlestick_patterns_table(r)
     chart_patterns_table = _chart_patterns_table(r)
 
-    # Elliott Wave -- one chart per degree (primary, intermediate, minor,
-    # ... down the ladder -- see wave_analysis.py's DEFAULT_DEGREE_LADDER),
-    # same source (analyze_degrees) and same tier/color scheme as the live
-    # React tab. Was missing from the export entirely until 2026-07-17. A
-    # one-line description per chart (2026-07-21, matching
-    # ElliottWavePanel.tsx's identical addition on the live side) --
-    # name-based throughout, not hardcoded to any specific degree name, so
-    # any ladder depth gets the same treatment automatically.
-    def _elliott_description(name: str, degrees: dict) -> str:
-        base = name.replace("_global", "")
-        label = base[0].upper() + base[1:]
-        if name.endswith("_global"):
-            return f"Shows higher-level {label} structures across the entire chart."
-        if f"{name}_global" in degrees:
-            return f"Shows smaller {label} structures detected inside the larger trend."
-        return "Shows the highest-level Elliott Wave structures detected for this timeframe."
-
-    if not r.price_data.empty:
-        degrees = analyze_degrees(r.price_data)
-
-        def _elliott_chart_box(name: str, a) -> str:
-            is_nested = name != "primary" and not name.endswith("_global")
-            fig_div = _fig_to_div(_elliott_wave_chart(r.price_data, a, name, nested=is_nested, symbol=r.symbol))
-            desc = _elliott_description(name, degrees)
-            return (f'<div class="chart-box">{fig_div}'
-                    f'<p style="color:#8b949e;font-size:0.8rem;padding:4px 8px 0">{desc}</p></div>')
-
-        chart_elliott = "".join(_elliott_chart_box(name, a) for name, a in degrees.items())
-    else:
-        chart_elliott = '<p style="color:#8b949e;padding:12px">No price data available for wave analysis.</p>'
+    # Elliott Wave. Uses the SAME serializer the live endpoint calls, so the
+    # report can never disagree with the live tab about what was classified
+    # (live/report parity). Wrapped defensively, matching the ZigZag overlay's
+    # own pattern: a rendering failure here must never break the whole report.
+    try:
+        from api import serializers as _serializers
+        from src.analysis.elliott_wave import (
+            DEFAULT_RATIO, DEFAULT_SCALES, DEFAULT_THETA_BASE,
+        )
+        _ew = _serializers.elliott_wave_to_records(
+            r.price_data, DEFAULT_THETA_BASE, DEFAULT_RATIO, DEFAULT_SCALES,
+        )
+        chart_elliott = _fig_to_div(_elliott_wave_chart(r, _ew))
+        elliott_panel = _elliott_wave_panel(_ew)
+        _c = _ew["counts"]
+        ew_tag = (f"{_c['structures']} structures · "
+                  f"{_c['structures_by_state'].get('gated', 0)} confirmed · "
+                  f"{_c['structures_by_state'].get('undecidable', 0)} undecidable")
+    except Exception as exc:
+        chart_elliott = ""
+        elliott_panel = (
+            "<p style='color:#f85149'>Elliott Wave analysis could not be rendered "
+            f"for this backtest: {type(exc).__name__}. The rest of this report is "
+            "unaffected.</p>"
+        )
+        ew_tag = "unavailable"
 
     title = f"{r.strategy_name} — {r.symbol}"
     html = _HTML_TEMPLATE.format(
@@ -1175,7 +1049,6 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         generated=datetime.now().strftime("%Y-%m-%d %H:%M"),
         metric_cards="\n".join(cards),
         chart_candle=chart_candle,
-        chart_elliott=chart_elliott,
         chart_equity=chart_equity,
         chart_pnl=chart_pnl,
         chart_monthly=chart_monthly,
@@ -1183,6 +1056,9 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         trade_rows="\n".join(trade_rows),
         candlestick_patterns_table=candlestick_patterns_table,
         chart_patterns_table=chart_patterns_table,
+        chart_elliott=chart_elliott,
+        elliott_panel=elliott_panel,
+        ew_tag=ew_tag,
     )
 
     if output_path:

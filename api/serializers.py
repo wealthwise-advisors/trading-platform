@@ -10,7 +10,7 @@ import pandas as pd
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
 from src.analysis.indicators import calc_rsi, calc_stoch
-from src.analysis.zigzag import calc_zigzag, assign_swing_labels
+from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 
 
 def _safe(x):
@@ -119,33 +119,111 @@ def equity_curve_to_records(results: BacktestResults) -> list[dict]:
 
 
 def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
-    """Both 3-leg and 10-leg zigzags, matching the Streamlit dual-overlay design.
-    Both use the SAME fixed-channel swing-grouping procedure from
-    assign_swing_labels(). Label TEXT differs: 10-leg keeps the original
-    decimal format (1.0, 1.1, 2.0...); 3-leg uses just the 1-indexed
-    position within its swing group (1, 2, 3, then resets to 1 for the next
-    swing, then 1, 2, 3 again...) with no letter/group prefix -- a letter
-    prefix (A1, B1...) was tried first and rejected since it wraps to AA/AB
-    past Z, which read as confusing."""
+    """10-leg (major) and 3-leg (minor) zigzags. The 10-leg zigzag is grouped
+    into swings via assign_swing_labels()'s fixed-channel procedure (decimal
+    labels: 1.0, 1.1, 2.0...). The 3-leg zigzag is NOT computed independently
+    over the whole series -- calc_nested_zigzag() runs it separately within
+    each 10-leg swing's own bar window, so every minor pivot's `swing` field
+    is its true parent major swing, and its `label` (a letter: A, B, C...)
+    always resets at the start of a new parent swing. This makes containment
+    a property of the data itself, not a client-side rendering heuristic."""
     zz10 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_10, legs=10)
     zz10 = assign_swing_labels(zz10) if not zz10.empty else zz10
-    zz3 = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev_3, legs=3)
-    zz3 = assign_swing_labels(zz3) if not zz3.empty else zz3
+    zz3 = calc_nested_zigzag(df["high"], df["low"], df["close"], zz10, deviation=dev_3, legs=3)
 
-    def to_records(zz: pd.DataFrame, per_swing_index: bool) -> list[dict]:
+    def to_records(zz: pd.DataFrame) -> list[dict]:
         if zz.empty:
             return []
-        out = []
-        for ts, row in zz.iterrows():
-            swing, sub = int(row["swing"]), int(row["sub"])
-            label = str(sub + 1) if per_swing_index else row["label"]
-            out.append({
+        return [
+            {
                 "t": ts.isoformat(), "price": float(row["price"]), "type": row["type"],
-                "swing": swing, "sub": sub, "label": label,
-            })
-        return out
+                "swing": int(row["swing"]), "sub": int(row["sub"]), "label": row["label"],
+            }
+            for ts, row in zz.iterrows()
+        ]
 
-    return {"zigzag_10": to_records(zz10, per_swing_index=False), "zigzag_3": to_records(zz3, per_swing_index=True)}
+    return {"zigzag_10": to_records(zz10), "zigzag_3": to_records(zz3)}
+
+
+def elliott_wave_to_records(
+    df: pd.DataFrame,
+    theta_base: float,
+    ratio: float,
+    scales: int,
+) -> dict:
+    """Run the Elliott Wave engine and flatten it for the API.
+
+    Deliberately faithful to what the engine reports, including its gaps:
+
+    * every wave carries its lifecycle ``state`` and ``blocked_by``, so a
+      client can distinguish a confirmed structure from one whose acceptance
+      depends on an unresolved Open Question (FE-3.1);
+    * ``blocked_rules`` and ``notes`` are passed through verbatim, so a partial
+      analysis can never be rendered as if it were complete (FE-3.2);
+    * no confidence/score field is produced or derivable (FR-7.4).
+    """
+    from src.analysis.elliott_wave import EngineConfig, run_analysis
+
+    cfg = EngineConfig(theta_base=theta_base, ratio=ratio, scales=scales)
+    res = run_analysis(df, cfg)
+
+    pivots = [
+        {
+            "index": p.index,
+            "confirm_index": p.confirm_index,
+            "t": p.timestamp.isoformat() if hasattr(p.timestamp, "isoformat") else str(p.timestamp),
+            "price": _safe(p.price),
+            "kind": p.kind.value,
+            "scale": p.scale,
+        }
+        for p in res.pivots
+    ]
+
+    waves = [
+        {
+            "id": w.id,
+            "scale": w.scale,
+            "state": w.state.value,
+            "label": w.label,
+            "structure_type": w.structure_type.value if w.structure_type else None,
+            "direction": w.direction.value if w.direction else None,
+            "start_t": w.start_pivot.timestamp.isoformat()
+            if hasattr(w.start_pivot.timestamp, "isoformat") else str(w.start_pivot.timestamp),
+            "start_price": _safe(w.start_pivot.price),
+            "end_t": w.end_pivot.timestamp.isoformat()
+            if hasattr(w.end_pivot.timestamp, "isoformat") else str(w.end_pivot.timestamp),
+            "end_price": _safe(w.end_pivot.price),
+            "parent_id": w.parent_id,
+            "child_ids": list(w.child_ids),
+            "measurements": {k: _safe(v) for k, v in w.measurements.items()},
+            "blocked_by": list(w.blocked_by),
+        }
+        for w in res.waves
+    ]
+
+    structures = [w for w in waves if w["structure_type"] is not None]
+    by_type: dict[str, int] = {}
+    by_state: dict[str, int] = {}
+    for w in structures:
+        by_type[w["structure_type"]] = by_type.get(w["structure_type"], 0) + 1
+        by_state[w["state"]] = by_state.get(w["state"], 0) + 1
+
+    return {
+        "engine_version": res.engine_version,
+        "config": res.config,
+        "pivots": pivots,
+        "waves": waves,
+        "blocked_rules": res.blocked_rules,
+        "notes": res.notes,
+        "counts": {
+            "pivots": len(pivots),
+            "waves": len(waves),
+            "structures": len(structures),
+            "structures_by_type": by_type,
+            "structures_by_state": by_state,
+            "blocked_rule_ids": sum(len(e["rules"]) for e in res.blocked_rules),
+        },
+    }
 
 
 def win_loss(results: BacktestResults) -> dict:

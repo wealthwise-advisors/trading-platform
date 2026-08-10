@@ -133,7 +133,11 @@ Trading/
 │   └── download_rithmic_data.py   # Download real Rithmic bars
 │
 ├── tests/
-│   └── test_engine.py         # 5 smoke tests (all passing)
+│   ├── test_engine.py                     # 5 backtest engine smoke tests
+│   └── test_swing_zigzag_regression.py    # 29 tests -- regression baseline for the
+│                                            #   Swing/3-Leg Deviation zigzag overlay
+│                                            #   (boundaries, A-start labeling, parent-
+│                                            #   swing containment, live/report parity)
 │
 ├── data/
 │   └── historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
@@ -332,8 +336,33 @@ timestamp,open,high,low,close,volume
 py -3.12 -m pytest tests/ -v
 ```
 
-5 tests cover: MA crossover, RSI, Breakout, equity curve length, and trade P&L types.
-All must pass before committing. Tests use synthetic data (seed=99) â€” no Rithmic account needed.
+`test_engine.py`: 5 tests cover MA crossover, RSI, Breakout, equity curve
+length, and trade P&L types (synthetic data, seed=99).
+
+`test_swing_zigzag_regression.py`: 29 tests -- the verified, stable
+regression baseline for the Swing (10-Leg) / 3-Leg Deviation zigzag overlay
+(`src/analysis/zigzag.py::calc_nested_zigzag()`, its live-chart consumer
+`api/serializers.py::zigzag_to_records()`, and its static-report consumer
+`api/report/report.py::generate_html_report()`). Confirmed correct via
+real backtests, live browser screenshots, and direct API/DOM inspection on
+2026-08-02 -- see the module's own docstring. Covers, against three fixed
+deterministic reference datasets:
+
+- major swing boundaries are contiguous, non-overlapping, sequential from 1
+- every swing's 3-Leg sequence starts at label "A" (never "B")
+- no 3-Leg pivot's timestamp falls outside its own parent swing's window
+- the live chart and static HTML report use identical deviation defaults
+  and produce byte-identical swing/label data for the same input
+- a real end-to-end backtest's generated report contains every swing header
+
+A failure here means a change altered one of these already-confirmed
+behaviors -- treat that as "did I mean to do this", not "update the test
+to match the new output". This is the foundation for future
+higher-level market-structure work; don't modify `calc_nested_zigzag()`'s
+core containment/labeling logic without re-running and re-confirming
+against this suite.
+
+All tests must pass before committing.
 
 ---
 

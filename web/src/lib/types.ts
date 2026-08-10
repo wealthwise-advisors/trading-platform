@@ -132,6 +132,78 @@ export interface WinLoss {
   win_rate: number
 }
 
+// ── Elliott Wave ────────────────────────────────────────────────────────────
+// Mirrors api/schemas/elliott_wave.py. Two absences are deliberate and must
+// stay absent: there is no confidence/score/probability field (SRS FR-7.4 --
+// the reference states no weighting function), and no valid/violated_rules
+// field (a candidate failing an implementable gate is never created).
+
+export interface EWPivot {
+  index: number
+  /** Bar at which the reversal confirmed this pivot; always > index.
+   *  A consumer at bar t may only use pivots with confirm_index <= t. */
+  confirm_index: number
+  t: string
+  price: number
+  kind: "H" | "L"
+  /** Ladder index, NOT an Elliott degree -- degree naming is OQ-17, open. */
+  scale: number
+}
+
+/** gated = passed every implementable gate. undecidable = passed everything
+ *  evaluable, but acceptance depends on a rule blocked by an open question. */
+export type EWState = "enumerated" | "gated" | "measured" | "undecidable"
+
+export type EWStructureType =
+  | "impulse"
+  | "leading_diagonal"
+  | "ending_diagonal"
+  | "zigzag"
+  | "flat"
+  | "flat_running"
+
+export interface EWWave {
+  id: string
+  scale: number
+  state: EWState
+  label: string | null
+  structure_type: EWStructureType | null
+  direction: "up" | "down" | null
+  start_t: string
+  start_price: number
+  end_t: string
+  end_price: number
+  parent_id: string | null
+  child_ids: string[]
+  /** Raw guideline ratios. Recorded, never "matched" -- OQ-05 is open. */
+  measurements: Record<string, number | string | boolean | null>
+  /** Rule / open-question ids that prevented a decision. */
+  blocked_by: string[]
+}
+
+export interface EWBlockedRule {
+  rules: string[]
+  oq: string
+  reason: string
+}
+
+export interface ElliottWaveResponse {
+  engine_version: string
+  config: Record<string, unknown>
+  pivots: EWPivot[]
+  waves: EWWave[]
+  blocked_rules: EWBlockedRule[]
+  notes: string[]
+  counts: {
+    pivots: number
+    waves: number
+    structures: number
+    structures_by_type: Record<string, number>
+    structures_by_state: Record<string, number>
+    blocked_rule_ids: number
+  }
+}
+
 export interface CandlestickPatternRecord {
   timestamp: string
   pattern: string
@@ -258,69 +330,4 @@ export interface OptimizeResponse {
   best_backtest_id: string | null
 }
 
-export interface WaveSwing {
-  t: string
-  price: number
-  kind: "high" | "low"
-  label: string | null
-}
-
-export interface WaveImpulse {
-  direction: "up" | "down"
-  valid: boolean
-  rules: Record<string, boolean>
-  fib_score: number
-  truncated_fifth: boolean
-  pivots: WaveSwing[]
-}
-
-export interface WaveCorrection {
-  type: string
-  direction: string
-  metrics: Record<string, number | null>
-  pivots: WaveSwing[]
-}
-
-export interface WaveFibDetail {
-  fib_fit: number | null
-  detail: Record<string, { achieved: number; nearest_ideal: number; dist: number }>
-}
-
-export interface WaveTargetZone {
-  center: number
-  low: number
-  high: number
-  strength: number
-  members: { price: number; source: string }[]
-}
-
-export interface WaveLabel {
-  t: string
-  price: number
-  kind: "high" | "low"
-  wave: string          // "1".."11" or "a"/"b"/"c"
-  sub: 1 | 2 | null      // confidence tier: 1 = fib+pattern both met, 2 = pattern only
-  direction: "up" | "down"
-}
-
-export interface WaveAnalysis {
-  degree: string
-  trend: string
-  n_swings: number
-  swings: WaveSwing[]
-  impulse: WaveImpulse | null
-  impulse_fib: WaveFibDetail | null
-  correction: WaveCorrection | null
-  correction_fib: WaveFibDetail | null
-  cycle_position: string
-  bias: string
-  invalidation: number | null
-  target_zones: WaveTargetZone[]
-  alternates: string[]
-  notes: string[]
-  warnings: string[]
-  wave_sequence: WaveLabel[]
-}
-
-export type ElliottWaveResponse = Record<string, WaveAnalysis>
 

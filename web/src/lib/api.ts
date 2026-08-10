@@ -39,6 +39,17 @@ export const api = {
   getEquityCurve: (id: string) => request<EquityPoint[]>(`/backtests/${id}/equity-curve`),
   getZigZag: (id: string, dev3: number, dev10: number) =>
     request<ZigZagResponse>(`/backtests/${id}/zigzag?dev_3=${dev3}&dev_10=${dev10}`),
+  // Elliott Wave. The three params are the pivot ladder's D-13 values -- the
+  // only knobs the backend actually exposes. Defaults intentionally omitted so
+  // the server's own defaults apply and the two cannot drift (SRS FR-1e.4).
+  getElliottWave: (id: string, opts?: { thetaBase?: number; ratio?: number; scales?: number }) => {
+    const q = new URLSearchParams()
+    if (opts?.thetaBase !== undefined) q.set("theta_base", String(opts.thetaBase))
+    if (opts?.ratio !== undefined) q.set("ratio", String(opts.ratio))
+    if (opts?.scales !== undefined) q.set("scales", String(opts.scales))
+    const qs = q.toString()
+    return request<ElliottWaveResponse>(`/backtests/${id}/elliott-wave${qs ? `?${qs}` : ""}`)
+  },
   getWinLoss: (id: string) => request<WinLoss>(`/backtests/${id}/win-loss`),
   getCandlestickPatterns: (id: string, minConfidence = 70) =>
     request<CandlestickPatternRecord[]>(`/backtests/${id}/candlestick-patterns?min_confidence=${minConfidence}`),
@@ -64,6 +75,4 @@ export const api = {
 
   runOptimizer: (req: OptimizeRequest) =>
     request<OptimizeResponse>("/optimize", { method: "POST", body: JSON.stringify(req) }),
-
-  getElliottWave: (id: string) => request<ElliottWaveResponse>(`/backtests/${id}/elliott-wave`),
 }

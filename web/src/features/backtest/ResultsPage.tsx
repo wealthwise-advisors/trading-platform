@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import { WinLossDonut } from "@/components/charts/WinLossDonut"
 import { CandlestickChart } from "@/components/charts/CandlestickChart"
+import { ElliottWaveChart } from "@/components/charts/ElliottWaveChart"
 import { EquityChart } from "@/components/charts/EquityChart"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
 import { CandlestickPatternsTable } from "@/components/tables/CandlestickPatternsTable"
@@ -11,12 +13,12 @@ import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
 import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
-import { ElliottWavePanel } from "@/components/tables/ElliottWavePanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 
 export function ResultsPage() {
   const backtestId = useConfigStore((s) => s.backtestId)
+  const [ewScale, setEwScale] = useState<number | "all">("all")
 
   const summaryQ = useQuery({
     queryKey: ["backtest", backtestId, "summary"],
@@ -43,6 +45,14 @@ export function ResultsPage() {
     queryFn: () => api.getZigZag(backtestId!, 0.003, 0.003),
     enabled: !!backtestId,
   })
+  // Elliott Wave: its own top-level tab with its own chart -- never an overlay
+  // on Price & Trades. Params are omitted so the server's own D-13 defaults
+  // apply and client/server cannot drift (SRS FR-1e.4).
+  const elliottWaveQ = useQuery({
+    queryKey: ["backtest", backtestId, "elliott-wave"],
+    queryFn: () => api.getElliottWave(backtestId!),
+    enabled: !!backtestId,
+  })
   const winLossQ = useQuery({
     queryKey: ["backtest", backtestId, "win-loss"],
     queryFn: () => api.getWinLoss(backtestId!),
@@ -61,11 +71,6 @@ export function ResultsPage() {
   const chartPatternsQ = useQuery({
     queryKey: ["backtest", backtestId, "chart-patterns"],
     queryFn: () => api.getChartPatterns(backtestId!),
-    enabled: !!backtestId,
-  })
-  const elliottWaveQ = useQuery({
-    queryKey: ["backtest", backtestId, "elliott-wave"],
-    queryFn: () => api.getElliottWave(backtestId!),
     enabled: !!backtestId,
   })
   if (!backtestId) {
@@ -135,7 +140,7 @@ export function ResultsPage() {
             <TabsTrigger value="candles">🕯️ Candlestick Patterns</TabsTrigger>
             <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
             <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
-            <TabsTrigger value="elliottwave">📶 Elliott Wave</TabsTrigger>
+            <TabsTrigger value="elliottwave">🌊 Elliott Wave</TabsTrigger>
           </TabsList>
         </div>
 
@@ -202,10 +207,21 @@ export function ResultsPage() {
                 <OptimizerPanel />
               </Card>
             </TabsContent>
-            <TabsContent value="elliottwave" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
-                {elliottWaveQ.data && priceDataQ.data && (
-                  <ElliottWavePanel data={elliottWaveQ.data} bars={priceDataQ.data.bars} symbol={s.symbol} />
+            <TabsContent value="elliottwave" className="mt-0 flex-1 flex flex-col min-h-0">
+              <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
+                {priceDataQ.data && (
+                  <div className="flex-1 min-h-0">
+                    <ElliottWaveChart
+                      symbol={s.symbol}
+                      strategyName={s.strategy_name}
+                      bars={priceDataQ.data.bars}
+                      data={elliottWaveQ.data}
+                      isLoading={elliottWaveQ.isLoading}
+                      error={elliottWaveQ.error}
+                      scaleFilter={ewScale}
+                      onScaleFilter={setEwScale}
+                    />
+                  </div>
                 )}
               </Card>
             </TabsContent>
