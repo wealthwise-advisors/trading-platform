@@ -367,6 +367,26 @@ class TestBlockedRuleRegistry:
             entry = [e for e in validation.BLOCKED_RULES if e["oq"] == oq][0]
             assert "IMP-F04" in entry["rules"], f"IMP-F04 missing from {oq}"
 
+    def test_oq14_is_declared_not_implementable_not_merely_blocked(self):
+        """Closed 2026-08-10. OQ-14 is a terminal gap, not a pending decision:
+        Motive Sequence is defined by "the numbers in the motive sequence" and
+        the reference never states them, so there is nothing to decide. The id
+        stays "OQ-14" -- consumers group by it -- and the disposition lives in
+        the reason."""
+        entry = [e for e in validation.BLOCKED_RULES if e["oq"] == "OQ-14"][0]
+        assert set(entry["rules"]) == {"MS-01", "MS-02", "MS-03"}
+        assert "not implementable" in entry["reason"].lower()
+
+    def test_no_motive_sequence_numbers_were_invented(self):
+        """MS-03's "much LIKE the Fibonacci number sequence" is a simile, not
+        an identity. No Fibonacci integer set may appear as a swing-count
+        target anywhere in the package."""
+        for module, src in IMPL_CODE.items():
+            low = src.lower()
+            assert "motive_sequence" not in low, module
+            for seq in ("[3, 5, 8", "[5, 9, 13", "(3, 5, 8", "(5, 9, 13"):
+                assert seq not in low, f"{module}.py invents a sequence (OQ-14)"
+
     def test_oq18_no_longer_declared_blocked(self):
         """OQ-18 is resolved; leaving it in the registry would misreport."""
         assert not any(e["oq"] == "OQ-18" for e in validation.BLOCKED_RULES)

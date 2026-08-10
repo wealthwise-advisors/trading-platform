@@ -25,7 +25,7 @@ Elliott-specific pivot detector that neither modifies **nor consumes** the exist
 modules). **All four are decisions, not source-defined behavior** — the reference contributes
 nothing to any of them — and are labelled as such wherever they appear. *(OQ-18 has since been
 resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **5 of 27
-resolved, 22 unresolved**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
+resolved, 21 unresolved, 1 confirmed not implementable (OQ-14)**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
 with OQ-21 settled, **the engine now has a defined input**.
 
 ---
@@ -236,9 +236,66 @@ therefore distinguished *only* by host position (LD-01 vs ED-01). See **OQ-16**.
 
 | ID | Structure | Wave | Rule (verbatim) | M/G | Input | Measurement | Fib | Mom | § | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| MS-01 | Motive Sequence | — | "We define a motive sequence simply as an incomplete sequence of waves (swings)" | M | pivots | swing count | — | — | 3.5 | Blocked (OQ-14) |
-| MS-02 | Motive Sequence | — | "The structure of the waves can be corrective, but the sequence of the swings will be able to tell us whether the move is over" | G | pivots, sub | swing count vs sequence membership | — | — | 3.5 | Blocked (OQ-14) |
+| MS-01 | Motive Sequence | — | "We define a motive sequence simply as an incomplete sequence of waves (swings)" | M | pivots | swing count | — | — | 3.5 | **Not implementable (OQ-14)** — "incomplete" has no stated criterion |
+| MS-02 | Motive Sequence | — | "The structure of the waves can be corrective, but the sequence of the swings will be able to tell us whether the move is over" | G | pivots, sub | swing count vs sequence membership | — | — | 3.5 | **Not implementable (OQ-14)** — membership set absent |
 | MS-03 | Motive Sequence | — | "Motive sequence is much like the Fibonacci number sequence. If we discover the number of swings on the chart is one of the numbers in the motive sequence, then we can expect the current trend to extend further." | G | pivots | swing_count ∈ motive_sequence | — | — | 3.5 | **Blocked (OQ-14) — sequence numbers never stated** |
+
+### OQ-14 investigated 2026-08-10 — confirmed NOT IMPLEMENTABLE, closed as a dead end
+
+Re-verified against the live reference rather than trusting the Phase-2
+extraction, because the three preceding investigations each found something it
+had missed. **This one did not.** The gap is exactly as recorded, and it is
+terminal rather than merely open.
+
+Everything section 3.5 says about the concept:
+
+> *"We define a motive sequence simply as an incomplete sequence of waves
+> (swings)."*
+> *"The structure of the waves can be corrective, but the sequence of the
+> swings will be able to tell us whether the move is over or whether we should
+> expect an extension in the existing direction."*
+> *"Motive sequence is much like the Fibonacci number sequence. If we discover
+> the number of swings on the chart is one of the numbers in the motive
+> sequence, then we can expect the current trend to extend further."*
+
+Confirmed absent: **no numeric sequence is ever listed**, **no worked example
+of counting swings to a number**, **no labelling scheme** distinct from the
+standard 1-2-3-4-5, and **no criterion for complete vs incomplete**.
+
+#### Why this is NI, not merely unresolved
+
+The definition closes a loop with nothing inside it:
+
+- **MS-01** defines a motive sequence as an ***incomplete*** sequence.
+- Incomplete relative to what? **MS-03** answers: relative to *"the numbers in
+  the motive sequence"*.
+- Those numbers are **never stated**.
+
+So the concept is defined by reference to a set the source never supplies, and
+the only thing distinguishing it from an ordinary swing count is that missing
+set. There is no parameter to choose here and no decision a project could
+make: unlike OQ-05, where a tolerance *could* be picked (badly), here the
+absent content **is the rule itself**. Supplying numbers would not be resolving
+an Open Question — it would be authoring a different rule.
+
+#### The Fibonacci simile is not a licence to substitute
+
+MS-03 says the sequence is *"much **like** the Fibonacci number sequence"*.
+That is a **simile, not an identity** — "much like X" does not state "is X".
+Reading it as an identity and substituting 3, 5, 8, 13, 21 would be inventing
+the operative content of the rule while quoting the source as authority for it,
+which is the precise failure mode this project exists to avoid. Note also that
+the sentence compares the sequence to Fibonacci *as an analogy for how it
+behaves* ("if the swing count is one of the numbers, expect extension"), not as
+a definition of its membership.
+
+#### Disposition
+
+**Tier NI. Closed.** MS-01/02/03 are registered in `blocked_rules` and excluded
+from v1 (FR-3.5.1, DM-4.1). No code was written and none should be. OQ-14 is
+distinguished from the 21 genuinely *unresolved* questions in the tally below:
+those await a decision or better source wording; this one awaits content the
+reference does not contain and cannot be closed from it at all.
 
 ## 9. Wave Personality (§4)
 
@@ -645,7 +702,7 @@ before it can enter the Phase 3 SRS.
 | **OQ-11** | FLR-F02, FLE-F02, FLU-F02 | All three flat subtypes measure wave C "of wave **AB**". What is "wave AB" — the net A-to-B displacement, the sum of len(A)+len(B), or wave A's length? Undefined. |
 | **OQ-12** *(investigated 2026-08-10; candidates measured, see §12)* | TRI-01…07 | Triangle has **no Fibonacci ratios, no per-wave rules for D or E, no rule distinguishing the four named variants**, and TRI-04 permits nearly any corrective subdivision. As written, a Triangle detector would match almost any 5-leg sideways move. Is Triangle in scope at all for v1? |
 | **OQ-13** *(investigated 2026-08-10; RSI recorded, "supports" undecided)* | TRI-06 | "RSI also needs to support the triangle in **every time frame**" — "support" is undefined, and "every time frame" is undefined in a single-timeframe backtest. This is the only place RSI is named as a requirement. |
-| **OQ-14** | MS-01…03 | Motive Sequence is defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated on the page.** The concept cannot be implemented from this source. Do we drop it, or source the numbers elsewhere (out of scope for this reference)? |
+| ~~**OQ-14**~~ | MS-01…03 | **INVESTIGATED 2026-08-10 — CONFIRMED NOT IMPLEMENTABLE (tier NI), CLOSED.** Re-verified against the live reference: no numeric sequence, no worked example, no labelling scheme, no complete-vs-incomplete criterion. The definition is circular — MS-01 says "incomplete", MS-03 defines completeness by "the numbers in the motive sequence", and the numbers are never given. MS-03's "much **like** the Fibonacci number sequence" is a simile, not an identity, so substituting Fibonacci numbers would author the rule rather than implement it. Not a pending decision: the absent content **is** the rule. Original wording: Motive Sequence is defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated on the page.** The concept cannot be implemented from this source. Do we drop it, or source the numbers elsewhere (out of scope for this reference)? |
 | **OQ-15** | LD-02, ED-02 | Both diagonals: overlap is "**not a condition**" and the wedge shape is unquantified. With position (LD-01/ED-01) and subdivision (LD-03/ED-03) as the only gates, what actually makes a diagonal a diagonal rather than a plain 5-leg move? |
 | **OQ-16** | LD-03, ED-03 | Leading and Ending Diagonal permit the **identical** subdivision sets, so shape cannot distinguish them — only host position can. Confirm that's intended. |
 | **OQ-17** | DEG-03, DEG-04 | Only 2 of the 9 degrees are mapped to a timeframe, and no rule exists for assigning a degree from price data. How is degree assigned? |

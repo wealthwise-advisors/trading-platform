@@ -88,9 +88,21 @@ BLOCKED_RULES: tuple[dict, ...] = (
                "of candidates are plainly trending, which would contradict "
                "the reference's own opening definition of the word. "
                "Candidates are measured instead -- see triangle.py."},
+    # Key stays "OQ-14": it is the stable identifier consumers group by. The
+    # not-implementable disposition lives in the reason, not in the id.
     {"rules": ["MS-01", "MS-02", "MS-03"], "oq": "OQ-14",
-     "reason": "Motive Sequence is defined by 'the numbers in the motive "
-               "sequence', and those numbers are never stated."},
+     "reason": "NOT IMPLEMENTABLE, CLOSED 2026-08-10. "
+               "Motive Sequence is defined by 'the numbers in the motive "
+               "sequence', and those numbers are never stated. Re-verified "
+               "against the reference 2026-08-10 and CLOSED as not "
+               "implementable: no numeric sequence, no worked example, no "
+               "labelling scheme, no complete-vs-incomplete criterion. The "
+               "definition is circular -- MS-01 says 'incomplete', MS-03 "
+               "defines completeness by the numbers, the numbers are absent. "
+               "MS-03's 'much LIKE the Fibonacci number sequence' is a "
+               "simile, not an identity, so substituting Fibonacci numbers "
+               "would author the rule rather than implement it. Unlike a "
+               "pending decision, the absent content IS the rule."},
     {"rules": ["LD-02", "ED-02"], "oq": "OQ-15",
      "reason": "Wedge shape is unquantified. Overlap is measured and recorded "
                "but explicitly never gates."},

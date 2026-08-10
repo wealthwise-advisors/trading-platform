@@ -9,6 +9,9 @@ Written 2026-08-09.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 1.3 — 2026-08-10.** **OQ-14 investigated and closed as not implementable**
+> (FR-3.5.2) — re-verified against the live reference, nothing missed. Reclassified out of the
+> unresolved tally: **5 resolved, 21 unresolved, 1 not implementable**. No code. Previously —
 > **Revision 1.2 — 2026-08-10.** **OQ-12/OQ-13 investigated and left open** (FR-3.8.1–2).
 > TRI-01/TRI-03 turn out to be exact and selective (8.4%), not "near-vacuous" as previously
 > recorded — corrected — but they still cannot gate, chiefly because 21% of candidates
@@ -393,6 +396,26 @@ Ending Diagonal are distinguishable **only** by host position. Confirmation requ
 
 **FR-3.5.1 [NI]** — Motive Sequence SHALL NOT be implemented in v1. No amount of care can extract
 a number set that is absent from the source. Supplying one would be invention (OQ-14).
+
+**FR-3.5.2 [NI] — OQ-14 investigated 2026-08-10, confirmed not implementable, closed.**
+Re-verified against the live reference rather than the Phase-2 extraction. Confirmed absent: any
+numeric sequence, any worked counting example, any labelling scheme distinct from 1-2-3-4-5, and
+any complete-vs-incomplete criterion.
+
+The definition is circular with nothing inside the loop: MS-01 defines a motive sequence as an
+*incomplete* sequence; MS-03 defines completeness by *"the numbers in the motive sequence"*; those
+numbers are never stated. **This is NI rather than UD** because there is no parameter to choose —
+unlike OQ-05, where a tolerance could be picked, here the absent content *is* the rule, and
+supplying it would author a different rule rather than resolve a question.
+
+MS-03's *"much **like** the Fibonacci number sequence"* is a **simile, not an identity**.
+Substituting 3, 5, 8, 13, 21 would invent the rule's operative content while citing the source as
+authority for it. The sentence draws an analogy for how the sequence behaves, not a definition of
+its membership.
+
+**Disposition: closed.** No code, now or later, from this reference. OQ-14 is excluded from the
+*unresolved* tally and counted separately as not-implementable — the other 21 await a decision or
+better wording; this one awaits content the source does not contain.
 
 ### FR-3.6 Zigzag (§5.1)
 
@@ -876,7 +899,11 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 
 ---
 
-## 14. Open Questions — 5 resolved, 22 unresolved (OQ-25, OQ-26, OQ-27 added 2026-08-10)
+## 14. Open Questions — 5 resolved, 21 unresolved, 1 not implementable (of 27)
+
+*OQ-14 is counted separately from 2026-08-10: it is not a pending decision but a terminal
+gap in the source (FR-3.5.2). The 21 unresolved await a decision or better wording; OQ-14
+awaits content the reference does not contain.*
 
 **Revised 2026-08-09.** **OQ-02, OQ-03, OQ-04 and OQ-21 are RESOLVED by project decision**
 (§6.1b, §6.1a, §4a). **The other 20 remain unresolved and none has been silently narrowed.**
@@ -898,7 +925,7 @@ insufficient, and what it blocks.
 | **OQ-11** | FLR-F02, FLE-F02, FLU-F02 | "of wave AB" — net A→B displacement, len(A)+len(B), or len(A)? Undefined. | All three flat wave-C ratios |
 | **OQ-12** | TRI-01…07 | No Fibonacci ratios, no rules for waves D/E, no variant discriminators; TRI-04 permits nearly any corrective. | Whether Triangle is in v1 at all (FR-3.8.1) |
 | **OQ-13** | TRI-06 | "support" undefined; "every time frame" undefined in a single-timeframe backtest. Only place RSI is named as a requirement. | Triangle momentum gate |
-| **OQ-14** | MS-01…03 | The motive-sequence **numbers are never stated on the page**. | Motive Sequence entirely → **NI**, excluded from v1 (FR-3.5.1, DM-4.1) |
+| ~~**OQ-14**~~ | MS-01…03 | **INVESTIGATED 2026-08-10, CONFIRMED NI, CLOSED (FR-3.5.2).** The numbers are never stated; the definition is circular (MS-01 "incomplete" → MS-03 "the numbers" → absent). "Much *like* the Fibonacci sequence" is a simile, not an identity. | Motive Sequence entirely → **NI**, excluded from v1 (FR-3.5.1, DM-4.1). Counted separately from the unresolved questions. |
 | **OQ-15** | LD-02, ED-02 | Overlap is explicitly *not* a condition and "wedge shape" is unquantified — leaving position + subdivision as the only gates. | Whether a diagonal is distinguishable from a plain 5-leg move |
 | **OQ-16** | LD-03, ED-03 | Identical permitted subdivision sets for both diagonals. | Leading vs Ending distinguishable only by host (FR-3.3.3) |
 | **OQ-17** | DEG-03, DEG-04 | Only 2 of 9 degrees mapped to timeframes; no rule for assigning degree from data. | Degree assignment (FR-3.11.2) |
@@ -1124,7 +1151,7 @@ identical split.
 
 ### Open Questions preserved
 
-**22 of 27 unresolved; OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25, OQ-26 and OQ-27 were added 2026-08-10.**
+**21 of 27 unresolved, plus OQ-14 confirmed not implementable and closed (FR-3.5.2). OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25, OQ-26 and OQ-27 were added 2026-08-10.**
 
 - **OQ-02, OQ-03** — RESOLVED (§6.1b). **OQ-04** — RESOLVED (§6.1a). **OQ-21** — RESOLVED (§4a).
   All four tagged **EN**, not SD: the reference contributes nothing to any of them, and each is
@@ -1159,7 +1186,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 6. **OQ-24** — Extension undefined and **not derivable from data** (investigated 2026-08-10, FR-3.2.2); this also keeps OQ-19's zigzag/impulse tiebreak circular. Quantities are recorded, the verdict withheld.
 7. **OQ-05** — 14 Fibonacci rules (not 16; FLE-F02/FLU-F02 state ranges, FR-4.2b). **Investigated 2026-08-10, no tolerance justifiable.** **Not a classification blocker** — non-gating
    measurements; ratios computable, just not declarable as "matched".
-8. **OQ-14** — Motive Sequence not implementable; excluded from v1.
+8. ~~**OQ-14**~~ — Motive Sequence **confirmed not implementable and closed 2026-08-10** (FR-3.5.2); excluded from v1 and from the unresolved tally.
 9. **OQ-01** — still open, off the critical path (§8.3).
 
 ### Assumptions

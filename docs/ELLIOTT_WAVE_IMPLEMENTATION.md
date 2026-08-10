@@ -10,10 +10,18 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 
 > **Read this first.** This engine is deliberately incomplete, and its incompleteness is
 > reported at runtime rather than hidden. Roughly half the reference's rules cannot be
-> implemented because the source does not define them precisely enough. **22 of 27 Open
+> implemented because the source does not define them precisely enough. **21 of 27 Open
 > Questions remain unresolved.** Every affected rule is registered in
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
+>
+> **V2 Step 6 addendum — 2026-08-10.** **OQ-14 (Motive Sequence) investigated and closed as
+> NOT IMPLEMENTABLE.** Re-verified against the live reference — unlike the three preceding
+> investigations, this one found nothing the extraction had missed. The definition is circular
+> with nothing inside it: MS-01 says "incomplete", MS-03 defines completeness by "the numbers
+> in the motive sequence", and the numbers are never stated. MS-03's "much *like* the
+> Fibonacci number sequence" is a simile, not an identity. Reclassified out of the unresolved
+> tally: **5 resolved, 21 unresolved, 1 not implementable**. No code written.
 >
 > **V2 Step 5 addendum — 2026-08-10.** **OQ-12/OQ-13 investigated and left open.** A 13th
 > module, `triangle.py`, measures Triangle candidates and classifies nothing — no `TRIANGLE`
@@ -159,7 +167,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 | **Triangle** *(classification only; candidates measured)* | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
 | ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
 | **Impulse with Extension** *(classification only)* | OQ-24 *(investigated 2026-08-10, no cliff in data; independent of OQ-05)* | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
-| **Motive Sequence** | OQ-14 | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |
+| **Motive Sequence** | ~~OQ-14~~ *(closed 2026-08-10 — confirmed NOT IMPLEMENTABLE, not merely unresolved)* | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |
 | **Fibonacci matching** | OQ-05 *(investigated 2026-08-10; blocks 14 rules, not 16)* | All 16 ratios are discrete exact values with no stated tolerance. Ratios **are computed and recorded**; they are never declared "matched" |
 | **Named wave degrees** | OQ-17 | Only 2 of 9 degrees map to a timeframe and no rule assigns degree from price. Pivots carry an integer `scale` index only |
 | **Confidence / scoring** | FR-7.4 | The reference states no weighting function anywhere. No such field exists in the model, the API, or the UI |
@@ -349,7 +357,7 @@ deterministic — byte-identical output across 20 repeated runs.
 
 ---
 
-## 10. Remaining Open Questions — 22 of 27 unresolved
+## 10. Remaining Open Questions — 21 of 27 unresolved, plus OQ-14 closed as not implementable
 
 **Resolved (4):** OQ-02, OQ-03, OQ-04, OQ-21.
 
@@ -411,6 +419,6 @@ recorded as accepted rather than a defect.
 section.
 **Test coverage and CI:** §8 — 220 tests passing; D-05 raised CI coverage from 2% to 100%.
 **Performance:** §9 — the quadratic-annotation timeout fix and measured generation times.
-**Remaining Open Questions:** §10 — **22 of 27 unresolved**, listed individually.
+**Remaining Open Questions:** §10 — **21 of 27 unresolved**, plus OQ-14 not implementable, listed individually.
 
 **No code changed in this step** — documentation only.
