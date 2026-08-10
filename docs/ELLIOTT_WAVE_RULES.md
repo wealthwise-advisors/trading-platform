@@ -468,18 +468,117 @@ contradicts rather than merely failing to support.
 
 | ID | Structure | Wave | Rule (verbatim) | M/G | Input | Measurement | Fib | Mom | § | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| TRI-01 | Triangle | all | "Corrective structure labelled as ABCDE" | **M** | pivots | leg count == 5 | — | — | 5.3 | Not implemented |
+| TRI-01 | Triangle | all | "Corrective structure labelled as ABCDE" | **M** | pivots | leg count == 5 | — | — | 5.3 | **Exact; used to form candidates, never to gate** — see §12 investigation |
 | TRI-02 | Triangle | — | "Usually happens in wave B or wave 4" | G | pivots, sub | host label ∈ {B, 4} | — | — | 5.3 | Not implemented |
-| TRI-03 | Triangle | all | "Subdivided into three (3-3-3-3-3)" | **M** | sub | every leg subdivides into 3 | — | — | 5.3 | Not implemented |
+| TRI-03 | Triangle | all | "Subdivided into three (3-3-3-3-3)" | **M** | sub | every leg subdivides into 3 | — | — | 5.3 | **Exact; forms candidates (8.4% pass), never gates.** Loose reading inherits OQ-25 |
 | TRI-04 | Triangle | A–E | "Subdivision of ABCDE can be either abc, wxy, or flat" | **M** (permissive) | sub | each leg ∈ {abc, wxy, flat} | — | — | 5.3 | Blocked (OQ-12) |
-| TRI-05 | Triangle | — | "A triangle is a sideways movement that is associated with decreasing volume and volatility" | G | OHLC, vol | vol and range both contracting | — | volume | 5.3 | Blocked (OQ-22) |
-| TRI-06 | Triangle | — | "RSI also needs to support the triangle in every time frame" | G | mom (RSI) | undefined | — | **RSI** | 5.3 | Blocked (OQ-13) |
-| TRI-07 | Triangle | — | Variants named: ascending, descending, contracting, expanding | G | pivots | trendline slopes of A-C-E and B-D | — | — | 5.3 | Blocked (OQ-12) |
+| TRI-05 | Triangle | — | "A triangle is a sideways movement that is associated with decreasing volume and volatility" | G | OHLC, vol | net displacement / path length | — | volume | 5.3 | Blocked (OQ-12 for "sideways", OQ-22 for volume) — ratio **measured**; no cliff exists (bootstrap: 0 of 3 modes stable) |
+| TRI-06 | Triangle | — | "RSI also needs to support the triangle in every time frame" | G | mom (RSI) | RSI at each of the 6 pivots | — | **RSI** | 5.3 | Blocked (OQ-13) — readings **measured** (326/328 complete); "supports" never decided |
+| TRI-07 | Triangle | — | Variants named: ascending, descending, contracting, expanding — **and nothing more; the geometry is only in a graphic, never in prose** | G | pivots | trendline slopes of A-C-E and B-D | — | — | 5.3 | Blocked (OQ-12) — both slopes **measured**; no name assigned |
 
 **No Fibonacci ratios are stated for any triangle wave.** No rule for wave D or wave E
 individually. TRI-04's permitted set covers nearly every corrective structure, so it does almost
 no discriminating work. See **OQ-12** — Triangle is the weakest-specified structure in the
 reference by a wide margin.
+
+### OQ-12 / OQ-13 investigated 2026-08-10 — measured, still unresolved
+
+Investigated with the same method as OQ-24 and OQ-09/OQ-10. Outcome: an exact
+rule *was* found, and it still does not gate. Candidates are measured
+(`triangle.py`, surfaced as `AnalysisResult.triangle_candidates`) and
+`StructureType` gains **no** `TRIANGLE` member.
+
+#### 1. The reference re-verified
+
+Re-fetched rather than trusting the Phase-2 extraction. Confirmed empty:
+**no rule for wave D or wave E**, **no Fibonacci ratio of any kind**, **nothing
+about what follows a triangle**.
+
+**Correction to this document's earlier framing.** The four variants were
+described here as lacking *quantification*. That understates it: ascending,
+descending, contracting and expanding are **named and nothing else** — the
+distinguishing geometry appears only in a *graphic*, never in prose. There is
+no text to extract, quantified or otherwise.
+
+#### 2. An exact rule was found — and the old "near-vacuous" claim was wrong
+
+**TRI-01** ("labelled as ABCDE" → 5 sides) and **TRI-03** ("3-3-3-3-3") are
+both **M** and *Not implemented* — the same signature FLE-01 had.
+
+`validation.py` recorded these as "a near-vacuous subdivision gate". **Measured,
+that is false:**
+
+| | count |
+|---|---|
+| five-leg windows examined | 3,912 |
+| passing TRI-01 + TRI-03 | **328 (8.4%)** |
+
+For scale, the engine confirms 318 flats and 173 zigzags on the same data. The
+gate is genuinely selective. It nonetheless stays ungated for three reasons:
+
+1. **It inherits OQ-25.** Read strictly — "subdivided into three" meaning
+   exactly three finer legs per side — the gate finds **1 candidate in 3,912**.
+   The 328 come from the *loose* predicate `diagonal.py` already applies to
+   LD-03/ED-03's identical `3-3-3-3-3`, so Triangle rests on the same
+   unresolved reading rather than standing on its own.
+2. **Nothing can constrain where a triangle occurs.** TRI-02 says *"**usually**
+   happens in wave B or wave 4"* — guideline grammar, so gating on it would be
+   an OQ-01 decision. It is moot regardless: only **6 of 328** candidates sit
+   in an impulse wave 4 or a zigzag/flat wave B.
+3. **The definitional property would be the one thing unenforced.** The
+   reference opens *"a triangle is a sideways movement"*, and **21% of
+   candidates (69 of 328)** have net displacement above 50% of their path
+   length — plainly trending. Emitting a structure named `TRIANGLE` for those
+   would be worse than emitting nothing.
+
+Point 3 is what separates this from FLE-01. FLE-01 is a *complete* criterion
+for what it claims; TRI-01 + TRI-03 is an **incomplete** criterion for
+"triangle", because the definitional content of the word is exactly what it
+omits.
+
+#### 3. No threshold for "sideways" — and a false signal caught
+
+Net displacement / path length across the 328 candidates is a broad plateau:
+p5 = 0.017, p25 = 0.160, p50 = 0.312, p75 = 0.479, p95 = 0.706.
+
+The histogram initially showed **three modes**, which would have been the
+cliff. A 1,000-sample bootstrap rejected it:
+
+| | |
+|---|---|
+| modes stable in >90% of resamples | **0 of 3** |
+| best bin (0.65) | 70.5% |
+| adjacent bins also called modes | 20–30% |
+| mode *count* across resamples | varies 1–5; three only 58.9% of the time |
+
+Ripples on a plateau, not regimes. The same discipline that caught the IMP-F03
+false positive during the OQ-05 investigation.
+
+#### 4. The Diagonal overlap — expected, and not found
+
+`3-3-3-3-3` is an explicitly permitted **diagonal** shape (LD-03/ED-03), so a
+collision was expected. **Measured overlap: zero** — 0 of 328 candidates
+coincide with or even overlap a confirmed diagonal, because diagonals are
+enumerated only inside impulse wave-1/wave-5 host legs, a different basis.
+
+No practical clash, but the principle stands: with no gateable host rule, a
+triangle would be defined as *"a 3-3-3-3-3 that is not inside an impulse
+host"* — a definition by exclusion the reference never gives.
+
+#### 5. OQ-13 (RSI) — measurable, not decidable
+
+RSI is readable at all six pivots for **326 of 328** candidates, and
+`momentum.rsi_series` already exists for IMP-06, so recording it is trivial.
+What is undefined is *"supports"*: no direction, no threshold, no comparison
+is stated, and *"in every time frame"* has no meaning in a single-timeframe
+engine. Readings are recorded; the verdict is not.
+
+#### What is recorded
+
+Per candidate, all tagged `blocked_by: ["OQ-12", "OQ-13"]`:
+`TRI-03_subdivision_counts`, `TRI-05_net_over_path`, `TRI-07_slope_A_C_E`,
+`TRI-07_slope_B_D`, `TRI-06_rsi_at_pivots`, plus `confirm_index` so no
+consumer can treat a candidate as known before its closing pivot confirmed.
 
 ## 13. Double Three (§5.4)
 
@@ -544,8 +643,8 @@ before it can enter the Phase 3 SRS.
 | **OQ-09** | FLR-01 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** Regular Flat wave B "terminates **near** the start of wave A" — "near" is unquantified, and the paired Fibonacci value (90%) is a **single point** with no tolerance. Data derivation failed: across 356 real flats wave B's retracement runs continuously through 1.00 with no trough (p25 0.37, p50 0.65, p75 1.21; only 9% within ±10% of 1.00). Regular Flat has **no exact criterion of its own**, so it cannot be gated at all. Quantities recorded; verdict withheld. |
 | **OQ-10** | FLR-02, FLE-02 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** "**slightly** beyond" (Regular) vs "**substantially** beyond" (Expanded), neither quantified. Data derivation failed: wave C's landing point is a broad continuum (p5 0.17 to p95 5.98 × |A|) with every large gap at p97+. **Correction:** this was previously described as *the only* stated discriminator between the subtypes. It is not — the wave-B test is a second one, and **FLE-01's half of it is exact** (see §11.3). |
 | **OQ-11** | FLR-F02, FLE-F02, FLU-F02 | All three flat subtypes measure wave C "of wave **AB**". What is "wave AB" — the net A-to-B displacement, the sum of len(A)+len(B), or wave A's length? Undefined. |
-| **OQ-12** | TRI-01…07 | Triangle has **no Fibonacci ratios, no per-wave rules for D or E, no rule distinguishing the four named variants**, and TRI-04 permits nearly any corrective subdivision. As written, a Triangle detector would match almost any 5-leg sideways move. Is Triangle in scope at all for v1? |
-| **OQ-13** | TRI-06 | "RSI also needs to support the triangle in **every time frame**" — "support" is undefined, and "every time frame" is undefined in a single-timeframe backtest. This is the only place RSI is named as a requirement. |
+| **OQ-12** *(investigated 2026-08-10; candidates measured, see §12)* | TRI-01…07 | Triangle has **no Fibonacci ratios, no per-wave rules for D or E, no rule distinguishing the four named variants**, and TRI-04 permits nearly any corrective subdivision. As written, a Triangle detector would match almost any 5-leg sideways move. Is Triangle in scope at all for v1? |
+| **OQ-13** *(investigated 2026-08-10; RSI recorded, "supports" undecided)* | TRI-06 | "RSI also needs to support the triangle in **every time frame**" — "support" is undefined, and "every time frame" is undefined in a single-timeframe backtest. This is the only place RSI is named as a requirement. |
 | **OQ-14** | MS-01…03 | Motive Sequence is defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated on the page.** The concept cannot be implemented from this source. Do we drop it, or source the numbers elsewhere (out of scope for this reference)? |
 | **OQ-15** | LD-02, ED-02 | Both diagonals: overlap is "**not a condition**" and the wedge shape is unquantified. With position (LD-01/ED-01) and subdivision (LD-03/ED-03) as the only gates, what actually makes a diagonal a diagonal rather than a plain 5-leg move? |
 | **OQ-16** | LD-03, ED-03 | Leading and Ending Diagonal permit the **identical** subdivision sets, so shape cannot distinguish them — only host position can. Confirm that's intended. |

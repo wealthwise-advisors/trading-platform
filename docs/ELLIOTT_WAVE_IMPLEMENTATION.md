@@ -15,6 +15,14 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
 >
+> **V2 Step 5 addendum — 2026-08-10.** **OQ-12/OQ-13 investigated and left open.** A 13th
+> module, `triangle.py`, measures Triangle candidates and classifies nothing — no `TRIANGLE`
+> structure type. TRI-01/TRI-03 turned out to be **exact and selective (8.4%, 328 of 3,912
+> windows)**, not the "near-vacuous" gate previously recorded — corrected — but they still
+> cannot gate: the strict reading finds 1 candidate in 3,912 (so OQ-25 is inherited), TRI-02's
+> host rule is guideline-tier and matches 6 of 328, and **21% of candidates are plainly
+> trending**, contradicting the reference's own definition of the word. Suite is **344 tests**.
+>
 > **V2 Step 4 addendum — 2026-08-10.** **OQ-05 investigated and left open. No behaviour
 > change.** Fibonacci matching stays uncomputed on three independent grounds: the reference
 > states no tolerance anywhere *and* demonstrably writes an explicit range where it means one
@@ -148,7 +156,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 |---|---|---|
 | **Regular Flat** | OQ-09, OQ-10 | "Wave B terminates **near** the start of wave A", "wave C **slightly** beyond" — neither quantified; the paired ratio is a single point (exactly 90%) with no tolerance |
 | **Expanded Flat** *(wave C half)* | OQ-10, OQ-27 | Needs "**substantially** beyond", unquantified and with no cliff in 356 real flats. **Corrected 2026-08-10:** this row previously said Regular and Expanded are separated *only* by slightly-vs-substantially. They are not — **FLE-01** (wave B beyond wave A start) is a second, *exact* discriminator, now measured. It does not gate pending **OQ-27** (29 of 34 structures satisfying it also satisfy FLU-01) |
-| **Triangle** | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
+| **Triangle** *(classification only; candidates measured)* | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
 | ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
 | **Impulse with Extension** *(classification only)* | OQ-24 *(investigated 2026-08-10, no cliff in data; independent of OQ-05)* | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
 | **Motive Sequence** | OQ-14 | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |

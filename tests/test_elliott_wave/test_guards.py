@@ -122,10 +122,12 @@ class TestDeferredStructuresAbsent:
         assert not (set(MODULE_NAMES) & banned)
 
     @pytest.mark.parametrize("term,oq", [
-        ("triangle", "OQ-12/13"),
         ("motive_sequence", "OQ-14"),
         ("wedge", "OQ-15"),
         # double_three / triple_three dropped here when OQ-18 was resolved.
+        # "triangle" dropped 2026-08-10: candidates are now MEASURED. The ban
+        # is replaced by the three scoped guards below, which forbid the
+        # verdict rather than the word.
     ])
     def test_no_logic_for_deferred_concept(self, term, oq):
         for module, src in IMPL_CODE.items():
@@ -139,6 +141,52 @@ class TestDeferredStructuresAbsent:
             assert "flat_regular" not in low and "flat_expanded" not in low, module
             for word in ("substantially", "slightly", "near_start"):
                 assert word not in low, f"{module}.py uses '{word}' (OQ-09/10 open)"
+
+    def test_no_triangle_verdict(self):
+        """OQ-12/OQ-13 open: triangle candidates may be MEASURED, never named.
+
+        Narrowed 2026-08-10 (was: the word "triangle" banned outright). What
+        must not exist is anything that renders a verdict -- a variant name, a
+        sideways decision, or an RSI "supports" decision.
+        """
+        verdicts = (r"\bis_triangle\b|\bis_sideways\b|\brsi_supports\b|"
+                    r"\bascending\b|\bdescending\b|\bcontracting\b|"
+                    r"\bexpanding\b|triangle_variant|sideways_threshold")
+        for module, src in IMPL_CODE.items():
+            assert not re.search(verdicts, src.lower()), module
+
+    def test_triangle_logic_is_scoped_to_two_modules(self):
+        """triangle.py measures it; pipeline.py calls it. If "triangle"
+        appears in impulse.py, diagonal.py or correction.py, it is gating."""
+        allowed = {"triangle", "pipeline", "models"}
+        for module, src in IMPL_CODE.items():
+            if module in allowed:
+                continue
+            assert "triangle" not in src.lower(), (
+                f"{module}.py references triangle; only {allowed} may (OQ-12)")
+
+    def test_no_threshold_constant_in_the_triangle_code(self):
+        """The load-bearing OQ-12 guard: no number stands in for "sideways".
+
+        A sidewaysness cutoff would appear as a float literal, and the ratio
+        must never be compared against anything. TRI-01's leg count (5) and
+        the subdivision floor (2) are integers stated by the reference and by
+        LD-03/ED-03's existing reading, not thresholds.
+        """
+        from src.analysis.elliott_wave import triangle
+        src = inspect.getsource(triangle)
+        src = re.sub(r'""".*?"""', "", src, flags=re.S)
+        src = "\n".join(line.split("#")[0] for line in src.splitlines())
+
+        floats = [f for f in re.findall(r"\b\d+\.\d+\b", src) if f != "0.0"]
+        assert not floats, f"float literal in triangle code -- a threshold? {floats}"
+
+        for line in src.splitlines():
+            if "net_over_path" not in line and "_sidewaysness(" not in line:
+                continue
+            bare = line.replace("->", "")     # a return annotation is not a test
+            assert not re.search(r"[<>]=?", bare), (
+                f"the sidewaysness ratio is being thresholded: {line.strip()}")
 
     def test_no_threshold_constant_in_the_flat_subtype_code(self):
         """OQ-09/OQ-10 open: 'near', 'slightly beyond' and 'substantially

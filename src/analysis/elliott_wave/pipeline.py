@@ -28,7 +28,7 @@ from __future__ import annotations
 import pandas as pd
 
 from . import (combination, correction, diagonal, hierarchy, impulse,
-               measurements, momentum, pivots, validation)
+               measurements, momentum, pivots, triangle, validation)
 from .models import (
     ELLIOTT_WAVE_ENGINE_VERSION,
     AnalysisResult,
@@ -101,6 +101,11 @@ def run_analysis(df: pd.DataFrame, config: EngineConfig | None = None) -> Analys
         by_scale, spans, cfg.max_combination_depth)
 
     waves: list[Wave] = imp_waves + dia_waves + cor_waves + com_waves
+
+    # Triangle candidates. Measured, never classified, and deliberately kept
+    # OUT of `waves`: OQ-12/OQ-13 leave them unnameable, so putting them in
+    # the list the chart renders would present a guess as analysis.
+    result.triangle_candidates = triangle.measure_candidates(by_scale, spans, rsi)
 
     # 6. guideline ratios -- recorded, never matched
     by_id = {w.id: w for w in waves}

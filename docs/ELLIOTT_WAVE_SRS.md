@@ -9,6 +9,11 @@ Written 2026-08-09.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 1.2 — 2026-08-10.** **OQ-12/OQ-13 investigated and left open** (FR-3.8.1–2).
+> TRI-01/TRI-03 turn out to be exact and selective (8.4%), not "near-vacuous" as previously
+> recorded — corrected — but they still cannot gate, chiefly because 21% of candidates
+> contradict the reference's own definition of "sideways". Candidates are measured instead.
+> Previously —
 > **Revision 1.1 — 2026-08-10.** **OQ-05 investigated and left open** (FR-4.2a) — no tolerance
 > language in the reference, no empirical clustering once density is controlled for, and an 11x
 > spread in the width any tolerance would need. **Scope corrected**: OQ-05 blocks 14 rules, not
@@ -556,6 +561,36 @@ ranges, which are directly evaluable and need no tolerance; they remain blocked 
 (undefined "wave AB" base). IMP-F04 carries **both OQ-05 and OQ-07** — one of its three bases is
 undefined ("inverse retracement"), the other two are discrete values.
 
+**FR-3.8.1 [EN] — OQ-12/OQ-13 investigated 2026-08-10, deliberately left open.** An exact rule was
+found and still does not gate.
+
+  * **TRI-01 and TRI-03 are exact, mandatory-tier and selective** — 328 of 3,912 five-leg windows
+    pass (8.4%), comparable to the flat and zigzag confirm rates. The prior record calling this "a
+    near-vacuous subdivision gate" was measured and is **wrong**; corrected.
+  * They stay ungated on three grounds: the strict reading of "subdivided into three" finds **1**
+    candidate in 3,912, so the loose `diagonal.py` predicate is used and **OQ-25 is inherited**;
+    TRI-02's host rule is guideline-tier ("usually") and matches only **6 of 328** regardless; and
+    **21%** of candidates are plainly trending, contradicting the reference's own opening
+    definition, *"a triangle is a sideways movement"*.
+  * **No threshold for "sideways" is derivable.** net/path is a plateau (p25 0.160, p50 0.312,
+    p75 0.479). An apparent three-mode structure was rejected by a 1,000-sample bootstrap — **0 of
+    3 modes stable above 90%**, mode count varying 1–5 across resamples.
+  * **The expected Diagonal collision does not occur.** `3-3-3-3-3` is a permitted diagonal shape,
+    but measured overlap is **zero**: diagonals are enumerated only inside impulse wave-1/wave-5
+    hosts. The principle still bites — with no gateable host rule a triangle would be "a
+    3-3-3-3-3 not inside an impulse host", a definition by exclusion the reference never gives.
+  * **OQ-13 is measurable, not decidable.** RSI reads at all six pivots for 326 of 328 candidates.
+    "Supports" states no direction, threshold or comparison, and "in every time frame" is
+    meaningless in a single-timeframe engine.
+
+**FR-3.8.2 [EN] — what SHALL be recorded.** Each candidate window is emitted to
+`AnalysisResult.triangle_candidates` as a plain record, **never** to `waves`, and `StructureType`
+SHALL NOT gain `TRIANGLE`. Fields: `TRI-03_subdivision_counts`, `TRI-05_net_over_path`,
+`TRI-07_slope_A_C_E`, `TRI-07_slope_B_D`, `TRI-06_rsi_at_pivots`, `confirm_index`, and
+`blocked_by: ["OQ-12", "OQ-13"]`. Candidates are records rather than waves precisely because they
+are not structures: promoting them would put an unnameable shape into the list the chart renders
+as confirmed analysis.
+
 ### FR-5 Candidate lifecycle
 
 | ID | Tier | Requirement |
@@ -628,7 +663,7 @@ blocked *by Impulse*.
 | **Regular Flat** | ❌ Blocked | **OQ-09** ("near"), **OQ-10** ("slightly beyond") — investigated 2026-08-10, no cliff. Has **no exact criterion of its own**, so unreachable under any resolution of OQ-10 alone. Quantities measured. |
 | **Expanded Flat** | ⚠ Gateable but not gating | **FLE-01 is exact** and unactioned; FLE-02 stays blocked by **OQ-10**. Not promoted because **OQ-27** (Running/Expanded precedence, 29 of 34 overlap) is unresolved. Quantities measured. |
 | **Double / Triple Three** | ✅ **Implemented 2026-08-10** | OQ-18 resolved by a depth-1 cap (FR-3.9a). DT-02/TT-02's swing counts remain **OQ-26** — recorded, never gated. OQ-17 is not involved: the gate keys on the ladder's integer `scale`, not a named degree. |
-| **Triangle** | ❌ Blocked | **OQ-12**, **OQ-13** — independent of Impulse throughout |
+| **Triangle** | ⚠ Measured, never classified | **OQ-12**, **OQ-13** — investigated 2026-08-10 (FR-3.8.1). TRI-01/TRI-03 are exact and selective (8.4%) but ungated: OQ-25 inherited, TRI-02 guideline-tier, and no derivable "sideways" threshold. No `TRIANGLE` type. |
 | **Impulse with Extension** | ❌ Classification blocked | **OQ-24** — investigated on real data 2026-08-10 and left open: no cliff in five formulations, EXT-02 unmeasurable on 98.8%. Quantities recorded (FR-3.2.4); no `IMPULSE_WITH_EXTENSION` type emitted. Independent of OQ-05. |
 | **Motive Sequence** | ❌ Not implementable | **OQ-14** — excluded from v1 |
 
@@ -1043,7 +1078,7 @@ SRS says UNDEFINED rather than assuming.
 | **D-05** | Whether to extend CI beyond `test_engine.py` — the 29 swing/zigzag regression tests are currently **not** run in CI (TR-11) | — |
 | **D-06** | Whether to introduce TypeScript test infrastructure for the new chart (TR-10) | — |
 | **D-07** | Whether Elliott Wave ever appears in the exported HTML report — and if so, how to avoid the existing `CandlestickChart.tsx` ↔ `api/report/charts.py` duplication hazard (§1.3) | — |
-| **D-08** | Answer OQ-12 — whether Triangle is in v1 scope, given its gates are near-vacuous (FR-3.8.1) | — |
+| **D-08** | Answer OQ-12 — whether Triangle is in v1 scope. **Investigated 2026-08-10 and deliberately deferred** (FR-3.8.1). The premise was wrong: the gates are NOT near-vacuous (8.4% pass, comparable to flat/zigzag). Triangle stays out of scope for a different reason — 21% of candidates contradict the reference's own definition of "sideways", and no threshold for it is derivable. Candidates are measured (FR-3.8.2). | — |
 | ~~**D-09**~~ | ~~Answer OQ-18~~ — **CLOSED 2026-08-10.** `max_combination_depth = 1`, derived from the ladder (ARCHITECTURE §6.7a) | — |
 | **D-10** | Answer OQ-20 — how a 3-swing move is classified as motive vs corrective | D-01 |
 | **D-11** | Build order, given §8. Now depends on **D-02a**, not D-02 | D-01, D-02a |
@@ -1118,7 +1153,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 
 3. **OQ-09 / OQ-10** — Regular and Expanded Flat remain indistinguishable. Running Flat is
    unaffected and stays in the core.
-4. **OQ-12 / OQ-13** — Triangle's gates remain near-vacuous; scope decision required.
+4. **OQ-12 / OQ-13** — Triangle. **Corrected 2026-08-10:** the gates are *not* near-vacuous (TRI-01/TRI-03 pass 8.4% of windows, exact and mandatory-tier). Triangle stays unclassified because "sideways" has no derivable threshold and 21% of candidates plainly trend. Candidates are measured; no `TRIANGLE` type is emitted.
 5. ~~**OQ-18**~~ — **RESOLVED.** Double/Triple Three implemented; the *nested* branch is
    missing; the {zigzag, flat} branch is available. A depth cap would close this.
 6. **OQ-24** — Extension undefined and **not derivable from data** (investigated 2026-08-10, FR-3.2.2); this also keeps OQ-19's zigzag/impulse tiebreak circular. Quantities are recorded, the verdict withheld.

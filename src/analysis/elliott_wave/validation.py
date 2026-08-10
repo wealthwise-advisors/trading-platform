@@ -74,8 +74,20 @@ BLOCKED_RULES: tuple[dict, ...] = (
      "reason": "Flat wave-C ratios use an undefined 'wave AB' base."},
     {"rules": ["TRI-01", "TRI-02", "TRI-03", "TRI-04",
                "TRI-05", "TRI-06", "TRI-07"], "oq": "OQ-12/OQ-13",
-     "reason": "Triangle has no Fibonacci ratios, no rules for waves D/E, no "
-               "variant discriminators, and a near-vacuous subdivision gate."},
+     "reason": "Triangle states no Fibonacci ratio, no rule for wave D or "
+               "wave E, and no geometry for its four named variants -- those "
+               "appear only in a graphic, never in prose, so there is no text "
+               "to extract. CORRECTED 2026-08-10: the subdivision gate is NOT "
+               "'near-vacuous' as previously recorded. TRI-01 + TRI-03 are "
+               "exact, mandatory-tier and selective -- 328 of 3,912 five-leg "
+               "windows pass (8.4%), comparable to the flat and zigzag "
+               "confirm rates. They still do not gate: the strict reading of "
+               "'subdivided into three' finds 1 candidate in 3,912 so the "
+               "loose one is used and OQ-25 is inherited; TRI-02's host rule "
+               "is guideline-tier and matches only 6 of 328 anyway; and 21% "
+               "of candidates are plainly trending, which would contradict "
+               "the reference's own opening definition of the word. "
+               "Candidates are measured instead -- see triangle.py."},
     {"rules": ["MS-01", "MS-02", "MS-03"], "oq": "OQ-14",
      "reason": "Motive Sequence is defined by 'the numbers in the motive "
                "sequence', and those numbers are never stated."},
@@ -143,6 +155,10 @@ V1_LIMITATIONS: tuple[str, ...] = (
     "is analysed, not on the rule: at <=7,189 bars no impulse ever confirmed "
     "above scale 1, but over 60,000-bar slices 14 GATED scale-2 impulses "
     "appear. Small samples will still show none.",
+    "Triangle candidates are measured but never classified -- OQ-12 and OQ-13 "
+    "are open. TRI-01/TRI-03 are exact and would be gateable if 'sideways' "
+    "were ever quantified, but it is not, so no TRIANGLE structure type "
+    "exists. See triangle.py and AnalysisResult.triangle_candidates.",
     "Regular and Expanded Flat are measured but never separated -- OQ-09 and "
     "OQ-10 are open and neither 'near', 'slightly beyond' nor "
     "'substantially beyond' has a natural width in the data. Flats stay "

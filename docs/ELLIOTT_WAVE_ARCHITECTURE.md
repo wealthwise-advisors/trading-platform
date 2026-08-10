@@ -20,7 +20,8 @@ Flat, Running Flat → serialization → one API sub-resource → one dedicated 
 chart.
 
 **Out (deferred, each blocked by its own Open Question):** Regular Flat and Expanded Flat
-(OQ-09/OQ-10) · Triangle (OQ-12/OQ-13) · Impulse with Extension **classification**
+(OQ-09/OQ-10) · Triangle **classification** (OQ-12/OQ-13 — candidates measured since
+2026-08-10, §6.7b) · Impulse with Extension **classification**
 (OQ-24 — its quantities *are* measured since 2026-08-10, §6.8) · Motive Sequence (OQ-14, not implementable) · Fibonacci **matching** (OQ-05 — ratios are
 still *computed and recorded*, just never declared "matched").
 
@@ -39,12 +40,13 @@ src/analysis/elliott_wave/
 ├── diagonal.py        Leading / Ending Diagonal (LD-*, ED-*)
 ├── correction.py      Zigzag, generic Flat, Running Flat
 ├── combination.py     Double Three, Triple Three (OQ-18 depth cap)
+├── triangle.py        Triangle candidates — measures, never classifies
 ├── measurements.py    guideline ratios + extension quantities — records, never decides
 ├── validation.py      lifecycle transitions + blocked-rule registry
 └── pipeline.py        orchestration; the one correct call order
 ```
 
-**12 files** (11 at v1; `combination.py` added 2026-08-10 with the OQ-18 resolution).
+**13 files** (11 at v1; `combination.py` and `triangle.py` added 2026-08-10).
 Every one earns its place below.
 
 ### 2.1 Modules deliberately NOT created
@@ -313,6 +315,7 @@ One line each, then the contract that matters.
 | `diagonal.py` | Apply LD-01/03 and ED-01/03 to 5-leg windows in valid host positions. |
 | `correction.py` | Apply ZZ-01…04, FL-01/02 and FLU-01 to 3-leg windows. |
 | `combination.py` | Apply DT-01/03/05 and TT-01/03/05; own the OQ-18 recursion depth cap. |
+| `triangle.py` | Form TRI-01/TRI-03 candidates and measure TRI-05/06/07. Never gate. |
 | `measurements.py` | Compute and record guideline ratios and EXT-01/EXT-02 quantities. **Cannot match, cannot classify.** |
 | `validation.py` | Own lifecycle transitions and the blocked-rule registry. |
 | `pipeline.py` | Run the layers in the one correct order and assemble the result. |
@@ -443,6 +446,33 @@ constant is used as a ceiling rather than an equality.
 **OQ-26.** DT-02's "7 swing structure" contradicts DT-04 + GEN-06 (3+3+3 = 9, not 7). Swing count
 is **measured and reported, never gated**, and every combination carries `blocked_by: ["OQ-26"]`.
 
+### 6.7b `triangle.py`
+
+Forms candidate windows from **TRI-01** ("labelled as ABCDE" — five sides) and **TRI-03**
+("3-3-3-3-3"), measures them, and names nothing. `StructureType` has no `TRIANGLE` member and
+candidates never enter `waves`; they go to `AnalysisResult.triangle_candidates` as plain records,
+because putting an unnameable shape into the list the chart renders would present a guess as
+analysis.
+
+**Both rules are exact and mandatory-tier**, the same signature FLE-01 has, and genuinely
+selective: 328 of 3,912 five-leg windows pass (8.4%), against 318 flats and 173 zigzags on the
+same data. A prior note calling this gate "near-vacuous" was measured and corrected.
+
+**Why it still does not gate.** Three reasons, in increasing order of weight. The strict reading
+of "subdivided into three" finds 1 candidate in 3,912, so the loose predicate `diagonal.py`
+already applies to LD-03/ED-03's identical `3-3-3-3-3` is used instead — inheriting **OQ-25**.
+TRI-02's host rule is worded "usually" (guideline-tier, an OQ-01 question) and matches only 6 of
+328 anyway. And decisively: the reference opens *"a triangle is a sideways movement"*, yet 21% of
+candidates have net displacement above half their path length. TRI-01 + TRI-03 is an **incomplete**
+criterion for the word — it omits exactly the property that defines it — where FLE-01 was a
+complete criterion for its own claim.
+
+`TRI-05_net_over_path` quantifies "sideways" without judging it; no threshold exists, and the
+apparent three-mode structure in the data was rejected by bootstrap (0 of 3 modes stable).
+`TRI-07`'s two trendline slopes are recorded because they are what *would* name the four variants
+— which the reference names and then describes only in a graphic. `TRI-06` records RSI at each
+pivot; "supports" states no direction, threshold or comparison.
+
 ### 6.8 `measurements.py`
 
 Computes every guideline ratio the reference states (IMP-F01…F04, ZZ-F01/F02, …) and records the
@@ -535,6 +565,7 @@ both existing test files (§12.1 of the SRS).
 | `test_ew_correction.py` | Zigzag, generic Flat, Running Flat; Regular/Expanded absent and *reported* as blocked |
 | `test_combination.py` | DT-01/03/05, TT-01/03/05, the OQ-18 depth-cap boundary, and OQ-26 swing count recorded-not-gated |
 | `test_extension.py` | EXT-01/EXT-02 quantities, reject-on-tie, scale-1 unmeasurability reported as None, and the OQ-24 abstention (no verdict at any ratio) |
+| `test_triangle.py` | Candidate formation, sidewaysness at both extremes, RSI None-vs-zero, and the OQ-12/13 abstention (a plainly trending window is recorded, not rejected, and never named) |
 | `test_flat_subtype.py` | FLR-01/FLR-02/FLE-01 quantities, sign conventions in both directions, and the OQ-09/OQ-10 abstention (an extreme expanded shape stays generically typed) |
 | `test_ew_guards.py` | **TR-2** no invented constants · **TR-4** no score field · **TR-7** independence via import graph · blocked-rule registry completeness |
 | `test_ew_pipeline.py` | Ordering, determinism over ≥20 runs, serializer shape, live/report default parity (FR-1e.4) |
@@ -568,9 +599,10 @@ Each step is independently testable; nothing later invalidates anything earlier.
 2. **Do not add a tolerance, epsilon, or buffer anywhere.** OQ-05 is open; TR-2 will catch it.
 3. **Do not add a confidence/score field.** FR-7.4; TR-4 will catch it.
 4. **Do not import or consume `swing_identification` / `zigzag`.** FR-1f.2; TR-7 will catch it.
-5. **Do not implement wedge geometry, Regular/Expanded Flat, Triangle, or Fibonacci matching.**
-   All blocked; register them in `blocked_rules` instead. *(DT/TT were unblocked 2026-08-10 by the
-   OQ-18 depth cap. Extension is MEASURED but must never be CLASSIFIED — OQ-24 stays open.)*
+5. **Do not implement wedge geometry, Regular/Expanded Flat, or Fibonacci matching.**
+   All blocked; register them in `blocked_rules` instead. *(DT/TT were unblocked 2026-08-10 by
+   the OQ-18 depth cap. Extension, the Flat subtypes and Triangle candidates are all MEASURED
+   but must never be CLASSIFIED — OQ-24, OQ-09/10 and OQ-12/13 all stay open.)*
 6. **Do not touch `CandlestickChart.tsx`.**
 7. **When a rule cannot be evaluated, return UNDECIDABLE.** Never guess a pass or a fail.
 

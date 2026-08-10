@@ -175,3 +175,7 @@ class AnalysisResult:
     waves: list[Wave] = field(default_factory=list)
     blocked_rules: list[dict] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    # Windows satisfying TRI-01 and TRI-03, measured but never classified.
+    # Deliberately NOT in `waves`: they are not structures, and OQ-12/OQ-13
+    # keep them unnameable. See triangle.py.
+    triangle_candidates: list[dict] = field(default_factory=list)
