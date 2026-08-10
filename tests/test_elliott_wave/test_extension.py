@@ -10,7 +10,6 @@ The measurement is exercised through `measurements.record_extension` directly
 so each assertion pins one behaviour rather than the detector's tuning.
 """
 
-import pandas as pd
 import pytest
 
 from src.analysis.elliott_wave import measurements, pipeline
