@@ -10,8 +10,8 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 
 > **Read this first.** This engine is deliberately incomplete, and its incompleteness is
 > reported at runtime rather than hidden. Roughly half the reference's rules cannot be
-> implemented because the source does not define them precisely enough. **21 of 27 Open
-> Questions remain unresolved.** Every affected rule is registered in
+> implemented because the source does not define them precisely enough. **Of 27 Open Questions:
+> 6 resolved, 20 unresolved, 1 confirmed not implementable.** Every affected rule is registered in
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
 >
@@ -21,7 +21,8 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 > with nothing inside it: MS-01 says "incomplete", MS-03 defines completeness by "the numbers
 > in the motive sequence", and the numbers are never stated. MS-03's "much *like* the
 > Fibonacci number sequence" is a simile, not an identity. Reclassified out of the unresolved
-> tally: **5 resolved, 21 unresolved, 1 not implementable**. No code written.
+> tally: **5 resolved, 21 unresolved, 1 not implementable**. No code written. *(Superseded by
+> Step 7: OQ-01 later resolved as documentation, giving the final **6 / 20 / 1**.)*
 >
 > **V2 Step 5 addendum — 2026-08-10.** **OQ-12/OQ-13 investigated and left open.** A 13th
 > module, `triangle.py`, measures Triangle candidates and classifies nothing — no `TRIANGLE`
@@ -357,7 +358,37 @@ deterministic — byte-identical output across 20 repeated runs.
 
 ---
 
-## 10. Remaining Open Questions — 21 of 27 unresolved, plus OQ-14 closed as not implementable
+### V2 — all deferred-structure investigations complete (2026-08-10)
+
+Seven follow-up steps closed out every deferred structure and every substantive Open Question on
+the list. **One was built, four were investigated and deliberately left measurement-only, one was
+closed as impossible, and one was resolved on paper with no behavioural change.**
+
+| Step | Question | Outcome |
+|---|---|---|
+| 1 | **OQ-18** Double/Triple Three | **Resolved and built.** Recursion capped at depth 1, derived from the ladder. Two missed rules (DT-05/TT-05) extracted; new **OQ-26** raised |
+| 2 | **OQ-24** Extension | **Measurement-only.** No cliff in five formulations over 1,142 impulses; EXT-02 unmeasurable on 98.7% |
+| 3 | **OQ-09/OQ-10** Regular/Expanded Flat | **Measurement-only.** No cliff in either dimension across 356 flats. Found **FLE-01** — exact and unactioned — but gating it needs an unstated precedence rule, raised as **OQ-27** |
+| 4 | **OQ-05** Fibonacci matching | **Measurement-only.** No tolerance in the reference, no clustering once density is controlled for, 11× spread in the width one would need. Scope corrected: it blocks 14 rules, not 16 |
+| 5 | **OQ-12/OQ-13** Triangle | **Measurement-only.** TRI-01/TRI-03 turned out exact and selective (8.4%), not "near-vacuous" as recorded — but 21% of candidates contradict the reference's own definition of "sideways" |
+| 6 | **OQ-14** Motive Sequence | **Closed — not implementable.** The definition is circular and the numbers are never stated; the absent content *is* the rule |
+| 7 | **OQ-01** Mandatory/Guideline tiers | **Resolved as documentation.** Tiers adopted, restated as judgement *informed by* grammar rather than derived from it. **No gate reclassified** — blast radius measured per rule first |
+
+The pattern is deliberate. Four of the seven ended in abstention, and in each case the reason is
+recorded with its evidence rather than as a bare "blocked", so the question does not need
+re-investigating. Along the way the work also **corrected four claims this project had made about
+itself**: the missed DT-05/TT-05 rules, the "zero scale-≥2 impulses" absolute, the "separated only
+by slightly-vs-substantially" flat claim, and the "near-vacuous" triangle gate — plus the OQ-05
+attribution and the grammar-derivation claim. The count of unresolved questions went **up**
+(21 → 20 with two closures, but 27 total after three new ones surfaced), which for honest
+bookkeeping is the right direction.
+
+**Structures added since v1:** Double Three, Triple Three. **Measurement-only additions:**
+extension quantities, flat-subtype quantities, triangle candidates. **Gates changed: none.**
+
+---
+
+## 10. Remaining Open Questions — 20 of 27 unresolved, plus OQ-14 closed as not implementable
 
 **Resolved (4):** OQ-02, OQ-03, OQ-04, OQ-21.
 
@@ -365,7 +396,7 @@ deterministic — byte-identical output across 20 repeated runs.
 
 | OQ | Subject |
 |---|---|
-| **OQ-01** | Whether the grammar-based Mandatory/Guideline split is the adopted classification. *Partially constrained* (blanket-non-gating ruled out) but not answered |
+| ~~**OQ-01**~~ *(resolved 2026-08-10 — documentation only, no gate changed)* | Whether the grammar-based Mandatory/Guideline split is the adopted classification. *Partially constrained* (blanket-non-gating ruled out) but not answered |
 | **OQ-05** | Fibonacci tolerance — blocks all 16 ratio rules from ever "matching" |
 | OQ-06 | "of wave 1-2" base undefined |
 | OQ-07 | "inverse retracement" never defined |
@@ -386,7 +417,7 @@ deterministic — byte-identical output across 20 repeated runs.
 | OQ-24 | "Extension" has no numeric definition |
 | **OQ-25** | *(new)* Diagonal leg→sub-wave mapping |
 
-OQ-01, OQ-05 and OQ-20 were explicitly preserved unresolved by instruction throughout. **No Open
+OQ-05 and OQ-20 remain explicitly preserved unresolved by instruction. OQ-01 was preserved throughout the v1 build and resolved only in V2 Step 7, as documentation with no behavioural change. **No Open
 Question was resolved by substituting classical Elliott Wave knowledge** — where the reference is
 silent, the engine says UNDECIDABLE.
 
@@ -419,6 +450,7 @@ recorded as accepted rather than a defect.
 section.
 **Test coverage and CI:** §8 — 220 tests passing; D-05 raised CI coverage from 2% to 100%.
 **Performance:** §9 — the quadratic-annotation timeout fix and measured generation times.
-**Remaining Open Questions:** §10 — **21 of 27 unresolved**, plus OQ-14 not implementable, listed individually.
+**Remaining Open Questions:** §10 — **6 resolved, 20 unresolved, 1 not implementable** (of 27),
+listed individually, with the V2 investigation summary above them.
 
 **No code changed in this step** — documentation only.
