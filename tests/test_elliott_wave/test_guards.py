@@ -140,6 +140,33 @@ class TestDeferredStructuresAbsent:
             for word in ("substantially", "slightly", "near_start"):
                 assert word not in low, f"{module}.py uses '{word}' (OQ-09/10 open)"
 
+    def test_no_threshold_constant_in_the_flat_subtype_code(self):
+        """OQ-09/OQ-10 open: 'near', 'slightly beyond' and 'substantially
+        beyond' were investigated on 356 real flats and have no natural width,
+        so no number may stand in for them.
+
+        FLE-01 is measured, and needs no constant to be: "beyond the starting
+        level of wave A" is a sign test, not a magnitude test. So the same
+        no-float-literal rule that guards the extension code applies here.
+        """
+        src = inspect.getsource(measurements.record_flat_subtype)
+        src = re.sub(r'""".*?"""', "", src, flags=re.S)
+        src = "\n".join(line.split("#")[0] for line in src.splitlines())
+
+        floats = [f for f in re.findall(r"\b\d+\.\d+\b", src) if f != "1.0"]
+        assert not floats, f"float literal in flat-subtype code: {floats}"
+
+        for line in src.splitlines():
+            if "retracement_of_waveA" in line or "waveC_beyond" in line:
+                assert not re.search(r"[<>]=?", line), (
+                    f"a flat ratio is being thresholded: {line.strip()}")
+
+    def test_flat_subtype_measurement_does_not_gate(self):
+        """It may not skip, reject or retype a structure."""
+        src = inspect.getsource(measurements.record_flat_subtype)
+        assert "structure_type =" not in src, "the measurement retypes a flat"
+        assert "LifecycleState" not in src, "the measurement touches lifecycle"
+
     def test_no_extension_verdict(self):
         """OQ-24 open: extension may be MEASURED, never DECIDED.
 

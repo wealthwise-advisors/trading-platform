@@ -24,8 +24,8 @@ comparison), and [OQ-21](#oq-21-resolution--elliott-specific-pivot-detection) (a
 Elliott-specific pivot detector that neither modifies **nor consumes** the existing swing/zigzag
 modules). **All four are decisions, not source-defined behavior** — the reference contributes
 nothing to any of them — and are labelled as such wherever they appear. *(OQ-18 has since been
-resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **5 of 26
-resolved, 21 unresolved**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
+resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **5 of 27
+resolved, 22 unresolved**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
 with OQ-21 settled, **the engine now has a defined input**.
 
 ---
@@ -326,6 +326,46 @@ gives are the wave-B and wave-C termination tests:
 Expanded and Running share an identical wave-B ratio (**OQ-23**), and "near" / "slightly" /
 "substantially" are never quantified (**OQ-09**, **OQ-10**).
 
+### OQ-09 / OQ-10 investigated 2026-08-10 — measured, still unresolved
+
+Attacked with the D-13 method — derive the number from real data, don't guess — over **356 flats**
+from CL 5m, NQ 5m, CL 15m and ES 15m. **No cliff exists in either dimension**, so both stay open
+and the engine records the quantities without separating the subtypes
+(`measurements.record_flat_subtype`).
+
+**OQ-10 — "slightly" vs "substantially" beyond wave A's end.** Where wave C lands is a broad
+continuum: p5 = 0.17, p25 = 0.69, p50 = 1.29, p75 = 2.54, p95 = 5.98 (in units of |wave A|). Every
+large consecutive gap sits at p97 or beyond — tail sparsity, not a regime boundary. There is no
+trough anywhere that could mark the end of "slightly" and the start of "substantially".
+
+**OQ-09 — "near" the start of wave A.** Wave B's retracement of wave A runs *continuously through
+1.00* with no trough at all: p25 = 0.37, p50 = 0.65, p75 = 1.21, and only **9%** of flats land
+within ±10% of 1.00. "Near" has no natural width to discover.
+
+### A correction, and one exact rule that was overlooked
+
+The implementation note in `correction.py` claimed Regular and Expanded were *"separated ONLY by
+slightly-vs-substantially"*. **That was wrong**, and the summary table above already showed why:
+the wave-B column is a second, independent discriminator, and **FLE-01's half of it is exact.**
+
+**FLE-01 — "wave B of the 3-3-5 pattern terminates beyond the starting level of wave A"** — is a
+binary geometric test. It needs no threshold, no tolerance and no Open Question, exactly like
+FLU-01, which already ships as a gate. It is marked *Not implemented* above rather than *Blocked*,
+so this is an unactioned extraction gap, not a reference gap. **33.5% of real flats (118 of 352)
+satisfy it.**
+
+What FLE-01 buys and what it does not:
+
+- It separates **Expanded from NOT-Expanded**, exactly and without inventing anything.
+- It does **not** hand us Regular Flat. Regular's own two statements are *both* vague ("near",
+  "slightly beyond"), so Regular has **no exact criterion at all** and cannot be gated under any
+  resolution of OQ-10 alone.
+- Promoting it to a gate would collide with Running Flat: **29 of the 34** structures satisfying
+  FLE-01 also satisfy FLU-01, and the reference states no precedence between them. That is
+  recorded as **OQ-27**.
+
+FLE-01 is therefore **measured but not gating**, pending a project decision.
+
 ## 12. Triangle (§5.3)
 
 | ID | Structure | Wave | Rule (verbatim) | M/G | Input | Measurement | Fib | Mom | § | Status |
@@ -403,8 +443,8 @@ before it can enter the Phase 3 SRS.
 | **OQ-06** | IMP-F02 | "161.8% … of wave **1-2**" — is the base the net displacement from start of wave 1 to end of wave 2, or the length of wave 1 projected from the end of wave 2? Standard practice differs from the literal reading. |
 | **OQ-07** | IMP-F04, FIB-06 | "**inverse** 123.6 – 161.8% retracement of wave 4" — "inverse retracement" is used but never defined on the page. |
 | **OQ-08** | IMP-F03, WP-07 | Wave 4: §3.1 says "14.6%, 23.6%, or 38.2% of wave 3 **but no more than 50%**"; §4.3 says "typically retraces **less than 38.2%**". Is 50% a hard cap or a guideline, and how does it interact with IMP-05 (overlap), which is the actual structural constraint? Two sections give different numbers. |
-| **OQ-09** | FLR-01 | Regular Flat wave B "terminates **near** the start of wave A" — "near" is unquantified, and the paired Fibonacci value (90%) is a **single point** with no tolerance, so under strict reading it can essentially never match. |
-| **OQ-10** | FLR-02, FLE-02 | "**slightly** beyond" (Regular) vs "**substantially** beyond" (Expanded) is the only stated discriminator between the two subtypes, and neither word is quantified. |
+| **OQ-09** | FLR-01 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** Regular Flat wave B "terminates **near** the start of wave A" — "near" is unquantified, and the paired Fibonacci value (90%) is a **single point** with no tolerance. Data derivation failed: across 356 real flats wave B's retracement runs continuously through 1.00 with no trough (p25 0.37, p50 0.65, p75 1.21; only 9% within ±10% of 1.00). Regular Flat has **no exact criterion of its own**, so it cannot be gated at all. Quantities recorded; verdict withheld. |
+| **OQ-10** | FLR-02, FLE-02 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** "**slightly** beyond" (Regular) vs "**substantially** beyond" (Expanded), neither quantified. Data derivation failed: wave C's landing point is a broad continuum (p5 0.17 to p95 5.98 × |A|) with every large gap at p97+. **Correction:** this was previously described as *the only* stated discriminator between the subtypes. It is not — the wave-B test is a second one, and **FLE-01's half of it is exact** (see §11.3). |
 | **OQ-11** | FLR-F02, FLE-F02, FLU-F02 | All three flat subtypes measure wave C "of wave **AB**". What is "wave AB" — the net A-to-B displacement, the sum of len(A)+len(B), or wave A's length? Undefined. |
 | **OQ-12** | TRI-01…07 | Triangle has **no Fibonacci ratios, no per-wave rules for D or E, no rule distinguishing the four named variants**, and TRI-04 permits nearly any corrective subdivision. As written, a Triangle detector would match almost any 5-leg sideways move. Is Triangle in scope at all for v1? |
 | **OQ-13** | TRI-06 | "RSI also needs to support the triangle in **every time frame**" — "support" is undefined, and "every time frame" is undefined in a single-timeframe backtest. This is the only place RSI is named as a requirement. |
@@ -413,6 +453,7 @@ before it can enter the Phase 3 SRS.
 | **OQ-16** | LD-03, ED-03 | Leading and Ending Diagonal permit the **identical** subdivision sets, so shape cannot distinguish them — only host position can. Confirm that's intended. |
 | **OQ-17** | DEG-03, DEG-04 | Only 2 of the 9 degrees are mapped to a timeframe, and no rule exists for assigning a degree from price data. How is degree assigned? |
 | ~~**OQ-18**~~ | DT-03, TT-03 | **✅ RESOLVED 2026-08-10 — recursion capped at depth 1.** *(Original question: W/Y/Z may themselves be a "double three of smaller degree", recursive with no stated depth limit.)* The cap is derived from the pivot ladder's expressive limit, not chosen: correctives occur only at scale 2, so a combination needs scale 3 and a nested one scale 4 — two levels would need scale 5, beyond the 4-scale ladder. See [OQ-18 resolution](#oq-18-resolution--doubletriple-three-recursion-depth). |
+| **OQ-27** | FLE-01, FLU-01 | **NEW 2026-08-10, UNRESOLVED.** Running Flat and Expanded Flat overlap and the reference states no precedence. FLE-01 (wave B beyond wave A's start) and FLU-01 (wave C short of wave A's end) are both exact and both mandatory-tier, and **29 of 34** real structures satisfy both. Which label wins is undefined. Dormant while FLE-01 does not gate; live the moment it does. |
 | **OQ-26** | DT-02, TT-02 | **NEW 2026-08-10, UNRESOLVED.** The reference's own swing arithmetic is inconsistent. DT-02 says WXY is a **7**-swing structure, but DT-04 says X is "any corrective structure" and GEN-06 says correctives move in three — 3+3+3 is **9**, not 7. The stated count only works if X contributes a single swing. TT is identical: 11 = 3+1+3+1+3. Gating on the count would contradict DT-04; ignoring DT-02 would drop a mandatory-tier statement. Swing count is therefore **recorded as a measurement and never gated**, and every combination carries `blocked_by: ["OQ-26"]`. |
 | **OQ-19** | ZZ-F03 | The reference itself flags that a Zigzag's wave C at 161.8% of A is ambiguous with a wave 3 of an impulse, and offers "whether the third swing has extension or not" as the tiebreak — but "extension" is itself undefined (OQ-24). Circular. |
 | **OQ-20** | GEN-04, GEN-06 | §5 says corrective waves "move in three, but **never** in five"; §1.6/§3.5 says motive waves "can unfold in **3 waves**". A 3-swing move is therefore both possibly-corrective and possibly-motive, with **no stated discriminator**. This is the reference's central modernization and its central ambiguity. |
@@ -716,7 +757,7 @@ section total.
 **Impulse is now fully specified** — all six of its gates (IMP-01…IMP-06) are settled, three by
 the reference and three by the OQ-02/03/04 decisions. The remaining blocked rules cluster into:
 the 16 Fibonacci rules (all blocked on tolerance, **OQ-05**, none of which gate anything), the
-Regular/Expanded flat discriminators (**OQ-09** / **OQ-10**), Triangle (**OQ-12** / **OQ-13**),
+Regular/Expanded flat discriminators (**OQ-09** / **OQ-10** — investigated 2026-08-10, no cliff; but FLE-01 alone is exact and unactioned, see §11.3), Triangle (**OQ-12** / **OQ-13**),
 and extensions (**OQ-24**). Nested combinations are no longer blocked: **OQ-18 is resolved** by a depth-1 cap, though DT-02/TT-02's swing counts remain open as **OQ-26**.
 
 **The OQ-21 resolution deliberately does not move these numbers.** OQ-21 was never a *per-rule*

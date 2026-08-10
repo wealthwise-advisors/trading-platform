@@ -4,11 +4,16 @@
 Written 2026-08-09.
 
 **Sole rule authority:** [docs/ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (94 rule records,
-26 Open Questions), which in turn derives solely from
+27 Open Questions), which in turn derives solely from
 <https://elliottwave-forecast.com/elliott-wave-theory/>.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 1.0 — 2026-08-10.** **OQ-09/OQ-10 investigated and left open** — no cliff in 356
+> real flats; quantities now measured (FR-3.7.1a–c). **FR-3.7.1 corrected**: Regular and
+> Expanded are NOT separated only by slightly-vs-substantially — FLE-01 is a second, exact
+> discriminator, currently unactioned. **New OQ-27** records the Running/Expanded precedence
+> collision that gating FLE-01 would create. Previously —
 > **Revision 0.9 — 2026-08-10.** **OQ-24 investigated and deliberately left open** — extension
 > is now MEASURED but never classified (FR-3.2.2 to FR-3.2.4). Data derivation was attempted
 > with the D-13 method and failed: no cliff in any of five formulations. Confirmed independent
@@ -398,15 +403,47 @@ a number set that is absent from the source. Supplying one would be invention (O
 |---|---|---|---|
 | 3 legs, 3-3-5 subdivision | FL-01 | SD | Implementable |
 | Wave A subdivides into 3 (this is what separates Flat from Zigzag) | FL-02 | SD | Implementable |
-| **Regular:** wave B terminates *near* the start of wave A | FLR-01 | **UD — OQ-09** | **BLOCKED.** "Near" unquantified; paired ratio is a single point (90%) with no tolerance. |
-| **Regular:** wave C terminates *slightly beyond* the end of wave A | FLR-02 | **UD — OQ-10** | **BLOCKED.** "Slightly" unquantified. |
-| **Expanded:** wave B terminates beyond the start of wave A | FLE-01 | SD | Implementable — a clean directional price comparison |
-| **Expanded:** wave C ends *substantially beyond* the end of wave A | FLE-02 | **UD — OQ-10** | **BLOCKED.** "Substantially" unquantified. |
+| **Regular:** wave B terminates *near* the start of wave A | FLR-01 | **UD — OQ-09** | **BLOCKED; QUANTITY MEASURED.** "Near" unquantified and no cliff in the data (FR-3.7.1a). |
+| **Regular:** wave C terminates *slightly beyond* the end of wave A | FLR-02 | **UD — OQ-10** | **BLOCKED; QUANTITY MEASURED.** "Slightly" unquantified, no cliff. |
+| **Expanded:** wave B terminates beyond the start of wave A | FLE-01 | SD | **Implementable and unactioned** — exact, needs no threshold. Measured; does not gate, pending **OQ-27** (FR-3.7.1c). 33.5% of real flats satisfy it. |
+| **Expanded:** wave C ends *substantially beyond* the end of wave A | FLE-02 | **UD — OQ-10** | **BLOCKED; QUANTITY MEASURED.** "Substantially" unquantified, no cliff. |
 | **Running:** wave C falls short of where wave A ended | FLU-01 | SD | Implementable — a clean directional price comparison |
 | All flat Fibonacci ratios | FLR-F01/F02, FLE-F01/F02, FLU-F01/F02 | **UD — OQ-05, OQ-11** | Record, never gate. Additionally **OQ-11**: the base "wave AB" is undefined. |
 
-**FR-3.7.1 [UD — OQ-10]** — Regular and Expanded Flat are separated *only* by "slightly beyond"
-vs "substantially beyond". With both undefined, **the two subtypes are not distinguishable**.
+**FR-3.7.1 [UD - OQ-09/OQ-10] - CORRECTED 2026-08-10.** This clause previously read *"Regular and
+Expanded Flat are separated **only** by 'slightly beyond' vs 'substantially beyond'."* **That is
+wrong**, and the table above already contradicted it: the wave-B test is a second, independent
+discriminator, and **FLE-01's half of it is exact** (SD, "Implementable - a clean directional price
+comparison"). The accurate statement is:
+
+  * **FLE-01 separates Expanded from NOT-Expanded**, exactly, with no threshold.
+  * **Regular Flat cannot be gated at all** - *both* of its statements are vague (FLR-01 "near",
+    FLR-02 "slightly beyond"), so it has no exact criterion of its own. Resolving OQ-10 alone
+    would not produce Regular Flat.
+
+**FR-3.7.1a [EN] - OQ-09/OQ-10 investigated 2026-08-10, deliberately left open.** Data derivation
+over 356 real flats found **no cliff in either dimension**:
+
+  * OQ-10 - where wave C lands relative to wave A's end is a broad continuum, p5 = 0.17 to
+    p95 = 5.98 x |A|, every large gap at p97+. No trough between "slightly" and "substantially".
+  * OQ-09 - wave B's retracement of wave A runs continuously *through* 1.00 with no trough
+    (p25 = 0.37, p50 = 0.65, p75 = 1.21); only 9% of flats land within +/-10% of 1.00.
+
+**FR-3.7.1b [EN] - what SHALL be recorded** on every flat and running flat, never gating, each
+tagged `blocked_by: ["OQ-09", "OQ-10"]`. `StructureType` SHALL NOT gain `FLAT_REGULAR` or
+`FLAT_EXPANDED`:
+
+| Measurement | Notes |
+|---|---|
+| `FLR-01_waveB_retracement_of_waveA` | 1.0 means wave B ended exactly at wave A's start |
+| `FLE-01_waveB_beyond_waveA_start` | boolean; exact, needs no threshold |
+| `FLR-02_FLE-02_waveC_beyond_waveA_end` | signed, in units of wave A's length; below 0 is FLU-01's case |
+| `waveC_over_waveA` | relative to wave A only - the "wave AB" base is OQ-11, undefined |
+
+**FR-3.7.1c [UD - OQ-27]** - FLE-01 is **measured but SHALL NOT gate**, pending a project
+decision. Promoting it would collide with Running Flat: **29 of 34** real structures satisfy both
+FLE-01 and FLU-01, and the reference states no precedence between Expanded and Running. See
+OQ-27.
 
 **FR-3.7.2 [UD — OQ-23]** — Expanded and Running Flat state the **same** wave-B ratio (123.6%).
 Wave B cannot discriminate between them; only wave C can (FLE-02 vs FLU-01).
@@ -538,8 +575,8 @@ blocked *by Impulse*.
         ├──→ ✅ ZIGZAG      (ZZ-01…04 — A and C now classifiable)       ⚠ OQ-19 disambiguation
         └──→ ✅ FLAT generic (FL-01/02 — 5-wave C now classifiable)
                   ├── ✅ Running Flat   (FLU-01 fully specified)
-                  ├── ❌ Regular Flat   — OQ-09, OQ-10
-                  └── ❌ Expanded Flat  — OQ-10
+                  ├── ❌ Regular Flat   — OQ-09, OQ-10 (no exact criterion at all)
+                  └── ❌ Expanded Flat  — FLE-01 exact but not gating (OQ-27)
                         │
                         ▼
               DOUBLE / TRIPLE THREE — DT-03/TT-03 partially satisfied:
@@ -559,8 +596,8 @@ blocked *by Impulse*.
 | **Zigzag** | ✅ **All gates specified** | **OQ-19** open: the reference's own impulse-vs-zigzag tiebreak at C = 161.8% depends on "extension" (OQ-24). Affects labelling preference, not gating. |
 | **Flat (generic)** | ✅ **Gates specified** | — |
 | **Running Flat** | ✅ **Fully specified** (FLU-01) | The only fully-specified flat subtype (FR-3.7.3) |
-| **Regular Flat** | ❌ Blocked | **OQ-09** ("near"), **OQ-10** ("slightly beyond") |
-| **Expanded Flat** | ❌ Blocked | **OQ-10** ("substantially beyond") |
+| **Regular Flat** | ❌ Blocked | **OQ-09** ("near"), **OQ-10** ("slightly beyond") — investigated 2026-08-10, no cliff. Has **no exact criterion of its own**, so unreachable under any resolution of OQ-10 alone. Quantities measured. |
+| **Expanded Flat** | ⚠ Gateable but not gating | **FLE-01 is exact** and unactioned; FLE-02 stays blocked by **OQ-10**. Not promoted because **OQ-27** (Running/Expanded precedence, 29 of 34 overlap) is unresolved. Quantities measured. |
 | **Double / Triple Three** | ✅ **Implemented 2026-08-10** | OQ-18 resolved by a depth-1 cap (FR-3.9a). DT-02/TT-02's swing counts remain **OQ-26** — recorded, never gated. OQ-17 is not involved: the gate keys on the ladder's integer `scale`, not a named degree. |
 | **Triangle** | ❌ Blocked | **OQ-12**, **OQ-13** — independent of Impulse throughout |
 | **Impulse with Extension** | ❌ Classification blocked | **OQ-24** — investigated on real data 2026-08-10 and left open: no cliff in five formulations, EXT-02 unmeasurable on 98.8%. Quantities recorded (FR-3.2.4); no `IMPULSE_WITH_EXTENSION` type emitted. Independent of OQ-05. |
@@ -758,7 +795,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 | ID | Tier | Requirement |
 |---|---|---|
 | TR-1 | **EN** | Every **implementable** mandatory gate SHALL have both a passing fixture and a fixture violating **only** that gate. Applies to: IMP-01, IMP-02, IMP-03, LD-01, LD-03, ED-01, ED-03, ZZ-01, ZZ-02, ZZ-03, ZZ-04, FL-01, FL-02, FLE-01, FLU-01, TRI-01, TRI-03, DT-01, DT-02, DT-04, TT-01, TT-02, TT-04. |
-| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open; no Fibonacci constant outside the one scoped DT-05/TT-05 ceiling exception; no "extension" verdict, threshold constant or comparison of the extension ratio while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
+| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open, and no flat ratio is compared against a constant; no Fibonacci constant outside the one scoped DT-05/TT-05 ceiling exception; no "extension" verdict, threshold constant or comparison of the extension ratio while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
 | TR-2b | **EN** | **IMP-04 / IMP-05 tests.** Fixtures SHALL cover: wave 3 longer than both siblings (pass); wave 3 shorter than both (fail); wave 3 shorter than exactly one (pass); wave 4 territory clear of wave 1 (pass); wave 4 territory overlapping wave 1 (fail); and both exact-equality boundary cases of FR-3.1b.8. A further test SHALL assert **no tolerance constant** is applied to either gate (FR-3.1b.7). |
 | TR-2a | **EN** | **IMP-06 tests.** Fixtures SHALL cover all four outcomes of the resolved definition: divergence present (up), divergence present (down), price precondition met but RSI **not** diverging (gate fails, FR-3.1a.8), and RSI(13) `NaN` at a comparison bar (→ **UNDECIDABLE**, FR-3.1a.6). A further test SHALL assert **no tolerance constant** is applied to the RSI comparison (FR-3.1a.5). |
 | TR-3 | **EN** | A test SHALL assert LD-02/ED-02 (wave 1/4 overlap) **never** gates — a fixture with overlap must still classify as a diagonal. This is explicitly source-defined (FR-3.3.1) and easy to regress. |
@@ -775,7 +812,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 
 ---
 
-## 14. Open Questions — 5 resolved, 21 unresolved (OQ-25, OQ-26 added 2026-08-10)
+## 14. Open Questions — 5 resolved, 22 unresolved (OQ-25, OQ-26, OQ-27 added 2026-08-10)
 
 **Revised 2026-08-09.** **OQ-02, OQ-03, OQ-04 and OQ-21 are RESOLVED by project decision**
 (§6.1b, §6.1a, §4a). **The other 20 remain unresolved and none has been silently narrowed.**
@@ -792,8 +829,8 @@ insufficient, and what it blocks.
 | **OQ-06** | IMP-F02 | "of wave 1-2" — net displacement start-of-1→end-of-2, or wave 1's length projected from end of wave 2? | Wave 3 ratio base |
 | **OQ-07** | IMP-F04, FIB-06 | "inverse retracement" is used but never defined on the page. | Wave 5 target, basis 1 of 3 |
 | **OQ-08** | IMP-F03, WP-07 | §3.1 says "14.6%, 23.6%, or 38.2% … but no more than 50%"; §4.3 says "typically less than 38.2%". Two sections, different numbers. Cap vs guideline unstated. | Wave 4 ratio; its interaction with IMP-05 |
-| **OQ-09** | FLR-01 | "near" unquantified; paired ratio is a single point (90%) with no tolerance. | Regular Flat wave-B gate |
-| **OQ-10** | FLR-02, FLE-02 | "slightly beyond" vs "substantially beyond" is the **only** Regular/Expanded discriminator; neither is quantified. | Regular vs Expanded Flat separation (FR-3.7.1) |
+| **OQ-09** | FLR-01 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** "near" unquantified; paired ratio is a single point (90%). Wave B's retracement runs continuously through 1.00 with no trough; only 9% within +/-10%. | Regular Flat wave-B gate. Quantity measured (FR-3.7.1b). |
+| **OQ-10** | FLR-02, FLE-02 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** Neither word is quantified and wave C's landing point is a broad continuum (p5 0.17 to p95 5.98). **Corrected:** this is *not* the only Regular/Expanded discriminator — the wave-B test is a second one, and FLE-01 is exact. | Regular Flat entirely; Expanded's wave-C half. Quantities measured (FR-3.7.1b). |
 | **OQ-11** | FLR-F02, FLE-F02, FLU-F02 | "of wave AB" — net A→B displacement, len(A)+len(B), or len(A)? Undefined. | All three flat wave-C ratios |
 | **OQ-12** | TRI-01…07 | No Fibonacci ratios, no rules for waves D/E, no variant discriminators; TRI-04 permits nearly any corrective. | Whether Triangle is in v1 at all (FR-3.8.1) |
 | **OQ-13** | TRI-06 | "support" undefined; "every time frame" undefined in a single-timeframe backtest. Only place RSI is named as a requirement. | Triangle momentum gate |
@@ -808,6 +845,7 @@ insufficient, and what it blocks.
 | **OQ-25** | LD-03, ED-03 | **NEW 2026-08-10, UNRESOLVED.** The reference constrains a diagonal's subdivision *shape* (5-3-5-3-5 / 3-3-3-3-3) but never defines how detector-scale legs combine into an Elliott sub-wave. Implemented readings: 'sub-wave is a five-wave' = 'the finer scale registers an impulse inside it'; 'sub-wave is a three-wave' = 'spans ≥2 finer legs'. Both are readings, not stated rules. | Which groupings count as valid diagonals. All consistent groupings are emitted as alternates; none is preferred. |
 | ~~**OQ-21**~~ | All | **RESOLVED 2026-08-09 by project decision** — an independent, Elliott-specific detector (§4a) that neither modifies nor consumes the existing swing/zigzag modules. **The reference still says nothing on this**; the detector is 100% project engineering, tier EN. | *(was: the engine's entire input — now specified)* |
 | **OQ-22** | WP-02/04/08/11/12/13, TRI-05 | All volume statements are qualitative, with no threshold or window. Volume is also **synthetic** on the default data source. | All volume rules (FR-4.3) |
+| **OQ-27** | FLE-01, FLU-01 | **NEW 2026-08-10, UNRESOLVED.** Expanded and Running Flat overlap on exact criteria — FLE-01 (wave B beyond wave A's start) and FLU-01 (wave C short of wave A's end) are both exact and mandatory-tier, and 29 of 34 real structures satisfy both. The reference states no precedence. | Whether FLE-01 may gate (FR-3.7.1c). Dormant while it does not. |
 | **OQ-23** | FLE-F01, FLU-F01 | Expanded and Running Flat state the **same** wave-B ratio (123.6%). | Wave B cannot separate them (FR-3.7.2) |
 | **OQ-24** | EXT-01, EXT-02, ZZ-F03 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** No numeric definition anywhere, and none derivable: five formulations over 1,142 impulses show no cliff; EXT-02 unmeasurable on 98.8% and self-contradicting on 36% of the rest. **Independent of OQ-05** — no stated inequality to lift, unlike DT-05. | Extension *classification* (FR-3.2.1); feeds OQ-19. Quantities are measured (FR-3.2.4). |
 
@@ -891,8 +929,9 @@ Every rule ID from the inventory appears exactly once.
 | ZZ-F01, ZZ-F02 | FR-4.2 | UD | **OQ-05** |
 | ZZ-F03 | FR-3.6 | UD | OQ-19 |
 | FL-01, FL-02 | FR-3.7 | SD | — |
-| FLR-01 | FR-3.7 | UD | OQ-09 |
-| FLR-02 | FR-3.7 | UD | OQ-10 |
+| FLR-01 | FR-3.7, FR-3.7.1b | UD | OQ-09 — measured, never gated |
+| FLR-02 | FR-3.7, FR-3.7.1b | UD | OQ-10 — measured, never gated |
+| FLE-01 | FR-3.7, FR-3.7.1c | SD | **Exact and unactioned** — measured; gating pending OQ-27 |
 | FLE-01 | FR-3.7 | SD | — |
 | FLE-02 | FR-3.7 | UD | OQ-10 |
 | FLU-01 | FR-3.7, FR-3.7.3 | SD | — |
@@ -1021,7 +1060,7 @@ identical split.
 
 ### Open Questions preserved
 
-**21 of 26 unresolved; OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25 and OQ-26 were added 2026-08-10.**
+**22 of 27 unresolved; OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25, OQ-26 and OQ-27 were added 2026-08-10.**
 
 - **OQ-02, OQ-03** — RESOLVED (§6.1b). **OQ-04** — RESOLVED (§6.1a). **OQ-21** — RESOLVED (§4a).
   All four tagged **EN**, not SD: the reference contributes nothing to any of them, and each is

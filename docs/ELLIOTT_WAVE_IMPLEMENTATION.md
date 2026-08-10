@@ -4,16 +4,26 @@
 Written 2026-08-10. Branch `feature/elliott-wave-rebuild` (local, unpushed).
 
 **Sole rule source:** <https://elliottwave-forecast.com/elliott-wave-theory/>
-**Companion documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 26 Open
+**Companion documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 27 Open
 Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 [ELLIOTT_WAVE_ARCHITECTURE.md](ELLIOTT_WAVE_ARCHITECTURE.md) (module design, D-13 calibration)
 
 > **Read this first.** This engine is deliberately incomplete, and its incompleteness is
 > reported at runtime rather than hidden. Roughly half the reference's rules cannot be
-> implemented because the source does not define them precisely enough. **21 of 26 Open
+> implemented because the source does not define them precisely enough. **22 of 27 Open
 > Questions remain unresolved.** Every affected rule is registered in
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
+>
+> **V2 Step 3 addendum — 2026-08-10.** **OQ-09/OQ-10 investigated and left open.** No cliff
+> in 356 real flats in either dimension, so Regular and Expanded stay unseparated and the
+> quantities are measured instead (`measurements.record_flat_subtype`). **A stale claim was
+> corrected**: Regular and Expanded are NOT separated only by slightly-vs-substantially —
+> **FLE-01** (*wave B terminates beyond the starting level of wave A*) is a second, *exact*
+> discriminator that needs no threshold and was simply never actioned; 33.5% of real flats
+> satisfy it. It is measured but does not gate, pending the new **OQ-27**: 29 of 34 structures
+> satisfying FLE-01 also satisfy FLU-01, and the reference states no precedence between
+> Expanded and Running. Suite is **312 tests**.
 >
 > **V2 Step 2 addendum — 2026-08-10.** **OQ-24 investigated and deliberately left open.**
 > Extension is now MEASURED but never classified: `measurements.record_extension` records
@@ -127,7 +137,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 | Structure / feature | Blocked by | Reason |
 |---|---|---|
 | **Regular Flat** | OQ-09, OQ-10 | "Wave B terminates **near** the start of wave A", "wave C **slightly** beyond" — neither quantified; the paired ratio is a single point (exactly 90%) with no tolerance |
-| **Expanded Flat** | OQ-10 | Needs "**substantially** beyond". Regular vs Expanded are separated *only* by slightly-vs-substantially, so with OQ-10 open the two are indistinguishable |
+| **Expanded Flat** *(wave C half)* | OQ-10, OQ-27 | Needs "**substantially** beyond", unquantified and with no cliff in 356 real flats. **Corrected 2026-08-10:** this row previously said Regular and Expanded are separated *only* by slightly-vs-substantially. They are not — **FLE-01** (wave B beyond wave A start) is a second, *exact* discriminator, now measured. It does not gate pending **OQ-27** (29 of 34 structures satisfying it also satisfy FLU-01) |
 | **Triangle** | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
 | ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
 | **Impulse with Extension** *(classification only)* | OQ-24 *(investigated 2026-08-10, no cliff in data; independent of OQ-05)* | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
@@ -321,7 +331,7 @@ deterministic — byte-identical output across 20 repeated runs.
 
 ---
 
-## 10. Remaining Open Questions — 21 of 26 unresolved
+## 10. Remaining Open Questions — 22 of 27 unresolved
 
 **Resolved (4):** OQ-02, OQ-03, OQ-04, OQ-21.
 
@@ -342,6 +352,7 @@ deterministic — byte-identical output across 20 repeated runs.
 | OQ-16 | LD and ED permit identical subdivisions |
 | OQ-17 | Degree assignment from price data |
 | **OQ-26** | *(new)* DT-02/TT-02 swing count: the reference's 7 contradicts DT-04 + GEN-06's 9 |
+| **OQ-27** | *(new)* Expanded vs Running Flat precedence: FLE-01 and FLU-01 are both exact and 29 of 34 real structures satisfy both, with no stated priority |
 | OQ-19 | Zigzag-vs-impulse tiebreak, circular via OQ-24 |
 | **OQ-20** | A 3-swing move is both possibly-motive and possibly-corrective, with no discriminator |
 | OQ-22 | Volume statements qualitative |
@@ -382,6 +393,6 @@ recorded as accepted rather than a defect.
 section.
 **Test coverage and CI:** §8 — 220 tests passing; D-05 raised CI coverage from 2% to 100%.
 **Performance:** §9 — the quadratic-annotation timeout fix and measured generation times.
-**Remaining Open Questions:** §10 — **21 of 26 unresolved**, listed individually.
+**Remaining Open Questions:** §10 — **22 of 27 unresolved**, listed individually.
 
 **No code changed in this step** — documentation only.

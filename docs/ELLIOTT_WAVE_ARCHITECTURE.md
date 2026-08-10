@@ -3,7 +3,7 @@
 **Phase 4 deliverable.** Version 1.0 (DRAFT — not approved for implementation).
 Written 2026-08-09.
 
-**Governing documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 26 OQs — 5
+**Governing documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 27 OQs — 5
 resolved) and [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements, rev 0.5). Where this
 document and the SRS disagree, **the SRS wins** and this document is the bug.
 
@@ -449,6 +449,15 @@ Computes every guideline ratio the reference states (IMP-F01…F04, ZZ-F01/F02, 
 raw value. **It exposes no comparison, tolerance, or match function at all** — the absence of the
 capability is the enforcement mechanism for OQ-05, and TR-2 asserts no tolerance constant exists.
 
+**Flat subtypes (FLR-01/02, FLE-01/02), added 2026-08-10.** `record_flat_subtype` records wave
+B's retracement of wave A, whether wave B passed wave A's start, and where wave C landed relative
+to wave A's end. OQ-09 and OQ-10 were investigated over 356 real flats and stayed open: no cliff
+in either dimension. **A correction landed with it** — the old claim that Regular and Expanded are
+separated only by slightly-vs-substantially was wrong. FLE-01 is a second, *exact* discriminator
+needing no threshold, and it was simply never actioned (33.5% of real flats satisfy it). It is
+measured but does not gate, because 29 of 34 structures satisfying it also satisfy FLU-01 and the
+reference states no precedence — recorded as the new **OQ-27**.
+
 **Extension (EXT-01/EXT-02), added 2026-08-10.** `record_extension` records which motive wave is
 longest, its ratio to the second-longest, and finer-scale subdivision counts where a finer scale
 exists. It renders **no verdict**: OQ-24 was investigated with the D-13 data-derivation method and
@@ -518,6 +527,7 @@ both existing test files (§12.1 of the SRS).
 | `test_ew_correction.py` | Zigzag, generic Flat, Running Flat; Regular/Expanded absent and *reported* as blocked |
 | `test_combination.py` | DT-01/03/05, TT-01/03/05, the OQ-18 depth-cap boundary, and OQ-26 swing count recorded-not-gated |
 | `test_extension.py` | EXT-01/EXT-02 quantities, reject-on-tie, scale-1 unmeasurability reported as None, and the OQ-24 abstention (no verdict at any ratio) |
+| `test_flat_subtype.py` | FLR-01/FLR-02/FLE-01 quantities, sign conventions in both directions, and the OQ-09/OQ-10 abstention (an extreme expanded shape stays generically typed) |
 | `test_ew_guards.py` | **TR-2** no invented constants · **TR-4** no score field · **TR-7** independence via import graph · blocked-rule registry completeness |
 | `test_ew_pipeline.py` | Ordering, determinism over ≥20 runs, serializer shape, live/report default parity (FR-1e.4) |
 

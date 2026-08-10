@@ -35,10 +35,23 @@ BLOCKED_RULES: tuple[dict, ...] = (
     {"rules": ["IMP-F04"], "oq": "OQ-07",
      "reason": "'inverse retracement' is never defined; that basis is skipped."},
     {"rules": ["FLR-01", "FLR-02"], "oq": "OQ-09/OQ-10",
-     "reason": "Regular Flat needs 'near' and 'slightly beyond', unquantified."},
+     "reason": "Regular Flat needs 'near' and 'slightly beyond', unquantified. "
+               "Investigated on 356 real flats 2026-08-10 and left open: wave "
+               "B's retracement of wave A runs continuously THROUGH 1.00 with "
+               "no trough (p25 0.37, p50 0.65, p75 1.21; only 9% land within "
+               "+/-10% of 1.00), so 'near' has no natural width. Regular Flat "
+               "has NO exact criterion of its own -- both its statements are "
+               "vague -- so it cannot be gated at all. The quantities are "
+               "recorded (FLR-01_*, FLR-02_*); only the verdict is withheld."},
     {"rules": ["FLE-02"], "oq": "OQ-10",
-     "reason": "Expanded Flat needs 'substantially beyond', unquantified; "
-               "Regular and Expanded are therefore indistinguishable."},
+     "reason": "Expanded Flat's wave C needs 'substantially beyond', "
+               "unquantified. Investigated 2026-08-10: where wave C lands "
+               "relative to wave A's end is a broad continuum (p5 0.17 to p95 "
+               "5.98 times |A|) with every large gap out at p97+, so no "
+               "threshold separates 'slightly' from 'substantially'. NOTE "
+               "FLE-01 -- 'wave B terminates beyond the STARTING level of "
+               "wave A' -- needs no threshold and IS measured; whether it may "
+               "gate is an open project decision, not a blocked rule."},
     {"rules": ["FLR-F02", "FLE-F02", "FLU-F02"], "oq": "OQ-11",
      "reason": "Flat wave-C ratios use an undefined 'wave AB' base."},
     {"rules": ["TRI-01", "TRI-02", "TRI-03", "TRI-04",
@@ -112,6 +125,10 @@ V1_LIMITATIONS: tuple[str, ...] = (
     "is analysed, not on the rule: at <=7,189 bars no impulse ever confirmed "
     "above scale 1, but over 60,000-bar slices 14 GATED scale-2 impulses "
     "appear. Small samples will still show none.",
+    "Regular and Expanded Flat are measured but never separated -- OQ-09 and "
+    "OQ-10 are open and neither 'near', 'slightly beyond' nor "
+    "'substantially beyond' has a natural width in the data. Flats stay "
+    "generically typed. See measurements.record_flat_subtype.",
     "Extension (EXT-01/EXT-02) is measured but never classified -- OQ-24 is "
     "open and no threshold for 'extended' exists in the reference or in the "
     "data. See measurements.record_extension.",

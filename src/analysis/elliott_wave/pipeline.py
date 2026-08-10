@@ -109,6 +109,9 @@ def run_analysis(df: pd.DataFrame, config: EngineConfig | None = None) -> Analys
     # EXT-01/EXT-02 quantities. Recorded, never classified: OQ-24 stays open,
     # so no structure is ever relabelled "impulse with extension".
     measurements.record_extension(structures, by_id, by_scale)
+    # Regular-vs-Expanded Flat quantities. Recorded, never classified: OQ-09
+    # and OQ-10 stay open, so no flat is ever retyped to a subtype.
+    measurements.record_flat_subtype(structures, by_id)
 
     # stable ordering for byte-identical output across runs
     waves.sort(key=lambda w: (w.scale, w.start_pivot.index, w.end_pivot.index, w.id))

@@ -128,6 +128,66 @@ def _record_impulse(s: Wave, by_id: dict[str, Wave]) -> None:
     })
 
 
+def record_flat_subtype(structures: list[Wave], by_id: dict[str, Wave]) -> None:
+    """Record the quantities that WOULD separate Regular from Expanded Flat.
+
+    Measurement only. No structure is retyped: ``StructureType`` still has no
+    ``FLAT_REGULAR`` or ``FLAT_EXPANDED`` member, because OQ-09 and OQ-10 stay
+    open. Every structure touched gains ``blocked_by: ["OQ-09", "OQ-10"]``.
+
+    Why not a threshold -- investigated on real data 2026-08-10, 356 flats:
+
+      * OQ-10 ("slightly" vs "substantially" beyond wave A's end): where wave
+        C lands is a broad continuum, p5 = 0.17 to p95 = 5.98 times |A|, with
+        every large gap out at p97+. No trough anywhere between "slightly" and
+        "substantially".
+      * OQ-09 ("near" the start of wave A): wave B's retracement of wave A
+        runs continuously THROUGH 1.00 with no trough -- p25 = 0.37,
+        p50 = 0.65, p75 = 1.21 -- and only 9% of flats land within +/-10% of
+        1.00. "Near" has no natural width.
+
+    FLE-01 is the exception, and it is recorded as a fact rather than derived
+    from a threshold: "wave B terminates BEYOND the starting level of wave A"
+    is a binary geometric test needing no quantification at all, exactly like
+    FLU-01. It is reported here; whether it may GATE is a separate decision
+    (it would collide with Running Flat, which 29 of these 34 also satisfy).
+    """
+    for s in structures:
+        if s.structure_type not in (StructureType.FLAT,
+                                    StructureType.FLAT_RUNNING):
+            continue
+        legs = _legs(s, by_id)
+        if len(legs) != 3:
+            continue
+        wa, _wb, wc = legs
+        start_a = wa.start_pivot.price
+        end_a = wa.end_pivot.price
+        end_b = legs[1].end_pivot.price
+        end_c = wc.end_pivot.price
+        len_a = abs(end_a - start_a)
+        if len_a == 0:
+            continue
+        # +1 when wave A rose, -1 when it fell, so "beyond" reads the same way
+        # for both directions.
+        heading = 1.0 if end_a > start_a else -1.0
+
+        s.measurements.update({
+            # OQ-09: FLR-01 wants this "near" 1.0; FLE-01 wants it past 1.0.
+            "FLR-01_waveB_retracement_of_waveA": abs(end_b - end_a) / len_a,
+            # FLE-01 is exact -- no threshold, no tolerance, just geometry.
+            "FLE-01_waveB_beyond_waveA_start": bool(
+                (end_b - start_a) * heading < 0),
+            # OQ-10: FLR-02 wants "slightly" past 0, FLE-02 "substantially"
+            # past 0, FLU-01 short of it. Signed, in units of |wave A|.
+            "FLR-02_FLE-02_waveC_beyond_waveA_end": (
+                (end_c - end_a) * heading / len_a),
+            "waveC_over_waveA": abs(end_c - end_b) / len_a,
+        })
+        for oq in ("OQ-09", "OQ-10"):
+            if oq not in s.blocked_by:
+                s.blocked_by.append(oq)
+
+
 def record_extension(
     structures: list[Wave],
     by_id: dict[str, Wave],

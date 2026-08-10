@@ -20,10 +20,23 @@ NOT implemented, deliberately -- these are reported as blocked, not omitted:
     start of wave A" and wave C "SLIGHTLY beyond the end of wave A". Neither
     "near" nor "slightly" is quantified anywhere, and the paired Fibonacci
     value is a single point (exactly 90%) with no tolerance.
-  * Expanded Flat (FLE-01/02) -- OQ-10. FLE-01 alone is clean, but its second
-    gate needs "SUBSTANTIALLY beyond", also unquantified. Regular and Expanded
-    are separated ONLY by slightly-vs-substantially, so with OQ-10 open they
-    are not distinguishable at all.
+  * Expanded Flat (FLE-01/02) -- OQ-10 on the wave C half. FLE-02 needs
+    "SUBSTANTIALLY beyond", unquantified.
+
+    CORRECTED 2026-08-10. This note used to claim "Regular and Expanded are
+    separated ONLY by slightly-vs-substantially". That is wrong. FLE-01 --
+    "wave B terminates beyond the STARTING level of wave A" -- is a second,
+    independent separator, and unlike everything else in the flat family it
+    is EXACT: a binary geometric test needing no threshold, the same shape as
+    FLU-01. 33% of real flats satisfy it. What FLE-01 separates is Expanded
+    from NOT-Expanded; it does not hand us Regular, because Regular's own two
+    statements ("near", "slightly beyond") are both vague, so Regular has no
+    exact criterion of its own and cannot be gated at all.
+
+    FLE-01 is measured (measurements.record_flat_subtype) but does not gate,
+    because 29 of the 34 structures satisfying it ALSO satisfy FLU-01 and the
+    reference states no precedence between Running and Expanded. Making it
+    gate is a pending project decision, not a blocked rule.
   * Triangle -- OQ-12/13. (Double/Triple Three ARE implemented, in
     combination.py, since OQ-18 was resolved by a depth cap.)
 
