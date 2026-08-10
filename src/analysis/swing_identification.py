@@ -2,7 +2,7 @@
 swing_identification.py
 =======================
 
-Swing (pivot) detection for price-action, Elliott-wave and divergence strategies.
+Swing (pivot) detection for price-action and divergence strategies.
 
 Design goals
 ------------
@@ -12,12 +12,56 @@ Design goals
    BOTH the pivot index and the confirmation index. In a backtest you must only
    ever act on ``confirm_index`` -- using ``index`` is look-ahead bias and is the
    #1 way swing strategies look great on history and die live.
-3. Optional minimum-move filter (absolute price, or derived from ATR) to drop
+3. Local-adaptive minimum-move filter (see "Adaptive filtering" below) to drop
    noise pivots and enforce high/low alternation.
 4. Market-structure labelling: HH / HL / LH / LL, plus a coarse trend read.
 
 The detection layer (find_swings) is intentionally simple and auditable; the
 filtering and labelling layers sit on top so you can swap any piece out.
+
+Adaptive filtering (2026-07-20)
+--------------------------------
+``filter_swings`` used to accept one absolute ``min_move`` number, computed by
+the caller as a single GLOBAL statistic over the whole series (typically
+``k * median(ATR)``) and applied identically to every candidate counter-swing
+everywhere in the data. Audited and found to actively erase genuine minor
+pivots: a real, valid small retracement (e.g. a ~3% pullback against a much
+larger prior swing) can be smaller in absolute price terms than a threshold
+sized off the whole series' volatility, which is dominated by the big legs
+elsewhere in the same chart -- verified directly: constructed exactly this
+case and watched the minor pivot vanish from the filtered list entirely.
+
+The filter now evaluates each candidate counter-swing against its own LOCAL
+context instead of one number for the whole chart, combining three signals
+computed AT that candidate's own bar position:
+  - a fraction of the immediately preceding kept swing's own amplitude
+    (``prev_frac``, default 23.6% -- a genuine Wave 2/4 is expected to be
+    smaller than the wave it's correcting, so sizing off the PRIOR swing
+    keeps a small-but-real retracement eligible even when that prior swing
+    was huge)
+  - local ATR (Wilder-smoothed volatility AT this bar, not the whole
+    series' median -- a quiet period isn't held to a threshold set by a
+    separate volatile stretch of the same chart, and vice versa)
+  - recent realized volatility -- a short (10-bar) rolling stdev of returns,
+    which reacts faster to a genuine regime shift than ATR's longer
+    effective memory can
+
+These are combined with **min()**, not max/average: the question for a
+candidate pivot is "does this move clear AT LEAST ONE reasonable local
+yardstick," not "does it clear the strictest one." The caller's own
+``min_move`` (if non-zero) still participates as one more candidate in that
+min() -- so it acts as an upper ceiling (preserving the relative strictness
+intent behind e.g. Primary's larger multiplier vs Minor's smaller one) rather
+than the sole determinant, and callers that explicitly pass ``min_move=0.0``
+("keep everything") get that exact behavior unchanged, since 0 is always the
+minimum of any combination it's part of.
+
+Trade-off, stated plainly: this is deliberately more PERMISSIVE than the old
+global filter -- it will let more small pivots through in exchange for not
+silently deleting real ones. Some of what survives now genuinely is noise;
+there is no free lunch here. Downstream consumers (wave_numbering.py's hard
+rules and candidate scoring) are what's relied on to discard noise that
+happens to pass this looser gate, not this filter alone.
 """
 
 from __future__ import annotations
@@ -98,18 +142,72 @@ def find_swings(high, low, left: int = 2, right: int = 2) -> List[Swing]:
 
 
 # --------------------------------------------------------------------------- #
-# 2. Noise filter: alternation + minimum amplitude
+# 2. Noise filter: alternation + LOCAL-ADAPTIVE minimum amplitude
 # --------------------------------------------------------------------------- #
-def filter_swings(swings: List[Swing], min_move: float = 0.0) -> List[Swing]:
+def _recent_volatility(close, window: int = 10) -> np.ndarray:
+    """Short rolling stdev of bar-to-bar price changes (price units, same
+    scale as ATR and raw price differences -- not a percentage). Reacts
+    faster to a genuine regime shift than Wilder ATR's longer effective
+    memory; used as a second, faster-moving adaptive signal alongside ATR
+    in ``_adaptive_threshold``. NaN for the first ``window`` bars."""
+    close = np.asarray(close, dtype=float)
+    diffs = np.diff(close, prepend=close[0])
+    out = np.full(len(close), np.nan)
+    for i in range(window, len(close)):
+        out[i] = float(np.std(diffs[i - window + 1:i + 1], ddof=0))
+    return out
+
+
+def _adaptive_threshold(
+    prev_amplitude: Optional[float],
+    local_atr: Optional[float],
+    recent_vol: Optional[float],
+    global_min_move: float,
+    prev_frac: float,
+    atr_mult: float,
+    vol_mult: float,
+) -> float:
+    """Combine several LOCAL signals into one adaptive minimum-move
+    threshold for a single candidate counter-swing, instead of one number
+    applied everywhere (see module docstring, "Adaptive filtering").
+    min() of whatever's available and positive -- a real but small Wave
+    2/4 should survive as long as it clears AT LEAST ONE reasonable local
+    yardstick, not all of them at their strictest.
+    """
+    candidates = [global_min_move]
+    if prev_amplitude is not None and prev_amplitude > 0:
+        candidates.append(prev_frac * prev_amplitude)
+    if local_atr is not None and not np.isnan(local_atr) and local_atr > 0:
+        candidates.append(atr_mult * local_atr)
+    if recent_vol is not None and not np.isnan(recent_vol) and recent_vol > 0:
+        candidates.append(vol_mult * recent_vol)
+    return min(candidates)
+
+
+def filter_swings(
+    swings: List[Swing],
+    min_move: float = 0.0,
+    local_atr_series: Optional[np.ndarray] = None,
+    recent_vol_series: Optional[np.ndarray] = None,
+    prev_frac: float = 0.236,
+    atr_mult: float = 1.0,
+    vol_mult: float = 1.0,
+) -> List[Swing]:
     """Enforce high/low alternation and drop tiny counter-swings.
 
     - Consecutive same-type pivots collapse to the more extreme one
       (e.g. two swing highs in a row -> keep the higher).
-    - An opposite pivot is ignored if it reverses less than ``min_move``
-      (absolute price) from the last kept pivot.
+    - An opposite pivot is ignored if it reverses less than an ADAPTIVE
+      threshold from the last kept pivot -- see module docstring,
+      "Adaptive filtering", and ``_adaptive_threshold``.
 
-    ``min_move`` of 0 keeps everything except the alternation collapse.
-    A single forward pass; good enough in practice, not provably optimal.
+    ``local_atr_series`` / ``recent_vol_series`` (optional): arrays aligned
+    to the ORIGINAL bar index space (as produced by ``identify_swings``,
+    which is the normal entry point -- direct callers of this function
+    without them fall back to the plain global-``min_move`` behavior this
+    function always had, since both local signals are simply absent from
+    the min() combination). ``min_move`` of 0 with no local series supplied
+    keeps everything, exactly as before.
     """
     if not swings:
         return []
@@ -123,9 +221,16 @@ def filter_swings(swings: List[Swing], min_move: float = 0.0) -> List[Swing]:
             if more_extreme:
                 kept[-1] = s
         else:
-            if abs(s.price - last.price) >= min_move:
+            prev_amplitude = abs(kept[-2].price - last.price) if len(kept) >= 2 else None
+            local_atr = (local_atr_series[s.index]
+                        if local_atr_series is not None and s.index < len(local_atr_series) else None)
+            recent_vol = (recent_vol_series[s.index]
+                         if recent_vol_series is not None and s.index < len(recent_vol_series) else None)
+            threshold = _adaptive_threshold(prev_amplitude, local_atr, recent_vol, min_move,
+                                            prev_frac, atr_mult, vol_mult)
+            if abs(s.price - last.price) >= threshold:
                 kept.append(s)
-            # else: counter-swing too small, skip it
+            # else: counter-swing too small relative to its LOCAL context, skip it
     return kept
 
 
@@ -210,10 +315,26 @@ def swings_to_frame(swings: List[Swing]) -> pd.DataFrame:
 # One-call pipeline
 # --------------------------------------------------------------------------- #
 def identify_swings(df: pd.DataFrame, left: int = 2, right: int = 2,
-                    min_move: float = 0.0) -> List[Swing]:
-    """detect -> filter -> label. Expects columns 'high' and 'low'."""
+                    min_move: float = 0.0,
+                    atr_period: int = 14, vol_window: int = 10,
+                    prev_frac: float = 0.236, atr_mult: float = 1.0, vol_mult: float = 1.0,
+                    ) -> List[Swing]:
+    """detect -> filter -> label. Expects columns 'high' and 'low' (and
+    ideally 'close' -- used only to compute the adaptive filter's local ATR
+    / recent-volatility signals; falls back to the high/low midpoint if
+    'close' is absent, since neither the fractal detection nor the
+    structure labelling needs it).
+
+    ``atr_period``/``vol_window``/``prev_frac``/``atr_mult``/``vol_mult``
+    tune the adaptive filter (see module docstring, "Adaptive filtering");
+    the defaults are reasonable starting points, not tuned per-instrument.
+    """
     swings = find_swings(df["high"], df["low"], left, right)
-    swings = filter_swings(swings, min_move)
+    close = df["close"] if "close" in df.columns else (df["high"] + df["low"]) / 2.0
+    local_atr_series = atr(df["high"], df["low"], close, atr_period)
+    recent_vol_series = _recent_volatility(close, vol_window)
+    swings = filter_swings(swings, min_move, local_atr_series, recent_vol_series,
+                           prev_frac, atr_mult, vol_mult)
     swings = label_structure(swings)
     return swings
 
@@ -231,13 +352,50 @@ if __name__ == "__main__":
     df = pd.DataFrame({"high": high, "low": low, "close": close})
 
     a = atr(df["high"], df["low"], df["close"], 14)
-    min_move = 1.0 * float(np.nanmedian(a))        # require ~1 ATR reversal
+    global_min_move = 1.0 * float(np.nanmedian(a))        # require ~1 ATR reversal
 
-    swings = identify_swings(df, left=2, right=2, min_move=min_move)
+    swings = identify_swings(df, left=2, right=2, min_move=global_min_move)
     frame = swings_to_frame(swings)
 
-    print(f"bars={n}  pivots found={len(swings)}  min_move={min_move:.2f}")
+    print(f"bars={n}  pivots found={len(swings)}  min_move={global_min_move:.2f}")
     print("\nlast 12 confirmed swings:")
     print(frame.tail(12).to_string(index=False))
     print("\ncurrent structure:", trend_state(swings))
     print("confirmation lag = right = 2 bars  ->  act on confirm_index, never index")
+
+    print("\n" + "=" * 70)
+    print("OLD (pure global min_move) vs NEW (local-adaptive):")
+    print("a genuine, valid minor retracement (15% of the prior swing) sitting")
+    print("in the SAME series as an unrelated, much more volatile stretch")
+    print("elsewhere in the chart -- exactly the")
+    print("real-world case (e.g. one volatile news day inflating a whole")
+    print("year's ATR median) that erases a valid pivot under a single global")
+    print("threshold, but not under a threshold evaluated locally.")
+    print("=" * 70)
+    demo_rng = np.random.default_rng(3)
+    noisy = 500 + np.cumsum(demo_rng.normal(0, 28, 130))   # unrelated volatile stretch
+    w1 = np.linspace(100, 160, 20)
+    w2 = np.linspace(160, 130, 8)[1:]
+    w3 = np.linspace(130, 330, 40)                          # wave 3: 200pt, smooth
+    w4 = np.linspace(330, 300, 8)[1:]                       # wave 4: 30pt retrace = 15% of wave3
+    w5 = np.linspace(300, 400, 20)[1:]
+    pattern = np.concatenate([w1, w2, w3, w4, w5])
+    demo_close = np.concatenate([noisy, pattern])
+    demo_df = pd.DataFrame({"high": demo_close + 0.3, "low": demo_close - 0.3, "close": demo_close})
+    wave4_bar = len(noisy) + len(w1) + len(w2) + len(w3) + len(w4) - 1
+
+    demo_atr = atr(demo_df["high"], demo_df["low"], demo_df["close"], 14)
+    demo_min_move = 2.0 * float(np.nanmedian(demo_atr))   # same 'primary' sensitivity used elsewhere
+
+    old_style = filter_swings(find_swings(demo_df["high"], demo_df["low"], 2, 2), demo_min_move)
+    new_style = identify_swings(demo_df, left=2, right=2, min_move=demo_min_move)
+
+    print(f"\nglobal min_move = {demo_min_move:.2f}  (inflated by the unrelated noisy stretch)")
+    print(f"Wave 4 retrace = 30.0 (15.0% of Wave 3's 200pt length) at bar {wave4_bar}")
+    print("OLD pivots near the pattern:", [(s.index, s.kind.value, round(s.price, 1))
+                                           for s in old_style if s.index >= len(noisy)])
+    print("NEW pivots near the pattern:", [(s.index, s.kind.value, round(s.price, 1))
+                                           for s in new_style if s.index >= len(noisy)])
+    print(f"\nWave 4 (bar {wave4_bar}) present:")
+    print("  OLD:", any(s.index == wave4_bar for s in old_style))
+    print("  NEW:", any(s.index == wave4_bar for s in new_style))

@@ -318,6 +318,7 @@ export interface WaveAnalysis {
   target_zones: WaveTargetZone[]
   alternates: string[]
   notes: string[]
+  warnings: string[]
   wave_sequence: WaveLabel[]
 }
 

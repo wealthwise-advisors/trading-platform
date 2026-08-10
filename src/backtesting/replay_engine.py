@@ -6,11 +6,10 @@ a step() method so callers (Streamlit, a live feed, a test) can drive it
 one bar at a time and observe intermediate state.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 import pandas as pd
-from loguru import logger
 
 from ..data.base_provider import Bar, DataProvider
 from ..broker.paper_broker import PaperBroker

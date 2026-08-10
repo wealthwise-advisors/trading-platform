@@ -1,31 +1,45 @@
+# Production runtime dependencies -- mirrors [project.dependencies] in
+# pyproject.toml. Prefer `pip install -e .` (or `-e ".[dev]"` for
+# development); this file exists for environments (Docker, simple venvs)
+# that want a flat pip-install without editable/package metadata.
+#
+# Audited in Task 10 (v1.0.0 release audit) against actual `import`
+# statements across the whole repo -- not assumed. Corrected two real gaps
+# (fastapi/uvicorn/pydantic/openpyxl/reportlab/python-docx were used but
+# undeclared) and dropped two stale entries (streamlit, scipy -- zero
+# remaining imports anywhere; the Streamlit UI was fully removed, see
+# CLAUDE.md). See docs/RELEASE_AUDIT.md for the full dependency audit.
+
 # Core data
 pandas>=2.0.0
 numpy>=1.24.0
-scipy>=1.10.0
 
 # Technical indicators
 pandas_ta>=0.4.71b0
 
-# Visualization
+# Visualization / reporting
 plotly>=5.15.0
-streamlit>=1.28.0
 
 # Config & logging
 pyyaml>=6.0
 loguru>=0.7.0
 python-dotenv>=1.0.0
 
-# Data sources (historical)
-yfinance>=0.2.28
-
-# Broker APIs — Rithmic historical data + live trading
-pyrithmic>=0.1.0
-
 # Schwab market data API
 requests>=2.31.0
 websockets>=11.0
 
-# Dev / testing
-pytest>=7.4.0
-pytest-cov>=4.1.0
-black>=23.0.0
+# FastAPI backend
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# Report export (api/export/formats.py: CSV/Excel/PDF/Word)
+openpyxl>=3.1.0
+reportlab>=4.0.0
+python-docx>=1.1.0
+Pillow>=12.3.0   # security pin -- see pyproject.toml comment (pip-audit, PYSEC-2026-2253 et al.)
+
+# Optional extras (not installed by default -- see pyproject.toml):
+#   pip install -e ".[live]"   Rithmic real/live market data (requires a licensed account)
+#   pip install -e ".[dev]"    pytest, ruff, mypy, vulture, bandit, pip-audit, black

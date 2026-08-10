@@ -13,6 +13,21 @@ def health():
     return {"status": "ok"}
 
 
+@router.get("/version")
+def get_version():
+    """Task 10 API audit: no version endpoint existed. Reports the
+    installed package version (falls back honestly to 'unknown' rather
+    than a hardcoded guess if the package metadata isn't available, e.g.
+    running from source without `pip install -e .`)."""
+    from importlib.metadata import version, PackageNotFoundError
+
+    try:
+        pkg_version = version("autotrader")
+    except PackageNotFoundError:
+        pkg_version = "unknown (not installed as a package)"
+    return {"version": pkg_version, "api": "autotrader"}
+
+
 @router.get("/strategies")
 def list_strategies():
     return STRATEGIES
@@ -43,8 +58,14 @@ def list_data_sources():
 
     try:
         from src.data.schwab_provider import SchwabDataProvider
+        SchwabDataProvider()
         availability["schwab"] = True
     except Exception:
+        # Task 10 API audit: this previously never actually tried to
+        # construct the provider, so it unconditionally reported True
+        # regardless of whether config/credentials.yaml had a schwab
+        # section at all -- the frontend's "Live Data (Schwab)" option
+        # showed as available even with no credentials configured.
         availability["schwab"] = False
 
     try:

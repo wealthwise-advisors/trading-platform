@@ -27,6 +27,15 @@ data/live/
 
 # Logs
 logs/
+*.log
+
+# Test/coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.bandit_cache/
 
 # Generated reports — share via email/Slack, don't commit
 reports/*.html

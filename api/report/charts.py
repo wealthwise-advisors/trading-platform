@@ -1,13 +1,17 @@
 """Plotly chart builders for the Streamlit dashboard."""
 
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from src.backtesting.results import BacktestResults, Trade
+from src.backtesting.results import BacktestResults
 from src.analysis.indicators import calc_rsi as _calc_rsi, calc_stoch as _calc_stoch
-from src.analysis.zigzag import calc_zigzag as _calc_zigzag, assign_swing_labels as _assign_swing_labels
+from src.analysis.zigzag import (
+    calc_zigzag as _calc_zigzag,
+    assign_swing_labels as _assign_swing_labels,
+    calc_nested_zigzag as _calc_nested_zigzag,
+    spreadsheet_letter as _swing_letter,
+)
 
 # Re-exported under their old underscore-prefixed names (ui/report.py imports
 # these from this module) -- the actual logic now lives in src/analysis/ so
@@ -16,17 +20,6 @@ from src.analysis.zigzag import calc_zigzag as _calc_zigzag, assign_swing_labels
 
 
 _SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
-
-
-def _swing_letter(n: int) -> str:
-    """1 -> A, 2 -> B, ... 26 -> Z, 27 -> AA, ... spreadsheet-column style.
-    Ported from CandlestickChart.tsx's swingLetter() -- keep in sync."""
-    letters = ""
-    x = n
-    while x > 0:
-        x, rem = divmod(x - 1, 26)
-        letters = chr(65 + rem) + letters
-    return letters
 
 
 _GREEN = "#26a69a"

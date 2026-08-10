@@ -32,6 +32,7 @@ import pandas as pd
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
+from ..config import resolve_config_dir
 
 
 # Resample rules: pandas OHLCV aggregation
@@ -73,7 +74,7 @@ class ExternalCSVProvider(DataProvider):
     def _dir_from_config() -> str:
         try:
             import yaml
-            cfg_path = Path(__file__).parent.parent.parent / "config" / "settings.yaml"
+            cfg_path = resolve_config_dir() / "settings.yaml"
             with open(cfg_path) as f:
                 cfg = yaml.safe_load(f)
             return cfg.get("data", {}).get("external_dir", "")
