@@ -9,6 +9,11 @@ Written 2026-08-09.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 1.4 — 2026-08-10.** **OQ-01 RESOLVED as documentation, no behaviour change**
+> (§8.3, FR-8.3.1–4). The M/G tiers are adopted as project judgement *informed by* grammar, not
+> derived from it — the previous "derived purely from the grammar" wording overstated the
+> rigour. Three divergences documented, blast radius measured per rule, **no gate
+> reclassified**. Tally: **6 resolved, 20 unresolved, 1 not implementable**. Previously —
 > **Revision 1.3 — 2026-08-10.** **OQ-14 investigated and closed as not implementable**
 > (FR-3.5.2) — re-verified against the live reference, nothing missed. Reclassified out of the
 > unresolved tally: **5 resolved, 21 unresolved, 1 not implementable**. No code. Previously —
@@ -51,7 +56,7 @@ Written 2026-08-09.
 > pivot-price interval overlap), both §6.1b; and **OQ-04** (divergence = RSI(13) directional
 > comparison), §6.1a. All three are tier **EN** — decisions, **not** source-defined behavior; the
 > reference says nothing on any of them. **All six Impulse gates are now specified and the §8
-> dependency chain is broken.** **The other 21 Open Questions remain unresolved**, and OQ-01 is
+> dependency chain is broken.** **The other 20 Open Questions remain unresolved**, and OQ-01 is
 > *partially constrained* but explicitly **not** resolved (§8.3).
 > Where a requirement depends on an open question it is marked **BLOCKED** or **UNDEFINED** and
 > its behavior is deliberately left unspecified. No classical Elliott Wave knowledge
@@ -718,13 +723,54 @@ threshold values, FR-1e.3) and two boundary confirmations (**D-02b**, **D-02c**)
 Fibonacci rules are non-gating measurements (FR-4.1). The engine can classify structures without
 it; it simply cannot report whether a ratio "matches" (FR-4.2).
 
-### 8.3 OQ-01 remains open — and is now purely a validation question
+### 8.3 OQ-01 — RESOLVED 2026-08-10 as documentation, with no behaviour change
 
-OQ-01 (does the grammar-based Mandatory/Guideline split hold?) is **still unresolved**. The
-2026-08-09 decisions ruled out the blanket-non-gating answer and confirmed gating for IMP-06
-specifically, but did not settle the general classification. It no longer blocks anything on the
-critical path: every gate now in use has been individually confirmed or individually decided.
-It matters for the *remaining* blocked rules, where the M/G call is still load-bearing.
+OQ-01 (is the Mandatory/Guideline split in the inventory the classification the project adopts?)
+is **closed**. The answer is yes, with the description corrected: **the tiers are project
+judgement calls informed by the reference's grammar, not mechanically derived from it.** The
+inventory previously claimed they were "derived purely from the grammar of each statement", which
+claimed more rigour than was applied. **No gate was reclassified and no engine behaviour changed.**
+
+**FR-8.3.1 [EN] — the grammar is evidence, not an algorithm.** All eight structure blocks in the
+reference are headed "Guidelines"; *rule*, *must*, *mandatory* and *required* never appear as a
+classification. Applying grammar mechanically would give a wrong answer: the reference states the
+*same* diagonal subdivision constraint as *"can be"* (LD-03) and *"is either"* (ED-03), which
+would split an identical rule across two tiers. Both are M, correctly.
+
+**FR-8.3.2 [EN] — the IMP-06 / TRI-06 asymmetry is deliberate.** Both use the modal *"needs to"*
+and are tiered oppositely:
+
+  * **IMP-06 is Mandatory by the OQ-04 project decision** (RSI(13), 55/45), taken independently of
+    grammar. Its tier does not rest on the wording.
+  * **TRI-06 remains Guideline**, measurement-only: *"supports"* states no direction, threshold or
+    comparison, and *"in every time frame"* is meaningless in a single-timeframe engine (OQ-13).
+
+They differ on the **evaluability of their content**, not their grammar. This is recorded so a
+future reader does not "correct" the asymmetry into a behaviour change without repeating the
+review in FR-8.3.3.
+
+**FR-8.3.3 [EN] — measured blast radius, and why nothing moved.** Each gating mandatory rule was
+made non-gating on real data (CL 5m, NQ 5m, CL 15m, ES 15m). Baseline **1,891 structures — 765
+gated, 1,126 undecidable, 1,140 impulses**:
+
+| Rule relaxed | structures | gated | undecidable | impulses |
+|---|---|---|---|---|
+| IMP-06 | **+2,560 (+135%)** | +768 | +1,792 | +1,876 |
+| IMP-02 | +1,605 (+85%) | +2,731 | −1,126 | +292 |
+| IMP-05 | +692 (+37%) | +258 | +434 | +450 |
+| IMP-03 | +581 (+31%) | +184 | +397 | +407 |
+| IMP-04 | +125 (+7%) | +74 | +51 | +58 |
+| DT-05 / TT-05 | +51 (+3%) | +51 | 0 | 0 |
+| FLU-01 | 0 | 0 | 0 | 0 |
+
+FLU-01's zero is a **relabel, not a no-op** — relaxed, every flat becomes a running flat
+(188 → 0, 23 → 211). IMP-02 is the **sole source of UNDECIDABLE**. Impulse gates cascade into
+corrections and diagonals: relaxing IMP-02 takes diagonals from 72 to 1,236. IMP-01, ZZ-01, FL-01,
+DT-01 and TT-01 cannot be relaxed this way at all — they define which windows are enumerated.
+
+**FR-8.3.4 [SD] — a third divergence, already tracked.** IMP-F03's *"but no more than 50%"* is an
+absolute cap inside a G-classified rule, needing no tolerance (the DT-05 shape). It remains under
+**OQ-08**.
 
 ## 9. Data model requirements
 
@@ -899,9 +945,9 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 
 ---
 
-## 14. Open Questions — 5 resolved, 21 unresolved, 1 not implementable (of 27)
+## 14. Open Questions — 6 resolved, 20 unresolved, 1 not implementable (of 27)
 
-*OQ-14 is counted separately from 2026-08-10: it is not a pending decision but a terminal
+*OQ-01 was resolved 2026-08-10 as documentation only — the tiers are adopted, restated honestly, and no gate changed (§8.3). OQ-14 is counted separately: it is not a pending decision but a terminal
 gap in the source (FR-3.5.2). The 21 unresolved await a decision or better wording; OQ-14
 awaits content the reference does not contain.*
 
@@ -912,7 +958,7 @@ insufficient, and what it blocks.
 
 | OQ | Affected rules | Why the reference is insufficient | What it blocks |
 |---|---|---|---|
-| **OQ-01** | All 94 | **STILL UNRESOLVED — now partially constrained.** Every structure block is headed "Guidelines"; the words *rule*, *must*, *mandatory* never appear as a classification. The M/G split in the inventory is inferred from grammar, not stated. The 2026-08-09 decisions ruled out the blanket-non-gating answer, but did **not** confirm the grammar-based split. See §8.3. | The definition of "gate" itself. Determines whether *anything* can reject a candidate. |
+| ~~**OQ-01**~~ | All 94 | **RESOLVED 2026-08-10 — documentation only, no behaviour change (§8.3).** The split IS adopted, restated as project judgement *informed by* grammar rather than derived from it. Three divergences documented: IMP-06/TRI-06 (same modal, opposite tiers — deliberate, FR-8.3.2), LD-03/ED-03 (same constraint, different grammar), IMP-F03's embedded cap (OQ-08). Blast radius measured; no gate moved. Original wording: Every structure block is headed "Guidelines"; the words *rule*, *must*, *mandatory* never appear as a classification. The M/G split in the inventory is inferred from grammar, not stated. The 2026-08-09 decisions ruled out the blanket-non-gating answer, but did **not** confirm the grammar-based split. See §8.3. | The definition of "gate" itself. Determines whether *anything* can reject a candidate. |
 | ~~**OQ-02**~~ | IMP-04 | **✅ RESOLVED 2026-08-09 by project decision** — wave length is **absolute price distance** from pivot prices; %, log and bar-count measures rejected. Full definition: §6.1b. **The reference still says nothing on this**; tier EN, not SD. | *(was: impulse gate 4 — now specified)* |
 | ~~**OQ-03**~~ | IMP-05 | **✅ RESOLVED 2026-08-09 by project decision** — territory is the **pivot-price interval**; violated iff wave 4's interval intersects wave 1's. Full-intrabar-range reading rejected. Full definition: §6.1b. **The reference still says nothing on this**; tier EN, not SD. | *(was: impulse gate 5 — now specified)* |
 | ~~**OQ-04**~~ | IMP-06, WP-10 | **✅ RESOLVED 2026-08-09 by project decision** — RSI(13) directional comparison, IMP-06 stays mandatory. Full definition: §6.1a. **The reference still says nothing on this**; the resolution is a decision (tier EN), not source-defined behavior. | *(was: the entire §8 chain — now unblocked at this node)* |
@@ -1093,7 +1139,7 @@ SRS says UNDEFINED rather than assuming.
 
 | # | Decision | Depends on |
 |---|---|---|
-| **D-01** | Answer OQ-01 — what constitutes a gate, given the reference declares only "Guidelines". **Partially constrained** (blanket-non-gating ruled out, §8.3) but still **OPEN**. No longer on the critical path | — |
+| ~~**D-01**~~ | ~~Answer OQ-01~~ — **CLOSED 2026-08-10** as documentation, no behaviour change (§8.3). Original: what constitutes a gate, given the reference declares only "Guidelines". **Partially constrained** (blanket-non-gating ruled out, §8.3) but still **OPEN**. No longer on the critical path | — |
 | ~~**D-02**~~ | ~~Answer OQ-04~~ — **✅ CLOSED 2026-08-09.** IMP-06 stays mandatory; divergence defined as an RSI(13) directional comparison (§6.1a) | — |
 | ~~**D-02a**~~ | ~~Answer OQ-02 and OQ-03~~ — **✅ CLOSED 2026-08-09.** Absolute price distance; pivot-price interval overlap (§6.1b). **This broke the §8 chain.** | — |
 | ~~**D-02c**~~ | ~~Confirm FR-3.1b.8~~ — **CLOSED 2026-08-09.** Reject-on-tie confirmed for both IMP-04 and IMP-05; no change made | — |
@@ -1151,13 +1197,13 @@ identical split.
 
 ### Open Questions preserved
 
-**21 of 27 unresolved, plus OQ-14 confirmed not implementable and closed (FR-3.5.2). OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25, OQ-26 and OQ-27 were added 2026-08-10.**
+**20 of 27 unresolved, plus OQ-14 confirmed not implementable and closed (FR-3.5.2). OQ-01, OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision — OQ-01 as a documentation matter with no behavioural change (§8.3). OQ-25, OQ-26 and OQ-27 were added 2026-08-10.**
 
 - **OQ-02, OQ-03** — RESOLVED (§6.1b). **OQ-04** — RESOLVED (§6.1a). **OQ-21** — RESOLVED (§4a).
   All four tagged **EN**, not SD: the reference contributes nothing to any of them, and each is
   recorded as a decision everywhere it appears.
-- **OQ-01** — **still unresolved.** The decisions ruled out the blanket-non-gating answer, which
-  *constrains* OQ-01 without answering it (§8.3). Deliberately not marked resolved.
+- ~~**OQ-01**~~ — **RESOLVED 2026-08-10** as documentation, no behaviour change (§8.3). The split
+  is adopted and restated as judgement informed by grammar; every gate is unchanged.
 - **OQ-05, OQ-20** — untouched, still marked *"PRESERVED UNRESOLVED per instruction"* in §14.
 - The remaining 17 are unchanged.
 
@@ -1187,7 +1233,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 7. **OQ-05** — 14 Fibonacci rules (not 16; FLE-F02/FLU-F02 state ranges, FR-4.2b). **Investigated 2026-08-10, no tolerance justifiable.** **Not a classification blocker** — non-gating
    measurements; ratios computable, just not declarable as "matched".
 8. ~~**OQ-14**~~ — Motive Sequence **confirmed not implementable and closed 2026-08-10** (FR-3.5.2); excluded from v1 and from the unresolved tally.
-9. **OQ-01** — still open, off the critical path (§8.3).
+9. ~~**OQ-01**~~ — **resolved 2026-08-10**, documentation only (§8.3). No gate changed.
 
 ### Assumptions
 

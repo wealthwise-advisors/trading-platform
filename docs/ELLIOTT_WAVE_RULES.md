@@ -24,8 +24,8 @@ comparison), and [OQ-21](#oq-21-resolution--elliott-specific-pivot-detection) (a
 Elliott-specific pivot detector that neither modifies **nor consumes** the existing swing/zigzag
 modules). **All four are decisions, not source-defined behavior** — the reference contributes
 nothing to any of them — and are labelled as such wherever they appear. *(OQ-18 has since been
-resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **5 of 27
-resolved, 21 unresolved, 1 confirmed not implementable (OQ-14)**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
+resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **6 of 27
+resolved, 20 unresolved, 1 confirmed not implementable (OQ-14)**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
 with OQ-21 settled, **the engine now has a defined input**.
 
 ---
@@ -59,15 +59,128 @@ outline is:
 "rule", "mandatory", "required", or "must" as a classification. There is no rules-vs-guidelines
 distinction in the source.
 
-The **M/G** column below is therefore **my classification, not the reference's**, derived
-purely from the grammar of each statement:
+The **M/G** column below is therefore **a project classification, not the reference's**. It is
+**informed by the grammar of each statement, not mechanically derived from it** — a distinction
+corrected on 2026-08-10 after OQ-01 was investigated, because the original wording ("derived
+purely from the grammar") claimed more rigour than was actually applied.
 
-- **M (Mandatory)** — stated as an absolute negative or a definitional identity:
+The grammar that informs the call:
+
+- **M (Mandatory)** — typically an absolute negative or a definitional identity:
   *"can't"*, *"can not"*, *"does not"*, *"never"*, *"is X waves"*. Falsifiable from price alone.
-- **G (Guideline)** — stated as typical/frequent/approximate: *"usually"*, *"typically"*,
+- **G (Guideline)** — typically an approximation or a frequency claim: *"usually"*, *"typically"*,
   *"generally"*, *"frequently"*, *"should"*, *"can be"*, or any Fibonacci ratio.
 
-This inference needs your sign-off before Phase 3 — see **OQ-01**.
+**Where grammar and judgement diverge, judgement decided, and the divergences are documented
+rather than smoothed over** — see [the OQ-01 investigation](#oq-01-investigated-2026-08-10--resolved-as-documentation-no-behaviour-change).
+Applying the grammar mechanically would give the wrong answer in at least one place: the
+reference states the *same* diagonal subdivision constraint as *"can be"* for LD-03 and *"is
+either"* for ED-03, which would split an identical rule across two tiers.
+
+**OQ-01 is closed** as of 2026-08-10 — resolved as a documentation matter, with no behavioural
+change.
+
+### OQ-01 investigated 2026-08-10 — resolved as documentation, no behaviour change
+
+OQ-01 asked whether the Mandatory/Guideline split in this inventory is the classification the
+project adopts, given the reference labels **every** block "Guidelines" and never says *rule*,
+*must*, *mandatory* or *required* as a classification anywhere.
+
+**Outcome: every gate stays exactly as it is.** What changed is the honesty of the description —
+the tiers are project judgement calls informed by grammar, not outputs of a grammar rule. No code
+was touched, no rule was reclassified, and no structure the engine reports has changed.
+
+#### The grammar evidence
+
+Re-verified against the live reference. All eight structure blocks — Impulse, Leading Diagonal,
+Ending Diagonal, Zigzag, Flat, Triangle, Double Three, Triple Three — carry the identical heading
+**"Guidelines"**. The Impulse list, in order:
+
+| Rule | Verbatim modal | Matches the stated M criterion? |
+|---|---|---|
+| IMP-01 | "subdivide into 5 waves" | yes — definitional identity |
+| IMP-02 | "subdivision **are** impulse" | yes — definitional identity |
+| IMP-03 | "**can't** retrace more than" | yes — absolute negation |
+| IMP-04 | "**can not** be the shortest" | yes — absolute negation |
+| IMP-05 | "**does not** overlap" | yes — absolute negation |
+| IMP-06 | "**needs to** end with momentum divergence" | **no — neither** |
+
+#### Three inconsistencies found
+
+**1. IMP-06 and TRI-06 share a modal and are tiered oppositely.**
+
+> IMP-06 — **M** — *"Wave 5 **needs to** end with momentum divergence"*
+>
+> TRI-06 — **G** — *"RSI also **needs to** support the triangle in every time frame"*
+
+Same verb, same page, opposite tiers. **This is a considered inconsistency, not an oversight**, and
+it is recorded here so that nobody "fixes" it into a behaviour change:
+
+- **IMP-06 is Mandatory by the OQ-04 project decision** (RSI(13) divergence, 55/45), taken
+  deliberately and independently of grammar. Its tier does not rest on the words "needs to".
+- **TRI-06 stays Guideline** because *"supports"* states no direction, no threshold and no
+  comparison, and *"in every time frame"* has no meaning in a single-timeframe engine (OQ-13). It
+  ships measurement-only, exactly as the Triangle step built it.
+
+The two differ because the **evaluability of their content** differs, not because their grammar
+does. Reclassifying either to match the other is a behaviour change of the magnitude in the table
+below — IMP-06 is the single highest-impact gate in the engine.
+
+**2. LD-03 and ED-03 state the same constraint with different grammar.**
+
+> LD-03 — *"The subdivision of a leading diagonal **can be** 5-3-5-3-5 or 3-3-3-3-3"*
+>
+> ED-03 — *"The subdivision of an ending diagonal **is either** 3-3-3-3-3 or 5-3-5-3-5"*
+
+*"Can be"* is on the Guideline list; *"is either"* is a definitional identity. Applied
+mechanically, grammar would put an **identical constraint into two different tiers**. Both are M,
+which is substantively correct — and is the clearest single proof that grammar cannot be the
+criterion on its own. (A closed disjunction, "can be X or Y", genuinely constrains; "can be **any**
+corrective structure" in ZZ-03/DT-04/TT-04 does not, and those are marked permissive and never
+gate.)
+
+**3. An absolute cap inside a guideline.** IMP-F03 — *"Wave 4 is 14.6%, 23.6%, or 38.2% of wave 3
+**but no more than 50%**"* — is G-classified, yet "no more than 50%" is an absolute inequality
+needing no tolerance, the same shape as DT-05. Already tracked as **OQ-08**; noted here because it
+is the one place a gateable constraint sits inside a non-gating rule.
+
+#### Blast radius — why nothing was reclassified
+
+Every currently-gating mandatory rule was measured on real data (CL 5m, NQ 5m, CL 15m, ES 15m) by
+making it non-gating and re-running. Baseline: **1,891 structures — 765 gated, 1,126 undecidable,
+1,140 impulses.**
+
+| Rule relaxed | change in structures | gated | undecidable | impulses |
+|---|---|---|---|---|
+| **IMP-06** wave 5 divergence | **+2,560 (+135%)** | +768 | +1,792 | +1,876 |
+| **IMP-02** wave 1/3/5 subdivide | +1,605 (+85%) | +2,731 | **−1,126** | +292 |
+| **IMP-05** wave 4 territory | +692 (+37%) | +258 | +434 | +450 |
+| **IMP-03** wave 2 retrace | +581 (+31%) | +184 | +397 | +407 |
+| **IMP-04** wave 3 not shortest | +125 (+7%) | +74 | +51 | +58 |
+| **DT-05 / TT-05** wave Y ceiling | +51 (+3%) | +51 | 0 | 0 |
+| **FLU-01** running flat wave C | 0 | 0 | 0 | 0 |
+
+Three things the totals hide:
+
+- **FLU-01's zero is a relabel, not a no-op.** Relaxed, *every* flat becomes a running flat
+  (188 → 0 generic, 23 → 211 running). Zero percent by count, one hundred percent by label.
+- **IMP-02 is the sole source of UNDECIDABLE.** Relaxing it drives the count to zero — the D-14
+  scale-1 floor is entirely IMP-02's doing.
+- **Impulse gates cascade**, because ZZ-02/FL-01 and LD-01/ED-01 consume the spans impulses
+  register. Relaxing IMP-02 takes diagonals from 72 to **1,236**; relaxing IMP-06 takes ending
+  diagonals from 13 to **170**.
+
+Rules that **cannot** be relaxed this way are excluded rather than faked: IMP-01, ZZ-01, FL-01,
+DT-01 and TT-01 are leg-count definitions that determine which windows are enumerated at all. An
+"impulse without IMP-01" is not a relaxed impulse; it is a different structure.
+
+#### Disposition
+
+**OQ-01 RESOLVED 2026-08-10 — documentation only.** The tier assignments are substantively sound
+but were never mechanically derivable from the stated criterion, and the criterion now says so.
+Every gate is unchanged. A future reader who spots the IMP-06/TRI-06 asymmetry should read this
+section before acting on it: it has been reviewed deliberately, and changing it is a behaviour
+change of the magnitude shown above.
 
 ### Column key
 
@@ -689,7 +802,7 @@ before it can enter the Phase 3 SRS.
 
 | OQ | Affects | Question |
 |---|---|---|
-| **OQ-01** | Everything | The reference labels every block "Guidelines" and never says "rule" or "mandatory". Is the M/G split in this document (absolute-negation wording ⇒ Mandatory) the classification we adopt? |
+| ~~**OQ-01**~~ | Everything | **RESOLVED 2026-08-10 — documentation only, no behaviour change.** The M/G split IS the adopted classification, restated honestly as project judgement *informed by* grammar rather than derived from it. Three divergences documented (IMP-06/TRI-06 same modal, opposite tiers — deliberate; LD-03/ED-03 same constraint, different grammar; IMP-F03's embedded cap, tracked as OQ-08). Every gate unchanged; blast radius measured and recorded. See [the investigation](#oq-01-investigated-2026-08-10--resolved-as-documentation-no-behaviour-change). |
 | ~~**OQ-02**~~ | IMP-04 | **✅ RESOLVED 2026-08-09 — absolute price distance.** *(Original question: "shortest" by what — absolute price distance, percentage move, log distance, or bar count? The reference never says; these disagree on real data.)* See [resolution](#oq-02-resolution--wave-3-shortest-measure). |
 | ~~**OQ-03**~~ | IMP-05 | **✅ RESOLVED 2026-08-09 — pivot-price interval overlap.** *(Original question: is the test against wave 1's terminal price or its full intrabar range? And wave 4's terminal price or its own extreme? Four readings.)* See [resolution](#oq-03-resolution--wave-4-price-territory). |
 | ~~**OQ-04**~~ | IMP-06, WP-10 | **✅ RESOLVED 2026-08-09 — see "OQ-04 resolution" below.** *(Original question: "Momentum divergence" — which indicator, what period, measured between which two points, and what magnitude counts? WP-10 gives only a prose definition. IMP-06 is stated as a hard requirement for every impulse, which made the entire impulse detector depend on an undefined quantity.)* |
@@ -951,7 +1064,7 @@ existing shared implementation already used for the platform's RSI(13) chart pan
 - **No tolerance/threshold.** "Lower"/"higher" is a strict directional comparison. No epsilon, no
   minimum divergence magnitude, no RSI overbought/oversold levels are involved. (The platform's
   RSI(13) chart bands are 70/30, but they play **no part** in this rule.)
-- **No other Open Question is resolved by this one.** In particular **OQ-01, OQ-05 and OQ-20
+- **No other Open Question is resolved by this one.** In particular **OQ-05 and OQ-20
   remain open.**
 - **On its own it did not unblock the impulse detector** — IMP-04 and IMP-05 were still
   undefined at that point. They were subsequently resolved by the OQ-02 and OQ-03 decisions
@@ -966,12 +1079,13 @@ existing shared implementation already used for the platform's RSI(13) chart pan
 | Engine input contract | **Extended.** IMP-06 needs the `close` price series, so pivots alone are no longer a sufficient input. This is a real change to the engine's input requirements. |
 | New dependency | The Elliott module now depends on `src/analysis/indicators.py` (read-only). |
 
-### Partial constraint on OQ-01 (not a resolution)
+### Partial constraint on OQ-01 *(superseded 2026-08-10 — OQ-01 is now resolved)*
 
 The same decision states that "Guidelines" must **not** be treated as non-gating as a blanket
-rule. That **rules out one of OQ-01's two candidate answers** but does not answer the question
-itself — whether the grammar-based Mandatory/Guideline split proposed in this inventory is the
-adopted classification is **still open**. OQ-01 therefore remains listed as unresolved.
+rule. At the time that ruled out one of OQ-01's two candidate answers without settling the
+question. **OQ-01 was investigated and closed on 2026-08-10** — the split is adopted, restated as
+project judgement informed by grammar rather than derived from it, with no behavioural change.
+See [the investigation](#oq-01-investigated-2026-08-10--resolved-as-documentation-no-behaviour-change).
 
 ---
 
