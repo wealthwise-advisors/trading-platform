@@ -299,6 +299,26 @@ class TestBlockedRuleRegistry:
         assert any(e["oq"] == oq for e in validation.BLOCKED_RULES), \
             f"{oq} is open but not declared in the registry"
 
+    def test_oq05_does_not_claim_the_range_stated_rules(self):
+        """Corrected 2026-08-10. FLE-F02 ("123.6% - 161.8% of wave AB") and
+        FLU-F02 ("61.8% - 100% of wave AB") are stated as RANGES. A range is
+        directly evaluable, so no tolerance is needed and OQ-05 does not apply.
+        They remain blocked -- by OQ-11's undefined "wave AB" base."""
+        oq05 = [e for e in validation.BLOCKED_RULES if e["oq"] == "OQ-05"][0]
+        assert "FLE-F02" not in oq05["rules"]
+        assert "FLU-F02" not in oq05["rules"]
+        assert len(oq05["rules"]) == 14, "OQ-05 blocks 14 rules, not 16"
+
+        oq11 = [e for e in validation.BLOCKED_RULES if e["oq"] == "OQ-11"][0]
+        assert {"FLE-F02", "FLU-F02"} <= set(oq11["rules"])
+
+    def test_imp_f04_is_blocked_by_both_oq05_and_oq07(self):
+        """It has three bases: one undefined ("inverse retracement", OQ-07)
+        and two discrete ("equal to wave 1", "61.8% of wave 1-3", OQ-05)."""
+        for oq in ("OQ-05", "OQ-07"):
+            entry = [e for e in validation.BLOCKED_RULES if e["oq"] == oq][0]
+            assert "IMP-F04" in entry["rules"], f"IMP-F04 missing from {oq}"
+
     def test_oq18_no_longer_declared_blocked(self):
         """OQ-18 is resolved; leaving it in the registry would misreport."""
         assert not any(e["oq"] == "OQ-18" for e in validation.BLOCKED_RULES)

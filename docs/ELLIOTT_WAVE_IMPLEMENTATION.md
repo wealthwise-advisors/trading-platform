@@ -15,6 +15,16 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
 >
+> **V2 Step 4 addendum — 2026-08-10.** **OQ-05 investigated and left open. No behaviour
+> change.** Fibonacci matching stays uncomputed on three independent grounds: the reference
+> states no tolerance anywhere *and* demonstrably writes an explicit range where it means one
+> (3 rules do), so the discrete lists are discrete by intent; real ratios show no clustering
+> on the stated values once the data's own density is controlled for (**0 of 5** families
+> significant); and the width any tolerance would need varies **11×** across families, ruling
+> out a single global ±%. One attribution bug fixed: **OQ-05 blocks 14 rules, not 16** —
+> FLE-F02 and FLU-F02 state ranges and are blocked by OQ-11, while IMP-F04 carries both OQ-05
+> and OQ-07. Suite is **314 tests**.
+>
 > **V2 Step 3 addendum — 2026-08-10.** **OQ-09/OQ-10 investigated and left open.** No cliff
 > in 356 real flats in either dimension, so Regular and Expanded stay unseparated and the
 > quantities are measured instead (`measurements.record_flat_subtype`). **A stale claim was
@@ -142,7 +152,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 | ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
 | **Impulse with Extension** *(classification only)* | OQ-24 *(investigated 2026-08-10, no cliff in data; independent of OQ-05)* | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
 | **Motive Sequence** | OQ-14 | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |
-| **Fibonacci matching** | OQ-05 | All 16 ratios are discrete exact values with no stated tolerance. Ratios **are computed and recorded**; they are never declared "matched" |
+| **Fibonacci matching** | OQ-05 *(investigated 2026-08-10; blocks 14 rules, not 16)* | All 16 ratios are discrete exact values with no stated tolerance. Ratios **are computed and recorded**; they are never declared "matched" |
 | **Named wave degrees** | OQ-17 | Only 2 of 9 degrees map to a timeframe and no rule assigns degree from price. Pivots carry an integer `scale` index only |
 | **Confidence / scoring** | FR-7.4 | The reference states no weighting function anywhere. No such field exists in the model, the API, or the UI |
 

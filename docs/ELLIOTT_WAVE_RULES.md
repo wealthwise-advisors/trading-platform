@@ -366,6 +366,104 @@ What FLE-01 buys and what it does not:
 
 FLE-01 is therefore **measured but not gating**, pending a project decision.
 
+### OQ-05 investigated 2026-08-10 — measured, still unresolved
+
+The one Open Question with engine-wide reach: it blocks every discrete
+Fibonacci ratio from ever being declared "matched". Investigated on three
+independent fronts, all negative. **OQ-05 stays open and match/no-match is
+never computed.** Recorded here so it is not re-investigated.
+
+#### 1. The reference re-verified — and it writes ranges when it means them
+
+The source was re-fetched and searched for tolerance language. Three of the
+four categories are empty:
+
+| Looked for | Found |
+|---|---|
+| "approximately" / "about" / "near" / "roughly" applied to a ratio | **nothing** |
+| any statement on how precise a ratio must be | **nothing** |
+| tolerance / band / zone / area / margin around a level | **nothing** |
+| a ratio stated as an explicit **range** | **three** |
+
+The fourth row is the interpretive finding. Three relationships *are* written
+as ranges — IMP-F04's *"inverse **123.6 – 161.8%** retracement of wave 4"*,
+FLE-F02's *"**123.6% – 161.8%** of wave AB"*, FLU-F02's *"**61.8% – 100%** of
+wave AB"* — while everywhere else the values are enumerated discretely
+("50%, 61.8%, 76.4%, or 85.4%").
+
+**The author demonstrably knows how to express a band and wrote one where a
+band was meant.** That is positive evidence the discrete lists are discrete by
+intent, not band-centres with an unstated width. It is the same principle that
+let DT-05's inequality through: implement what the source states, in the form
+it states it.
+
+#### 2. Attribution corrected — OQ-05 blocks 14 rules, not 16
+
+A stated range needs no tolerance: `123.6 ≤ r ≤ 161.8` is directly evaluable.
+So OQ-05 never applied to **FLE-F02** or **FLU-F02**; this table already had
+them as `Blocked (OQ-11)`, but `validation.py`'s registry listed them under
+OQ-05. Corrected — they stay blocked, by OQ-11's undefined "wave AB" base.
+
+**IMP-F04** was inconsistent in the other direction: this table listed only
+OQ-07, the registry only OQ-05. It has three bases — one undefined
+("inverse retracement", OQ-07) and two discrete ("equal to wave 1",
+"61.8% of wave 1-3", OQ-05). It now carries **both**.
+
+#### 3. No empirical clustering — including a false positive that was caught
+
+If real ratios clustered on the stated values, the clustering width would BE
+an empirically derived tolerance, exactly as D-13 was derived. They do not.
+
+A first pass compared each family's mean distance-to-nearest-target against
+randomly placed targets, and returned **IMP-F03 at p = 0.018** — an apparent
+signal. **It was an artifact.** That null is confounded: wave 4's targets
+(0.146 / 0.236 / 0.382) all sit in the naturally dense low end of the window —
+the engine's own IMP-05 territory gate and the "no more than 50%" cap force
+wave 4 to be small — so they beat targets scattered across a mostly-empty
+range *without any clustering on the target values themselves*.
+
+Two density-controlled nulls remove the confound. **Shift** slides the real
+target set by a random offset, preserving its internal spacing and its region,
+so only clustering *on the values* can win. **Empirical** draws fake targets
+from the observed data itself, preserving the density profile exactly.
+
+| Rule | p (shift) | p (empirical) | Verdict |
+|---|---|---|---|
+| IMP-F01 | 0.134 | 0.753 | not special |
+| IMP-F03 | 0.051 | 0.093 | **apparent signal collapses** |
+| IMP-F04 | 0.143 | 0.277 | not special |
+| ZZ-F01 | 0.377 | 0.994 | not special |
+| ZZ-F02 | 0.066 | 0.486 | not special |
+
+**0 of 5 families significant** at α = 0.01 (Bonferroni across five tests), and
+none survive *both* controls even at an uncorrected 0.05.
+
+#### 4. No single global tolerance could work anyway
+
+Width required to call half the observed ratios "matched":
+
+| Rule | ±width for 50% |
+|---|---|
+| IMP-F03 | ±0.035 |
+| IMP-F01 | ±0.065 |
+| ZZ-F02 | ±0.157 |
+| ZZ-F01 | ±0.196 |
+| IMP-F04 | ±0.397 |
+
+An **11× spread**. This eliminates, on evidence, the first of the three options
+OQ-05 poses ("a single global ±%, per-ratio bands, or one min–max envelope?").
+A conventional ±3% sits below even the 25% match threshold for every family
+except IMP-F03 — it would match almost nothing.
+
+#### Conclusion
+
+Ratios stay **computed and reported; match/no-match stays uncomputed**. Three
+independent lines converge: the reference states no tolerance and shows it
+writes ranges deliberately; the data shows no clustering once density is
+controlled for; and no single tolerance could serve all families. Adopting a
+common convention such as ±3% is the one option the evidence actively
+contradicts rather than merely failing to support.
+
 ## 12. Triangle (§5.3)
 
 | ID | Structure | Wave | Rule (verbatim) | M/G | Input | Measurement | Fib | Mom | § | Status |
@@ -439,7 +537,7 @@ before it can enter the Phase 3 SRS.
 | ~~**OQ-02**~~ | IMP-04 | **✅ RESOLVED 2026-08-09 — absolute price distance.** *(Original question: "shortest" by what — absolute price distance, percentage move, log distance, or bar count? The reference never says; these disagree on real data.)* See [resolution](#oq-02-resolution--wave-3-shortest-measure). |
 | ~~**OQ-03**~~ | IMP-05 | **✅ RESOLVED 2026-08-09 — pivot-price interval overlap.** *(Original question: is the test against wave 1's terminal price or its full intrabar range? And wave 4's terminal price or its own extreme? Four readings.)* See [resolution](#oq-03-resolution--wave-4-price-territory). |
 | ~~**OQ-04**~~ | IMP-06, WP-10 | **✅ RESOLVED 2026-08-09 — see "OQ-04 resolution" below.** *(Original question: "Momentum divergence" — which indicator, what period, measured between which two points, and what magnitude counts? WP-10 gives only a prose definition. IMP-06 is stated as a hard requirement for every impulse, which made the entire impulse detector depend on an undefined quantity.)* |
-| **OQ-05** | All 16 Fibonacci rules | Every ratio is a **discrete exact value** ("50%, 61.8%, 76.4%, or 85.4%"), never a band. Exact float equality never matches real price data. What tolerance? A single global ±%, per-ratio bands, or convert each discrete set to one min–max envelope? |
+| **OQ-05** | 14 Fibonacci rules *(not 16 — corrected 2026-08-10; FLE-F02 and FLU-F02 state RANGES and need no tolerance)* | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** Every ratio is a **discrete exact value** ("50%, 61.8%, 76.4%, or 85.4%"), never a band. Exact float equality never matches real price data. What tolerance? A single global ±%, per-ratio bands, or convert each discrete set to one min–max envelope? **All three investigated and none justified** — see [the OQ-05 investigation](#oq-05-investigated-2026-08-10--measured-still-unresolved). The global-±% option is eliminated on evidence (11× spread in required width). |
 | **OQ-06** | IMP-F02 | "161.8% … of wave **1-2**" — is the base the net displacement from start of wave 1 to end of wave 2, or the length of wave 1 projected from the end of wave 2? Standard practice differs from the literal reading. |
 | **OQ-07** | IMP-F04, FIB-06 | "**inverse** 123.6 – 161.8% retracement of wave 4" — "inverse retracement" is used but never defined on the page. |
 | **OQ-08** | IMP-F03, WP-07 | Wave 4: §3.1 says "14.6%, 23.6%, or 38.2% of wave 3 **but no more than 50%**"; §4.3 says "typically retraces **less than 38.2%**". Is 50% a hard cap or a guideline, and how does it interact with IMP-05 (overlap), which is the actual structural constraint? Two sections give different numbers. |
@@ -756,7 +854,7 @@ section total.
 
 **Impulse is now fully specified** — all six of its gates (IMP-01…IMP-06) are settled, three by
 the reference and three by the OQ-02/03/04 decisions. The remaining blocked rules cluster into:
-the 16 Fibonacci rules (all blocked on tolerance, **OQ-05**, none of which gate anything), the
+the 16 Fibonacci rules (14 blocked on tolerance, **OQ-05**; FLE-F02 and FLU-F02 state ranges and are blocked instead by **OQ-11** — none of the 16 gate anything), the
 Regular/Expanded flat discriminators (**OQ-09** / **OQ-10** — investigated 2026-08-10, no cliff; but FLE-01 alone is exact and unactioned, see §11.3), Triangle (**OQ-12** / **OQ-13**),
 and extensions (**OQ-24**). Nested combinations are no longer blocked: **OQ-18 is resolved** by a depth-1 cap, though DT-02/TT-02's swing counts remain open as **OQ-26**.
 

@@ -9,6 +9,10 @@ Written 2026-08-09.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 1.1 — 2026-08-10.** **OQ-05 investigated and left open** (FR-4.2a) — no tolerance
+> language in the reference, no empirical clustering once density is controlled for, and an 11x
+> spread in the width any tolerance would need. **Scope corrected**: OQ-05 blocks 14 rules, not
+> 16 (FR-4.2b). No behaviour change. Previously —
 > **Revision 1.0 — 2026-08-10.** **OQ-09/OQ-10 investigated and left open** — no cliff in 356
 > real flats; quantities now measured (FR-3.7.1a–c). **FR-3.7.1 corrected**: Regular and
 > Expanded are NOT separated only by slightly-vs-substantially — FLE-01 is a second, exact
@@ -527,6 +531,31 @@ shallowest find wins, and `combination_depth` reports it.
 | FR-4.5 | **EI** | WP-03 duplicates IMP-03. The engine SHALL implement it once. **Inference:** §4.1's "can never extend beyond the starting point of wave one" and §3.1's "can't retrace more than the beginning of wave 1" are the same constraint stated twice. |
 | FR-4.6 | **SD** | WP-05 (wave 3 usually largest) and WP-06 (gaps indicate wave 3) are implementable as recorded observations, never as gates. |
 
+**FR-4.2a [EN] — OQ-05 investigated 2026-08-10, deliberately left open.** Three independent lines
+of evidence, all negative. Recorded so the question is not re-opened without new grounds.
+
+  1. **The reference states no tolerance — and writes ranges where it means them.** Re-verified
+     against the source: no "approximately"/"about"/"near" applied to any ratio, no statement on
+     required precision, no band/zone/margin language anywhere. But **three** relationships ARE
+     stated as explicit ranges (IMP-F04 "inverse 123.6 – 161.8%", FLE-F02 "123.6% – 161.8%",
+     FLU-F02 "61.8% – 100%"). The author knows how to express a band, so the discrete lists are
+     discrete **by intent**, not band-centres with an unstated width. Same principle that admitted
+     the DT-05 inequality.
+  2. **No empirical clustering.** A naive null suggested IMP-F03 at p = 0.018; that was an
+     artifact of wave 4's targets sitting in the naturally dense low end of its range (IMP-05's
+     territory gate and the "no more than 50%" cap force wave 4 small). Under a **shift** null
+     (slide the target set, preserving spacing and region) and an **empirical** null (draw targets
+     from the data itself), **0 of 5 families are significant** at α = 0.01 — IMP-F01 0.134/0.753,
+     IMP-F03 0.051/0.093, IMP-F04 0.143/0.277, ZZ-F01 0.377/0.994, ZZ-F02 0.066/0.486.
+  3. **No single global tolerance is viable.** The width needed to match 50% of observations spans
+     11× — IMP-F03 ±0.035, IMP-F01 ±0.065, ZZ-F02 ±0.157, ZZ-F01 ±0.196, IMP-F04 ±0.397. This
+     eliminates the "single global ±%" option in FR-4.2 on evidence rather than on preference.
+
+**FR-4.2b [SD] — corrected scope.** OQ-05 blocks **14** rules, not 16. FLE-F02 and FLU-F02 state
+ranges, which are directly evaluable and need no tolerance; they remain blocked by **OQ-11**
+(undefined "wave AB" base). IMP-F04 carries **both OQ-05 and OQ-07** — one of its three bases is
+undefined ("inverse retracement"), the other two are discrete values.
+
 ### FR-5 Candidate lifecycle
 
 | ID | Tier | Requirement |
@@ -825,7 +854,7 @@ insufficient, and what it blocks.
 | ~~**OQ-02**~~ | IMP-04 | **✅ RESOLVED 2026-08-09 by project decision** — wave length is **absolute price distance** from pivot prices; %, log and bar-count measures rejected. Full definition: §6.1b. **The reference still says nothing on this**; tier EN, not SD. | *(was: impulse gate 4 — now specified)* |
 | ~~**OQ-03**~~ | IMP-05 | **✅ RESOLVED 2026-08-09 by project decision** — territory is the **pivot-price interval**; violated iff wave 4's interval intersects wave 1's. Full-intrabar-range reading rejected. Full definition: §6.1b. **The reference still says nothing on this**; tier EN, not SD. | *(was: impulse gate 5 — now specified)* |
 | ~~**OQ-04**~~ | IMP-06, WP-10 | **✅ RESOLVED 2026-08-09 by project decision** — RSI(13) directional comparison, IMP-06 stays mandatory. Full definition: §6.1a. **The reference still says nothing on this**; the resolution is a decision (tier EN), not source-defined behavior. | *(was: the entire §8 chain — now unblocked at this node)* |
-| **OQ-05** | All 16 Fibonacci rules | **PRESERVED UNRESOLVED per instruction.** Every ratio is a discrete exact value, never a band. No tolerance stated anywhere. Exact float equality never matches real data. | All ratio matching (FR-4.2). Ratios may be *computed*, never *matched*. |
+| **OQ-05** | 14 Fibonacci rules *(corrected from 16, 2026-08-10)* | **INVESTIGATED, STILL UNRESOLVED (FR-4.2a).** **PRESERVED UNRESOLVED per instruction.** Every ratio is a discrete exact value, never a band. No tolerance stated anywhere. Exact float equality never matches real data. **Investigated 2026-08-10 on three fronts, all negative** (FR-4.2a): the reference writes explicit ranges where it means them, real ratios show no clustering on the stated values once density is controlled for (0 of 5 families significant), and the width any tolerance would need varies 11× across families. | All ratio matching (FR-4.2). Ratios may be *computed*, never *matched*. |
 | **OQ-06** | IMP-F02 | "of wave 1-2" — net displacement start-of-1→end-of-2, or wave 1's length projected from end of wave 2? | Wave 3 ratio base |
 | **OQ-07** | IMP-F04, FIB-06 | "inverse retracement" is used but never defined on the page. | Wave 5 target, basis 1 of 3 |
 | **OQ-08** | IMP-F03, WP-07 | §3.1 says "14.6%, 23.6%, or 38.2% … but no more than 50%"; §4.3 says "typically less than 38.2%". Two sections, different numbers. Cap vs guideline unstated. | Wave 4 ratio; its interaction with IMP-05 |
@@ -978,7 +1007,7 @@ time and reports the identical 41 / 42 / 5 / 2 / 4 split. Three reconciliations 
 
 **Effect of the three resolutions on these totals:** IMP-06 and WP-10 (OQ-04), then IMP-04
 (OQ-02) and IMP-05 (OQ-03), moved from UD to implementable — 44 → 40 blocked, 39 → 43
-implementable. No other rule's disposition changed; in particular the 16 Fibonacci rules remain
+implementable. No other rule's disposition changed; in particular the Fibonacci rules remain
 blocked on OQ-05, and no blocked rule was reclassified to make the totals look better.
 
 ---
@@ -1007,7 +1036,7 @@ SRS says UNDEFINED rather than assuming.
 | ~~**D-02a**~~ | ~~Answer OQ-02 and OQ-03~~ — **✅ CLOSED 2026-08-09.** Absolute price distance; pivot-price interval overlap (§6.1b). **This broke the §8 chain.** | — |
 | ~~**D-02c**~~ | ~~Confirm FR-3.1b.8~~ — **CLOSED 2026-08-09.** Reject-on-tie confirmed for both IMP-04 and IMP-05; no change made | — |
 | ~~**D-02b**~~ | ~~Confirm FR-3.1a.7~~ — **CLOSED 2026-08-09.** Pivot-price reading confirmed; no change made | — |
-| **D-03** | Answer OQ-05 — the tolerance model for all 16 Fibonacci rules; this also determines API query parameters (API-1.4) and enumeration bounds (FR-2.6) | — |
+| **D-03** | Answer OQ-05 — the tolerance model for the 14 discrete-ratio rules. **Investigated 2026-08-10 and deliberately deferred** (FR-4.2a): no tolerance is derivable from either the reference or the data, so the decision stays open rather than being made arbitrarily. Still determines API query parameters (API-1.4) and enumeration bounds (FR-2.6) if ever answered. | — |
 | ~~**D-04**~~ | ~~Answer OQ-21 — pivot source~~ — **CLOSED 2026-08-09.** Independent Elliott-specific detector; existing swing/zigzag modules neither modified nor consumed (§4a) | — |
 | ~~**D-13**~~ | ~~Choose pivot threshold values~~ — **CLOSED 2026-08-09, REVISED 2026-08-10.** Now 0.10% / r=4.0 / S=4. Rev 1 (0.20% / 2.5) superseded after implementation showed it could never satisfy IMP-02 (ARCHITECTURE §5.6) | — |
 | ~~**D-14**~~ | ~~IMP-02 recursion floor~~ — **✅ CLOSED 2026-08-09.** At scale 1 there is no finer scale, so IMP-02 resolves to **UNDECIDABLE**, never a silent pass/fail (ARCHITECTURE §5.3). Confirmed | — |
@@ -1093,7 +1122,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 5. ~~**OQ-18**~~ — **RESOLVED.** Double/Triple Three implemented; the *nested* branch is
    missing; the {zigzag, flat} branch is available. A depth cap would close this.
 6. **OQ-24** — Extension undefined and **not derivable from data** (investigated 2026-08-10, FR-3.2.2); this also keeps OQ-19's zigzag/impulse tiebreak circular. Quantities are recorded, the verdict withheld.
-7. **OQ-05** — all 16 Fibonacci rules. **Not a classification blocker** — non-gating
+7. **OQ-05** — 14 Fibonacci rules (not 16; FLE-F02/FLU-F02 state ranges, FR-4.2b). **Investigated 2026-08-10, no tolerance justifiable.** **Not a classification blocker** — non-gating
    measurements; ratios computable, just not declarable as "matched".
 8. **OQ-14** — Motive Sequence not implementable; excluded from v1.
 9. **OQ-01** — still open, off the critical path (§8.3).

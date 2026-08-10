@@ -449,6 +449,14 @@ Computes every guideline ratio the reference states (IMP-F01…F04, ZZ-F01/F02, 
 raw value. **It exposes no comparison, tolerance, or match function at all** — the absence of the
 capability is the enforcement mechanism for OQ-05, and TR-2 asserts no tolerance constant exists.
 
+**OQ-05 investigated 2026-08-10 and left open.** The absence stays. The reference states no
+tolerance and writes an explicit range where it means one (3 rules do), so its discrete lists
+are discrete by intent; real ratios show no clustering on the stated values once density is
+controlled for (0 of 5 families significant under shift and empirical nulls); and the width a
+tolerance would need varies 11x across families, so no single global value could serve them.
+Scope corrected at the same time: OQ-05 blocks **14** rules, not 16 — FLE-F02 and FLU-F02 state
+ranges, which need no tolerance, and are blocked by OQ-11 instead.
+
 **Flat subtypes (FLR-01/02, FLE-01/02), added 2026-08-10.** `record_flat_subtype` records wave
 B's retracement of wave A, whether wave B passed wave A's start, and where wave C landed relative
 to wave A's end. OQ-09 and OQ-10 were investigated over 356 real flats and stayed open: no cliff

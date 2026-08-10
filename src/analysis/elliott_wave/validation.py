@@ -23,17 +23,35 @@ from .models import AnalysisResult, LifecycleState, Wave
 # Every rule this build deliberately does not evaluate, with the Open Question
 # responsible. Traced to docs/ELLIOTT_WAVE_RULES.md.
 BLOCKED_RULES: tuple[dict, ...] = (
+    # 14 rules, not 16. FLE-F02 and FLU-F02 were dropped 2026-08-10: the
+    # reference states those two as RANGES ("123.6% - 161.8%", "61.8% - 100%"),
+    # and a range is directly evaluable with no tolerance at all. They stay
+    # blocked, but by OQ-11's undefined "wave AB" base, not by OQ-05.
     {"rules": ["IMP-F01", "IMP-F02", "IMP-F03", "IMP-F04",
                "ZZ-F01", "ZZ-F02", "FLR-F01", "FLR-F02",
-               "FLE-F01", "FLE-F02", "FLU-F01", "FLU-F02",
+               "FLE-F01", "FLU-F01",
                "DT-F01", "DT-F02", "TT-F01", "TT-F02"],
      "oq": "OQ-05",
      "reason": "Fibonacci ratios are discrete exact values with no stated "
-               "tolerance; ratios are recorded but never matched."},
+               "tolerance; ratios are recorded but never matched. "
+               "Investigated 2026-08-10 and left open on three independent "
+               "grounds: the reference states no tolerance anywhere AND "
+               "demonstrably writes an explicit range where it means one (3 "
+               "rules do), so the discrete lists are discrete by intent; real "
+               "ratios show no clustering on the stated values once the data's "
+               "own density is controlled for (0 of 5 families significant); "
+               "and the width needed to match half the observations varies "
+               "11-fold across families, so no single global tolerance could "
+               "serve them."},
     {"rules": ["IMP-F02"], "oq": "OQ-06",
      "reason": "'of wave 1-2' base is undefined; ratio not computed."},
+    # IMP-F04 carries OQ-05 as well: of its three stated bases, only the
+    # "inverse 123.6-161.8% retracement" one is undefined here. The other two
+    # ("equal to wave 1", "61.8% of wave 1-3") are discrete values and are
+    # blocked by OQ-05 like every other discrete ratio.
     {"rules": ["IMP-F04"], "oq": "OQ-07",
-     "reason": "'inverse retracement' is never defined; that basis is skipped."},
+     "reason": "'inverse retracement' is never defined; that basis is skipped. "
+               "The rule's other two bases are discrete and blocked by OQ-05."},
     {"rules": ["FLR-01", "FLR-02"], "oq": "OQ-09/OQ-10",
      "reason": "Regular Flat needs 'near' and 'slightly beyond', unquantified. "
                "Investigated on 356 real flats 2026-08-10 and left open: wave "
