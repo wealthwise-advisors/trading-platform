@@ -304,7 +304,17 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.003,
                     hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
                 ), row=row_n, col=1)
 
-            # Swing region boundaries + headers
+            # Swing region boundaries + headers.
+            #
+            # PERFORMANCE: these are accumulated into lists and applied in ONE
+            # update_layout call rather than via per-swing add_shape/
+            # add_annotation. Both of those are quadratic in plotly.py -- each
+            # call re-validates the whole layout -- and a large backtest
+            # produces a lot of swings. Measured: 1,000 add_annotation calls
+            # take 141s, and a 78k-bar backtest yields 2,509 swings (~890s
+            # extrapolated), which is what made /report time out. The single
+            # assignment below does 2,000 in 0.4s. Output is unchanged.
+            swing_shapes, swing_annotations = [], []
             for swing_num, grp in zz.groupby("swing"):
                 color = _SWING_COLORS[(swing_num - 1) % len(_SWING_COLORS)]
                 x0 = grp.index[0]
@@ -313,20 +323,28 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.003,
                 first_label = grp["label"].iloc[0]
                 last_label  = grp["label"].iloc[-1]
 
-                fig.add_shape(
+                swing_shapes.append(dict(
                     type="rect", xref="x", yref="paper",
                     x0=x0, x1=x1, y0=0, y1=1,
                     fillcolor="rgba(0,0,0,0)",
                     line=dict(color=color, width=1.5, dash="dot"),
                     layer="below",
-                )
+                ))
                 letters = region_letters_by_swingnum.get(swing_num, [])
                 leg_part = f" | 3 Leg Dev ({letters[0]} to {letters[-1]})" if letters else ""
-                fig.add_annotation(
+                swing_annotations.append(dict(
                     x=x_mid, y=1.005, xref="x", yref="paper", yanchor="bottom",
                     text=f"<b>Swing {swing_num}</b><br>({first_label} to {last_label}){leg_part}",
                     showarrow=False, font=dict(color=color, size=11),
                     align="center",
+                ))
+
+            # Append, never replace: the RSI/Stoch hlines added earlier are
+            # also layout shapes and must survive.
+            if swing_shapes or swing_annotations:
+                fig.update_layout(
+                    shapes=list(fig.layout.shapes) + swing_shapes,
+                    annotations=list(fig.layout.annotations) + swing_annotations,
                 )
     except Exception:
         has_headers = False
@@ -364,6 +382,157 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.003,
         yaxis4=dict(gridcolor=_GRID, title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[-5, 105]),
     )
     return fig
+
+
+_EW_COLORS = {
+    "impulse": "#ff8c42",
+    "leading_diagonal": "#c084fc",
+    "ending_diagonal": "#f472b6",
+    "zigzag": "#38bdf8",
+    "flat": "#a3e635",
+    "flat_running": "#fbbf24",
+}
+_EW_PRETTY = {
+    "impulse": "Impulse",
+    "leading_diagonal": "Leading Diagonal",
+    "ending_diagonal": "Ending Diagonal",
+    "zigzag": "Zigzag",
+    "flat": "Flat",
+    "flat_running": "Running Flat",
+}
+
+
+def _elliott_wave_chart(results: BacktestResults, ew: dict) -> go.Figure:
+    """Single-panel Elliott Wave chart for the static report.
+
+    Mirrors the live tab: candlesticks plus one connected path per structure,
+    running from its start through each labelled leg in order, so the wave
+    sequence reads as a sequence rather than as scattered points.
+
+    FE-3 applies here exactly as it does live -- a partial analysis must not
+    look complete in the exported file either. Confirmed structures draw
+    solid; UNDECIDABLE ones draw dashed, dimmed, are labelled "(undecidable)"
+    in the legend, and carry their blocked_by reasons in the hover text.
+
+    ``ew`` is the SAME payload the live endpoint returns (produced by
+    api/serializers.py::elliott_wave_to_records). The report never runs a
+    second, separately-configured analysis -- that is the live/report
+    classification-parity requirement.
+    """
+    df = results.price_data
+    fig = go.Figure()
+
+    fig.add_trace(go.Candlestick(
+        x=df.index, open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+        increasing_line_color=_G, decreasing_line_color=_R,
+        name="Price", showlegend=False,
+    ))
+
+    by_id = {w["id"]: w for w in ew["waves"]}
+    structures = [w for w in ew["waves"] if w["structure_type"]]
+    seen_legend: set[str] = set()
+
+    for s in structures:
+        legs = [by_id[c] for c in s["child_ids"] if c in by_id]
+        if not legs:
+            continue
+        xs = [s["start_t"]] + [leg["end_t"] for leg in legs]
+        ys = [s["start_price"]] + [leg["end_price"] for leg in legs]
+        labels = [""] + [leg["label"] or "" for leg in legs]
+
+        undecided = s["state"] == "undecidable"
+        stype = s["structure_type"]
+        color = _EW_COLORS.get(stype, "#94a3b8")
+        pretty = _EW_PRETTY.get(stype, stype)
+        legend_name = f"{pretty} (undecidable)" if undecided else pretty
+
+        blocked = (f"<br><b>Blocked by:</b> {', '.join(s['blocked_by'])}"
+                   if s["blocked_by"] else "")
+        measures = "".join(
+            f"<br>{k}: {v:.3f}" if isinstance(v, float) else f"<br>{k}: {v}"
+            for k, v in s["measurements"].items()
+        )
+
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, mode="lines+markers+text",
+            text=labels, textposition="top center",
+            textfont=dict(color=color, size=9, family="Arial"),
+            line=dict(color=color, width=1.2 if undecided else 2.2,
+                      dash="dot" if undecided else "solid"),
+            marker=dict(symbol="circle-open" if undecided else "diamond",
+                        size=7 if undecided else 9,
+                        color=color if undecided else _BG,
+                        line=dict(color=color, width=1.6)),
+            opacity=0.55 if undecided else 1.0,
+            name=legend_name, legendgroup=legend_name,
+            showlegend=legend_name not in seen_legend,
+            hovertemplate=(f"<b>{pretty}</b> — scale {s['scale']}"
+                           f"<br>state: <b>{s['state']}</b>{blocked}{measures}"
+                           "<br>%{x}<br>%{y:.2f}<extra></extra>"),
+        ))
+        seen_legend.add(legend_name)
+
+    base = _layout(f"{results.symbol} — Elliott Wave "
+                   f"(engine {ew['engine_version']})", height=620)
+    base["margin"] = dict(l=60, r=12, t=55, b=8)
+    fig.update_layout(
+        **base,
+        xaxis=dict(gridcolor=_GRID, rangeslider=dict(visible=False),
+                   rangeselector=_RANGE_SELECTOR, **_SPIKE),
+        yaxis=dict(gridcolor=_GRID, title=dict(text="Price"), **_SPIKE),
+    )
+    return fig
+
+
+def _elliott_wave_panel(ew: dict) -> str:
+    """The completeness panel that sits beside the Elliott chart.
+
+    FE-3.2: blocked_rules and scope notes are surfaced in the static report,
+    not left in the API payload, so a reader of the exported file can see what
+    was NOT evaluated rather than assuming the analysis is complete.
+    """
+    counts = ew["counts"]
+    gated = counts["structures_by_state"].get("gated", 0)
+    undecidable = counts["structures_by_state"].get("undecidable", 0)
+
+    by_type = "".join(
+        f"<tr><td>{_EW_PRETTY.get(k, k)}</td><td style='text-align:right'>{v}</td></tr>"
+        for k, v in sorted(counts["structures_by_type"].items())
+    ) or "<tr><td colspan='2' style='color:#8b949e'>No structures found</td></tr>"
+
+    notes = "".join(f"<li>{n}</li>" for n in ew["notes"])
+    blocked = "".join(
+        f"<li><code style='color:#ffcc80'>{b['oq']}</code> "
+        f"<span style='color:#8b949e'>{', '.join(b['rules'])}</span><br>"
+        f"<span style='color:#6e7681'>{b['reason']}</span></li>"
+        for b in ew["blocked_rules"]
+    )
+
+    return f"""
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+  <div>
+    <h4 style="margin:0 0 8px">Structures found</h4>
+    <table style="width:100%;border-collapse:collapse">{by_type}
+      <tr style="border-top:1px solid #21262d">
+        <td><b>Confirmed</b></td><td style="text-align:right"><b>{gated}</b></td></tr>
+      <tr><td style="color:#8b949e">Undecidable (dashed on chart)</td>
+        <td style="text-align:right;color:#8b949e">{undecidable}</td></tr>
+    </table>
+    <p style="color:#8b949e;margin-top:12px">
+      This analysis is <b style="color:#e6edf3">partial by design</b>.
+      <b style="color:#e6edf3">{counts['blocked_rule_ids']}</b> reference rules could not be
+      evaluated because the source material does not define them precisely enough.
+      Structures shown dashed are <b>undecidable</b>: they passed every gate the engine can
+      evaluate, but acceptance depends on a blocked rule.
+    </p>
+    <h4 style="margin:14px 0 6px">Scope notes</h4>
+    <ul style="color:#8b949e;padding-left:18px;margin:0">{notes}</ul>
+  </div>
+  <div>
+    <h4 style="margin:0 0 8px">Unevaluated rules ({len(ew['blocked_rules'])} groups)</h4>
+    <ul style="padding-left:18px;margin:0;max-height:460px;overflow-y:auto">{blocked}</ul>
+  </div>
+</div>"""
 
 
 def _equity_chart(results: BacktestResults) -> go.Figure:
@@ -694,6 +863,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   <a href="#trade-log">📋 Trade Log</a>
   <a href="#candlestick-patterns">🕯️ Candlesticks</a>
   <a href="#chart-patterns">📐 Chart Patterns</a>
+  <a href="#elliott-wave">🌊 Elliott Wave</a>
 </nav>
 
 <!-- ── controls hint ── -->
@@ -748,6 +918,10 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div class="section-title" id="chart-patterns"><span class="icon">📐</span> Chart Patterns</div>
 <div class="chart-box" style="padding:0">{chart_patterns_table}</div>
+
+<div class="section-title" id="elliott-wave"><span class="icon">🌊</span> Elliott Wave <span class="tag">{ew_tag}</span></div>
+<div class="chart-box">{chart_elliott}</div>
+<div class="chart-box">{elliott_panel}</div>
 
 <footer><b>AutoTrader</b> Backtest Report &mdash; {title} &mdash; Generated {generated}</footer>
 </div>
@@ -838,6 +1012,33 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     candlestick_patterns_table = _candlestick_patterns_table(r)
     chart_patterns_table = _chart_patterns_table(r)
 
+    # Elliott Wave. Uses the SAME serializer the live endpoint calls, so the
+    # report can never disagree with the live tab about what was classified
+    # (live/report parity). Wrapped defensively, matching the ZigZag overlay's
+    # own pattern: a rendering failure here must never break the whole report.
+    try:
+        from api import serializers as _serializers
+        from src.analysis.elliott_wave import (
+            DEFAULT_RATIO, DEFAULT_SCALES, DEFAULT_THETA_BASE,
+        )
+        _ew = _serializers.elliott_wave_to_records(
+            r.price_data, DEFAULT_THETA_BASE, DEFAULT_RATIO, DEFAULT_SCALES,
+        )
+        chart_elliott = _fig_to_div(_elliott_wave_chart(r, _ew))
+        elliott_panel = _elliott_wave_panel(_ew)
+        _c = _ew["counts"]
+        ew_tag = (f"{_c['structures']} structures · "
+                  f"{_c['structures_by_state'].get('gated', 0)} confirmed · "
+                  f"{_c['structures_by_state'].get('undecidable', 0)} undecidable")
+    except Exception as exc:
+        chart_elliott = ""
+        elliott_panel = (
+            "<p style='color:#f85149'>Elliott Wave analysis could not be rendered "
+            f"for this backtest: {type(exc).__name__}. The rest of this report is "
+            "unaffected.</p>"
+        )
+        ew_tag = "unavailable"
+
     title = f"{r.strategy_name} — {r.symbol}"
     html = _HTML_TEMPLATE.format(
         title=title,
@@ -855,6 +1056,9 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         trade_rows="\n".join(trade_rows),
         candlestick_patterns_table=candlestick_patterns_table,
         chart_patterns_table=chart_patterns_table,
+        chart_elliott=chart_elliott,
+        elliott_panel=elliott_panel,
+        ew_tag=ew_tag,
     )
 
     if output_path:
