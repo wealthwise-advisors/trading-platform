@@ -24,7 +24,8 @@ NOT implemented, deliberately -- these are reported as blocked, not omitted:
     gate needs "SUBSTANTIALLY beyond", also unquantified. Regular and Expanded
     are separated ONLY by slightly-vs-substantially, so with OQ-10 open they
     are not distinguishable at all.
-  * Triangle, Double Three, Triple Three -- OQ-12/13, OQ-18.
+  * Triangle -- OQ-12/13. (Double/Triple Three ARE implemented, in
+    combination.py, since OQ-18 was resolved by a depth cap.)
 
 Running Flat is the one flat subtype whose non-Fibonacci gate is fully
 specified by the reference (FR-3.7.3), which is why it alone ships in v1.

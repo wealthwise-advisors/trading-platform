@@ -4,16 +4,24 @@
 Written 2026-08-10. Branch `feature/elliott-wave-rebuild` (local, unpushed).
 
 **Sole rule source:** <https://elliottwave-forecast.com/elliott-wave-theory/>
-**Companion documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (94 rules, 25 Open
+**Companion documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 26 Open
 Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 [ELLIOTT_WAVE_ARCHITECTURE.md](ELLIOTT_WAVE_ARCHITECTURE.md) (module design, D-13 calibration)
 
 > **Read this first.** This engine is deliberately incomplete, and its incompleteness is
 > reported at runtime rather than hidden. Roughly half the reference's rules cannot be
-> implemented because the source does not define them precisely enough. **21 of 25 Open
+> implemented because the source does not define them precisely enough. **21 of 26 Open
 > Questions remain unresolved.** Every affected rule is registered in
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
+>
+> **V2 Step 1 addendum — 2026-08-10.** Double Three and Triple Three are now implemented in a
+> 12th module, `combination.py`, resolving **OQ-18** with a recursion depth cap of 1 derived from
+> the pivot ladder's expressive limit. Two rules the Phase-2 extraction missed — **DT-05/TT-05**,
+> the 161.8% wave-Y ceiling — are extracted and enforced. A new unresolved **OQ-26** records the
+> reference's 7-vs-9 swing-count contradiction; swing count is measured, never gated. Suite is
+> **256 tests**. The commit table, file counts and per-commit test counts in §1, §2 and §9 below
+> describe the **v1 branch state** and are left as the historical record.
 
 ---
 
@@ -100,6 +108,8 @@ would be dead code.
 | **Zigzag** | ZZ-01 (3 legs) · ZZ-02 (A and C are 5-wave) · ZZ-03 (B permissive) · ZZ-04 (5-3-5) |
 | **Flat (generic)** | FL-01 (3-3-5) · FL-02 (wave A is 3, not 5) |
 | **Running Flat** | FLU-01 (wave C falls short of wave A's end) |
+| **Double Three** | DT-01 (3 legs W-X-Y) · DT-03 (W/Y hold a permitted component) · DT-04 (X permissive) · DT-05 (wave Y ≤ 161.8% of wave W) |
+| **Triple Three** | TT-01 (5 legs W-X-Y-X-Z) · TT-03 (W/Y/Z hold components) · TT-04 (X permissive) · TT-05 (wave **Y** ≤ 161.8% of wave W) |
 
 **LD-02 / ED-02 overlap is measured and recorded but NEVER gates** — the reference states
 outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
@@ -111,7 +121,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 | **Regular Flat** | OQ-09, OQ-10 | "Wave B terminates **near** the start of wave A", "wave C **slightly** beyond" — neither quantified; the paired ratio is a single point (exactly 90%) with no tolerance |
 | **Expanded Flat** | OQ-10 | Needs "**substantially** beyond". Regular vs Expanded are separated *only* by slightly-vs-substantially, so with OQ-10 open the two are indistinguishable |
 | **Triangle** | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
-| **Double / Triple Three** | OQ-18 | W/Y/Z may be "double three **of smaller degree**" — unbounded recursion with no depth limit and no rule for when nesting should read as one larger structure |
+| ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
 | **Impulse with Extension** | OQ-24 | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
 | **Motive Sequence** | OQ-14 | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |
 | **Fibonacci matching** | OQ-05 | All 16 ratios are discrete exact values with no stated tolerance. Ratios **are computed and recorded**; they are never declared "matched" |
@@ -289,7 +299,7 @@ deterministic — byte-identical output across 20 repeated runs.
 
 ---
 
-## 10. Remaining Open Questions — 21 of 25 unresolved
+## 10. Remaining Open Questions — 21 of 26 unresolved
 
 **Resolved (4):** OQ-02, OQ-03, OQ-04, OQ-21.
 
@@ -309,7 +319,7 @@ deterministic — byte-identical output across 20 repeated runs.
 | OQ-15 | Wedge shape unquantified |
 | OQ-16 | LD and ED permit identical subdivisions |
 | OQ-17 | Degree assignment from price data |
-| OQ-18 | Unbounded "of smaller degree" recursion |
+| **OQ-26** | *(new)* DT-02/TT-02 swing count: the reference's 7 contradicts DT-04 + GEN-06's 9 |
 | OQ-19 | Zigzag-vs-impulse tiebreak, circular via OQ-24 |
 | **OQ-20** | A 3-swing move is both possibly-motive and possibly-corrective, with no discriminator |
 | OQ-22 | Volume statements qualitative |
@@ -350,6 +360,6 @@ recorded as accepted rather than a defect.
 section.
 **Test coverage and CI:** §8 — 220 tests passing; D-05 raised CI coverage from 2% to 100%.
 **Performance:** §9 — the quadratic-annotation timeout fix and measured generation times.
-**Remaining Open Questions:** §10 — **21 of 25 unresolved**, listed individually.
+**Remaining Open Questions:** §10 — **21 of 26 unresolved**, listed individually.
 
 **No code changed in this step** — documentation only.

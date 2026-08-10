@@ -4,11 +4,16 @@
 Written 2026-08-09.
 
 **Sole rule authority:** [docs/ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (94 rule records,
-24 Open Questions), which in turn derives solely from
+26 Open Questions), which in turn derives solely from
 <https://elliottwave-forecast.com/elliott-wave-theory/>.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 0.8 — 2026-08-10.** **OQ-18 RESOLVED** — Double/Triple Three implemented with
+> recursion capped at depth 1 (ARCHITECTURE §6.7a). Two rules the Phase-2 pass missed,
+> **DT-05/TT-05** (the 161.8% wave-Y ceiling), are now extracted and specified — mandatory,
+> and *not* blocked by OQ-05 since a ceiling is an inequality, not a match. **New unresolved
+> OQ-26** records the reference's 7-vs-9 swing-count contradiction. Previously —
 > **Revision 0.7 — 2026-08-10.** Diagonal sub-wave **grouping** revised so a diagonal no longer
 > requires the host leg's finer subdivision to land on exactly 5 legs (ARCHITECTURE §6.6.1);
 > diagonals went 0 → 4 on real data. **New unresolved OQ-25** records the leg→sub-wave
@@ -218,7 +223,7 @@ their return values (§12.1, TR-7).
 |---|---|---|
 | FR-2.1 | **EI** | The engine SHALL evaluate contiguous pivot windows. **Inference:** each structure has a stated leg count (IMP-01: 5; ZZ-01: 3; TRI-01: 5; DT-01: 3; TT-01: 5), and a structure occupies consecutive legs. A window of *n* legs requires *n+1* pivots. |
 | FR-2.2 | **SD** | Window sizes, per the reference's stated leg counts: Impulse 5 legs (IMP-01) · Leading/Ending Diagonal 5 legs (LD-03/ED-03) · Zigzag 3 legs (ZZ-01) · Flat 3 legs (FL-01) · Triangle 5 legs (TRI-01) · Double Three 3 legs (DT-01) · Triple Three 5 legs (TT-01). |
-| FR-2.3 | **UD — OQ-18** | Recursion depth for nested structures is **UNDEFINED**. DT-03/TT-03 permit W/Y/Z to be "double three **of smaller degree**", which is unbounded recursion with no stated limit. |
+| FR-2.3 | **EN — OQ-18 RESOLVED** | Recursion depth is capped at `max_combination_depth = 1` (FR-3.9a.1), derived from the ladder rather than chosen. The reference still states no limit; the cap is a project decision. |
 | FR-2.4 | **UD** | Whether overlapping candidates are ranked, pruned, or all retained is **UNDEFINED**. The reference states no selection procedure between competing readings. (Related: ZZ-F03/OQ-19, where the reference acknowledges an ambiguity and offers a tiebreak that is itself undefined.) |
 | FR-2.5 | **NI** | No search-order, completeness, or termination criterion can be derived. The reference describes patterns, never a procedure for finding them. |
 | FR-2.6 | **EN** | Enumeration SHALL be bounded so that analysis of a bounded bar count terminates in bounded time. Concrete bounds: Phase 4 (§12, D-03). |
@@ -398,12 +403,32 @@ open decision.** This SRS does not resolve it, and does not invent geometry to p
 |---|---|---|---|
 | DT: 3 legs W-X-Y; TT: 5 legs W-X-Y-X-Z | DT-01, TT-01 | SD | Implementable |
 | DT: 7 sub-swings; TT: 11 sub-swings | DT-02, TT-02 | SD | Implementable |
-| W/Y (DT) and W/Y/Z (TT) ∈ {zigzag, flat, DT of smaller degree, TT of smaller degree} | DT-03, TT-03 | **UD — OQ-18** | **BLOCKED on recursion.** Unbounded nesting, no depth limit, no rule for when nested combinations should read as one larger structure. Also depends on degree assignment (OQ-17). |
+| W/Y (DT) and W/Y/Z (TT) in {zigzag, flat, DT of smaller degree, TT of smaller degree} | DT-03, TT-03 | **EN — OQ-18 RESOLVED** | **Implementable.** Recursion capped at depth 1 (FR-3.9a). Uses the pivot ladder's `scale`, not a named degree, so OQ-17 is not involved. |
 | X ∈ any corrective structure | DT-04, TT-04 | SD | Implementable (permissive) |
 | DT: X/W and Y/W ratios; TT: X/W and Z/W ratios | DT-F01/F02, TT-F01/F02 | **UD — OQ-05** | Record, never gate |
 
 **FR-3.9.1 [SD]** — The reference states **no** ratio for wave Y in a Triple Three, and none for
 the second X. The engine SHALL NOT fabricate one. This asymmetry is in the source.
+
+### FR-3.9a Double Three / Triple Three (§5.4, §5.5) — OQ-18 RESOLVED
+
+| Gate | Rule | Tier | Status |
+|---|---|---|---|
+| 3 legs W-X-Y / 5 legs W-X-Y-X-Z | DT-01, TT-01 | SD | Implementable |
+| W/Y (and Z) hold a zigzag, flat, DT or TT of smaller degree | DT-03, TT-03 | **EN — OQ-18 RESOLVED** | Implementable; recursion capped at depth 1 |
+| X is any corrective structure | DT-04, TT-04 | SD (permissive) | Never gates |
+| Wave Y must not pass 161.8% of wave W | **DT-05, TT-05** | **SD** | Implementable — a stated **ceiling**, so no tolerance is needed and OQ-05 does not apply |
+| 7-swing / 11-swing structure | DT-02, TT-02 | **UD — OQ-26** | **Recorded, never gated** |
+
+**FR-3.9a.1 [EN]** — `max_combination_depth = 1`. Derived, not chosen: correctives exist only at
+scale 2, so a combination needs scale 3, a nested one scale 4, and a doubly-nested one scale 5 —
+beyond the 4-scale ladder. Confirmed after implementation: depth-0 combinations appear at scale 3,
+depth-1 at scale 4.
+
+**FR-3.9a.2 [SD]** — TT-05 constrains wave **Y**, not wave Z. A large wave Z is not bounded by it.
+
+**FR-3.9a.3 [EN]** — A structure found at depth *d* SHALL NOT be re-emitted at depth *d+1*; the
+shallowest find wins, and `combination_depth` reports it.
 
 ### FR-3.11 Degree assignment (§1.4)
 
@@ -411,7 +436,7 @@ the second X. The engine SHALL NOT fabricate one. This asymmetry is in the sourc
 |---|---|---|
 | FR-3.11.1 | **SD** | Nine degrees exist, named largest→smallest: Grand Super Cycle, Super Cycle, Cycle, Primary, Intermediate, Minor, Minute, Minuette, Subminuette (DEG-01, DEG-02). |
 | FR-3.11.2 | **UD — OQ-17** | **How a degree is assigned to a structure is UNDEFINED.** The reference maps only 2 of 9 degrees to timeframes (GSC → weekly/monthly, Subminuette → hourly) and gives no rule for assigning degree from price data. |
-| FR-3.11.3 | **EI** | Degree labelling, if implemented, SHALL be presentation-only and SHALL NOT affect classification. **Inference:** no rule in the inventory takes degree as an input to a gate, except DT-03/TT-03's "of smaller degree", which is itself blocked (OQ-18). |
+| FR-3.11.3 | **EI** | Degree labelling, if implemented, SHALL be presentation-only and SHALL NOT affect classification. **Inference:** no rule in the inventory takes degree as an input to a gate, except DT-03/TT-03's "of smaller degree", which is resolved by the depth cap and keyed on the ladder's integer `scale`, never a named degree. |
 
 ---
 
@@ -482,7 +507,7 @@ blocked *by Impulse*.
                         ▼
               DOUBLE / TRIPLE THREE — DT-03/TT-03 partially satisfied:
               the {zigzag, flat} branch is ✅ available; the
-              "of smaller degree" nesting branch is ❌ OQ-18 (+ OQ-17)
+              "of smaller degree" nesting branch is ✅ OQ-18 RESOLVED (depth cap)
 
   TRIANGLE — never depended on Impulse; still ❌ OQ-12, OQ-13
   EXTENSION — still ❌ OQ-24 (and this keeps OQ-19 circular)
@@ -499,7 +524,7 @@ blocked *by Impulse*.
 | **Running Flat** | ✅ **Fully specified** (FLU-01) | The only fully-specified flat subtype (FR-3.7.3) |
 | **Regular Flat** | ❌ Blocked | **OQ-09** ("near"), **OQ-10** ("slightly beyond") |
 | **Expanded Flat** | ❌ Blocked | **OQ-10** ("substantially beyond") |
-| **Double / Triple Three** | ❌ Blocked | **OQ-18** — only the *nested* branch of DT-03/TT-03 is missing; the {zigzag, flat} branch is now available. A depth cap would close this. Also **OQ-17** (degree). |
+| **Double / Triple Three** | ✅ **Implemented 2026-08-10** | OQ-18 resolved by a depth-1 cap (FR-3.9a). DT-02/TT-02's swing counts remain **OQ-26** — recorded, never gated. OQ-17 is not involved: the gate keys on the ladder's integer `scale`, not a named degree. |
 | **Triangle** | ❌ Blocked | **OQ-12**, **OQ-13** — independent of Impulse throughout |
 | **Impulse with Extension** | ❌ Blocked | **OQ-24** |
 | **Motive Sequence** | ❌ Not implementable | **OQ-14** — excluded from v1 |
@@ -607,7 +632,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 | API-1.1 | **EN** | One new read-only sub-resource: `GET /api/backtests/{backtest_id}/elliott-wave`. Follows the existing sub-resource convention (`/zigzag`, `/chart-patterns`, `/candlestick-patterns`). |
 | API-1.2 | **EN** | It SHALL read `price_data` from the existing in-memory store and SHALL NOT re-run the backtest or re-fetch data. |
 | API-1.3 | **EN** | 404 for an unknown/expired `backtest_id`, matching sibling endpoints. |
-| API-1.4 | **EN — D-13 CLOSED** | The endpoint SHALL expose the pivot detector's `theta_base`, `ratio` and `scales` as optional query parameters, defaulting to the FR-1e.3 values. FR-1e.4's parity test applies. Any further parameters depend on OQ-05 and OQ-18 and are out of v1. |
+| API-1.4 | **EN — D-13 CLOSED** | The endpoint SHALL expose the pivot detector's `theta_base`, `ratio` and `scales` as optional query parameters, defaulting to the FR-1e.3 values. FR-1e.4's parity test applies. Any further parameters depend on OQ-05 and are out of v1. `max_combination_depth` is deliberately **not** exposed — it is capped at 1 by the ladder's expressive limit (FR-3.9a.1), so a caller-supplied value could only be wrong. |
 | API-1.5 | **EN** | The response SHALL include `blocked_rules` (DM-3) so the client can honestly display what was not evaluated. |
 | API-1.6 | **EN** | No existing endpoint's path, parameters, or response shape SHALL change. |
 | API-1.7 | **EN** | `GET /api/backtests/{id}/report` SHALL NOT gain Elliott Wave parameters in v1 (§1.3). |
@@ -696,7 +721,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 | ID | Tier | Requirement |
 |---|---|---|
 | TR-1 | **EN** | Every **implementable** mandatory gate SHALL have both a passing fixture and a fixture violating **only** that gate. Applies to: IMP-01, IMP-02, IMP-03, LD-01, LD-03, ED-01, ED-03, ZZ-01, ZZ-02, ZZ-03, ZZ-04, FL-01, FL-02, FLE-01, FLU-01, TRI-01, TRI-03, DT-01, DT-02, DT-04, TT-01, TT-02, TT-04. |
-| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open; no recursion into nested combinations while OQ-18 is open; no "extension" magnitude test while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
+| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open; no Fibonacci constant outside the one scoped DT-05/TT-05 ceiling exception; no "extension" magnitude test while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
 | TR-2b | **EN** | **IMP-04 / IMP-05 tests.** Fixtures SHALL cover: wave 3 longer than both siblings (pass); wave 3 shorter than both (fail); wave 3 shorter than exactly one (pass); wave 4 territory clear of wave 1 (pass); wave 4 territory overlapping wave 1 (fail); and both exact-equality boundary cases of FR-3.1b.8. A further test SHALL assert **no tolerance constant** is applied to either gate (FR-3.1b.7). |
 | TR-2a | **EN** | **IMP-06 tests.** Fixtures SHALL cover all four outcomes of the resolved definition: divergence present (up), divergence present (down), price precondition met but RSI **not** diverging (gate fails, FR-3.1a.8), and RSI(13) `NaN` at a comparison bar (→ **UNDECIDABLE**, FR-3.1a.6). A further test SHALL assert **no tolerance constant** is applied to the RSI comparison (FR-3.1a.5). |
 | TR-3 | **EN** | A test SHALL assert LD-02/ED-02 (wave 1/4 overlap) **never** gates — a fixture with overlap must still classify as a diagonal. This is explicitly source-defined (FR-3.3.1) and easy to regress. |
@@ -713,7 +738,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 
 ---
 
-## 14. Open Questions — 4 resolved, 21 unresolved (OQ-25 added 2026-08-10)
+## 14. Open Questions — 5 resolved, 21 unresolved (OQ-25, OQ-26 added 2026-08-10)
 
 **Revised 2026-08-09.** **OQ-02, OQ-03, OQ-04 and OQ-21 are RESOLVED by project decision**
 (§6.1b, §6.1a, §4a). **The other 20 remain unresolved and none has been silently narrowed.**
@@ -738,10 +763,11 @@ insufficient, and what it blocks.
 | **OQ-14** | MS-01…03 | The motive-sequence **numbers are never stated on the page**. | Motive Sequence entirely → **NI**, excluded from v1 (FR-3.5.1, DM-4.1) |
 | **OQ-15** | LD-02, ED-02 | Overlap is explicitly *not* a condition and "wedge shape" is unquantified — leaving position + subdivision as the only gates. | Whether a diagonal is distinguishable from a plain 5-leg move |
 | **OQ-16** | LD-03, ED-03 | Identical permitted subdivision sets for both diagonals. | Leading vs Ending distinguishable only by host (FR-3.3.3) |
-| **OQ-17** | DEG-03, DEG-04 | Only 2 of 9 degrees mapped to timeframes; no rule for assigning degree from data. | Degree assignment (FR-3.11.2); feeds OQ-18 |
-| **OQ-18** | DT-03, TT-03 | "of smaller degree" is unbounded recursion with no depth limit and no rule for when nesting should read as one larger structure. | DT/TT sub-structure gates; recursion depth (FR-2.3) |
+| **OQ-17** | DEG-03, DEG-04 | Only 2 of 9 degrees mapped to timeframes; no rule for assigning degree from data. | Degree assignment (FR-3.11.2) |
+| ~~**OQ-18**~~ | DT-03, TT-03 | **RESOLVED 2026-08-10 by project decision** — capped at `max_combination_depth = 1`, derived from the ladder's expressive limit. The reference still states no depth; tier EN, not SD. | *(was: DT/TT gates — now specified)* |
 | **OQ-19** | ZZ-F03 | The reference flags the C=161.8% ambiguity itself and offers "whether the third swing has extension" as tiebreak — but "extension" is undefined (OQ-24). **Circular.** | Zigzag-vs-impulse disambiguation |
 | **OQ-20** | GEN-04, GEN-06 | **PRESERVED UNRESOLVED per instruction.** §5: corrective waves "move in three, but never in five". §1.6/§3.5: motive waves "can unfold in 3 waves". A 3-swing move is therefore both, with **no stated discriminator.** | The motive/corrective distinction at 3 swings — the reference's central modernization and central ambiguity |
+| **OQ-26** | DT-02, TT-02 | **NEW 2026-08-10, UNRESOLVED.** The reference's swing arithmetic contradicts itself: DT-02 says WXY is a **7**-swing structure, while DT-04 ("X can be any corrective structure") plus GEN-06 ("correctives move in three") imply **9**. TT is the same: 11 requires X to be a single swing. | Whether swing count may gate. It does not — recorded as a measurement only, so neither statement is discarded. |
 | **OQ-25** | LD-03, ED-03 | **NEW 2026-08-10, UNRESOLVED.** The reference constrains a diagonal's subdivision *shape* (5-3-5-3-5 / 3-3-3-3-3) but never defines how detector-scale legs combine into an Elliott sub-wave. Implemented readings: 'sub-wave is a five-wave' = 'the finer scale registers an impulse inside it'; 'sub-wave is a three-wave' = 'spans ≥2 finer legs'. Both are readings, not stated rules. | Which groupings count as valid diagonals. All consistent groupings are emitted as alternates; none is preferred. |
 | ~~**OQ-21**~~ | All | **RESOLVED 2026-08-09 by project decision** — an independent, Elliott-specific detector (§4a) that neither modifies nor consumes the existing swing/zigzag modules. **The reference still says nothing on this**; the detector is 100% project engineering, tier EN. | *(was: the engine's entire input — now specified)* |
 | **OQ-22** | WP-02/04/08/11/12/13, TRI-05 | All volume statements are qualitative, with no threshold or window. Volume is also **synthetic** on the default data source. | All volume rules (FR-4.3) |
@@ -790,7 +816,7 @@ the strict/conservative choice, meaning they reject rather than admit a borderli
 
 ---
 
-## 15. Traceability — all 94 rules
+## 15. Traceability — all 96 rules
 
 Every rule ID from the inventory appears exactly once.
 
@@ -838,11 +864,15 @@ Every rule ID from the inventory appears exactly once.
 | TRI-04, TRI-07 | FR-3.8 | UD | OQ-12 |
 | TRI-05 | FR-3.8, FR-4.3 | UD | OQ-22 |
 | TRI-06 | FR-3.8 | UD | OQ-13 |
-| DT-01, DT-02, DT-04 | FR-3.9 | SD | — |
-| DT-03 | FR-3.9 | UD | OQ-18 |
+| DT-01, DT-04 | FR-3.9, FR-3.9a | SD | — |
+| DT-05 | FR-3.9a | SD | **Newly extracted 2026-08-10** — ceiling, not blocked by OQ-05 |
+| DT-03 | FR-3.9a | EN | **OQ-18 RESOLVED** — depth cap |
+| DT-02 | FR-3.9a | UD | **OQ-26** |
 | DT-F01, DT-F02 | FR-4.2 | UD | **OQ-05** |
-| TT-01, TT-02, TT-04 | FR-3.10 | SD | — |
-| TT-03 | FR-3.10 | UD | OQ-18 |
+| TT-01, TT-04 | FR-3.10, FR-3.9a | SD | — |
+| TT-05 | FR-3.9a | SD | **Newly extracted 2026-08-10** — constrains wave Y, not Z |
+| TT-03 | FR-3.9a | EN | **OQ-18 RESOLVED** — depth cap |
+| TT-02 | FR-3.9a | UD | **OQ-26** |
 | TT-F01, TT-F02 | FR-4.2 | UD | **OQ-05** |
 
 ### 15.1 Disposition totals
@@ -909,7 +939,7 @@ SRS says UNDEFINED rather than assuming.
 | **D-06** | Whether to introduce TypeScript test infrastructure for the new chart (TR-10) | — |
 | **D-07** | Whether Elliott Wave ever appears in the exported HTML report — and if so, how to avoid the existing `CandlestickChart.tsx` ↔ `api/report/charts.py` duplication hazard (§1.3) | — |
 | **D-08** | Answer OQ-12 — whether Triangle is in v1 scope, given its gates are near-vacuous (FR-3.8.1) | — |
-| **D-09** | Answer OQ-18 — recursion depth bound for nested Double/Triple Three (FR-2.3) | D-04 |
+| ~~**D-09**~~ | ~~Answer OQ-18~~ — **CLOSED 2026-08-10.** `max_combination_depth = 1`, derived from the ladder (ARCHITECTURE §6.7a) | — |
 | **D-10** | Answer OQ-20 — how a 3-swing move is classified as motive vs corrective | D-01 |
 | **D-11** | Build order, given §8. Now depends on **D-02a**, not D-02 | D-01, D-02a |
 | **D-12** | Whether an UNDECIDABLE candidate is surfaced in the UI or withheld (FE-3.1). **More concrete now:** the OQ-04 resolution creates a real UNDECIDABLE path (RSI(13) warmup, FR-1.8), so this is no longer hypothetical | D-02a |
@@ -954,7 +984,7 @@ identical split.
 
 ### Open Questions preserved
 
-**20 of 24 unresolved; OQ-02, OQ-03, OQ-04 and OQ-21 resolved by explicit project decision.**
+**21 of 26 unresolved; OQ-02, OQ-03, OQ-04, OQ-18 and OQ-21 resolved by explicit project decision. OQ-25 and OQ-26 were added 2026-08-10.**
 
 - **OQ-02, OQ-03** — RESOLVED (§6.1b). **OQ-04** — RESOLVED (§6.1a). **OQ-21** — RESOLVED (§4a).
   All four tagged **EN**, not SD: the reference contributes nothing to any of them, and each is
@@ -984,7 +1014,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 3. **OQ-09 / OQ-10** — Regular and Expanded Flat remain indistinguishable. Running Flat is
    unaffected and stays in the core.
 4. **OQ-12 / OQ-13** — Triangle's gates remain near-vacuous; scope decision required.
-5. **OQ-18** (+ OQ-17) — Double/Triple Three: only the *nested* "of smaller degree" branch is
+5. ~~**OQ-18**~~ — **RESOLVED.** Double/Triple Three implemented; the *nested* branch is
    missing; the {zigzag, flat} branch is available. A depth cap would close this.
 6. **OQ-24** — Extension undefined; this also keeps OQ-19's zigzag/impulse tiebreak circular.
 7. **OQ-05** — all 16 Fibonacci rules. **Not a classification blocker** — non-gating

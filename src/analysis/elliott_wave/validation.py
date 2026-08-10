@@ -54,10 +54,13 @@ BLOCKED_RULES: tuple[dict, ...] = (
     {"rules": ["DEG-03", "DEG-04"], "oq": "OQ-17",
      "reason": "Only 2 of 9 degrees map to a timeframe and no rule assigns a "
                "degree from price data; pivots carry a scale index only."},
-    {"rules": ["DT-01", "DT-02", "DT-03", "DT-04",
-               "TT-01", "TT-02", "TT-03", "TT-04"], "oq": "OQ-18",
-     "reason": "Double/Triple Three nest 'of smaller degree' with no depth "
-               "limit and no rule for when nesting reads as one structure."},
+    {"rules": ["DT-02", "TT-02"], "oq": "OQ-26",
+     "reason": "The reference's own swing arithmetic is inconsistent: DT-02 "
+               "says WXY is a 7-swing structure, but DT-04 says X is 'any "
+               "corrective structure' and GEN-06 says correctives move in "
+               "three -- 3+3+3 is 9, not 7. The stated count only works if X "
+               "is a single swing. Swing count is recorded as a measurement "
+               "and never gated, so neither statement is silently discarded."},
     {"rules": ["ZZ-F03"], "oq": "OQ-19",
      "reason": "The zigzag-vs-impulse tiebreak at C=161.8% depends on "
                "'extension', which is itself undefined (OQ-24). Circular."},
@@ -88,6 +91,11 @@ BLOCKED_RULES: tuple[dict, ...] = (
 # Known v1 scope limitations that are NOT reference gaps -- they are
 # consequences of this build's own ordering or coverage.
 V1_LIMITATIONS: tuple[str, ...] = (
+    "Double/Triple Three recursion is capped at depth 1 (OQ-18 resolution) -- "
+    "the pivot ladder's expressive limit, since correctives occur only at "
+    "scale 2. Depth-1 nesting is reachable in principle but close to "
+    "unreachable in practice, because scale 3 carries few pivots and scale 4 "
+    "almost none.",
     "Diagonals are detected only in impulse wave 1 / wave 5 host positions. "
     "Zigzag wave A/C hosts (also valid per LD-01/ED-01) are not searched, "
     "because corrections are classified after diagonals in the pipeline.",

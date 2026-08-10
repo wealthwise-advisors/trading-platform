@@ -25,7 +25,7 @@ def _code_only(path: Path) -> str:
     """Source with docstrings and comments stripped, so prose EXPLAINING a gap
     is never mistaken for an implementation of it."""
     src = path.read_text(encoding="utf-8")
-    src = re.sub(r'"""7?.*?"""', "", src, flags=re.S)
+    src = re.sub(r'""".*?"""', "", src, flags=re.S)
     src = re.sub(r"'''.*?'''", "", src, flags=re.S)
     return "\n".join(line.split("#")[0] for line in src.splitlines())
 
@@ -48,11 +48,36 @@ class TestOQ05NoFibonacciTolerance:
            "0.854", "3.236", "61.8", "38.2", "23.6", "76.4", "85.4", "161.8",
            "123.6", "323.6", "14.6"]
 
+    # The ONE scoped exception, approved 2026-08-10. DT-05/TT-05 state an
+    # absolute prohibition -- "Wave Y can not pass 161.8% of wave W" -- which
+    # is a one-sided INEQUALITY, not a ratio match. An inequality needs no
+    # tolerance, so unlike every OQ-05 ratio it is implementable exactly as
+    # written. Permitted in combination.py only; still banned everywhere else,
+    # which test_fibonacci_exception_is_scoped_to_one_module enforces.
+    ALLOWED = {"combination": {"1.618", "161.8"}}
+
     @pytest.mark.parametrize("module", sorted(IMPL_CODE))
     def test_no_fibonacci_constant_in_code(self, module):
-        hits = [f for f in self.FIB if re.search(rf"(?<![\d.]){re.escape(f)}(?![\d])",
-                                                 IMPL_CODE[module])]
+        allowed = self.ALLOWED.get(module, set())
+        hits = [f for f in self.FIB
+                if f not in allowed
+                and re.search(rf"(?<![\d.]){re.escape(f)}(?![\d])", IMPL_CODE[module])]
         assert not hits, f"{module}.py contains Fibonacci constant(s) {hits}"
+
+    def test_fibonacci_exception_is_scoped_to_one_module(self):
+        """The 161.8 allowance must not spread. Any other module using it is a
+        regression, whatever the justification in its own comments."""
+        offenders = [m for m, src in IMPL_CODE.items()
+                     if m != "combination"
+                     and re.search(r"(?<![\d.])1?61\.8(?![\d])", src)]
+        assert not offenders, f"161.8 leaked into {offenders}"
+
+    def test_the_exception_is_an_inequality_not_a_match(self):
+        """The permitted constant must be used as a ceiling. If it ever becomes
+        an equality/closeness test, that is OQ-05 matching by the back door."""
+        src = IMPL_CODE["combination"]
+        assert re.search(r"<=\s*WAVE_Y_CEILING_OF_W|WAVE_Y_CEILING_OF_W\s*\*", src)
+        assert "==" not in src.split("WAVE_Y_CEILING_OF_W")[0].splitlines()[-1]
 
     @pytest.mark.parametrize("module", sorted(IMPL_CODE))
     def test_no_tolerance_identifier_in_code(self, module):
@@ -85,7 +110,9 @@ class TestDeferredStructuresAbsent:
 
     def test_no_deferred_structure_types(self):
         present = set(StructureType.__members__)
-        banned = {"TRIANGLE", "DOUBLE_THREE", "TRIPLE_THREE", "MOTIVE_SEQUENCE",
+        # DOUBLE_THREE / TRIPLE_THREE were removed from this list when OQ-18
+        # was resolved (depth cap, 2026-08-10) -- deliberately, not by accident.
+        banned = {"TRIANGLE", "MOTIVE_SEQUENCE",
                   "IMPULSE_WITH_EXTENSION", "FLAT_REGULAR", "FLAT_EXPANDED"}
         assert not (present & banned), f"deferred types present: {present & banned}"
 
@@ -97,9 +124,8 @@ class TestDeferredStructuresAbsent:
     @pytest.mark.parametrize("term,oq", [
         ("triangle", "OQ-12/13"),
         ("motive_sequence", "OQ-14"),
-        ("double_three", "OQ-18"),
-        ("triple_three", "OQ-18"),
         ("wedge", "OQ-15"),
+        # double_three / triple_three dropped here when OQ-18 was resolved.
     ])
     def test_no_logic_for_deferred_concept(self, term, oq):
         for module, src in IMPL_CODE.items():
@@ -123,6 +149,8 @@ class TestDeferredStructuresAbsent:
         """OQ-17: pivots carry a scale index, never one of the 9 degree names."""
         names = ["grand super cycle", "supercycle", "subminuette", "minuette",
                  "degree_name", "DEGREE_NAME_MAP"]
+        # note "of smaller degree" is reference wording quoted in
+        # combination.py's docstring; docstrings are stripped by _code_only
         for module, src in IMPL_CODE.items():
             for n in names:
                 assert n.lower() not in src.lower(), f"{module}.py mentions {n}"
@@ -194,14 +222,19 @@ class TestBlockedRuleRegistry:
             assert entry["rules"] and entry["oq"] and len(entry["reason"]) > 20
 
     @pytest.mark.parametrize("oq", ["OQ-05", "OQ-09/OQ-10", "OQ-12/OQ-13",
-                                    "OQ-14", "OQ-18", "OQ-24", "OQ-25"])
+                                    "OQ-14", "OQ-24", "OQ-25", "OQ-26"])
     def test_open_question_is_declared_blocked(self, oq):
         assert any(e["oq"] == oq for e in validation.BLOCKED_RULES), \
             f"{oq} is open but not declared in the registry"
 
+    def test_oq18_no_longer_declared_blocked(self):
+        """OQ-18 is resolved; leaving it in the registry would misreport."""
+        assert not any(e["oq"] == "OQ-18" for e in validation.BLOCKED_RULES)
+
     def test_v1_limitations_are_declared(self):
         assert validation.V1_LIMITATIONS
         joined = " ".join(validation.V1_LIMITATIONS).lower()
+        assert "depth 1" in joined            # the OQ-18 cap is disclosed
         assert "zigzag wave a/c" in joined      # diagonal host limitation
         assert "scale 1" in joined              # D-14 recursion floor
 

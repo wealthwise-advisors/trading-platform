@@ -27,7 +27,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import correction, diagonal, hierarchy, impulse, measurements, momentum, pivots, validation
+from . import (combination, correction, diagonal, hierarchy, impulse,
+               measurements, momentum, pivots, validation)
 from .models import (
     ELLIOTT_WAVE_ENGINE_VERSION,
     AnalysisResult,
@@ -53,6 +54,7 @@ def run_analysis(df: pd.DataFrame, config: EngineConfig | None = None) -> Analys
             "ratio": cfg.ratio,
             "scales": cfg.scales,
             "rsi_period": cfg.rsi_period,
+            "max_combination_depth": cfg.max_combination_depth,
             "thresholds": cfg.thresholds(),
         },
     )
@@ -93,8 +95,12 @@ def run_analysis(df: pd.DataFrame, config: EngineConfig | None = None) -> Analys
     dia_waves, dia_notes = diagonal.classify_diagonals(by_scale, imp_waves, spans)
     result.notes.extend(dia_notes)
     cor_waves = correction.classify_corrections(by_scale, spans)
+    # Combinations last among the classifiers: DT-03/TT-03 consume the
+    # correctives registered immediately above.
+    com_waves = combination.classify_combinations(
+        by_scale, spans, cfg.max_combination_depth)
 
-    waves: list[Wave] = imp_waves + dia_waves + cor_waves
+    waves: list[Wave] = imp_waves + dia_waves + cor_waves + com_waves
 
     # 6. guideline ratios -- recorded, never matched
     by_id = {w.id: w for w in waves}

@@ -14,6 +14,8 @@ WHAT THIS ENGINE SUPPORTS
   Zigzag                     ZZ-01..ZZ-04
   Flat (generic)             FL-01, FL-02
   Running Flat               FLU-01
+  Double Three               DT-01, DT-03, DT-05
+  Triple Three               TT-01, TT-03, TT-05
 
 WHAT IT DELIBERATELY DOES NOT SUPPORT
 -------------------------------------
@@ -24,7 +26,6 @@ Each of these is blocked by an unresolved Open Question and is reported in
                                           are never quantified
   Triangle                 OQ-12, OQ-13   no ratios, no D/E rules, no variant
                                           discriminators
-  Double / Triple Three    OQ-18          unbounded "of smaller degree" nesting
   Impulse with Extension   OQ-24          "extension" has no numeric definition
   Motive Sequence          OQ-14          the sequence numbers are never stated
   Fibonacci MATCHING       OQ-05          ratios are recorded, never matched --

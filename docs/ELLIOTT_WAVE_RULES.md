@@ -6,7 +6,12 @@
 This document is an **inventory of what the reference actually says** — not a design, not
 a specification, and not an implementation plan. Nothing here has been implemented.
 
-**Revision 2026-08-09 (latest):** pivot thresholds calibrated and **D-13 closed**
+**Revision 2026-08-10:** **OQ-18 RESOLVED** — Double/Triple Three recursion capped at depth 1
+([resolution](#oq-18-resolution--doubletriple-three-recursion-depth)). **DT-05 and TT-05 added** —
+an extraction correction; both ceilings were missing from the first pass. **OQ-26 added**
+(unresolved) — the reference's 7-vs-9 swing-count contradiction. Rule count 94 → **96**.
+
+**Revision 2026-08-09:** pivot thresholds calibrated and **D-13 closed**
 (θ_base 0.20%, r 2.5, S 4 — see [ARCHITECTURE](ELLIOTT_WAVE_ARCHITECTURE.md) §5);
 **D-02b and D-02c confirmed closed** (pivot-price reading kept; reject-on-tie kept for both
 IMP-04 and IMP-05 — no rule text changed).
@@ -18,8 +23,9 @@ overlap), [OQ-04](#oq-04-resolution--wave-5-momentum-divergence) (divergence = R
 comparison), and [OQ-21](#oq-21-resolution--elliott-specific-pivot-detection) (an independent,
 Elliott-specific pivot detector that neither modifies **nor consumes** the existing swing/zigzag
 modules). **All four are decisions, not source-defined behavior** — the reference contributes
-nothing to any of them — and are labelled as such wherever they appear. **The other 20 Open
-Questions remain unresolved.** With OQ-02/03/04 settled, **all six Impulse gates are specified**;
+nothing to any of them — and are labelled as such wherever they appear. *(OQ-18 has since been
+resolved too, and OQ-26 added — see the 2026-08-10 revision above. Current standing: **5 of 26
+resolved, 21 unresolved**.)* With OQ-02/03/04 settled, **all six Impulse gates are specified**;
 with OQ-21 settled, **the engine now has a defined input**.
 
 ---
@@ -294,10 +300,11 @@ reference by a wide margin.
 |---|---|---|---|---|---|---|---|---|---|---|
 | DT-01 | Double Three | all | "Double three is a sideways combination of two corrective patterns" labelled **WXY** | **M** | pivots | leg count == 3 (W, X, Y) | — | — | 5.4 | Not implemented |
 | DT-02 | Double Three | all | 7-swing structure | **M** | pivots | total sub-swing count == 7 | — | — | 5.4 | Not implemented |
-| DT-03 | Double Three | W, Y | "Wave W and wave Y subdivision can be zigzag, flat, double three of smaller degree, or triple three of smaller degree" | **M** | sub, deg | sub(W), sub(Y) ∈ {zigzag, flat, DT(−1 deg), TT(−1 deg)} | — | — | 5.4 | Blocked (OQ-18) |
+| DT-03 | Double Three | W, Y | "Wave W and wave Y subdivision can be zigzag, flat, double three of smaller degree, or triple three of smaller degree" | **M** | sub, deg | sub(W), sub(Y) ∈ {zigzag, flat, DT(−1 deg), TT(−1 deg)} | — | — | 5.4 | **Specified 2026-08-10** — OQ-18 resolved (depth cap) |
 | DT-04 | Double Three | X | "Wave X can be any corrective structure" | **M** (permissive) | sub | sub(X) ∈ any corrective | — | — | 5.4 | Not implemented |
 | DT-F01 | Double Three | X | "Wave X = 50%, 61.8%, 76.4%, or 85.4% of wave W" | G | pivots | len(X)/len(W) | 50 / 61.8 / 76.4 / 85.4 % | — | 5.4 | Blocked (OQ-05) |
 | DT-F02 | Double Three | Y | "Wave Y = 61.8%, 100%, or 123.6% of wave W" | G | pivots | len(Y)/len(W) | 61.8 / 100 / 123.6 % | — | 5.4 | Blocked (OQ-05) |
+| DT-05 | Double Three | Y | **"Wave Y can not pass 161.8% of wave W"** | **M** | pivots | len(Y) <= 1.618 × len(W) | 161.8% (ceiling) | — | 5.4 | **Specified 2026-08-10** — added by the extraction correction below |
 
 ## 14. Triple Three (§5.5)
 
@@ -305,13 +312,29 @@ reference by a wide margin.
 |---|---|---|---|---|---|---|---|---|---|---|
 | TT-01 | Triple Three | all | "Triple three is a sideways combination of three corrective patterns" labelled **WXYXZ** | **M** | pivots | leg count == 5 (W, X, Y, X, Z) | — | — | 5.5 | Not implemented |
 | TT-02 | Triple Three | all | 11-swing structure | **M** | pivots | total sub-swing count == 11 | — | — | 5.5 | Not implemented |
-| TT-03 | Triple Three | W, Y, Z | "Wave W, wave Y, and wave Z subdivision can be zigzag, flat, double three of smaller degree, or triple three of smaller degree" | **M** | sub, deg | sub(W/Y/Z) ∈ {zigzag, flat, DT(−1 deg), TT(−1 deg)} | — | — | 5.5 | Blocked (OQ-18) |
+| TT-03 | Triple Three | W, Y, Z | "Wave W, wave Y, and wave Z subdivision can be zigzag, flat, double three of smaller degree, or triple three of smaller degree" | **M** | sub, deg | sub(W/Y/Z) ∈ {zigzag, flat, DT(−1 deg), TT(−1 deg)} | — | — | 5.5 | **Specified 2026-08-10** — OQ-18 resolved (depth cap) |
 | TT-04 | Triple Three | X (both) | "Wave X can be any corrective structure" | **M** (permissive) | sub | sub(X) ∈ any corrective | — | — | 5.5 | Not implemented |
 | TT-F01 | Triple Three | X | "Wave X = 50%, 61.8%, 76.4%, or 85.4% of wave W" | G | pivots | len(X)/len(W) | 50 / 61.8 / 76.4 / 85.4 % | — | 5.5 | Blocked (OQ-05) |
 | TT-F02 | Triple Three | Z | "Wave Z = 61.8%, 100%, or 123.6% of wave W" | G | pivots | len(Z)/len(W) | 61.8 / 100 / 123.6 % | — | 5.5 | Blocked (OQ-05) |
+| TT-05 | Triple Three | **Y** | **"Wave Y can not pass 161.8% of wave W or it can become an impulsive wave 3"** | **M** | pivots | len(Y) <= 1.618 × len(W) | 161.8% (ceiling) | — | 5.5 | **Specified 2026-08-10** — constrains wave **Y**, not Z |
 
-**Note:** the reference states no ratio for wave **Y** in a Triple Three (only X and Z), and no
-ratio for the **second** X. Asymmetry is in the source, not a transcription error.
+**Note:** the reference states no *discrete ratio set* for wave **Y** in a Triple Three (only X
+and Z), and none for the **second** X. Asymmetry is in the source, not a transcription error.
+Wave Y is nonetheless constrained — by the TT-05 ceiling.
+
+> ### ⚠ Extraction correction, 2026-08-10
+>
+> **DT-05 and TT-05 were missing from the original Phase 2 inventory.** The reference states
+> *"Wave Y can not pass 161.8% of wave W"* (§5.4) and *"Wave Y can not pass 161.8% of wave W or it
+> can become an impulsive wave 3"* (§5.5); the first pass recorded only the discrete
+> 61.8/100/123.6% sets alongside them and missed both ceilings. Found by re-verifying the source
+> before implementing Double/Triple Three.
+>
+> Both are **mandatory** ("can not"), and — importantly — **neither is blocked by OQ-05**. Every
+> other Fibonacci rule is a discrete value needing a tolerance to match; these are one-sided
+> **inequalities**, which need none. They are implemented exactly as written.
+>
+> Note TT-05 constrains wave **Y**, not wave Z. That is what the page says.
 
 ---
 
@@ -340,13 +363,54 @@ before it can enter the Phase 3 SRS.
 | **OQ-15** | LD-02, ED-02 | Both diagonals: overlap is "**not a condition**" and the wedge shape is unquantified. With position (LD-01/ED-01) and subdivision (LD-03/ED-03) as the only gates, what actually makes a diagonal a diagonal rather than a plain 5-leg move? |
 | **OQ-16** | LD-03, ED-03 | Leading and Ending Diagonal permit the **identical** subdivision sets, so shape cannot distinguish them — only host position can. Confirm that's intended. |
 | **OQ-17** | DEG-03, DEG-04 | Only 2 of the 9 degrees are mapped to a timeframe, and no rule exists for assigning a degree from price data. How is degree assigned? |
-| **OQ-18** | DT-03, TT-03 | W/Y/Z may themselves be "double three **of smaller degree**". This is recursive with no stated depth limit and no stated rule for when a nested combination should instead be read as a single larger structure. |
+| ~~**OQ-18**~~ | DT-03, TT-03 | **✅ RESOLVED 2026-08-10 — recursion capped at depth 1.** *(Original question: W/Y/Z may themselves be a "double three of smaller degree", recursive with no stated depth limit.)* The cap is derived from the pivot ladder's expressive limit, not chosen: correctives occur only at scale 2, so a combination needs scale 3 and a nested one scale 4 — two levels would need scale 5, beyond the 4-scale ladder. See [OQ-18 resolution](#oq-18-resolution--doubletriple-three-recursion-depth). |
+| **OQ-26** | DT-02, TT-02 | **NEW 2026-08-10, UNRESOLVED.** The reference's own swing arithmetic is inconsistent. DT-02 says WXY is a **7**-swing structure, but DT-04 says X is "any corrective structure" and GEN-06 says correctives move in three — 3+3+3 is **9**, not 7. The stated count only works if X contributes a single swing. TT is identical: 11 = 3+1+3+1+3. Gating on the count would contradict DT-04; ignoring DT-02 would drop a mandatory-tier statement. Swing count is therefore **recorded as a measurement and never gated**, and every combination carries `blocked_by: ["OQ-26"]`. |
 | **OQ-19** | ZZ-F03 | The reference itself flags that a Zigzag's wave C at 161.8% of A is ambiguous with a wave 3 of an impulse, and offers "whether the third swing has extension or not" as the tiebreak — but "extension" is itself undefined (OQ-24). Circular. |
 | **OQ-20** | GEN-04, GEN-06 | §5 says corrective waves "move in three, but **never** in five"; §1.6/§3.5 says motive waves "can unfold in **3 waves**". A 3-swing move is therefore both possibly-corrective and possibly-motive, with **no stated discriminator**. This is the reference's central modernization and its central ambiguity. |
 | ~~**OQ-21**~~ | All | **✅ RESOLVED 2026-08-09 — build an independent, Elliott-specific pivot detector; do not consume the existing swing/zigzag modules.** *(Original question: the reference assumes waves/pivots are already identified and gives no rule for detecting wave boundaries from raw price.)* The reference **still** says nothing on this; the detector is entirely a project decision. See [OQ-21 resolution](#oq-21-resolution--elliott-specific-pivot-detection). |
 | **OQ-22** | WP-02/04/08/11/12/13, TRI-05 | Every volume statement is qualitative ("lower than", "well below", "picks up", "decreasing") with no threshold or measurement window. Also: volume is present in our OHLCV but is **synthetic** for the default data source, so volume-gated rules would be meaningless on synthetic backtests. |
 | **OQ-23** | FLE-F01, FLU-F01 | Expanded Flat and Running Flat both state wave B = **123.6%** of wave A. Wave B cannot discriminate between them; only wave C can. Confirm. |
 | **OQ-24** | EXT-01, EXT-02, ZZ-F03 | "Extension" / "elongated" / "exaggerated subdivisions" — no numeric definition anywhere. What makes a wave "extended"? |
+
+---
+
+## OQ-18 resolution — Double/Triple Three recursion depth
+
+**Status: RESOLVED 2026-08-10 by project decision.**
+
+> ⚠ **Not from the reference.** The page says W/Y/Z may be "a double three or triple three of
+> smaller degree" and **never states a termination depth** (verified against the source). The cap
+> below is a **project decision**.
+
+### Decision
+
+`max_combination_depth = 1`. A Double/Triple Three may be built from zigzag/flat components
+(depth 0), or from a depth-0 Double/Triple Three (depth 1). No deeper.
+
+### Why 1 — derived from the ladder, not chosen
+
+| Structure | Minimum scale | Because |
+|---|---|---|
+| Corrective (zigzag / flat) | **2** | needs 5-wave A/C legs at scale 1 |
+| DT/TT from correctives | **3** | needs correctives at scale 2 |
+| DT/TT containing a DT/TT | **4** | needs a DT at scale 3 |
+| DT/TT nested two deep | **5** | ❌ exceeds the 4-scale ladder (D-13) |
+
+Measured across four backtest configurations (191 impulses, 73 correctives): **correctives occur
+at scale 2 and nowhere else.** So depth 1 is exactly what the ladder can express — depth 0 would
+refuse a stated rule, depth ≥2 would be dead configuration. Confirmed empirically after
+implementation: depth-0 combinations land at scale 3 and depth-1 at scale 4, precisely as the
+table predicts.
+
+### Consequences
+
+| Item | Effect |
+|---|---|
+| DT-01, DT-03, DT-04, TT-01, TT-03, TT-04 | Blocked → **specified** |
+| DT-05, TT-05 | Newly extracted and **specified** (mandatory ceilings) |
+| DT-02, TT-02 | **Still blocked — OQ-26**, recorded as a measurement only |
+| DT-F01/F02, TT-F01/F02 | Still blocked on **OQ-05** (discrete ratios, no tolerance) |
+| Real-data yield | 11 Double Threes + 1 Triple Three across four configurations — rare, as predicted |
 
 ---
 
@@ -604,7 +668,7 @@ section total.
 the reference and three by the OQ-02/03/04 decisions. The remaining blocked rules cluster into:
 the 16 Fibonacci rules (all blocked on tolerance, **OQ-05**, none of which gate anything), the
 Regular/Expanded flat discriminators (**OQ-09** / **OQ-10**), Triangle (**OQ-12** / **OQ-13**),
-nested combinations (**OQ-18**), and extensions (**OQ-24**).
+and extensions (**OQ-24**). Nested combinations are no longer blocked: **OQ-18 is resolved** by a depth-1 cap, though DT-02/TT-02's swing counts remain open as **OQ-26**.
 
 **The OQ-21 resolution deliberately does not move these numbers.** OQ-21 was never a *per-rule*
 blocker — no individual rule in this inventory cites it. It was an engine-level precondition: the

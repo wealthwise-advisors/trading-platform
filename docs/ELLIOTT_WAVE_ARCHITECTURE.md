@@ -3,7 +3,7 @@
 **Phase 4 deliverable.** Version 1.0 (DRAFT — not approved for implementation).
 Written 2026-08-09.
 
-**Governing documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (94 rules, 24 OQs — 6 now
+**Governing documents:** [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md) (96 rules, 26 OQs — 5
 resolved) and [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements, rev 0.5). Where this
 document and the SRS disagree, **the SRS wins** and this document is the bug.
 
@@ -20,7 +20,7 @@ Flat, Running Flat → serialization → one API sub-resource → one dedicated 
 chart.
 
 **Out (deferred, each blocked by its own Open Question):** Regular Flat and Expanded Flat
-(OQ-09/OQ-10) · Triangle (OQ-12/OQ-13) · Double/Triple Three (OQ-18) · Impulse with Extension
+(OQ-09/OQ-10) · Triangle (OQ-12/OQ-13) · Impulse with Extension
 (OQ-24) · Motive Sequence (OQ-14, not implementable) · Fibonacci **matching** (OQ-05 — ratios are
 still *computed and recorded*, just never declared "matched").
 
@@ -38,12 +38,14 @@ src/analysis/elliott_wave/
 ├── impulse.py         IMP-01…IMP-06
 ├── diagonal.py        Leading / Ending Diagonal (LD-*, ED-*)
 ├── correction.py      Zigzag, generic Flat, Running Flat
+├── combination.py     Double Three, Triple Three (OQ-18 depth cap)
 ├── measurements.py    guideline ratio recording — computes, never matches
 ├── validation.py      lifecycle transitions + blocked-rule registry
 └── pipeline.py        orchestration; the one correct call order
 ```
 
-**11 files.** Every one earns its place below.
+**12 files** (11 at v1; `combination.py` added 2026-08-10 with the OQ-18 resolution).
+Every one earns its place below.
 
 ### 2.1 Modules deliberately NOT created
 
@@ -54,7 +56,7 @@ implementation.
 | Suggested | Verdict | Reason |
 |---|---|---|
 | `motive_sequence.py` | ❌ Not created | OQ-14 — the reference never states the sequence numbers. **Not implementable at any effort.** |
-| `advanced.py` | ❌ Not created *(split)* | It would have held Diagonals + Double/Triple Three. DT/TT are deferred (OQ-18), so a module named "advanced" would ship with half its scope missing. Diagonals get their own honestly-named `diagonal.py`. |
+| `advanced.py` | ❌ Not created *(split)* | It would have held Diagonals + Double/Triple Three. At v1 DT/TT were deferred, so a module named "advanced" would have shipped with half its scope missing. The split still stands now that DT/TT exist: `diagonal.py` and `combination.py` each name what they actually do. |
 | `fibonacci.py` | ❌ Not created *(renamed)* | Fibonacci **matching** is deferred (OQ-05). A module called `fibonacci.py` would imply matching exists. `measurements.py` computes and records ratios and cannot match — the name states the actual capability. |
 | `targets.py` | ❌ Not created | Wave-5 targets are IMP-F04, blocked on OQ-05 **and** OQ-07 ("inverse retracement" undefined). Nothing to build. |
 | `alternates.py` | ❌ Not created | Ranking/pruning between overlapping candidates is **FR-2.4 — UNDEFINED**. v1 keeps every alternate (no selection), which is zero code. A module here would be an empty hook inviting an invented ranking rule. |
@@ -310,6 +312,7 @@ One line each, then the contract that matters.
 | `impulse.py` | Apply IMP-01…IMP-06 to 5-leg windows. |
 | `diagonal.py` | Apply LD-01/03 and ED-01/03 to 5-leg windows in valid host positions. |
 | `correction.py` | Apply ZZ-01…04, FL-01/02 and FLU-01 to 3-leg windows. |
+| `combination.py` | Apply DT-01/03/05 and TT-01/03/05; own the OQ-18 recursion depth cap. |
 | `measurements.py` | Compute and record guideline ratios. **Cannot match.** |
 | `validation.py` | Own lifecycle transitions and the blocked-rule registry. |
 | `pipeline.py` | Run the layers in the one correct order and assemble the result. |
@@ -419,6 +422,27 @@ Zigzag (ZZ-01…04), generic Flat (FL-01/02), Running Flat (FLU-01). Regular and
 **not** implemented (OQ-09/OQ-10) — `validation.py` records them as blocked so their absence is
 reported rather than inferred.
 
+### 6.7a `combination.py`
+
+Double Three (W-X-Y) and Triple Three (W-X-Y-X-Z). Runs after `correction.py`, because DT-03/TT-03
+consume the correctives it registers.
+
+**OQ-18 - the depth cap.** `max_combination_depth = 1`, derived from the ladder rather than
+picked: correctives exist only at scale 2, so a combination needs scale 3, a nested one scale 4,
+and a doubly-nested one scale 5 - past the 4-scale ladder. Depth passes run shallowest-first and a
+structure is never re-emitted at a deeper depth. Confirmed on real data: depth-0 combinations
+appear at scale 3 and depth-1 at scale 4, exactly as the arithmetic predicts.
+
+**DT-05/TT-05 and the scoped Fibonacci exception.** The reference states *"Wave Y can not pass
+161.8% of wave W"*. That is an **inequality**, not a ratio match, so it needs no tolerance and
+OQ-05 does not block it - unlike every other Fibonacci rule. The project's TR-2 guard bans
+Fibonacci constants everywhere; it is narrowed to permit `161.8` **in this module only**, enforced
+by a dedicated test that fails if the constant appears anywhere else, and by another asserting the
+constant is used as a ceiling rather than an equality.
+
+**OQ-26.** DT-02's "7 swing structure" contradicts DT-04 + GEN-06 (3+3+3 = 9, not 7). Swing count
+is **measured and reported, never gated**, and every combination carries `blocked_by: ["OQ-26"]`.
+
 ### 6.8 `measurements.py`
 
 Computes every guideline ratio the reference states (IMP-F01…F04, ZZ-F01/F02, …) and records the
@@ -480,6 +504,7 @@ both existing test files (§12.1 of the SRS).
 | `test_ew_impulse.py` | IMP-01…06 each isolated with a pass fixture and a violates-only-this fixture; **TR-2b** boundary cases; **TR-2a** IMP-06's four outcomes incl. `NaN` → UNDECIDABLE |
 | `test_ew_diagonal.py` | LD/ED position + subdivision; **TR-3**: overlap never gates |
 | `test_ew_correction.py` | Zigzag, generic Flat, Running Flat; Regular/Expanded absent and *reported* as blocked |
+| `test_combination.py` | DT-01/03/05, TT-01/03/05, the OQ-18 depth-cap boundary, and OQ-26 swing count recorded-not-gated |
 | `test_ew_guards.py` | **TR-2** no invented constants · **TR-4** no score field · **TR-7** independence via import graph · blocked-rule registry completeness |
 | `test_ew_pipeline.py` | Ordering, determinism over ≥20 runs, serializer shape, live/report default parity (FR-1e.4) |
 

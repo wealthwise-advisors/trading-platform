@@ -54,7 +54,10 @@ class StructureType(str, Enum):
 
     Deferred and therefore absent: impulse_with_extension (OQ-24),
     flat_regular / flat_expanded (OQ-09/OQ-10), triangle (OQ-12/OQ-13),
-    double_three / triple_three (OQ-18), motive_sequence (OQ-14).
+    motive_sequence (OQ-14).
+
+    double_three / triple_three were added once OQ-18 was resolved by capping
+    recursion depth (see combination.py).
     """
 
     IMPULSE = "impulse"
@@ -63,6 +66,8 @@ class StructureType(str, Enum):
     ZIGZAG = "zigzag"
     FLAT = "flat"
     FLAT_RUNNING = "flat_running"
+    DOUBLE_THREE = "double_three"
+    TRIPLE_THREE = "triple_three"
 
 
 class Direction(str, Enum):
@@ -150,6 +155,11 @@ class EngineConfig:
     ratio: float = 4.0
     scales: int = 4
     rsi_period: int = 13        # IMP-06, OQ-04 resolution (FR-3.1a.2)
+    # OQ-18 resolution. 1 is the ladder's expressive limit, not a guess:
+    # correctives occur only at scale 2, so a combination needs scale 3 and a
+    # nested combination scale 4 -- two levels would need scale 5. See
+    # combination.py.
+    max_combination_depth: int = 1
 
     def thresholds(self) -> list[float]:
         return [self.theta_base * (self.ratio ** k) for k in range(self.scales)]
