@@ -140,10 +140,55 @@ class TestDeferredStructuresAbsent:
             for word in ("substantially", "slightly", "near_start"):
                 assert word not in low, f"{module}.py uses '{word}' (OQ-09/10 open)"
 
-    def test_no_extension_detection(self):
-        """OQ-24: 'extension' has no numeric definition."""
+    def test_no_extension_verdict(self):
+        """OQ-24 open: extension may be MEASURED, never DECIDED.
+
+        Narrowed 2026-08-10 (was: the word 'extension' banned outright). OQ-24
+        was investigated on real data and stayed open -- no cliff in any of
+        five candidate measures -- so the quantities are now recorded while the
+        judgement is withheld. What must not exist is anything that renders a
+        verdict.
+        """
+        verdicts = (r"\bis_extended\b|\bhas_extension\b|\bis_extension\b|"
+                    r"extension_threshold|ext_threshold|min_extension|"
+                    r"extended_wave\b|impulse_with_extension")
         for module, src in IMPL_CODE.items():
-            assert not re.search(r"\bis_extended\b|\bextension\b", src.lower()), module
+            assert not re.search(verdicts, src.lower()), module
+
+    def test_extension_measurement_is_scoped_to_two_modules(self):
+        """The exception must not spread into anything that gates.
+
+        measurements.py computes it; pipeline.py calls it. If 'extension'
+        appears in impulse.py or diagonal.py, something is gating on it.
+        """
+        allowed = {"measurements", "pipeline"}
+        for module, src in IMPL_CODE.items():
+            if module in allowed:
+                continue
+            assert "extension" not in src.lower(), (
+                f"{module}.py references extension; only {allowed} may (OQ-24)")
+
+    def test_no_threshold_constant_in_the_extension_code(self):
+        """The load-bearing OQ-24 guard: there is no number to be extended BY.
+
+        Any cutoff -- 1.618, 2.0, 1.5 -- would appear as a float literal in
+        this code. There is none, and the measured ratio is never compared
+        against anything.
+        """
+        funcs = [measurements.record_extension,
+                 measurements._sole_max,
+                 measurements._subdivision_measurements]
+        src = "\n".join(inspect.getsource(f) for f in funcs)
+        src = re.sub(r'""".*?"""', "", src, flags=re.S)
+        src = "\n".join(line.split("#")[0] for line in src.splitlines())
+
+        floats = re.findall(r"\b\d+\.\d+\b", src)
+        assert not floats, f"float literal in extension code -- a threshold? {floats}"
+
+        for line in src.splitlines():
+            if "over_second" in line:
+                assert not re.search(r"[<>]=?|==", line), (
+                    f"the extension ratio is being compared: {line.strip()}")
 
     def test_no_named_degree_assignment(self):
         """OQ-17: pivots carry a scale index, never one of the 9 degree names."""

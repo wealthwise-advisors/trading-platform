@@ -15,6 +15,14 @@ Questions) · [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) (requirements) ·
 > `AnalysisResult.blocked_rules` and surfaced in both the UI and the exported report. Nothing
 > here fabricates a value the reference does not supply.
 >
+> **V2 Step 2 addendum — 2026-08-10.** **OQ-24 investigated and deliberately left open.**
+> Extension is now MEASURED but never classified: `measurements.record_extension` records
+> EXT-01/EXT-02 quantities on every 5-leg motive structure, all tagged `blocked_by: ["OQ-24"]`,
+> and no `IMPULSE_WITH_EXTENSION` type is ever emitted. Data derivation was attempted with the
+> D-13 method and **failed to yield a defensible threshold** — five formulations over 1,142
+> impulses all decay smoothly with no cliff. Confirmed **independent of OQ-05**. §5.1's
+> "zero scale-≥2 impulses" claim is corrected below. Suite is **286 tests**.
+>
 > **V2 Step 1 addendum — 2026-08-10.** Double Three and Triple Three are now implemented in a
 > 12th module, `combination.py`, resolving **OQ-18** with a recursion depth cap of 1 derived from
 > the pivot ladder's expressive limit. Two rules the Phase-2 extraction missed — **DT-05/TT-05**,
@@ -122,7 +130,7 @@ outright that overlap "is not a condition". Guarded by a dedicated test (TR-3).
 | **Expanded Flat** | OQ-10 | Needs "**substantially** beyond". Regular vs Expanded are separated *only* by slightly-vs-substantially, so with OQ-10 open the two are indistinguishable |
 | **Triangle** | OQ-12, OQ-13 | No Fibonacci ratios, no rules for waves D/E, no discriminators between the four named variants, and a subdivision gate so permissive it would match almost any 5-leg sideways move. "RSI must support the triangle in every time frame" is undefined |
 | ~~**Double / Triple Three**~~ | ~~OQ-18~~ | **IMPLEMENTED 2026-08-10** — recursion capped at depth 1, derived from the ladder. Their DT-02/TT-02 swing counts remain blocked by the new **OQ-26** (recorded, never gated) |
-| **Impulse with Extension** | OQ-24 | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
+| **Impulse with Extension** *(classification only)* | OQ-24 *(investigated 2026-08-10, no cliff in data; independent of OQ-05)* | "Extension" / "elongated" / "exaggerated subdivisions" have no numeric definition anywhere |
 | **Motive Sequence** | OQ-14 | Defined entirely by reference to "the numbers in the motive sequence" — **and those numbers are never stated**. Not implementable at any effort |
 | **Fibonacci matching** | OQ-05 | All 16 ratios are discrete exact values with no stated tolerance. Ratios **are computed and recorded**; they are never declared "matched" |
 | **Named wave degrees** | OQ-17 | Only 2 of 9 degrees map to a timeframe and no rule assigns degree from price. Pivots carry an integer `scale` index only |
@@ -158,12 +166,26 @@ each is labelled as such wherever it appears.
 
 ### 5.1 Motive-parent nesting does not occur — accepted, not a bug
 
-**The classic "1-2-3-4-5 impulse with (i)-(v) sub-waves" figure cannot appear with the current
-design.** Impulses only ever confirm at **scale 1**, where IMP-02 is UNDECIDABLE by D-14, so an
+**The classic "1-2-3-4-5 impulse with (i)-(v) sub-waves" figure is rare with the current design.**
+Impulses overwhelmingly confirm at **scale 1**, where IMP-02 is UNDECIDABLE by D-14, and such an
 impulse can never host sub-waves.
 
-Measured across five backtest configurations (ES 5m over 5 and 11 months, NQ 5m, CL 15m, ES 15m
-— up to 7,189 bars and 113 structures): **zero scale-≥2 impulses in every one.**
+> **Corrected 2026-08-10.** This section previously read *"impulses **only ever** confirm at
+> scale 1"* and *"**zero** scale-≥2 impulses in every one"*, measured across five configurations
+> up to 7,189 bars / 113 structures. That measurement was correct but **the conclusion drawn from
+> it was too strong — the limitation is dataset-size-dependent, not absolute.** Re-measured during
+> the OQ-24 investigation over 60,000-bar slices of CL 5m, NQ 5m, CL 15m and ES 15m: **14 GATED
+> scale-2 impulses do occur**, alongside 1,128 UNDECIDABLE scale-1 ones. The correct statement is
+> that scale-≥2 impulses are *vanishingly rare* (roughly 1.2% of motive structures) and will not
+> appear at all on small samples — not that they cannot exist.
+
+Re-measured population, 60k-bar slices:
+
+| | count |
+|---|---|
+| Impulses, UNDECIDABLE at scale 1 (IMP-02 unevaluable, D-14) | 1,128 |
+| Impulses, **GATED at scale 2** | **14** |
+| Leading / Ending Diagonals, GATED at scale 1 | 72 |
 
 The nesting that *does* appear is the mirror image: scale-2 **corrective** structures (Flat,
 Zigzag) whose A or C legs contain scale-1 impulses — a red `A–B–C` with an orange `(i)–(v)`

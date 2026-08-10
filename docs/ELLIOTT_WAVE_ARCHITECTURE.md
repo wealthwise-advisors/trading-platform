@@ -20,8 +20,8 @@ Flat, Running Flat → serialization → one API sub-resource → one dedicated 
 chart.
 
 **Out (deferred, each blocked by its own Open Question):** Regular Flat and Expanded Flat
-(OQ-09/OQ-10) · Triangle (OQ-12/OQ-13) · Impulse with Extension
-(OQ-24) · Motive Sequence (OQ-14, not implementable) · Fibonacci **matching** (OQ-05 — ratios are
+(OQ-09/OQ-10) · Triangle (OQ-12/OQ-13) · Impulse with Extension **classification**
+(OQ-24 — its quantities *are* measured since 2026-08-10, §6.8) · Motive Sequence (OQ-14, not implementable) · Fibonacci **matching** (OQ-05 — ratios are
 still *computed and recorded*, just never declared "matched").
 
 ---
@@ -39,7 +39,7 @@ src/analysis/elliott_wave/
 ├── diagonal.py        Leading / Ending Diagonal (LD-*, ED-*)
 ├── correction.py      Zigzag, generic Flat, Running Flat
 ├── combination.py     Double Three, Triple Three (OQ-18 depth cap)
-├── measurements.py    guideline ratio recording — computes, never matches
+├── measurements.py    guideline ratios + extension quantities — records, never decides
 ├── validation.py      lifecycle transitions + blocked-rule registry
 └── pipeline.py        orchestration; the one correct call order
 ```
@@ -313,7 +313,7 @@ One line each, then the contract that matters.
 | `diagonal.py` | Apply LD-01/03 and ED-01/03 to 5-leg windows in valid host positions. |
 | `correction.py` | Apply ZZ-01…04, FL-01/02 and FLU-01 to 3-leg windows. |
 | `combination.py` | Apply DT-01/03/05 and TT-01/03/05; own the OQ-18 recursion depth cap. |
-| `measurements.py` | Compute and record guideline ratios. **Cannot match.** |
+| `measurements.py` | Compute and record guideline ratios and EXT-01/EXT-02 quantities. **Cannot match, cannot classify.** |
 | `validation.py` | Own lifecycle transitions and the blocked-rule registry. |
 | `pipeline.py` | Run the layers in the one correct order and assemble the result. |
 | `__init__.py` | Public surface: `run_analysis`, config defaults, engine version. |
@@ -449,6 +449,18 @@ Computes every guideline ratio the reference states (IMP-F01…F04, ZZ-F01/F02, 
 raw value. **It exposes no comparison, tolerance, or match function at all** — the absence of the
 capability is the enforcement mechanism for OQ-05, and TR-2 asserts no tolerance constant exists.
 
+**Extension (EXT-01/EXT-02), added 2026-08-10.** `record_extension` records which motive wave is
+longest, its ratio to the second-longest, and finer-scale subdivision counts where a finer scale
+exists. It renders **no verdict**: OQ-24 was investigated with the D-13 data-derivation method and
+stayed open, because five candidate formulations over 1,142 impulses all decay smoothly with no
+cliff, and EXT-02's conjunctive subdivision half is unmeasurable on 98.8% of the population and
+names a different wave than length does on 36% of the rest. OQ-24 is **independent of OQ-05** —
+unlike DT-05 there is no stated inequality to lift, so a Fibonacci resolution would not unblock it.
+Every measured structure carries `blocked_by: ["OQ-24"]`, and `StructureType` still has no
+`IMPULSE_WITH_EXTENSION` member. Three TR-2 guards hold the line: no verdict identifier anywhere,
+the word "extension" confined to `measurements.py` and `pipeline.py`, and no float literal or
+comparison in the extension code — a threshold could not exist without one.
+
 ### 6.9 `validation.py`
 
 Lifecycle transitions (FR-5.2/5.3) and the `blocked_rules` registry (DM-3). Given the set of rules
@@ -505,6 +517,7 @@ both existing test files (§12.1 of the SRS).
 | `test_ew_diagonal.py` | LD/ED position + subdivision; **TR-3**: overlap never gates |
 | `test_ew_correction.py` | Zigzag, generic Flat, Running Flat; Regular/Expanded absent and *reported* as blocked |
 | `test_combination.py` | DT-01/03/05, TT-01/03/05, the OQ-18 depth-cap boundary, and OQ-26 swing count recorded-not-gated |
+| `test_extension.py` | EXT-01/EXT-02 quantities, reject-on-tie, scale-1 unmeasurability reported as None, and the OQ-24 abstention (no verdict at any ratio) |
 | `test_ew_guards.py` | **TR-2** no invented constants · **TR-4** no score field · **TR-7** independence via import graph · blocked-rule registry completeness |
 | `test_ew_pipeline.py` | Ordering, determinism over ≥20 runs, serializer shape, live/report default parity (FR-1e.4) |
 
@@ -537,8 +550,9 @@ Each step is independently testable; nothing later invalidates anything earlier.
 2. **Do not add a tolerance, epsilon, or buffer anywhere.** OQ-05 is open; TR-2 will catch it.
 3. **Do not add a confidence/score field.** FR-7.4; TR-4 will catch it.
 4. **Do not import or consume `swing_identification` / `zigzag`.** FR-1f.2; TR-7 will catch it.
-5. **Do not implement wedge geometry, Regular/Expanded Flat, Triangle, DT/TT, Extension, Motive
-   Sequence, or Fibonacci matching.** All blocked; register them in `blocked_rules` instead.
+5. **Do not implement wedge geometry, Regular/Expanded Flat, Triangle, or Fibonacci matching.**
+   All blocked; register them in `blocked_rules` instead. *(DT/TT were unblocked 2026-08-10 by the
+   OQ-18 depth cap. Extension is MEASURED but must never be CLASSIFIED — OQ-24 stays open.)*
 6. **Do not touch `CandlestickChart.tsx`.**
 7. **When a rule cannot be evaluated, return UNDECIDABLE.** Never guess a pass or a fail.
 

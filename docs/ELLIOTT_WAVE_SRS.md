@@ -9,6 +9,10 @@ Written 2026-08-09.
 
 > **This document specifies requirements. It contains no production code and mandates none yet.**
 >
+> **Revision 0.9 — 2026-08-10.** **OQ-24 investigated and deliberately left open** — extension
+> is now MEASURED but never classified (FR-3.2.2 to FR-3.2.4). Data derivation was attempted
+> with the D-13 method and failed: no cliff in any of five formulations. Confirmed independent
+> of OQ-05. Previously —
 > **Revision 0.8 — 2026-08-10.** **OQ-18 RESOLVED** — Double/Triple Three implemented with
 > recursion capped at depth 1 (ARCHITECTURE §6.7a). Two rules the Phase-2 pass missed,
 > **DT-05/TT-05** (the 161.8% wave-Y ceiling), are now extracted and specified — mandatory,
@@ -307,12 +311,45 @@ raw ratio may still be computed and recorded.
 
 | Gate | Rule | Tier | Status |
 |---|---|---|---|
-| Exactly one of waves 1/3/5 is "extended" | EXT-01 | **UD — OQ-24** | **BLOCKED.** "Extended" has no numeric definition. |
-| "Elongated impulses with exaggerated subdivisions" | EXT-02 | **UD — OQ-24** | **BLOCKED.** "Elongated"/"exaggerated" unquantified. |
+| Exactly one of waves 1/3/5 is "extended" | EXT-01 | **UD — OQ-24** | **CLASSIFICATION BLOCKED; QUANTITY MEASURED.** "Extended" has no numeric definition, and none could be derived from data (FR-3.2.2). |
+| "Elongated impulses with exaggerated subdivisions" | EXT-02 | **UD — OQ-24** | **CLASSIFICATION BLOCKED; QUANTITY MEASURED.** Conjunctive, and the subdivision half is unmeasurable on 98.8% of the population. |
 | Market-class priors (equities/FX → wave 3; commodities → wave 5) | EXT-03, EXT-04 | **NI** | Not a detector rule. The platform has no instrument-class taxonomy, and the reference gives no probability values. |
 
-**FR-3.2.1 [UD]** — Extension detection is **BLOCKED** in its entirety. This transitively affects
+**FR-3.2.1 [UD]** — Extension **classification** is BLOCKED in its entirety. No structure SHALL be
+typed as an extension, and `StructureType` SHALL NOT contain `IMPULSE_WITH_EXTENSION`; GEN-03's
+three-way motive classification therefore remains unavailable. This transitively affects
 ZZ-F03/OQ-19, whose tiebreak depends on "whether the third swing has extension or not".
+
+**FR-3.2.2 [EN] — OQ-24 investigated 2026-08-10, deliberately left open.** Data derivation was
+attempted, using the method that resolved D-13 and the OQ-18 depth cap, and it **failed to produce
+a defensible threshold**:
+
+  * Five formulations over 1,142 impulses (longest / second-longest, w3/w1, longest / mean of the
+    other two, longest / total, longest / shortest) are all smooth monotone decays. No cliff, no
+    second mode. p25 = 1.22, p50 = 1.55, p75 = 2.13, p90 = 2.80, p95 = 3.51.
+  * Candidate cutoffs differ only in what share they flag (1.618 → 46%, 2.0 → 29%), so choosing
+    one means choosing a hit rate and back-solving — the opposite of calibration.
+  * EXT-02's subdivision criterion is unmeasurable on 1,198 of 1,212 motive structures (98.8%,
+    scale 1 has no finer scale — D-14) and names a different wave than length does on 36% of the
+    remaining 14.
+
+**FR-3.2.3 [SD] — OQ-24 is independent of OQ-05.** OQ-05 concerns tolerance for matching discrete
+stated ratios. DT-05 escaped it because the reference states an explicit inequality; §3.2 states
+**no extension ratio at all**, so there is nothing to lift. Resolving OQ-05 first would not
+unblock EXT-01/EXT-02. Adopting 161.8% anyway would make OQ-19 circular and collide with IMP-F02,
+which lists 161.8% as the first, typical value for an *ordinary* wave 3.
+
+**FR-3.2.4 [EN] — what SHALL be recorded** on every 5-leg motive structure, never gating, every
+one tagged `blocked_by: ["OQ-24"]`:
+
+| Measurement | Notes |
+|---|---|
+| `EXT-01_motive_wave_lengths` | waves 1, 3, 5 only — EXT-01 names no corrective |
+| `EXT-01_longest_motive_wave` | `None` on a tie (reject-on-tie, D-02c) |
+| `EXT-01_longest_over_second` | the ratio; never compared against anything |
+| `EXT-02_subdivision_counts` | `None` where no finer scale exists — **not 0**, which would read as "measured, and it has none" |
+| `EXT-02_most_subdivided_wave` | `None` on a tie |
+| `EXT-02_criteria_agree` | whether EXT-02's two halves name the same wave; `None` when unmeasurable |
 
 ### FR-3.3 Leading Diagonal (§3.3) / FR-3.4 Ending Diagonal (§3.4)
 
@@ -510,7 +547,7 @@ blocked *by Impulse*.
               "of smaller degree" nesting branch is ✅ OQ-18 RESOLVED (depth cap)
 
   TRIANGLE — never depended on Impulse; still ❌ OQ-12, OQ-13
-  EXTENSION — still ❌ OQ-24 (and this keeps OQ-19 circular)
+  EXTENSION — classification still ❌ OQ-24 (keeps OQ-19 circular); quantities measured
 ```
 
 ### 8.1 What is now unblocked
@@ -526,7 +563,7 @@ blocked *by Impulse*.
 | **Expanded Flat** | ❌ Blocked | **OQ-10** ("substantially beyond") |
 | **Double / Triple Three** | ✅ **Implemented 2026-08-10** | OQ-18 resolved by a depth-1 cap (FR-3.9a). DT-02/TT-02's swing counts remain **OQ-26** — recorded, never gated. OQ-17 is not involved: the gate keys on the ladder's integer `scale`, not a named degree. |
 | **Triangle** | ❌ Blocked | **OQ-12**, **OQ-13** — independent of Impulse throughout |
-| **Impulse with Extension** | ❌ Blocked | **OQ-24** |
+| **Impulse with Extension** | ❌ Classification blocked | **OQ-24** — investigated on real data 2026-08-10 and left open: no cliff in five formulations, EXT-02 unmeasurable on 98.8%. Quantities recorded (FR-3.2.4); no `IMPULSE_WITH_EXTENSION` type emitted. Independent of OQ-05. |
 | **Motive Sequence** | ❌ Not implementable | **OQ-14** — excluded from v1 |
 
 ### 8.2 The input is now defined too — the core path is complete
@@ -721,7 +758,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 | ID | Tier | Requirement |
 |---|---|---|
 | TR-1 | **EN** | Every **implementable** mandatory gate SHALL have both a passing fixture and a fixture violating **only** that gate. Applies to: IMP-01, IMP-02, IMP-03, LD-01, LD-03, ED-01, ED-03, ZZ-01, ZZ-02, ZZ-03, ZZ-04, FL-01, FL-02, FLE-01, FLU-01, TRI-01, TRI-03, DT-01, DT-02, DT-04, TT-01, TT-02, TT-04. |
-| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open; no Fibonacci constant outside the one scoped DT-05/TT-05 ceiling exception; no "extension" magnitude test while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
+| TR-2 | **EN** | **Blocked-rule guard tests.** For every rule marked BLOCKED, a test SHALL assert it has **not** been silently implemented — e.g. no Fibonacci tolerance constant exists while OQ-05 is open; no "near"/"slightly"/"substantially" flat-subtype threshold exists while OQ-09/OQ-10 are open; no Fibonacci constant outside the one scoped DT-05/TT-05 ceiling exception; no "extension" verdict, threshold constant or comparison of the extension ratio while OQ-24 is open. This is the primary defence against gaps being quietly filled with invented values. *(The OQ-02, OQ-03 and OQ-04 guards are retired — those rules are now specified and are covered by TR-2a/TR-2b.)* |
 | TR-2b | **EN** | **IMP-04 / IMP-05 tests.** Fixtures SHALL cover: wave 3 longer than both siblings (pass); wave 3 shorter than both (fail); wave 3 shorter than exactly one (pass); wave 4 territory clear of wave 1 (pass); wave 4 territory overlapping wave 1 (fail); and both exact-equality boundary cases of FR-3.1b.8. A further test SHALL assert **no tolerance constant** is applied to either gate (FR-3.1b.7). |
 | TR-2a | **EN** | **IMP-06 tests.** Fixtures SHALL cover all four outcomes of the resolved definition: divergence present (up), divergence present (down), price precondition met but RSI **not** diverging (gate fails, FR-3.1a.8), and RSI(13) `NaN` at a comparison bar (→ **UNDECIDABLE**, FR-3.1a.6). A further test SHALL assert **no tolerance constant** is applied to the RSI comparison (FR-3.1a.5). |
 | TR-3 | **EN** | A test SHALL assert LD-02/ED-02 (wave 1/4 overlap) **never** gates — a fixture with overlap must still classify as a diagonal. This is explicitly source-defined (FR-3.3.1) and easy to regress. |
@@ -772,7 +809,7 @@ insufficient, and what it blocks.
 | ~~**OQ-21**~~ | All | **RESOLVED 2026-08-09 by project decision** — an independent, Elliott-specific detector (§4a) that neither modifies nor consumes the existing swing/zigzag modules. **The reference still says nothing on this**; the detector is 100% project engineering, tier EN. | *(was: the engine's entire input — now specified)* |
 | **OQ-22** | WP-02/04/08/11/12/13, TRI-05 | All volume statements are qualitative, with no threshold or window. Volume is also **synthetic** on the default data source. | All volume rules (FR-4.3) |
 | **OQ-23** | FLE-F01, FLU-F01 | Expanded and Running Flat state the **same** wave-B ratio (123.6%). | Wave B cannot separate them (FR-3.7.2) |
-| **OQ-24** | EXT-01, EXT-02, ZZ-F03 | "extension" / "elongated" / "exaggerated subdivisions" — no numeric definition anywhere. | Extension detection entirely (FR-3.2.1); feeds OQ-19 |
+| **OQ-24** | EXT-01, EXT-02, ZZ-F03 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** No numeric definition anywhere, and none derivable: five formulations over 1,142 impulses show no cliff; EXT-02 unmeasurable on 98.8% and self-contradicting on 36% of the rest. **Independent of OQ-05** — no stated inequality to lift, unlike DT-05. | Extension *classification* (FR-3.2.1); feeds OQ-19. Quantities are measured (FR-3.2.4). |
 
 ---
 
@@ -837,7 +874,7 @@ Every rule ID from the inventory appears exactly once.
 | IMP-05 | FR-3.1, FR-3.1b | EN | **OQ-03 RESOLVED** — pivot-price interval overlap |
 | IMP-06 | FR-3.1a | EN | **OQ-04 RESOLVED** — mandatory gate, RSI(13) directional comparison |
 | IMP-F01, IMP-F02, IMP-F03, IMP-F04 | FR-3.1.2, FR-4.2 | UD | **OQ-05** (+OQ-06, OQ-07, OQ-08) |
-| EXT-01, EXT-02 | FR-3.2 | UD | OQ-24 |
+| EXT-01, EXT-02 | FR-3.2, FR-3.2.4 | UD | OQ-24 — classification blocked, quantities measured |
 | EXT-03, EXT-04 | FR-3.2 | NI | — |
 | LD-01, LD-03 | FR-3.3 | SD | — |
 | LD-02 | FR-3.3.1 (non-gating), FR-3.3.2 | SD / UD | OQ-15 |
@@ -1016,7 +1053,7 @@ Impulse, Diagonals, Zigzag, generic Flat and Running Flat — has no remaining r
 4. **OQ-12 / OQ-13** — Triangle's gates remain near-vacuous; scope decision required.
 5. ~~**OQ-18**~~ — **RESOLVED.** Double/Triple Three implemented; the *nested* branch is
    missing; the {zigzag, flat} branch is available. A depth cap would close this.
-6. **OQ-24** — Extension undefined; this also keeps OQ-19's zigzag/impulse tiebreak circular.
+6. **OQ-24** — Extension undefined and **not derivable from data** (investigated 2026-08-10, FR-3.2.2); this also keeps OQ-19's zigzag/impulse tiebreak circular. Quantities are recorded, the verdict withheld.
 7. **OQ-05** — all 16 Fibonacci rules. **Not a classification blocker** — non-gating
    measurements; ratios computable, just not declarable as "matched".
 8. **OQ-14** — Motive Sequence not implementable; excluded from v1.

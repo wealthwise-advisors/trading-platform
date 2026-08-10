@@ -73,7 +73,14 @@ BLOCKED_RULES: tuple[dict, ...] = (
                "volume is synthetic on the default data source."},
     {"rules": ["EXT-01", "EXT-02"], "oq": "OQ-24",
      "reason": "'Extension' / 'elongated' / 'exaggerated subdivisions' have no "
-               "numeric definition anywhere."},
+               "numeric definition anywhere. Investigated on real data and "
+               "left open: across 1,142 impulses, five candidate measures all "
+               "decay smoothly with no cliff, so any cutoff would be a chosen "
+               "hit-rate rather than a calibration. EXT-02's subdivision "
+               "criterion is unmeasurable on 98.7% of impulses and names a "
+               "different wave than length does on 36% of the rest. The "
+               "quantities ARE recorded (EXT-01_*, EXT-02_*); only the verdict "
+               "is withheld, and no impulse_with_extension type is emitted."},
     {"rules": ["LD-03", "ED-03"], "oq": "OQ-25",
      "reason": "The reference constrains a diagonal's subdivision SHAPE "
                "(5-3-5-3-5 / 3-3-3-3-3) but never defines how detector-scale "
@@ -101,7 +108,13 @@ V1_LIMITATIONS: tuple[str, ...] = (
     "because corrections are classified after diagonals in the pipeline.",
     "IMP-02 and the correction five-wave gates cannot be evaluated at scale 1 "
     "(no finer scale exists). Candidates there are UNDECIDABLE, never passed "
-    "or failed (D-14).",
+    "or failed (D-14). How many impulses escape this depends on how much data "
+    "is analysed, not on the rule: at <=7,189 bars no impulse ever confirmed "
+    "above scale 1, but over 60,000-bar slices 14 GATED scale-2 impulses "
+    "appear. Small samples will still show none.",
+    "Extension (EXT-01/EXT-02) is measured but never classified -- OQ-24 is "
+    "open and no threshold for 'extended' exists in the reference or in the "
+    "data. See measurements.record_extension.",
 )
 
 

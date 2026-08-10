@@ -106,6 +106,9 @@ def run_analysis(df: pd.DataFrame, config: EngineConfig | None = None) -> Analys
     by_id = {w.id: w for w in waves}
     structures = [w for w in waves if w.structure_type is not None]
     measurements.record(structures, by_id)
+    # EXT-01/EXT-02 quantities. Recorded, never classified: OQ-24 stays open,
+    # so no structure is ever relabelled "impulse with extension".
+    measurements.record_extension(structures, by_id, by_scale)
 
     # stable ordering for byte-identical output across runs
     waves.sort(key=lambda w: (w.scale, w.start_pivot.index, w.end_pivot.index, w.id))

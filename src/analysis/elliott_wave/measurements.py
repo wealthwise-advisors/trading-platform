@@ -37,11 +37,55 @@ where it is not:
 
 Skipping is not an omission -- validation.py reports each skipped rule so the
 gap is visible to the client rather than inferred.
+
+EXTENSION (EXT-01, EXT-02) -- MEASURED, NEVER CLASSIFIED
+--------------------------------------------------------
+``record_extension`` records which motive wave is longest, by how much, and
+how many finer-scale legs each motive wave contains. It does NOT decide
+whether a structure "has an extension", and ``StructureType`` deliberately has
+no ``IMPULSE_WITH_EXTENSION`` member, so GEN-03's three-way motive
+classification stays unavailable.
+
+Why measurement only -- OQ-24 was investigated on real data and stayed open:
+
+  * The reference gives no numeric definition of "extended". Unlike DT-05
+    ("can not pass 161.8% of wave W") there is no stated inequality to lift,
+    so this is NOT a tolerance problem and is independent of OQ-05.
+  * Five candidate formulations were measured over 1,142 impulses (longest /
+    second-longest, w3/w1, longest / mean of the other two, longest / total,
+    longest / shortest). Every one is a smooth monotone decay -- no cliff, no
+    second mode, nothing resembling the discontinuity D-13 was calibrated
+    against. Any cutoff would be a chosen hit-rate wearing calibration's
+    clothes.
+  * EXT-02 is conjunctive -- "elongated impulses WITH exaggerated
+    subdivisions". Subdivision count is unmeasurable on 98.7% of impulses
+    (they confirm at scale 1, where no finer scale exists, D-14), and on the
+    remainder the two criteria point at DIFFERENT waves 36% of the time.
+  * Defining extension as 161.8% would make OQ-19 circular: the reference
+    offers "whether the third swing has extension" as the tiebreak for a
+    zigzag wave C at 161.8% of A. It would also collide with IMP-F02, which
+    lists 161.8% as the FIRST, typical value for an ordinary wave 3.
+
+So the ratio is reported and the judgement is left to the client. Every
+structure carrying these measurements also carries ``blocked_by: ["OQ-24"]``.
 """
 
 from __future__ import annotations
 
-from .models import StructureType, Wave
+from .models import Pivot, StructureType, Wave
+
+#: 5-leg motive structures. EXT-01 names impulses only; the diagonals are
+#: measured too because they are the reference's other 5-leg motive forms
+#: (GEN-03), and a measurement asserts nothing the source did not say. Only
+#: ``EXT-01_*`` on an impulse corresponds to a reference statement.
+_MOTIVE_5 = (
+    StructureType.IMPULSE,
+    StructureType.LEADING_DIAGONAL,
+    StructureType.ENDING_DIAGONAL,
+)
+
+#: Positions of waves 1, 3 and 5 within a 5-leg motive structure.
+_MOTIVE_POSITIONS = ((0, "1"), (2, "3"), (4, "5"))
 
 
 def _ratio(numerator: float, denominator: float) -> float | None:
@@ -82,6 +126,99 @@ def _record_impulse(s: Wave, by_id: dict[str, Wave]) -> None:
         "IMP-F04_wave5_over_wave1": _ratio(w5.length, w1.length),
         "IMP-F04_wave5_over_net_1_3": _ratio(w5.length, net_1_3),
     })
+
+
+def record_extension(
+    structures: list[Wave],
+    by_id: dict[str, Wave],
+    by_scale: dict[int, list[Pivot]],
+) -> None:
+    """Record EXT-01/EXT-02 quantities on every 5-leg motive structure.
+
+    Measurement only (FR-4.1). Nothing here gates, and no structure is
+    reclassified: ``StructureType`` has no ``IMPULSE_WITH_EXTENSION`` member
+    precisely because no threshold exists to justify emitting one.
+
+    Every structure touched gains ``blocked_by: ["OQ-24"]`` so a client
+    reading ``EXT-01_longest_over_second`` cannot mistake it for a verdict.
+    """
+    for s in structures:
+        if s.structure_type not in _MOTIVE_5:
+            continue
+        legs = _legs(s, by_id)
+        if len(legs) != 5:
+            continue
+
+        lengths = {label: legs[i].length for i, label in _MOTIVE_POSITIONS}
+        ordered = sorted(lengths.values(), reverse=True)
+
+        s.measurements.update({
+            "EXT-01_motive_wave_lengths": dict(lengths),
+            "EXT-01_longest_motive_wave": _sole_max(lengths),
+            "EXT-01_longest_over_second": _ratio(ordered[0], ordered[1]),
+        })
+        s.measurements.update(_subdivision_measurements(s, legs, by_scale))
+
+        if "OQ-24" not in s.blocked_by:
+            s.blocked_by.append("OQ-24")
+
+
+def _sole_max(values: dict[str, float]) -> str | None:
+    """The single largest entry, or None when two or more tie.
+
+    Reject-on-tie, consistent with D-02c. A tie means the reference's "one of
+    the motive waves" has no unique referent, and reporting an arbitrary
+    winner would invent a resolution the data does not supply.
+    """
+    peak = max(values.values())
+    winners = [k for k, v in values.items() if v == peak]
+    return winners[0] if len(winners) == 1 else None
+
+
+def _subdivision_measurements(
+    s: Wave,
+    legs: list[Wave],
+    by_scale: dict[int, list[Pivot]],
+) -> dict:
+    """EXT-02's second criterion, where a finer scale exists to measure it.
+
+    At scale 1 there is no finer scale, so subdivision count is unmeasurable
+    by construction (D-14) -- reported as None rather than as zero, which
+    would read as "measured, and it has none".
+    """
+    finer = s.scale - 1
+    pivots = by_scale.get(finer) if finer >= 1 else None
+    if not pivots:
+        return {
+            "EXT-02_subdivision_counts": None,
+            "EXT-02_most_subdivided_wave": None,
+            "EXT-02_criteria_agree": None,
+        }
+
+    counts = {}
+    for i, label in _MOTIVE_POSITIONS:
+        leg = legs[i]
+        inside = sum(1 for p in pivots
+                     if leg.start_pivot.index <= p.index <= leg.end_pivot.index)
+        counts[label] = max(0, inside - 1)      # legs between pivots, not pivots
+
+    if not any(counts.values()):
+        return {
+            "EXT-02_subdivision_counts": counts,
+            "EXT-02_most_subdivided_wave": None,
+            "EXT-02_criteria_agree": None,
+        }
+
+    most = _sole_max(counts)
+    longest = s.measurements.get("EXT-01_longest_motive_wave")
+    agree = None if (most is None or longest is None) else (most == longest)
+    return {
+        "EXT-02_subdivision_counts": counts,
+        "EXT-02_most_subdivided_wave": most,
+        # EXT-02 is conjunctive. When the two criteria name different waves the
+        # rule cannot be satisfied as written -- recorded, never resolved.
+        "EXT-02_criteria_agree": agree,
+    }
 
 
 def _record_zigzag(s: Wave, by_id: dict[str, Wave]) -> None:

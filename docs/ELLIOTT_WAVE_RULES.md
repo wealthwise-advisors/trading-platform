@@ -157,12 +157,61 @@ assigning a degree from price data. See **OQ-17**.
 
 | ID | Structure | Wave | Rule (verbatim) | M/G | Input | Measurement | Fib | Mom | § | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| EXT-01 | Impulse+Ext | 1/3/5 | "Impulses usually have an extension in one of the motive waves (either wave 1, 3, or 5)" | G | pivots | exactly one of w1/w3/w5 is "extended" | — | — | 3.2 | Blocked (OQ-24) |
-| EXT-02 | Impulse+Ext | — | "Extensions are elongated impulses with exaggerated subdivisions" | G | pivots, sub | length + subdivision-count vs siblings | — | — | 3.2 | Blocked (OQ-24) |
+| EXT-01 | Impulse+Ext | 1/3/5 | "Impulses usually have an extension in one of the motive waves (either wave 1, 3, or 5)" | G | pivots | longest of w1/w3/w5, and its ratio to the second-longest | — | — | 3.2 | **Measured only** — OQ-24 open, no cutoff exists |
+| EXT-02 | Impulse+Ext | — | "Extensions are elongated impulses with exaggerated subdivisions" | G | pivots, sub | length + subdivision-count vs siblings | — | — | 3.2 | **Measured only** — OQ-24; conjunctive, and unmeasurable on 98.8% |
 | EXT-03 | Impulse+Ext | 3 | "Extensions frequently occur in the third wave in the stock market and forex market" | G | pivots, instrument class | prior probability by market | — | — | 3.2 | Informational |
 | EXT-04 | Impulse+Ext | 5 | "Commodities market commonly develop extensions in the fifth wave" | G | pivots, instrument class | prior probability by market | — | — | 3.2 | Informational |
 
 **No Fibonacci ratios are stated for extensions.** No numeric definition of "extended" is given.
+
+### OQ-24 investigated 2026-08-10 — measured, still unresolved
+
+OQ-24 was attacked the same way D-13 and the OQ-18 depth cap were: derive the number from real
+data instead of guessing. **The data refused to supply one, so OQ-24 stays open** and the engine
+records the quantities without ever rendering a verdict (`measurements.record_extension`).
+
+**1. No cliff, in any formulation.** Five candidate measures of "extended" over 1,142 impulses
+(CL 5m, NQ 5m, CL 15m, ES 15m; 60k-bar slices):
+
+| Formulation | Modes | Verdict |
+|---|---|---|
+| longest / second-longest | 0 | no split |
+| wave 3 / wave 1 | 1 | no split |
+| longest / mean(other two) | 2 | tail noise (counts `25, 15, 24, 21, 19, 10`), not a regime |
+| longest / total | 1 | no split |
+| longest / shortest | 1 | no split |
+
+The distribution is a smooth monotone decay — p25 = 1.22, p50 = 1.55, p75 = 2.13, p90 = 2.80,
+p95 = 3.51 — with no shoulder anywhere. D-13 had a genuine discontinuity to calibrate against;
+this has none. The only thing separating candidate cutoffs is what share they flag (1.618 → 46%,
+2.0 → 29%), which means choosing one is choosing a hit rate and back-solving. That is precisely
+what this project's calibration method exists to avoid.
+
+**2. EXT-02's second criterion is mostly unmeasurable, and self-contradicting where it isn't.**
+EXT-02 is conjunctive — "elongated impulses **with** exaggerated subdivisions". Subdivision count
+needs a finer scale, which scale-1 impulses do not have (D-14): unmeasurable on **1,198 of 1,212**
+motive structures (98.8%). On the 14 where both halves *are* measurable, they name **different
+waves 36% of the time** (5 of 14) — e.g. lengths `[1910, 3504, 3405] → longest w3` against
+subdivisions `[21, 27, 43] → most w5`. So even given a length threshold, EXT-02 as written could
+not be evaluated on almost the whole population and would contradict itself on a third of the
+rest.
+
+**3. OQ-24 is independent of OQ-05 — resolving OQ-05 first would not help.** OQ-05 is about
+tolerance for matching *discrete stated ratios*. DT-05 escaped it because the reference states an
+explicit **inequality** ("Wave Y can not pass 161.8% of wave W"), and an inequality needs no
+tolerance. **Extension has no equivalent stated ratio at all** — §3.2 gives none, as the line
+above records. Importing 161.8% here would be inventing a rule rather than lifting one, and it
+would break two things: it makes **OQ-19** circular (the reference offers "whether the third swing
+has extension" as the tiebreak for a zigzag wave C at 161.8% of A), and it collides with
+**IMP-F02**, which lists 161.8% as the *first, typical* value for an ordinary wave 3 — so the
+textbook-normal wave 3 would be classified as extended.
+
+**What is recorded instead** (all tagged `blocked_by: ["OQ-24"]`, never gating):
+`EXT-01_motive_wave_lengths`, `EXT-01_longest_motive_wave` (None on a tie, per D-02c),
+`EXT-01_longest_over_second`, `EXT-02_subdivision_counts` (None where no finer scale exists —
+not 0, which would falsely read as "measured, and none"), `EXT-02_most_subdivided_wave`,
+`EXT-02_criteria_agree`. `StructureType` still has **no** `IMPULSE_WITH_EXTENSION` member, so
+GEN-03's three-way motive classification correctly remains unavailable.
 
 ## 6. Leading Diagonal (§3.3)
 
@@ -370,7 +419,7 @@ before it can enter the Phase 3 SRS.
 | ~~**OQ-21**~~ | All | **✅ RESOLVED 2026-08-09 — build an independent, Elliott-specific pivot detector; do not consume the existing swing/zigzag modules.** *(Original question: the reference assumes waves/pivots are already identified and gives no rule for detecting wave boundaries from raw price.)* The reference **still** says nothing on this; the detector is entirely a project decision. See [OQ-21 resolution](#oq-21-resolution--elliott-specific-pivot-detection). |
 | **OQ-22** | WP-02/04/08/11/12/13, TRI-05 | Every volume statement is qualitative ("lower than", "well below", "picks up", "decreasing") with no threshold or measurement window. Also: volume is present in our OHLCV but is **synthetic** for the default data source, so volume-gated rules would be meaningless on synthetic backtests. |
 | **OQ-23** | FLE-F01, FLU-F01 | Expanded Flat and Running Flat both state wave B = **123.6%** of wave A. Wave B cannot discriminate between them; only wave C can. Confirm. |
-| **OQ-24** | EXT-01, EXT-02, ZZ-F03 | "Extension" / "elongated" / "exaggerated subdivisions" — no numeric definition anywhere. What makes a wave "extended"? |
+| **OQ-24** | EXT-01, EXT-02, ZZ-F03 | **INVESTIGATED 2026-08-10, STILL UNRESOLVED.** "Extension" / "elongated" / "exaggerated subdivisions" — no numeric definition anywhere. Data-derivation was attempted and failed: five formulations over 1,142 impulses all decay smoothly with no cliff, and EXT-02's subdivision half is unmeasurable on 98.8% of the population and names a different wave than length on 36% of the rest. **Independent of OQ-05** — unlike DT-05 there is no stated inequality to lift. Quantities are recorded; the verdict is withheld. See [§5](#oq-24-investigated-2026-08-10--measured-still-unresolved). |
 
 ---
 
