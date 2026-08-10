@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" viewBox="0 0 1280 340" role="img" aria-label="WealthWise Trading Platform">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0b1220"/>
+      <stop offset="55%"  stop-color="#0d1a2e"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#38bdf8"/>
+      <stop offset="50%"  stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#2dd4bf" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-width="1" opacity=".55"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="340" fill="url(#bg)"/>
+  <rect width="1280" height="340" fill="url(#grid)"/>
+
+  <!-- price action -->
+  <g transform="translate(0,26)">
+    <path d="M0 250 L70 236 L140 258 L210 214 L280 228 L350 186 L420 200 L490 158
+             L560 172 L630 132 L700 150 L770 112 L840 126 L910 88 L980 104 L1050 70
+             L1120 84 L1190 52 L1280 64 L1280 314 L0 314 Z" fill="url(#fade)"/>
+    <path d="M0 250 L70 236 L140 258 L210 214 L280 228 L350 186 L420 200 L490 158
+             L560 172 L630 132 L700 150 L770 112 L840 126 L910 88 L980 104 L1050 70
+             L1120 84 L1190 52 L1280 64"
+          fill="none" stroke="url(#accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="#0b1220" stroke="#2dd4bf" stroke-width="2.5">
+      <circle cx="350" cy="186" r="5.5"/><circle cx="630" cy="132" r="5.5"/>
+      <circle cx="910" cy="88"  r="5.5"/><circle cx="1190" cy="52" r="5.5"/>
+    </g>
+  </g>
+
+  <!-- candles -->
+  <g opacity=".8" stroke-width="2">
+    <g stroke="#22c55e" fill="#22c55e">
+      <rect x="1006" y="196" width="9" height="34" rx="1.5"/><path d="M1010.5 186v10M1010.5 230v10"/>
+      <rect x="1066" y="176" width="9" height="30" rx="1.5"/><path d="M1070.5 166v10M1070.5 206v10"/>
+      <rect x="1156" y="150" width="9" height="38" rx="1.5"/><path d="M1160.5 140v10M1160.5 188v10"/>
+    </g>
+    <g stroke="#f43f5e" fill="#f43f5e">
+      <rect x="1036" y="186" width="9" height="26" rx="1.5"/><path d="M1040.5 176v10M1040.5 212v10"/>
+      <rect x="1096" y="166" width="9" height="30" rx="1.5"/><path d="M1100.5 156v10M1100.5 196v10"/>
+      <rect x="1126" y="172" width="9" height="24" rx="1.5"/><path d="M1130.5 162v10M1130.5 196v10"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <g transform="translate(72,96)">
+    <rect x="0" y="0" width="4" height="118" rx="2" fill="url(#accent)"/>
+    <text x="26" y="34" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17"
+          font-weight="600" letter-spacing="5.5" fill="#5eead4">ALGORITHMIC TRADING RESEARCH</text>
+    <text x="24" y="86" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="52"
+          font-weight="800" letter-spacing="-1" fill="url(#title)">WealthWise Trading Platform</text>
+    <text x="26" y="114" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17"
+          fill="#94a3b8">Market data → strategy → simulated fills → scored results</text>
+  </g>
+
+  <!-- stat strip -->
+  <rect x="48" y="236" width="700" height="60" rx="10" fill="#0b1220" opacity=".72"/>
+  <g transform="translate(76,268)" font-family="Segoe UI,Helvetica,Arial,sans-serif">
+    <g fill="#e2e8f0" font-size="19" font-weight="700">
+      <text x="0"   y="0">346</text>
+      <text x="132" y="0">18k</text>
+      <text x="264" y="0">5</text>
+      <text x="396" y="0">7</text>
+      <text x="528" y="0">4</text>
+    </g>
+    <g fill="#7c8ba1" font-size="11" letter-spacing="1.3">
+      <text x="0"   y="18">TESTS</text>
+      <text x="132" y="18">LINES</text>
+      <text x="264" y="18">STRATEGIES</text>
+      <text x="396" y="18">STRUCTURES</text>
+      <text x="528" y="18">PROVIDERS</text>
+    </g>
+    <g stroke="#233247" stroke-width="1">
+      <path d="M112 -14v30"/><path d="M244 -14v30"/><path d="M376 -14v30"/><path d="M508 -14v30"/>
+    </g>
+  </g>
+
+  <rect y="336" width="1280" height="4" fill="url(#accent)"/>
+</svg>
