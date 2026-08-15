@@ -25,7 +25,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:        # manual redeploy from the Actions tab
 
 concurrency:
@@ -111,10 +111,14 @@ jobs:
         run: |
           ssh -o BatchMode=yes -o ConnectTimeout=20 \
               ec2-user@"${{ secrets.EC2_HOST }}" bash -euo pipefail <<'REMOTE'
+            # Actions substitutes this before the remote shell sees it, so the
+            # deploy always follows the branch that triggered it.
+            DEPLOY_BRANCH="${{ github.ref_name }}"
+
             cd /opt/wealthwise/repo
             # Shallow fetch: history (and its old token blobs) never lands here.
-            git fetch --depth 1 origin main
-            git reset --hard origin/main
+            git fetch --depth 1 origin "$DEPLOY_BRANCH"
+            git reset --hard "origin/$DEPLOY_BRANCH"
             git clean -fd -e docker-compose.override.yml
             echo "now at: $(git log --oneline -1)"
 
