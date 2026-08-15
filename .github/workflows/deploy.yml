@@ -116,6 +116,17 @@ jobs:
             DEPLOY_BRANCH="${{ github.ref_name }}"
 
             cd /opt/wealthwise/repo
+
+            # The checkout on this box was cloned from the previous repository.
+            # Re-point it, idempotently, so the cutover needs no manual SSH.
+            # Requires the box's existing deploy key to be registered on this
+            # repo as well -- same key, it just has to be added here too.
+            WANT="git@github.com:${{ github.repository }}.git"
+            if [ "$(git remote get-url origin)" != "$WANT" ]; then
+              echo "re-pointing origin -> $WANT"
+              git remote set-url origin "$WANT"
+            fi
+
             # Shallow fetch: history (and its old token blobs) never lands here.
             git fetch --depth 1 origin "$DEPLOY_BRANCH"
             git reset --hard "origin/$DEPLOY_BRANCH"
