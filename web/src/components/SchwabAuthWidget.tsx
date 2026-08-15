@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
+import { Loader } from "@/components/ui/loader"
 
 export function SchwabAuthWidget() {
   const queryClient = useQueryClient()
@@ -31,7 +32,12 @@ export function SchwabAuthWidget() {
   })
 
   if (statusQ.isLoading) {
-    return <p className="text-xs text-muted-foreground">Checking Schwab connection…</p>
+    return (
+      <p className="text-xs text-muted-foreground flex items-center gap-2">
+        <Loader size={14} label="Checking Schwab connection" />
+        Checking Schwab connection…
+      </p>
+    )
   }
   const status = statusQ.data
   if (!status) {

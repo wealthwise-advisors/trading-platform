@@ -44,7 +44,12 @@ router = APIRouter(prefix="/backtests", tags=["backtests"])
 
 
 def _build_provider(data_source: str, symbol: str, timeframe: str,
-                    start_date, end_date, spec: dict):
+                    start_date, end_date, spec: dict, session_start=None):
+    """
+    `session_start` only anchors resample bins (see ExternalCSVProvider._resample).
+    Passing it keeps the backtest's bars on the same grid the replay uses; leaving
+    it None keeps the calendar-day default, which is right for a 24-hour chart.
+    """
     if data_source == "rithmic":
         if not _RITHMIC_AVAILABLE:
             raise HTTPException(400, "Rithmic data source unavailable — pyrithmic not installed.")
@@ -52,7 +57,10 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
     if data_source == "schwab":
         if not _SCHWAB_AVAILABLE:
             raise HTTPException(400, "Schwab data source unavailable — check config/credentials.yaml.")
-        provider = SchwabDataProvider()
+        # session_start was accepted here and then dropped on the floor for
+        # Schwab, so the six timeframes it has to build itself came back on a
+        # midnight grid while the replay built them on the session grid.
+        provider = SchwabDataProvider(session_start=session_start)
         if not provider.is_authenticated():
             raise HTTPException(400, "Not authenticated with Schwab. Complete the auth flow first.")
         return provider
@@ -60,7 +68,7 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
         if not _EXTERNAL_AVAILABLE:
             raise HTTPException(400, "External CSV data source unavailable.")
         try:
-            return ExternalCSVProvider()
+            return ExternalCSVProvider(session_start=session_start)
         except FileNotFoundError as e:
             raise HTTPException(400, str(e))
 
@@ -81,11 +89,59 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
     return CSVDataProvider("data/historical")
 
 
+def _explain_run_failure(exc: Exception, req) -> str:
+    """Turn an engine/provider error into something a user can act on.
+
+    The bare provider message reads
+    "No bars found for ES between 2026-08-07 00:00:00 and 2026-08-07 23:59:00
+    in ['ES_FULL.csv']" -- accurate, but it never says which dates WOULD work,
+    so the only way forward was guessing. When the CSV source is in play we
+    know exactly what is on disk, so say so.
+    """
+    msg = str(exc)
+    if req.data_source != "external_csv" or "No bars found" not in msg:
+        return msg
+    try:
+        from pathlib import Path
+        from src.data.external_csv_provider import ExternalCSVProvider
+        from api.routers.meta import csv_coverage
+
+        cov = csv_coverage(Path(ExternalCSVProvider().data_dir), req.symbol)
+    except Exception:
+        return msg
+    if not cov:
+        return (f"No sample data is bundled for {req.symbol}. "
+                f"Pick another symbol, or point data.external_dir at an archive that has it.")
+    ranges = ", ".join(f"{c['start']} to {c['end']}" for c in cov)
+    plural = "ranges" if len(cov) > 1 else "range"
+    return (f"No {req.symbol} data between {req.start_date} and {req.end_date}. "
+            f"Available {plural}: {ranges}.")
+
+
 @router.post("")
 def run_backtest(req: BacktestRequest):
     spec = get_contract_spec(req.symbol)
     provider = _build_provider(req.data_source, req.symbol, req.timeframe,
-                               req.start_date, req.end_date, spec)
+                               req.start_date, req.end_date, spec,
+                               session_start=req.session_start)
+    # The provider does not touch the filesystem until run() asks it to, so a
+    # missing CSV surfaced here as an unhandled FileNotFoundError -> bare 500.
+    # Probed explicitly so the caller gets told which input to change.
+    if req.data_source == "external_csv":
+        try:
+            provider.load(
+                req.symbol,
+                datetime.combine(req.start_date, time_type(0, 0)),
+                datetime.combine(req.end_date, time_type(23, 59)),
+                req.timeframe,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                400,
+                f"No '{req.data_source}' data for {req.symbol}. {exc} "
+                f"Pick a symbol that has been exported, or switch the data source "
+                f"to Synthetic or Live (Schwab).",
+            )
     # Task 10.1 verification found this crashed with a raw, unhandled
     # KeyError (500) instead of a clean validation error when `params` is
     # missing a required strategy param (e.g. ma_crossover needs
@@ -114,7 +170,7 @@ def run_backtest(req: BacktestRequest):
     try:
         results = engine.run(start=start_dt, end=end_dt)
     except (ValueError, ImportError, RuntimeError) as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, _explain_run_failure(exc, req))
 
     backtest_id = store.save(results, req.data_source, req.session_start, req.session_end)
     return serializers.results_to_summary(backtest_id, results, req.data_source,
@@ -147,7 +203,7 @@ def get_trades(backtest_id: str):
 @router.get("/{backtest_id}/price-data")
 def get_price_data(backtest_id: str):
     stored = _get_or_404(backtest_id)
-    return serializers.price_data_to_response(stored.results.price_data)
+    return serializers.price_data_to_response(stored.results.price_data, stored.session_start)
 
 
 @router.get("/{backtest_id}/equity-curve")
@@ -157,7 +213,7 @@ def get_equity_curve(backtest_id: str):
 
 
 @router.get("/{backtest_id}/zigzag")
-def get_zigzag(backtest_id: str, dev_3: float = Query(0.003), dev_10: float = Query(0.003)):
+def get_zigzag(backtest_id: str, dev_3: float = Query(0.0005), dev_10: float = Query(0.0010)):
     stored = _get_or_404(backtest_id)
     return serializers.zigzag_to_records(stored.results.price_data, dev_3, dev_10)
 
@@ -205,9 +261,12 @@ def get_monthly_returns(backtest_id: str):
 def get_candlestick_patterns(backtest_id: str, min_confidence: float = Query(70.0)):
     stored = _get_or_404(backtest_id)
     patterns = detect_candlestick_patterns(stored.results.price_data)
+    # _safe() also narrows numpy scalars: confidence is derived from the price
+    # frame, which ExternalCSVProvider loads as float32 -- and float32 cannot
+    # be JSON-encoded by FastAPI. See api/serializers._safe.
     return [
         {"timestamp": p.timestamp.isoformat(), "pattern": p.pattern,
-         "direction": p.direction, "confidence": p.confidence}
+         "direction": p.direction, "confidence": serializers._safe(p.confidence)}
         for p in patterns if p.confidence >= min_confidence
     ]
 
@@ -220,13 +279,16 @@ def get_chart_patterns(backtest_id: str):
     return [
         {"pattern": p.pattern, "direction": p.direction,
          "start": df.index[p.start_index].isoformat(), "end": df.index[p.end_index].isoformat(),
-         "neckline": round(p.neckline, 2), "metrics": p.metrics}
+         # Same float32 narrowing as above -- round() on a numpy scalar returns
+         # a numpy scalar, and metrics values come straight off the frame.
+         "neckline": serializers._safe(round(float(p.neckline), 2)),
+         "metrics": {k: serializers._safe(v) for k, v in (p.metrics or {}).items()}}
         for p in patterns
     ]
 
 
 @router.get("/{backtest_id}/report")
-def get_report(backtest_id: str, zz_dev: float = Query(0.003), zz_dev_3: float = Query(0.003),
+def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float = Query(0.0005),
                format: str = Query("html")):
     """Backtest report, downloadable as HTML (full charts, via
     api/report/report.py) or as CSV/Excel/PDF/Word (metrics summary + trade
@@ -236,7 +298,8 @@ def get_report(backtest_id: str, zz_dev: float = Query(0.003), zz_dev_3: float =
     base_name = f"backtest_{r.symbol}_{r.strategy_name}"
 
     if format == "html":
-        html = generate_html_report(r, zz_deviation=zz_dev, zz_deviation_3=zz_dev_3)
+        html = generate_html_report(r, zz_deviation=zz_dev, zz_deviation_3=zz_dev_3,
+                                    session_start=stored.session_start)
         return Response(
             content=html, media_type="text/html",
             headers={"Content-Disposition": f'attachment; filename="{base_name}.html"'},

@@ -15,7 +15,7 @@ subjective of the three and easiest to see in hindsight.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 from .swing_identification import Swing, SwingType, identify_swings
 

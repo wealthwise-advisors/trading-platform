@@ -50,7 +50,27 @@ STRATEGIES = [
 _IDS = {s["id"] for s in STRATEGIES}
 
 
+def _with_defaults(strategy_id: str, params: dict) -> dict:
+    """
+    Fill in any parameter the caller left out, from the registry's own default.
+
+    Without this, a request carrying `params: {}` -- which is a perfectly
+    reasonable way to say "just use the defaults", and what the API's own
+    documented default for that field is -- raised KeyError inside the
+    constructor call below and surfaced as a bare 500 Internal Server Error.
+    The registry already publishes a default for every parameter, so there is
+    no reason for the caller to have to repeat them.
+    """
+    spec = next((s for s in STRATEGIES if s["id"] == strategy_id), None)
+    if spec is None:
+        return dict(params)
+    merged = {p["name"]: p["default"] for p in spec["params"]}
+    merged.update({k: v for k, v in (params or {}).items() if v is not None})
+    return merged
+
+
 def build_strategy(strategy_id: str, params: dict):
+    params = _with_defaults(strategy_id, params)
     if strategy_id == "ma_crossover":
         return MACrossoverStrategy(fast=int(params["fast"]), slow=int(params["slow"]))
     if strategy_id == "rsi_mean_reversion":

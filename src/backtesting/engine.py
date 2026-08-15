@@ -94,9 +94,12 @@ class BacktestEngine:
             bar_times = df.index.time
             if self.session_start and self.session_end:
                 if self.session_start <= self.session_end:
-                    mask = (bar_times >= self.session_start) & (bar_times <= self.session_end)
+                    # Strict at the end: see the note in api/routers/replay.py
+                    # ::_apply_session -- an open exactly on session_end belongs
+                    # to a bar that closes after the session does.
+                    mask = (bar_times >= self.session_start) & (bar_times < self.session_end)
                 else:
-                    mask = (bar_times >= self.session_start) | (bar_times <= self.session_end)
+                    mask = (bar_times >= self.session_start) | (bar_times < self.session_end)
             elif self.session_start:
                 mask = bar_times >= self.session_start
             else:
@@ -108,6 +111,25 @@ class BacktestEngine:
             )
             if df.empty:
                 window = f"{self.session_start}–{self.session_end} EST"
+                # Requesting today before the open is the common case, and the
+                # generic message reads as a fault when nothing is wrong: the
+                # provider returned this morning's pre-market bars and the
+                # filter correctly dropped every one, because the session has
+                # not started. Say that plainly instead of reporting a filter
+                # removing 100% of bars, which sounds like misconfiguration.
+                now = datetime.now()
+                requested_today = start.date() == now.date() == end.date()
+                if (requested_today and self.session_start
+                        and now.time() < self.session_start and bars_before > 0):
+                    raise ValueError(
+                        f"The market hasn't opened yet today — the session starts at "
+                        f"{self.session_start.strftime('%H:%M')} EST and it is currently "
+                        f"{now.strftime('%H:%M')}.\n"
+                        f"{bars_before} pre-market bar(s) were returned "
+                        f"({first_ts} → {last_ts}), all before the open.\n"
+                        "Data will appear once the session begins. To see pre-market "
+                        "activity now, widen the session hours or switch on 24-hour."
+                    )
                 if bars_before == 0:
                     explanation = (
                         "No bars were returned by the data provider for this date "

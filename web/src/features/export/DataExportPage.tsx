@@ -2,8 +2,8 @@
 // range, and data source, then download it as CSV/Excel/PDF/Word. Doesn't
 // run a backtest; hits GET /api/data/export directly (api/routers/data_export.py).
 
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
 import { api } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -21,7 +21,9 @@ const FORMATS = [
 ]
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h"]
-const SYMBOLS = ["ES", "NQ", "MES", "CL", "HG"]
+// Symbols come from /api/symbols per data source -- see the note in
+// features/replay/ReplayPage.tsx. Hardcoding them here meant this page could
+// not export the gold, bitcoin or equity samples that ship in data/sample.
 
 function defaultDateRange() {
   const today = new Date()
@@ -42,6 +44,17 @@ export function DataExportPage() {
   const [dataSource, setDataSource] = useState("synthetic")
 
   const { data: dataSources } = useQuery({ queryKey: ["data-sources"], queryFn: api.dataSources })
+  const { data: symbols } = useQuery({
+    queryKey: ["symbols", dataSource],
+    queryFn: () => api.symbols(dataSource),
+  })
+
+  // A symbol valid for one source may not exist in another (NQ has no CSV).
+  useEffect(() => {
+    if (!symbols || symbols.length === 0) return
+    if (!symbols.some((s) => s.symbol === symbol)) setSymbol(symbols[0].symbol)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbols, symbol])
 
   const url = api.dataExportUrl({
     symbol, timeframe, start: startDate, end: endDate, dataSource, format: "csv",
@@ -69,7 +82,14 @@ export function DataExportPage() {
               <Select value={symbol} onValueChange={setSymbol}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SYMBOLS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {(symbols ?? [{ symbol: "ES", name: "E-mini S&P 500", has_spec: true }]).map((s) => (
+                    <SelectItem key={s.symbol} value={s.symbol}>
+                      {s.symbol}
+                      {s.name && s.name !== s.symbol && (
+                        <span className="text-muted-foreground"> — {s.name}</span>
+                      )}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

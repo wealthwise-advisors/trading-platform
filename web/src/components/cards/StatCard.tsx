@@ -28,10 +28,13 @@ export function StatCard({
   return (
     <div className="stat-card" style={{ ["--stat-accent" as string]: accent }}>
       {icon && (
-        <span className="float-right -mt-0.5 -mr-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[0.65rem]"
+        // Dimmed to match the card's new restraint: at 45% ring opacity the
+        // chip was competing with the value for attention. It is a category
+        // marker, not a data point.
+        <span className="float-right -mt-0.5 -mr-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[0.65rem] opacity-70"
               style={{
-                background: `color-mix(in srgb, ${accent} 22%, transparent)`,
-                boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 45%, transparent)`,
+                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 24%, transparent)`,
               }}>
           {icon}
         </span>

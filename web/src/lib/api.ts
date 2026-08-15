@@ -4,7 +4,7 @@
 // frontend directly.
 
 import type {
-  StrategyMeta, DataSourceMeta, BacktestRequest, BacktestSummary,
+  StrategyMeta, DataSourceMeta, SymbolMeta, BacktestRequest, BacktestSummary,
   TradeRecord, PriceDataResponse, EquityPoint, ZigZagResponse, WinLoss,
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
@@ -20,7 +20,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const body = await res.text().catch(() => "")
-    throw new Error(`${res.status} ${res.statusText}: ${body}`)
+    // FastAPI puts the human-readable reason in `detail`. Surfacing the whole
+    // response instead meant the UI showed
+    // `400 Bad Request: {"detail":"No bars found for ES between …"}` --
+    // the useful sentence wrapped in JSON and a status line. Unwrap it when
+    // it's there, and only fall back to the raw body when it isn't.
+    let detail = ""
+    try {
+      const parsed = JSON.parse(body)
+      if (typeof parsed?.detail === "string") detail = parsed.detail
+      else if (Array.isArray(parsed?.detail)) {
+        // Pydantic validation errors arrive as a list of {loc, msg}.
+        detail = parsed.detail
+          .map((d: { loc?: (string | number)[]; msg?: string }) =>
+            `${(d.loc ?? []).filter((p) => p !== "body").join(".")}: ${d.msg ?? ""}`.trim())
+          .join("; ")
+      }
+    } catch {
+      /* not JSON — fall through to the raw body */
+    }
+    throw new Error(detail || body || `${res.status} ${res.statusText}`)
   }
   return res.json() as Promise<T>
 }
@@ -30,6 +49,11 @@ export const api = {
   strategies: () => request<StrategyMeta[]>("/strategies"),
   dataSources: () => request<DataSourceMeta[]>("/data-sources"),
   contracts: () => request<Record<string, unknown>>("/contracts"),
+  // Symbols the given data source can actually serve. For external_csv this
+  // is derived from the files on disk, so the dropdown cannot offer a symbol
+  // with no data behind it.
+  symbols: (dataSource: string) =>
+    request<SymbolMeta[]>(`/symbols?data_source=${encodeURIComponent(dataSource)}`),
 
   runBacktest: (req: BacktestRequest) =>
     request<BacktestSummary>("/backtests", { method: "POST", body: JSON.stringify(req) }),

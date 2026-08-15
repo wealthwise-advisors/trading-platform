@@ -17,8 +17,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
 from api.routers import meta, backtests, replay, schwab, optimize, data_export
@@ -49,6 +51,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def _unhandled_exception(request: Request, exc: Exception):
+    """
+    Never let an unhandled exception reach the user as a bare
+    "Internal Server Error".
+
+    That default told them nothing: a missing CSV for the symbol they had just
+    picked and a genuine server defect looked identical, so the only actionable
+    part of the failure -- which input to change -- was the part thrown away.
+    The full traceback still goes to the server log; the response carries the
+    exception type and message so the UI, which already renders `detail`, can
+    show something a person can act on.
+    """
+    logger.exception(f"Unhandled error on {request.method} {request.url.path}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"{type(exc).__name__}: {exc}",
+            "path": request.url.path,
+        },
+    )
+
 
 app.include_router(meta.router, prefix="/api")
 app.include_router(backtests.router, prefix="/api")

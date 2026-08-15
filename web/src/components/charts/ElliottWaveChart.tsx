@@ -28,9 +28,20 @@ import { useMemo, useState } from "react"
 import Plot from "react-plotly.js"
 import type { Data, Layout, Annotations } from "plotly.js"
 import type { ElliottWaveResponse, EWWave, OHLCVRecord } from "@/lib/types"
+import { computeRangebreaks } from "@/lib/rangebreaks"
+import { LoadingBlock } from "@/components/ui/loader"
 
 const BG = "#0b1120"
 const GRID = "#1a2340"
+
+// A native <select> inherits the app's light-on-dark text, but the popup list
+// it opens is painted by the OS with its own (light) background -- so the
+// options were white text on white and unreadable while open. The closed
+// control looked fine, which is why it read as "the dropdown text is white".
+// Both the control and the options therefore need explicit colours.
+const SELECT_CLS =
+  "bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
+const OPTION_CLS = "bg-[#0b1120] text-[#e6edf3]"
 const UP = "#2dd4bf"
 const DOWN = "#f0576b"
 
@@ -257,8 +268,8 @@ export function ElliottWaveChart({
   }, [data, bars, scaleFilter, showUndecidable, maxDepth])
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full text-muted-foreground">
-      Running Elliott Wave analysis…
+    return <div className="flex items-center justify-center h-full">
+      <LoadingBlock label="Running Elliott Wave analysis…" hint="Scanning impulse and corrective structures" />
     </div>
   }
   if (error) {
@@ -300,6 +311,9 @@ export function ElliottWaveChart({
     annotations: built.annotations,
     xaxis: {
       gridcolor: GRID, rangeslider: { visible: false }, type: "date",
+      // Skip non-trading voids so waves read against continuous price
+      // rather than islands separated by overnight blanks.
+      rangebreaks: computeRangebreaks(bars.map((b) => b.t)),
       ...(initialRange ? { range: initialRange } : {}),
       showspikes: true, spikemode: "across", spikesnap: "cursor",
       spikethickness: 1, spikedash: "dot", spikecolor: "#6b6b8a",
@@ -327,20 +341,22 @@ export function ElliottWaveChart({
         <div className="shrink-0 flex flex-wrap items-center gap-3 pb-2 text-xs">
           <label className="flex items-center gap-1.5">
             <span className="text-muted-foreground">Scale</span>
-            <select className="bg-white/5 border border-white/10 rounded px-2 py-1"
+            <select className={SELECT_CLS}
                     value={String(scaleFilter)}
                     onChange={(e) => onScaleFilter(e.target.value === "all" ? "all" : Number(e.target.value))}>
-              <option value="all">All</option>
-              {built.scales.map((s) => <option key={s} value={s}>{s}</option>)}
+              <option className={OPTION_CLS} value="all">All</option>
+              {built.scales.map((s) => (
+                <option className={OPTION_CLS} key={s} value={s}>{s}</option>
+              ))}
             </select>
           </label>
           <label className="flex items-center gap-1.5">
             <span className="text-muted-foreground">Nesting</span>
-            <select className="bg-white/5 border border-white/10 rounded px-2 py-1"
+            <select className={SELECT_CLS}
                     value={maxDepth} onChange={(e) => setMaxDepth(Number(e.target.value))}>
-              <option value={0}>Top level only</option>
-              <option value={1}>+ sub-waves</option>
-              <option value={2}>+ sub-sub-waves</option>
+              <option className={OPTION_CLS} value={0}>Top level only</option>
+              <option className={OPTION_CLS} value={1}>+ sub-waves</option>
+              <option className={OPTION_CLS} value={2}>+ sub-sub-waves</option>
             </select>
           </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
@@ -366,54 +382,126 @@ export function ElliottWaveChart({
           </span>
         </div>
 
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 relative">
           <Plot data={built.traces} layout={layout}
                 config={{ scrollZoom: true, displaylogo: false, displayModeBar: true,
                           modeBarButtonsToRemove: ["lasso2d", "select2d"] }}
                 style={{ width: "100%", height: "100%" }} useResizeHandler />
+          {/* An empty result is a legitimate outcome here, not a failure -- the
+              engine declines to label what it cannot detect. Previously the
+              only sign was a "0 top-level" counter in a row of controls, which
+              reads as a broken chart rather than an answer. The two reasons
+              for an empty chart need different responses, so they are told
+              apart rather than sharing one message. */}
+          {built.roots.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto max-w-md rounded-lg border border-white/10
+                              bg-[#0b1120]/92 px-5 py-4 text-center shadow-lg">
+                {data.counts.structures === 0 ? (
+                  <>
+                    <p className="text-sm font-semibold text-foreground">
+                      No Elliott Wave structures detected in this range
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                      The engine found {data.counts.pivots} pivots but none of them formed a
+                      structure that passes its rules. Nothing is labelled rather than
+                      labelling something it did not detect.
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Try a longer date range or a coarser timeframe — more pivots give the
+                      engine more to work with.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold text-foreground">
+                      {data.counts.structures} structure
+                      {data.counts.structures === 1 ? "" : "s"} detected, but hidden by the
+                      current filters
+                    </p>
+                    <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                      Set <b className="text-foreground">Scale</b> to “All”
+                      {!showUndecidable && <> and tick <b className="text-foreground">Show
+                      undecidable</b></>} to see them.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <aside className="xl:w-80 shrink-0 overflow-y-auto text-xs space-y-3 border-t xl:border-t-0 xl:border-l border-white/6 pt-3 xl:pt-0 xl:pl-3">
-        <div>
-          <h3 className="font-semibold mb-1 text-sm">Nesting actually detected</h3>
-          <p className="text-muted-foreground leading-relaxed">
-            Sub-wave labels are drawn <b className="text-foreground">only</b> where the engine
-            detected a structure at a finer scale inside a parent wave.{" "}
-            <b className="text-foreground">{built.nested.size}</b> of{" "}
-            {data.counts.structures} structures are nested inside another;{" "}
-            <b style={{ color: C_UNLABELLED }}>{built.unlabelledLegs}</b> top-level legs have no
-            detected subdivision and are deliberately left unlabelled rather than given invented
-            (i)/(ii)/(iii) markings.
-          </p>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-1 text-sm">Analysis completeness</h3>
-          <p className="text-muted-foreground leading-relaxed">
-            This analysis is <b className="text-foreground">partial by design</b>.{" "}
-            <b className="text-foreground">{data.counts.blocked_rule_ids}</b> reference rules could
-            not be evaluated because the source material does not define them precisely enough.
-            Dashed structures are <b>undecidable</b> ({undecidable} of {gated + undecidable}):
-            they passed every gate the engine can evaluate, but acceptance depends on a blocked
-            rule — so their sub-waves are not asserted either.
-          </p>
-        </div>
-
-        {data.notes.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-1">Scope notes</h4>
-            <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-              {data.notes.map((n, i) => <li key={i}>{n}</li>)}
-            </ul>
+        {/* At-a-glance figures only. The methodology behind them -- why legs go
+            unlabelled, what "undecidable" means, the scope notes and the full
+            blocked-rule inventory -- is real and still reachable, but it was
+            several paragraphs of standing theory next to a chart, so it now
+            sits behind a closed disclosure instead of being read every time. */}
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {([
+            ["Structures", String(data.counts.structures)],
+            ["Pivots", String(data.counts.pivots)],
+            ["Nested", String(built.nested.size)],
+            ["Labels drawn", String(built.labelled)],
+          ] as [string, string][]).map(([k, v]) => (
+            <div key={k} className="flex justify-between border-b border-white/5 pb-1">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="font-semibold text-foreground">{v}</dd>
+            </div>
+          ))}
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <dt className="text-muted-foreground">Undecidable</dt>
+            <dd className="font-semibold" style={{ color: C_UNLABELLED }}>
+              {undecidable}/{gated + undecidable}
+            </dd>
           </div>
-        )}
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <dt className="text-muted-foreground">Unlabelled legs</dt>
+            <dd className="font-semibold" style={{ color: C_UNLABELLED }}>
+              {built.unlabelledLegs}
+            </dd>
+          </div>
+        </dl>
 
-        <div>
-          <h4 className="font-semibold mb-1">
+        <p className="text-muted-foreground leading-relaxed">
+          Partial by design — <b className="text-foreground">{data.counts.blocked_rule_ids}</b>{" "}
+          reference rules can’t be evaluated, so some structures stay undecidable.
+        </p>
+
+        <details className="rounded border border-white/8 px-2 py-1.5">
+          <summary className="cursor-pointer select-none font-semibold text-sm">
+            How to read this
+          </summary>
+          <div className="mt-2 space-y-3">
+            <p className="text-muted-foreground leading-relaxed">
+              Sub-wave labels are drawn <b className="text-foreground">only</b> where the engine
+              detected a finer-scale structure inside a parent wave.{" "}
+              <b style={{ color: C_UNLABELLED }}>{built.unlabelledLegs}</b> top-level legs have no
+              detected subdivision and are left unlabelled rather than given invented
+              (i)/(ii)/(iii) markings.
+            </p>
+            <p className="text-muted-foreground leading-relaxed">
+              Dashed structures are <b>undecidable</b>: they passed every gate the engine can
+              evaluate, but acceptance depends on a rule the source material does not define
+              precisely enough — so their sub-waves are not asserted either.
+            </p>
+            {data.notes.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-1">Scope notes</h4>
+                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                  {data.notes.map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </details>
+
+        <details className="rounded border border-white/8 px-2 py-1.5">
+          <summary className="cursor-pointer select-none font-semibold text-sm">
             Unevaluated rules ({data.blocked_rules.length} groups)
-          </h4>
-          <ul className="space-y-1.5">
+          </summary>
+          <ul className="mt-2 space-y-1.5">
             {data.blocked_rules.map((b, i) => (
               <li key={i} className="border border-white/6 rounded p-1.5">
                 <div className="font-mono text-[11px] text-amber-300">{b.oq}</div>
@@ -422,7 +510,7 @@ export function ElliottWaveChart({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       </aside>
     </div>
   )

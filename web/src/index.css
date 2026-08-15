@@ -81,6 +81,15 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+  /* --- Surface / elevation scale (added in the polish pass) -----------------
+     Panels across the app had each grown their own literal: #0e1424, #0b1325,
+     border-white/6, rgba(255,255,255,0.06)... so "a card" looked slightly
+     different on every page. These four tokens are the single source now. */
+  --surface-1: #ffffff;
+  --surface-2: #f7f8fb;
+  --hairline: rgba(9, 12, 25, 0.10);
+  --radius-card: 12px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark {
@@ -116,6 +125,12 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+  /* Surface / elevation scale -- see the note in :root above. */
+  --surface-1: #0b1120;
+  --surface-2: #0e1424;
+  --hairline: rgba(255, 255, 255, 0.075);
+  --radius-card: 12px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
@@ -158,47 +173,72 @@
 .stat-card {
   position: relative;
   overflow: hidden;
+  /* Restrained on purpose. These cards used to carry a 1.5px saturated border
+     plus a 28px coloured bloom each, so five of them side by side read as five
+     competing neon frames -- the single most dated thing on the page. The
+     accent now identifies the card through a top rail and a faint corner wash
+     while the surface and border stay neutral, which lets the NUMBER be the
+     brightest thing in the card instead of its frame. */
   background:
-    linear-gradient(160deg, color-mix(in srgb, var(--stat-accent) 10%, #0e1424) 0%, #0b1120 100%);
-  backdrop-filter: blur(6px);
-  border-radius: 12px;
-  padding: 5px 8px 4px;
-  border: 1.5px solid color-mix(in srgb, var(--stat-accent) 65%, transparent);
+    radial-gradient(120% 100% at 0% 0%,
+      color-mix(in srgb, var(--stat-accent) 13%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  border-radius: var(--radius-card);
+  padding: 9px 12px 8px;
+  border: 1px solid var(--hairline);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 0 0 1px color-mix(in srgb, var(--stat-accent) 20%, transparent),
-    0 8px 28px -6px color-mix(in srgb, var(--stat-accent) 75%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 24px -18px color-mix(in srgb, var(--stat-accent) 60%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.6);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+/* The accent top rail: the card's whole colour identity in 2px. */
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--stat-accent) 0%,
+    color-mix(in srgb, var(--stat-accent) 35%, transparent) 55%,
+    transparent 100%);
+  opacity: 0.85;
+}
+
 .stat-card:hover {
   transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--stat-accent) 34%, var(--hairline));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 0 0 1px color-mix(in srgb, var(--stat-accent) 35%, transparent),
-    0 10px 34px -6px color-mix(in srgb, var(--stat-accent) 90%, transparent),
-    0 2px 8px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 14px 32px -20px color-mix(in srgb, var(--stat-accent) 85%, transparent),
+    0 4px 14px rgba(0, 0, 0, 0.5);
 }
+/* Left-aligned, and with a real size step between label and value. Centred
+   micro-text at 0.56rem gave every card the same visual weight; a dashboard
+   should let you read the numbers in one downward sweep. */
 .stat-card .stat-label {
-  font-size: 0.56rem;
-  color: #a6adc8;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 1px;
-  text-align: center;
+  letter-spacing: 0.075em;
+  margin-bottom: 3px;
 }
 .stat-card .stat-value {
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  font-feature-settings: "tnum" 1;
 }
 .stat-card .stat-sub {
-  font-size: 0.6rem;
-  color: #7f849c;
-  margin-top: 1px;
-  text-align: center;
+  font-size: 0.65rem;
+  color: color-mix(in srgb, var(--muted-foreground) 80%, transparent);
+  margin-top: 3px;
 }
 
 /* ── Info cards (Performance Summary / Backtest Details / Quick Insights /
@@ -304,4 +344,337 @@
    component styling (Plotly renders the modebar outside React's control). */
 .js-plotly-plot .modebar-btn {
   margin: 0 3px;
+}
+  /* ---------------------------------------------------------------------
+     Loading ring (components/ui/loader.tsx)
+
+     Each layer turns at its own rate and in its own direction, which is what
+     keeps it from reading as one plain spinning arc. Rotation is applied to
+     the SVG circles rather than to the <svg> element so the glow filter and
+     the tick ring can move independently of each other.
+
+     transform-box/transform-origin are needed because an SVG <circle> rotates
+     about the user-space origin (0,0) by default, not its own centre.
+     --------------------------------------------------------------------- */
+  .ldr-root {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    line-height: 0;
+  }
+
+  .ldr-root svg circle {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+  }
+
+  .ldr-sweep     { animation: ldr-rotate 1.5s linear infinite; }
+  .ldr-sweep-rev { animation: ldr-rotate 2.4s linear infinite reverse; }
+  .ldr-ticks     { animation: ldr-rotate 9s linear infinite; }
+  .ldr-core      { animation: ldr-pulse 1.5s ease-in-out infinite; }
+
+  @keyframes ldr-rotate {
+    to { transform: rotate(360deg); }
+  }
+
+  /* The core breathes in step with the main sweep (same 1.5s) so the two read
+     as one mechanism. The glow is a drop-shadow rather than a second element,
+     which keeps this to a single composited layer. */
+  @keyframes ldr-pulse {
+    0%, 100% { opacity: 0.45; transform: scale(0.72); filter: drop-shadow(0 0 2px var(--primary)); }
+    50%      { opacity: 1;    transform: scale(1);    filter: drop-shadow(0 0 7px var(--primary)); }
+  }
+
+  /* Respect the OS setting: keep the shape and the glow, drop the spinning.
+     A static ring alone would not read as "busy", so the core still pulses --
+     an opacity fade only, which does not trigger vestibular symptoms the way
+     rotation and scaling can. */
+  @media (prefers-reduced-motion: reduce) {
+    .ldr-sweep, .ldr-sweep-rev, .ldr-ticks {
+      animation: none;
+    }
+    .ldr-core {
+      animation: ldr-fade 2s ease-in-out infinite;
+    }
+    @keyframes ldr-fade {
+      0%, 100% { opacity: 0.4; }
+      50%      { opacity: 1; }
+    }
+  }
+
+/* =========================================================================
+   VISUAL POLISH PASS
+   -------------------------------------------------------------------------
+   Everything below is presentation only -- no layout is reflowed and no
+   element is hidden or moved, so it cannot change behaviour. It exists
+   because the app grew feature by feature: each page picked its own panel
+   colour, its own border alpha and its own number formatting, and the result
+   read as several dashboards stapled together rather than one product.
+
+   The rules are grouped by what they fix, and each group says why.
+   ========================================================================= */
+
+/* --- 1. Numbers -----------------------------------------------------------
+   Proportional digits are the reason the replay tables appear to twitch: as a
+   price ticks from 5969.25 to 5970.00, every column after it shifts by a
+   fraction of a pixel. Tabular figures give every digit the same advance, so a
+   live table updates in place. For a trading UI this is the highest-value rule
+   in this whole file. */
+table,
+input[type="number"],
+input[type="date"],
+input[type="time"],
+.font-mono,
+.stat-value,
+.tickbar-readout {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* --- 2. Table legibility -------------------------------------------------
+   The live-state and tape tables run to hundreds of rows and twenty columns.
+   A hairline between rows plus a hover tint makes one row traceable all the
+   way across, without the heavy zebra striping that would fight the semantic
+   red/green already inside the cells. */
+table thead th {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+table tbody tr {
+  transition: background-color 120ms linear;
+}
+table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.032);
+}
+table tbody tr + tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Header stays put while a long tape scrolls under it. */
+.table-sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  box-shadow: inset 0 -1px 0 var(--hairline);
+}
+
+/* --- 3. Interactive feedback ---------------------------------------------
+   Buttons, inputs and selects changed state instantly with no transition,
+   which makes an interface feel unfinished more surely than any single colour
+   choice does. One shared easing and duration for all of them. */
+button,
+[role="combobox"],
+[role="tab"],
+input,
+select {
+  transition:
+    background-color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out),
+    color 140ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+
+/* Press feedback: a single pixel. Enough to feel mechanical, not enough to
+   bounce the layout. */
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* Keyboard focus was effectively invisible against the dark surfaces in
+   several places. focus-visible only, so it never shows on a mouse click. */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 70%, transparent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input:hover:not(:disabled),
+[role="combobox"]:hover {
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--hairline));
+}
+input:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+/* --- 4. Tab rows --------------------------------------------------------
+   The results page has twelve tabs. Because every trigger was flex-1 they
+   stretched to fill the row, wrapped, and left "Elliott Wave" centred alone on
+   a second line -- which read as a rendering fault rather than a design.
+   Opting a list into .tabs-scroll makes it one non-wrapping scrollable row of
+   content-width tabs. Scoped to a class so the two- and three-tab groups
+   elsewhere keep their equal-width behaviour. */
+.tabs-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Fade the two edges instead of slicing a tab in half. A scrollable row that
+     hard-clips "Price & Trades" to "rice & Trades" looks like a bug; a fade
+     reads as "there is more this way", which is the actual situation. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent 100%);
+  scroll-padding-inline: 14px;
+}
+.tabs-scroll [data-slot="tabs-trigger"] {
+  flex: 0 0 auto;
+}
+
+/* --- 5. Scrollbars ------------------------------------------------------
+   The platform default is a wide light-grey slab, and this app has several
+   inner scroll areas (the tape, wide tables, the tab row) where it was the
+   brightest thing on screen. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* --- 6. Text selection -------------------------------------------------- */
+::selection {
+  background: color-mix(in srgb, var(--primary) 38%, transparent);
+  color: #ffffff;
+}
+
+/* --- 7. Tick / playback progress bar ------------------------------------
+   Was a flat 6px solid-blue rounded rect -- the last obviously default element
+   left after the loading ring landed. It now shares the ring's vocabulary: the
+   same --primary to --accent sweep, the same glow, so the two read as one
+   system rather than one styled element beside one leftover.
+
+   Three layers: an inset track, so the groove reads as recessed; a gradient
+   fill with a bright leading edge; and, only while playing, a shimmer
+   travelling along the filled portion. The shimmer is clipped to the fill, so
+   at 0% nothing moves and the bar never implies progress it has not made. */
+.tickbar-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.tickbar-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--primary) 78%, #0b1120) 0%,
+    var(--primary) 55%,
+    var(--accent) 100%);
+  box-shadow:
+    0 0 10px -1px color-mix(in srgb, var(--primary) 75%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  /* Width comes from React. Eased so a tick reads as motion rather than a
+     jump, but kept short: at 0.05s per tick a long transition would visibly
+     lag behind the actual position. */
+  transition: width 180ms var(--ease-out);
+}
+
+/* Bright leading edge, so the current position is findable even when the bar
+   is only a few percent along. */
+.tickbar-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: #ffffff;
+  opacity: 0.85;
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 90%, transparent);
+}
+
+.tickbar-track[data-playing="true"] .tickbar-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.30) 50%,
+    transparent 100%);
+  animation: tickbar-shimmer 1.5s linear infinite;
+}
+
+@keyframes tickbar-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.tickbar-readout {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  letter-spacing: 0.01em;
+}
+
+/* Same bargain as the loading ring: keep the shape and the glow, drop the
+   travelling highlight. Progress stays legible from width alone. */
+@media (prefers-reduced-motion: reduce) {
+  .tickbar-track[data-playing="true"] .tickbar-fill::before {
+    animation: none;
+    opacity: 0;
+  }
+  .tickbar-fill {
+    transition: none;
+  }
+}
+
+/* --- 8. Panels and captions ---------------------------------------------
+   One hairline and one radius for the ad-hoc panels that were using literal
+   colours, so cards line up visually from page to page. */
+.panel {
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+}
+
+/* Section captions ("STRATEGY PARAMETERS", "CAPITAL & RISK") had three
+   different sizes and letter-spacings depending on which page introduced
+   them. */
+.section-caption {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted-foreground);
+}
+
+/* Locked setup controls must not swallow the click.
+   A disabled control dispatches no events at all, so clicking a locked Symbol
+   or Strategy field produced literally nothing -- no open, no feedback, no
+   hint. Taking them out of hit-testing lets the click reach the wrapper, where
+   ReplayPage answers it with the reason and a way out. The control still shows
+   as disabled and still cannot be edited; only the dead click is fixed. */
+.setup-locked [disabled],
+.setup-locked [data-disabled] {
+  pointer-events: none;
 }

@@ -25,4 +25,24 @@ def get_config() -> dict:
 
 
 def get_contract_spec(symbol: str) -> dict:
-    return CONTRACT_SPECS.get(symbol, dict(tick_size=0.25, tick_value=12.50, point_value=50.0))
+    """Contract economics for a symbol.
+
+    settings.yaml wins over the hardcoded defaults above -- the same merge
+    /api/contracts already performed. Previously this consulted only
+    CONTRACT_SPECS, so a symbol defined in config was still priced with the
+    ES fallback (0.25 tick / $50 per point). That silently produced plausible
+    but wrong P&L for anything that isn't an E-mini, which matters now that
+    equities and metals ship in data/sample/.
+    """
+    contracts = get_config().get("contracts", {}) or {}
+    merged = {**CONTRACT_SPECS, **contracts}
+    spec = merged.get(symbol)
+    if spec is None:
+        return dict(tick_size=0.25, tick_value=12.50, point_value=50.0)
+    # settings.yaml entries carry extra keys (name, exchange, margins); the
+    # engine only wants the three economics fields.
+    return dict(
+        tick_size=spec["tick_size"],
+        tick_value=spec["tick_value"],
+        point_value=spec["point_value"],
+    )

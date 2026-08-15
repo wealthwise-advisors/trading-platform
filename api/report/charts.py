@@ -5,11 +5,18 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from src.backtesting.results import BacktestResults
-from src.analysis.indicators import calc_rsi as _calc_rsi, calc_stoch as _calc_stoch
+from datetime import time as time_type
+from src.analysis.indicators import (
+    calc_rsi as _calc_rsi,
+    calc_stoch as _calc_stoch,
+    calc_vwap_bands,
+    calc_volume_profile,
+    compute_rangebreaks,
+)
 from src.analysis.zigzag import (
     calc_zigzag as _calc_zigzag,
     assign_swing_labels as _assign_swing_labels,
-    calc_nested_zigzag as _calc_nested_zigzag,
+    calc_nested_zigzag as _calc_nested_zigzag,  # noqa: F401 -- re-export, see below
     spreadsheet_letter as _swing_letter,
 )
 
@@ -89,8 +96,9 @@ def candlestick_with_trades(
     results: BacktestResults,
     max_bars: int = 400,
     show_zigzag: bool = False,
-    zigzag_dev_3: float = 0.003,
-    zigzag_dev_10: float = 0.003,
+    zigzag_dev_3: float = 0.0005,    # 0.05% -- keep in step with
+    zigzag_dev_10: float = 0.0010,   # api/schemas/backtest.py
+    session_start: time_type | None = None,
 ) -> go.Figure:
     """
     Candlestick + EMA overlays + trade markers.
@@ -118,11 +126,13 @@ def candlestick_with_trades(
     std   = std.reindex(df.index, method="nearest")
 
     # ── Layout: 4 rows ────────────────────────────────────────────────
+    # Kept in step with report.py and the React CandlestickChart -- see the
+    # note there. Three separate implementations draw this same 4-panel view.
     fig = make_subplots(
         rows=4, cols=1,
         shared_xaxes=True,
-        row_heights=[0.55, 0.15, 0.15, 0.15],
-        vertical_spacing=0.035,
+        row_heights=[0.68, 0.1067, 0.1067, 0.1067],
+        vertical_spacing=0.028,
     )
 
     # ── Row 1: Candlestick ────────────────────────────────────────────
@@ -141,6 +151,74 @@ def candlestick_with_trades(
             x=df.index, y=ema, name=f"EMA{span}",
             line=dict(color=color, width=1.2),
         ), row=1, col=1)
+
+    # ── Session VWAP +/-2 sigma ─────────────────────────────────────────
+    # Mirrors CandlestickChart.tsx so an exported report matches the
+    # dashboard. Skipped entirely when the dataset carries no volume --
+    # calc_vwap_bands returns all-NaN there rather than inventing a series.
+    _vwap, _vwap_u, _vwap_l = calc_vwap_bands(
+        df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
+        session_start=session_start,
+    )
+    if _vwap.notna().any():
+        # Three solid lines of comparable weight, each its own colour --
+        # matching CandlestickChart.tsx and the broker-platform treatment of
+        # VWAP / UpperBand / LowerBand. Dotted bands with a fill between them
+        # read as shading, not as levels you can price off.
+        #
+        # The label is inside each hovertemplate on purpose: hovermode is
+        # "x unified", and <extra></extra> suppresses the box Plotly would
+        # otherwise put the trace name in -- without it the three values
+        # arrive as unlabelled numbers stacked together.
+        fig.add_trace(go.Scatter(
+            x=df.index, y=_vwap_u, name="UpperBand", legendgroup="vwap",
+            hovertemplate="<b>UpperBand</b>: %{y:.2f}<extra></extra>",
+            line=dict(color="#fde047", width=1.5),
+        ), row=1, col=1)
+        fig.add_trace(go.Scatter(
+            x=df.index, y=_vwap_l, name="LowerBand", legendgroup="vwap",
+            hovertemplate="<b>LowerBand</b>: %{y:.2f}<extra></extra>",
+            line=dict(color="#f472b6", width=1.5),
+        ), row=1, col=1)
+        fig.add_trace(go.Scatter(
+            x=df.index, y=_vwap, name="VWAP", legendgroup="vwap",
+            hovertemplate="<b>VWAP</b>: %{y:.2f}<extra></extra>",
+            line=dict(color="#e879f9", width=1.8),
+        ), row=1, col=1)
+
+
+    # ── Volume Profile ──────────────────────────────────────────────────
+    # Overlaid on the price row via a reversed secondary x-axis rather than
+    # given a subplot column of its own -- a column would cost chart width and
+    # force the indicator rows to shrink to match. Mirrors CandlestickChart.tsx.
+    _vp = calc_volume_profile(
+        df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
+    )
+    if _vp["prices"]:
+        _in_va = [
+            _vp["val"] is not None and _vp["vah"] is not None and _vp["val"] <= p <= _vp["vah"]
+            for p in _vp["prices"]
+        ]
+        fig.add_trace(go.Bar(
+            x=_vp["volumes"], y=_vp["prices"], orientation="h",
+            width=_vp["bin_size"],
+            marker_color=["rgba(56,189,248,0.34)" if f else "rgba(56,189,248,0.13)"
+                          for f in _in_va],
+            name="Volume Profile", xaxis="x5",
+            hovertemplate="<b>Volume Profile</b><br>%{y:.2f}: %{x:,.0f}<extra></extra>",
+        ), row=1, col=1)
+        for _lbl, _val, _col, _dash in (
+            ("POC", _vp["poc"], "#38bdf8", "solid"),
+            ("VAHigh", _vp["vah"], "#7dd3fc", "dash"),
+            ("VALow", _vp["val"], "#7dd3fc", "dash"),
+        ):
+            if _val is None:
+                continue
+            fig.add_trace(go.Scatter(
+                x=df.index, y=[_val] * len(df.index), name=_lbl, legendgroup="vp",
+                line=dict(color=_col, width=1.2, dash=_dash),
+                hovertemplate=f"<b>{_lbl}</b>: %{{y:.2f}}<extra></extra>",
+            ), row=1, col=1)
 
     # ── ZigZag overlay with per-swing numbering (resets at each new swing) ──
     zz = pd.DataFrame()
@@ -395,20 +473,27 @@ def candlestick_with_trades(
     layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=920)
     _has_swing_headers = show_zigzag and not zz.empty
     if _has_swing_headers:
-        layout["margin"] = dict(l=60, r=12, t=145, b=8)  # room for range selector + Swing N headers
+        layout["margin"] = dict(l=60, r=12, t=120, b=8)  # room for swing headers; the range selector now shares the toolbar row
     # Visual stacking top-to-bottom: title -> range selector -> swing headers
     # (sitting right above the dotted boundary, no big gap) -> chart
-    _rangeselector = {**_RANGE_SELECTOR, "y": 1.15} if _has_swing_headers else _RANGE_SELECTOR
+    # y is in PRICE ROW domain units, so it must track row_heights -- see the
+    # matching note in report.py. 0.115 of the paper above the row top lands
+    # the buttons on the same strip as the modebar.
+    _rangebreaks = compute_rangebreaks(df.index)
+    _PRICE_ROW_FRACTION = 0.68 * (1 - 3 * 0.028)
+    _rangeselector = ({**_RANGE_SELECTOR, "y": 1 + 0.115 / _PRICE_ROW_FRACTION}
+                      if _has_swing_headers else _RANGE_SELECTOR)
     layout.update(
         xaxis=dict(
             gridcolor=_GRID, showgrid=True,
             rangeslider_visible=False,
+            rangebreaks=_rangebreaks,
             rangeselector=_rangeselector,
             **_SPIKE,
         ),
-        xaxis2=dict(gridcolor=_GRID, **_SPIKE),
-        xaxis3=dict(gridcolor=_GRID, **_SPIKE),
-        xaxis4=dict(gridcolor=_GRID, **_SPIKE),
+        xaxis2=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
+        xaxis3=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
+        xaxis4=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         yaxis =dict(gridcolor=_GRID, showgrid=True,
                     title=dict(text="Price",   **_ylabel), fixedrange=False),
         yaxis2=dict(gridcolor=_GRID, showgrid=True,
@@ -419,6 +504,15 @@ def candlestick_with_trades(
                     title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[0, 100]),
     )
     fig.update_layout(**layout)
+    # Reversed overlay axis for the profile; 4x cap keeps it to <= 1/4 width.
+    if _vp["prices"]:
+        _vmax = max(_vp["volumes"]) or 1
+        fig.update_layout(xaxis5=dict(
+            overlaying="x", side="top", anchor="y",
+            range=[_vmax * 4, 0], showgrid=False, zeroline=False,
+            showticklabels=False, fixedrange=True,
+        ))
+
     return fig
 
 
