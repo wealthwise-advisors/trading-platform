@@ -23,27 +23,34 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Are the org secrets visible from this repo at all?
-        run: |
-          if [ -z "${{ secrets.APP_ID }}" ]; then
-            echo "APP_ID is EMPTY -- the org secret is not shared with this repository."
-            echo "Fix: org Settings -> Secrets -> APP_ID -> Repository access -> add trading-platform"
-            exit 1
-          fi
-          if [ -z "${{ secrets.APP_PRIVATE_KEY }}" ]; then
-            echo "APP_PRIVATE_KEY is EMPTY -- the org secret is not shared with this repository."
-            exit 1
-          fi
-          echo "both org secrets are readable from this repo"
-          echo "APP_ID length: ${#APP_ID_LEN} (value withheld)"
+      - name: Report which credentials are actually visible
         env:
-          APP_ID_LEN: ${{ secrets.APP_ID }}
+          SEEN_APP_ID: ${{ secrets.APP_ID }}
+          SEEN_APP_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        run: |
+          # Report both independently -- do not exit on the first gap, or a
+          # single missing value hides the state of everything after it.
+          if [ -n "$SEEN_APP_ID" ]; then
+            echo "  secrets.APP_ID:          present (${#SEEN_APP_ID} chars)"
+          else
+            echo "  secrets.APP_ID:          ABSENT -- falling back to the literal App ID"
+            echo "                           (an App ID is a public identifier, not a secret)"
+          fi
+          if [ -n "$SEEN_APP_KEY" ]; then
+            echo "  secrets.APP_PRIVATE_KEY: present (${#SEEN_APP_KEY} chars, value withheld)"
+          else
+            echo "  secrets.APP_PRIVATE_KEY: ABSENT -- cannot continue, this one IS a secret"
+            exit 1
+          fi
 
       - name: Mint an installation access token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.APP_ID }}
+          # Prefer the secret if it exists; otherwise use the App's public ID.
+          # An empty expression is falsy in GitHub expressions, so this selects
+          # the literal only when the secret is genuinely unset.
+          app-id: ${{ secrets.APP_ID || '4607282' }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Which repositories does this installation cover?
