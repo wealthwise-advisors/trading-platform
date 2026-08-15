@@ -32,6 +32,7 @@ import requests
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
+from .resample import bar_anchor, resample_ohlcv
 from ..config import resolve_config_dir
 
 
@@ -42,6 +43,25 @@ _FUTURES_ROOTS = {
     "ZN", "ZB", "ZF", "ZT",
 }
 
+# How far back Schwab actually serves intraday bars.
+#
+# Measured 2026-08-11 by walking single-day probes backwards and bisecting the
+# boundary, rather than taken from documentation:
+#
+#     /ES  5m   oldest data ~204 days back (2026-01-19), nothing by 205
+#     /ES  1h   oldest data ~259 days back (2025-11-25), nothing by 261
+#     AAPL 5m   oldest data ~208 days back (2026-01-15), nothing by 210
+#
+# Minute-based frequencies are the tighter constraint and the common case, so
+# 180 is used: comfortably inside the measured ~204 so the boundary itself
+# never gets advertised as available, and a round "about six months" to state
+# to a user. Daily bars go back much further and are not covered by this.
+#
+# This is a moving window relative to today, not a fixed date -- which is why
+# a request that worked last month can start failing without anything changing
+# locally.
+INTRADAY_LOOKBACK_DAYS = 180
+
 # Maps timeframe string → (Schwab frequencyType, frequency)
 _TF_MAP: dict[str, tuple[str, int]] = {
     "1m":  ("minute", 1),
@@ -49,10 +69,52 @@ _TF_MAP: dict[str, tuple[str, int]] = {
     "10m": ("minute", 10),
     "15m": ("minute", 15),
     "30m": ("minute", 30),
-    "1h":  ("minute", 30),   # we resample 30m → 1h client-side
+    "1h":  ("minute", 30),   # resampled client-side, like the intervals below
 }
 
+#: Minutes per timeframe label the app can ask for. Schwab serves only the
+#: frequencies in _TF_MAP, so anything else is fetched at the largest frequency
+#: that DIVIDES it and aggregated here. Resampling from a non-divisor would put
+#: the wrong amount of market time in a bar -- a 45m bar built from 30m data
+#: would hold 30 or 60 minutes -- so the divisor requirement is not optional.
+_TF_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
+               "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60}
+_NATIVE_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "30m": 30}
+
+
+def _fetch_plan(timeframe: str):
+    """(frequencyType, frequency, resample_alias_or_None) for a timeframe."""
+    if timeframe in _TF_MAP and timeframe != "1h":
+        return (*_TF_MAP[timeframe], None)
+    if timeframe not in _TF_MINUTES:
+        raise ValueError(
+            f"Unsupported timeframe {timeframe!r}. Supported: {sorted(_TF_MINUTES)}"
+        )
+    want = _TF_MINUTES[timeframe]
+    base = max((k for k, m in _NATIVE_MINUTES.items() if want % m == 0),
+               key=lambda k: _NATIVE_MINUTES[k])
+    return (*_TF_MAP[base], f"{want}min")
+
 _OHLCV_AGG = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+
+
+def build_timeframe(df: pd.DataFrame, timeframe: str, symbol: str | None = None) -> pd.DataFrame:
+    """
+    Turn natively-fetched bars into `timeframe` bars.
+
+    A no-op for the frequencies Schwab serves directly (1/5/10/15/30m); the rest
+    -- 20m, 25m, 35m, 40m, 45m, 1h -- are aggregated here on the session grid.
+
+    Split out of load() so it is reachable without credentials or a network
+    call. It was inline, which meant the only way to exercise it was against the
+    live API, which meant in practice it was never exercised at all -- and it sat
+    there resampling on a midnight grid through three rounds of "the bars are
+    wrong" while the tests all passed against a separate copy of the logic.
+    """
+    _freq_type, _freq, resample_to = _fetch_plan(timeframe)
+    if resample_to is None:
+        return df
+    return resample_ohlcv(df, timeframe, bar_anchor(symbol))
 
 
 class SchwabDataProvider(DataProvider):
@@ -62,7 +124,11 @@ class SchwabDataProvider(DataProvider):
     _ACCESS_TTL  = 1800             # seconds
     _BASE_URL    = "https://api.schwabapi.com"
 
-    def __init__(self, tokens_file: Optional[str] = None):
+    def __init__(self, tokens_file: Optional[str] = None, session_start=None):
+        #: Session open. Only used to anchor resample bins for the timeframes
+        #: Schwab does not serve natively -- see load(). None keeps the
+        #: calendar-day default, which is what a 24-hour chart wants.
+        self.session_start = session_start
         creds = self._load_credentials()
         self._app_key      = creds["app_key"]
         self._app_secret   = creds["app_secret"]
@@ -251,11 +317,7 @@ class SchwabDataProvider(DataProvider):
     ) -> pd.DataFrame:
         self._ensure_client()
 
-        if timeframe not in _TF_MAP:
-            raise ValueError(
-                f"Unsupported timeframe '{timeframe}'. Supported: {list(_TF_MAP)}"
-            )
-        freq_type, freq = _TF_MAP[timeframe]
+        freq_type, freq, resample_to = _fetch_plan(timeframe)
         schwab_sym = self._to_schwab_symbol(symbol)
         logger.info(f"Schwab: {schwab_sym} {timeframe} bars {start.date()} → {end.date()}")
 
@@ -270,18 +332,32 @@ class SchwabDataProvider(DataProvider):
             chunk_start = chunk_end + datetime.timedelta(seconds=1)
 
         if not frames:
+            oldest = datetime.datetime.now() - datetime.timedelta(days=INTRADAY_LOOKBACK_DAYS)
+            hint = ""
+            if start < oldest:
+                hint = (
+                    f"\nThat start date is {(datetime.datetime.now() - start).days} days back. "
+                    f"Schwab serves roughly the last {INTRADAY_LOOKBACK_DAYS} days of intraday "
+                    f"bars, i.e. nothing before about {oldest.date()}. "
+                    "For older history use the CSV data source."
+                )
             raise ValueError(
                 f"No data returned from Schwab for {schwab_sym} "
-                f"between {start} and {end}.\n"
-                "Check the symbol, date range, and that your account has data access."
+                f"between {start} and {end}.{hint}"
+                + ("" if hint else "\nCheck the symbol, date range, and that your "
+                                   "account has data access.")
             )
 
         df = pd.concat(frames).sort_index()
         df = df[~df.index.duplicated(keep="first")]
         df = df.loc[start:end]
 
-        if timeframe == "1h":
-            df = df.resample("1h").agg(_OHLCV_AGG).dropna()
+        # Anything Schwab does not serve natively is aggregated on the session
+        # grid, the same way every other path in the app does it. This used to
+        # be a bare df.resample() here, which anchors bins at MIDNIGHT, so all
+        # six built timeframes started their session on the wrong minute
+        # (09:30 session: 20m opened 09:40, 45m at 09:45, 1h at 10:00).
+        df = build_timeframe(df, timeframe, symbol)
 
         logger.info(f"  {len(df)} {timeframe} bars  ({df.index.min()} → {df.index.max()})")
         return df

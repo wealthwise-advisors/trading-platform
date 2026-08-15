@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { api } from "@/lib/api"
-import { useConfigStore } from "@/store/configStore"
+import {
+  useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
+} from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import { WinLossDonut } from "@/components/charts/WinLossDonut"
 import { CandlestickChart } from "@/components/charts/CandlestickChart"
@@ -15,6 +17,7 @@ import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
+import { LoadingBlock } from "@/components/ui/loader"
 
 export function ResultsPage() {
   const backtestId = useConfigStore((s) => s.backtestId)
@@ -42,7 +45,7 @@ export function ResultsPage() {
   })
   const zigzagQ = useQuery({
     queryKey: ["backtest", backtestId, "zigzag"],
-    queryFn: () => api.getZigZag(backtestId!, 0.003, 0.003),
+    queryFn: () => api.getZigZag(backtestId!, ZIGZAG_DEV_3_DEFAULT / 100, ZIGZAG_DEV_10_DEFAULT / 100),
     enabled: !!backtestId,
   })
   // Elliott Wave: its own top-level tab with its own chart -- never an overlay
@@ -86,7 +89,7 @@ export function ResultsPage() {
   const anyError = summaryQ.error || tradesQ.error || priceDataQ.error || equityQ.error || zigzagQ.error
 
   if (isLoading || !s) {
-    return <div className="p-8 text-muted-foreground">Loading results…</div>
+    return <LoadingBlock label="Loading results…" hint="Fetching trades, equity curve and price data" />
   }
   if (anyError) {
     return <div className="p-8 text-destructive">Error: {String(anyError)}</div>
@@ -131,7 +134,7 @@ export function ResultsPage() {
              duplicates that used to sit here to avoid two visible "Live Replay"
              entry points; same setPage("replay")/reportUrl() calls either way. ── */}
         <div className="shrink-0 flex flex-wrap items-center gap-2">
-          <TabsList>
+          <TabsList className="tabs-scroll">
             <TabsTrigger value="price">📊 Price & Trades</TabsTrigger>
             <TabsTrigger value="equity">📈 Equity Curve</TabsTrigger>
             <TabsTrigger value="trades">📋 Trade Log</TabsTrigger>

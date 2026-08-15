@@ -1,33 +1,38 @@
 """In-memory store for live-replay sessions, mirroring api/store.py's design
-(single-process, dev-appropriate — matches ReplayEngine's own single-session
-model, same as the Streamlit ui/live_app.py it replaces)."""
+(single-process, dev-appropriate).
+
+Holds a MultiReplaySession, which drives one ReplayEngine per selected
+timeframe off a shared market clock. A single-timeframe session is just a grid
+of one, so there is no separate code path for the original behaviour."""
 
 import uuid
 from dataclasses import dataclass
 
 import pandas as pd
 
-from src.backtesting.replay_engine import ReplayEngine
+from src.backtesting.multi_replay import MultiReplaySession
 
 
 @dataclass
 class ReplaySession:
-    engine: ReplayEngine
-    df: pd.DataFrame            # original bars, kept for Reset (engine.load() again)
+    session: MultiReplaySession
+    df: pd.DataFrame            # source bars at the finest resolution, kept for Reset
     symbol: str
     strategy_name: str
     initial_capital: float
+    data_source: str = "synthetic"
 
 
 _STORE: dict[str, ReplaySession] = {}
 
 
-def save(engine: ReplayEngine, df: pd.DataFrame, symbol: str, strategy_name: str,
-         initial_capital: float) -> str:
+def save(session: MultiReplaySession, df: pd.DataFrame, symbol: str, strategy_name: str,
+         initial_capital: float, data_source: str = "synthetic") -> str:
     replay_id = f"RP-{uuid.uuid4().hex[:10]}"
     _STORE[replay_id] = ReplaySession(
-        engine=engine, df=df, symbol=symbol,
+        session=session, df=df, symbol=symbol,
         strategy_name=strategy_name, initial_capital=initial_capital,
+        data_source=data_source,
     )
     return replay_id
 

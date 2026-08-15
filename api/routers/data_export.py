@@ -31,7 +31,11 @@ def export_data(
         raise HTTPException(400, f"format must be one of {sorted(_FORMATS)}")
 
     spec = get_contract_spec(symbol)
-    provider = _build_provider(data_source, symbol, timeframe, start, end, spec)
+    # The session has to reach the provider, not just the filter below: bars are
+    # AGGREGATED on the session grid, so exporting 45m without it returns bars
+    # on a midnight grid that no other page in the app agrees with.
+    provider = _build_provider(data_source, symbol, timeframe, start, end, spec,
+                               session_start=session_start)
 
     start_dt = datetime.combine(start, time_type(0, 0))
     end_dt = datetime.combine(end, time_type(23, 59))

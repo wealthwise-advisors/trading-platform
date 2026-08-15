@@ -25,7 +25,13 @@ services:
     environment:
       AUTOTRADER_CORS_ORIGINS: "http://localhost:8080"
     volumes:
-      - ./config:/app/config:ro
+      # NOT read-only. The Schwab client persists refreshed OAuth tokens back
+      # to config/schwab_tokens.json (see src/data/schwab_provider.py), so a
+      # :ro mount lets the app authenticate once and then fail silently the
+      # first time the token refreshes. Both credentials.yaml and
+      # schwab_tokens.json are gitignored, so `git clean -fd` during a deploy
+      # leaves them alone and they survive redeploys.
+      - ./config:/app/config
       - autotrader-data:/app/data
       - autotrader-logs:/app/logs
     # ports:

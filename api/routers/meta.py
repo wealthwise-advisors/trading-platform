@@ -1,8 +1,10 @@
 """Health check and reference/meta endpoints."""
 
+from functools import lru_cache
+
 from fastapi import APIRouter
 
-from api.deps import CONTRACT_SPECS, get_config
+from api.deps import BASE_PRICES, CONTRACT_SPECS, get_config
 from api.strategy_registry import STRATEGIES
 
 router = APIRouter(tags=["meta"])
@@ -41,6 +43,157 @@ def list_contracts():
     # matching ui/app.py's CONTRACT_SPECS behavior.
     merged = {**CONTRACT_SPECS, **contracts}
     return merged
+
+
+def _csv_files_by_symbol(data_dir) -> dict[str, list]:
+    """Group the CSVs in a directory by the symbol each one serves.
+
+    Mirrors ExternalCSVProvider._find_file()'s resolution patterns --
+    {SYM}_FULL.csv, {SYM}_FULL_{year}.csv, {SYM}_{year}.csv, FULL_{SYM}.csv --
+    so the symbols advertised here cannot drift from the ones the loader can
+    actually resolve.
+    """
+    import re
+
+    out: dict[str, list] = {}
+    for p in sorted(data_dir.glob("*.csv")):
+        for pattern in (
+            r"^([A-Z0-9]+)_FULL(?:_\d{4})?$",
+            r"^FULL_([A-Z0-9]+)(?:_\d{4})?$",
+            r"^([A-Z0-9]+)_(\d{4})$",
+        ):
+            m = re.match(pattern, p.stem)
+            if m:
+                out.setdefault(m.group(1), []).append(p)
+                break
+    return out
+
+
+@lru_cache(maxsize=256)
+def _file_span(path_str: str, mtime: float, size: int) -> tuple[str, str] | None:
+    """(first, last) timestamp of a CSV, without reading the whole file.
+
+    mtime/size are part of the cache key only -- they make the entry
+    self-invalidating when the file changes. The tail is read by seeking to
+    the end rather than scanning, because a real archive file can be hundreds
+    of megabytes and this runs on every /symbols request.
+    """
+    try:
+        with open(path_str, "rb") as f:
+            f.readline()                      # header
+            first_line = f.readline().decode("utf-8", "ignore")
+            if not first_line.strip():
+                return None
+            f.seek(0, 2)
+            end = f.tell()
+            f.seek(max(0, end - 8192))
+            tail = [ln for ln in f.read().decode("utf-8", "ignore").splitlines() if ln.strip()]
+            if not tail:
+                return None
+        return first_line.split(",")[0].strip(), tail[-1].split(",")[0].strip()
+    except OSError:
+        return None
+
+
+def csv_coverage(data_dir, symbol: str) -> list[dict]:
+    """Date windows a symbol actually has data for, oldest first.
+
+    Returned as separate segments rather than one min/max span because
+    coverage is often not continuous -- the bundled ES sample is five
+    disjoint windows (2008, then 2022 through 2025), so a single
+    "2008-01-02 to 2025-01-07" range would invite picking 2015 and getting
+    nothing back.
+    """
+    import os
+
+    spans = []
+    for p in _csv_files_by_symbol(data_dir).get(symbol, []):
+        try:
+            st = os.stat(p)
+        except OSError:
+            continue
+        span = _file_span(str(p), st.st_mtime, st.st_size)
+        if span:
+            spans.append({"start": span[0][:10], "end": span[1][:10]})
+    return sorted(spans, key=lambda s: s["start"])
+
+
+@router.get("/symbols")
+def list_symbols(data_source: str = "synthetic"):
+    """Symbols selectable for a given data source.
+
+    The frontend used to hardcode ["ES","NQ","MES","CL","HG"], so the
+    instruments committed under data/sample/ -- gold, bitcoin and nine
+    equities -- could not be chosen at all, and the four E-minis that have no
+    bundled data were offered regardless.
+
+    For external_csv the list is derived from the files actually present,
+    using ExternalCSVProvider's own resolution patterns so the two cannot
+    disagree. Every other source is generated or streams on demand, so the
+    configured contracts are the meaningful list.
+
+    `has_spec` reports whether the symbol has real contract economics.
+    Anything false falls back to the E-mini default and its P&L should not
+    be trusted -- see api/deps.get_contract_spec.
+    """
+    cfg = get_config()
+    specs = {**CONTRACT_SPECS, **(cfg.get("contracts", {}) or {})}
+
+    def entry(sym: str) -> dict:
+        spec = specs.get(sym)
+        return {
+            "symbol": sym,
+            "name": (spec or {}).get("name", sym) if isinstance(spec, dict) else sym,
+            "has_spec": spec is not None,
+        }
+
+    if data_source == "external_csv":
+        from pathlib import Path
+
+        try:
+            from src.data.external_csv_provider import ExternalCSVProvider
+            data_dir = Path(ExternalCSVProvider().data_dir)
+        except Exception:
+            return []
+
+        out = []
+        for sym in _csv_files_by_symbol(data_dir):
+            e = entry(sym)
+            # Coverage travels with the symbol so the UI can default the date
+            # pickers into a window that exists, instead of today's date --
+            # which is what produced "No bars found for ES between
+            # 2026-08-07 ... and ...".
+            e["coverage"] = csv_coverage(data_dir, sym)
+            out.append(e)
+        return sorted(out, key=lambda e: (not e["has_spec"], e["symbol"]))
+
+    if data_source == "schwab":
+        # Schwab serves a rolling window of intraday history, not an archive.
+        # Reporting it as coverage lets the date pickers, the availability hint
+        # and the disabled Run button all behave exactly as they do for CSV --
+        # without which the only feedback was a failed request reading "check
+        # the symbol, date range, and that your account has data access", which
+        # named three possible causes and confirmed none of them.
+        import datetime as _dt
+
+        from src.data.schwab_provider import INTRADAY_LOOKBACK_DAYS
+
+        today = _dt.date.today()
+        window = [{
+            "start": (today - _dt.timedelta(days=INTRADAY_LOOKBACK_DAYS)).isoformat(),
+            "end": today.isoformat(),
+        }]
+        return [{**entry(s), "coverage": window} for s in specs]
+
+    if data_source == "synthetic":
+        # The generator only models a starting price for these; anything else
+        # would be produced at the 4500 fallback, so a "NVDA" series would
+        # trade around E-mini levels. Offer only what it can actually model.
+        return [entry(s) for s in BASE_PRICES]
+
+    # schwab / rithmic stream whatever the venue supports; the configured
+    # contracts are the set we can price.
+    return [entry(s) for s in specs]
 
 
 @router.get("/data-sources")

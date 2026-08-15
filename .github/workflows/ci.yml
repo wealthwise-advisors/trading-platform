@@ -1,3 +1,13 @@
+# Root CI — this is the workflow GitHub actually runs.
+#
+# GitHub Actions only discovers workflows in .github/workflows/ at the
+# REPOSITORY ROOT. The platform keeps its own copy at
+# a copy inside the app directory so it stays valid as a
+# standalone project, but that copy is inert here — nothing triggers it.
+#
+# The application lives at the repository root here, so no step is scoped via
+# `defaults.run.working-directory`. Keep the two in sync when either changes.
+
 name: CI
 
 on:
@@ -5,6 +15,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.12"
@@ -32,8 +43,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - run: |
-          pip install -e ".[dev]"
+      - run: pip install -e ".[dev]"
       # Informational for now -- see docs/RELEASE_AUDIT.md ("Code Quality
       # Audit"): 36 pre-existing type errors were found in src/analysis/
       # and are not fixed here. continue-on-error keeps this job visible
@@ -51,10 +61,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install -e ".[dev]"
-      # Full suite: 5 engine smoke tests + 29 swing/zigzag regression tests
-      # + 186 Elliott Wave tests. Previously only test_engine.py ran, leaving
-      # 98% of the suite -- including every TR-2 blocked-rule guard -- unenforced
-      # on push. See docs/ELLIOTT_WAVE_SRS.md TR-11 (D-05).
+      # Full suite: engine smoke tests + 29 swing/zigzag regression tests
+      # + the Elliott Wave suite, including every TR-2 blocked-rule guard.
+      # See docs/ELLIOTT_WAVE_SRS.md TR-11 (D-05).
       - run: pytest tests/ -v
 
   build:
@@ -68,6 +77,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install build
       - run: python -m build --wheel
+      # `path` is resolved from the repo root, not working-directory.
       - uses: actions/upload-artifact@v4
         with:
           name: wheel
@@ -93,3 +103,26 @@ jobs:
           bandit -r src api -ll -q --exclude src/data/schwabdev
       - run: pip-audit --desc
         continue-on-error: true   # informational -- see docs/SECURITY_AUDIT.md; upstream CVE fixes aren't in our control on every run
+
+  frontend:
+    name: Frontend (vitest + tsc + oxlint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # Vitest guards the timestamp-convention bugs that twice made chart
+      # traces render off-axis while every other check stayed green. Runs in
+      # the node environment -- no browser, no jsdom, ~200ms.
+      - run: npm test
+      # tsc -b, not --noEmit: the root tsconfig is a solution file with
+      # "files": [], so --noEmit type-checks nothing and always exits 0.
+      - run: npx tsc -b --force
+      - run: npx oxlint src

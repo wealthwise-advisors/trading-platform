@@ -1,15 +1,3 @@
-> [!IMPORTANT]
-> ## 📦 This repository has moved
->
-> Active development now happens in
-> **[akxyverse/wealthwise-trading-platform](https://github.com/akxyverse/wealthwise-trading-platform)**,
-> where this codebase lives alongside the rest of the trading work in a single
-> maintained repository.
->
-> This copy is kept for history and is **no longer updated**.
-
----
-
 <div align="center">
 
 <img src="docs/assets/hero.svg" alt="WealthWise Trading Platform" width="100%">

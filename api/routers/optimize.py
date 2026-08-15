@@ -64,7 +64,8 @@ def run_optimizer(req: OptimizeRequest):
 
     contract_spec = get_contract_spec(req.symbol)
     provider = _build_provider(req.data_source, req.symbol, req.timeframe,
-                               req.start_date, req.end_date, contract_spec)
+                               req.start_date, req.end_date, contract_spec,
+                               session_start=req.session_start)
     start_dt = datetime.combine(req.start_date, time_type(0, 0))
     end_dt = datetime.combine(req.end_date, time_type(23, 59))
 

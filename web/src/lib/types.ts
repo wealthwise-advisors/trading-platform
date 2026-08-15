@@ -22,6 +22,26 @@ export interface DataSourceMeta {
   available: boolean
 }
 
+export interface DateWindow {
+  /** YYYY-MM-DD */
+  start: string
+  /** YYYY-MM-DD */
+  end: string
+}
+
+export interface SymbolMeta {
+  symbol: string
+  name: string
+  /** False means no contract economics are configured, so the engine falls
+   *  back to the E-mini default and the resulting P&L is not meaningful. */
+  has_spec: boolean
+  /** Date windows this symbol actually has data for, oldest first. Present
+   *  only for file-backed sources. Several windows rather than one span
+   *  because coverage is often not continuous — the bundled ES sample is
+   *  2008 plus 2022–2025, with nothing in between. */
+  coverage?: DateWindow[]
+}
+
 export interface BacktestRequest {
   data_source: string
   symbol: string
@@ -33,8 +53,8 @@ export interface BacktestRequest {
   commission_per_contract: number
   start_date: string
   end_date: string
-  session_start: string
-  session_end: string
+  session_start: string | null
+  session_end: string | null
   zigzag_dev_3: number
   zigzag_dev_10: number
 }
@@ -46,8 +66,8 @@ export interface BacktestSummary {
   timeframe: string
   start_date: string
   end_date: string
-  session_start: string
-  session_end: string
+  session_start: string | null
+  session_end: string | null
   data_source: string
   initial_capital: number
   final_capital: number
@@ -99,11 +119,33 @@ export interface IndicatorSeries {
   rsi13: (number | null)[]
   stoch_k: (number | null)[]
   stoch_d: (number | null)[]
+  /** Session VWAP and its ±2σ bands. All-null when the dataset has no volume
+   *  column — VWAP is undefined without volume, so the chart draws nothing
+   *  rather than a fabricated line. Optional so an older cached response
+   *  without these keys still type-checks. */
+  vwap?: (number | null)[]
+  vwap_upper?: (number | null)[]
+  vwap_lower?: (number | null)[]
+}
+
+/** Volume traded at each price level, with the point of control and the
+ *  value-area bounds. Empty / null throughout when the dataset has no volume —
+ *  a profile without volume cannot be approximated, so nothing is drawn. */
+export interface VolumeProfile {
+  prices: number[]
+  volumes: number[]
+  /** Price level holding the most volume. */
+  poc: number | null
+  /** Value Area Low / High — bounds of the ~70% volume band around the POC. */
+  val: number | null
+  vah: number | null
+  bin_size: number | null
 }
 
 export interface PriceDataResponse {
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
+  volume_profile?: VolumeProfile
 }
 
 export interface EquityPoint {
@@ -227,6 +269,12 @@ export interface MonthlyReturns {
 }
 
 export interface ReplayCreateRequest {
+  commission_per_contract?: number
+  session_start?: string | null
+  session_end?: string | null
+  /** Multi-timeframe grid; omit for the legacy single-timeframe session. */
+  timeframes?: string[]
+  data_source?: string
   symbol: string
   timeframe: string
   strategy_id: string
@@ -238,6 +286,15 @@ export interface ReplayCreateRequest {
 }
 
 export interface ReplayCreateResponse {
+  timeframes: string[]
+  base_timeframe: string
+  /** Set when an overnight session made the fetch reach back a day earlier than
+   *  asked, so its first session is whole. Null when unchanged. */
+  fetch_start_date?: string | null
+  /** Resolution the bars were fetched at. Anything finer needs a new session. */
+  data_timeframe?: string
+  bar_counts: Record<string, number>
+  data_source: string
   replay_id: string
   total_bars: number
   symbol: string
@@ -282,10 +339,62 @@ export interface ReplayFrameMessage {
   open_trade: ReplayTrade | null
   bars_processed: number
   total_bars: number
+  /** Session VWAP and its +/-2 sigma bands. Always shipped at 2 sigma so the
+   *  client can recover sigma as (upper - vwap) / 2 and re-scale to whatever
+   *  deviation the user selects without another round trip. */
+  vwap: number | null
+  vwap_upper: number | null
+  vwap_lower: number | null
+}
+
+/** One clock tick: every pane that produced a new bar, sent together so the
+ *  grid can never paint half-updated. Panes that did not advance are absent. */
+export interface ReplayFramesMessage {
+  type: "frames"
+  market_time: string | null
+  ticks_processed: number
+  total_ticks: number
+  frames: Record<string, ReplayFrameMessage>
+}
+
+/** History for a pane added part-way through a session.
+ *
+ *  `bars` are the pane's already-closed bars (capped server-side, hence
+ *  `truncated`); `state` is the ONE frame that settles every scalar, because
+ *  position / portfolio value / completed trades are all carried cumulatively
+ *  in a frame rather than as deltas. `state` is null when the pane has not
+ *  closed a bar yet -- e.g. a 1h pane added four minutes into the session. */
+export interface ReplayBackfill {
+  /** Each bar carries its own VWAP triple, so a timeframe added part-way
+   *  through has real band values on its historical rows rather than blanks. */
+  bars: (ReplayBar & {
+    vwap?: number | null
+    vwap_upper?: number | null
+    vwap_lower?: number | null
+  })[]
+  bars_closed: number
+  truncated: boolean
+  state: ReplayFrameMessage | null
+}
+
+/** Reply to `add_timeframes`. `rejected` lists timeframes FINER than the
+ *  resolution the session's data was loaded at -- they cannot be resampled out
+ *  of what is in memory, so they need a fresh session rather than a pane. */
+export interface ReplayTimeframesMessage {
+  type: "timeframes"
+  timeframes: string[]
+  base_timeframe: string
+  data_timeframe: string
+  bar_counts: Record<string, number>
+  added: string[]
+  rejected: string[]
+  backfill: Record<string, ReplayBackfill>
 }
 
 export type ReplayWsMessage =
+  | ReplayFramesMessage
   | ReplayFrameMessage
+  | ReplayTimeframesMessage
   | { type: "reset" }
   | { type: "done" }
   | { type: "error"; message: string }
@@ -308,8 +417,8 @@ export interface OptimizeRequest {
   commission_per_contract: number
   start_date: string
   end_date: string
-  session_start: string
-  session_end: string
+  session_start: string | null
+  session_end: string | null
   metric: "sharpe_ratio" | "total_return_pct" | "profit_factor"
 }
 

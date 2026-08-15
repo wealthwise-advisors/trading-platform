@@ -17,6 +17,7 @@ from ..broker.base_broker import Order, OrderSide, OrderType
 from ..strategies.base_strategy import BaseStrategy, Signal, SignalType
 from .results import Trade
 from .metrics import compute_metrics
+from ..analysis.indicators import calc_vwap_bands
 from .results import BacktestResults
 
 
@@ -33,6 +34,13 @@ class FrameState:
     open_trade: Optional[Trade]
     bars_processed: int
     total_bars: int
+    #: Session VWAP and its +/-2 sigma bands at this bar, or None when the
+    #: dataset carries no volume. Shipped at 2 sigma specifically so the client
+    #: can recover sigma as (upper - vwap) / 2 and re-scale to any deviation
+    #: setting without a round trip -- the same trick the backtest chart uses.
+    vwap: Optional[float] = None
+    vwap_upper: Optional[float] = None
+    vwap_lower: Optional[float] = None
 
 
 class ReplayEngine:
@@ -59,6 +67,7 @@ class ReplayEngine:
         tick_value: float = 12.50,
         point_value: float = 50.0,
         contracts_per_trade: int = 1,
+        session_start=None,
     ):
         self.strategy = strategy
         self.symbol = symbol
@@ -66,6 +75,8 @@ class ReplayEngine:
         self.initial_capital = initial_capital
         self.point_value = point_value
         self.contracts_per_trade = contracts_per_trade
+        # Anchors the VWAP daily reset; see calc_vwap_bands.
+        self.session_start = session_start
 
         self._tick_size = tick_size
         self._commission = commission_per_contract
@@ -73,6 +84,7 @@ class ReplayEngine:
         self._tick_value = tick_value
 
         self._df: Optional[pd.DataFrame] = None
+        self._vwap = self._vwap_u = self._vwap_l = None
         self._bars: list[Bar] = []
         self._cursor: int = 0
         self._broker: Optional[PaperBroker] = None
@@ -88,6 +100,29 @@ class ReplayEngine:
     def load(self, df: pd.DataFrame):
         self._df = df.copy()
         self._bars = DataProvider.df_to_bars(df, self.symbol, self.timeframe)
+
+        # VWAP is CUMULATIVE within a session, so the value at bar i depends
+        # only on bars 0..i. Computing the whole series once and indexing it by
+        # the cursor is therefore identical to recomputing over "bars so far"
+        # at every step -- no look-ahead -- but costs O(n) in total instead of
+        # O(n^2). Reuses calc_vwap_bands rather than reimplementing it.
+        vol = df["volume"] if "volume" in df else None
+        # Present when the frame was built by resample_ohlcv(with_vwap_price=True):
+        # each bar's own volume-weighted price, which is what a broker platform's
+        # VWAP study accumulates. Absent, calc_vwap_bands falls back to (H+L+C)/3.
+        price = df["vwap_price"] if "vwap_price" in df else None
+        try:
+            v, u, l = calc_vwap_bands(df["high"], df["low"], df["close"], vol,
+                                      num_dev=2.0, session_start=self.session_start,
+                                      price=price)
+            self._vwap = v.to_numpy(dtype=float)
+            self._vwap_u = u.to_numpy(dtype=float)
+            self._vwap_l = l.to_numpy(dtype=float)
+        except Exception:
+            # A dataset without usable volume yields all-NaN; treat any failure
+            # as "no VWAP available" rather than breaking playback.
+            self._vwap = self._vwap_u = self._vwap_l = None
+
         self.reset()
 
     def reset(self):
@@ -154,7 +189,24 @@ class ReplayEngine:
             open_trade=self._open_trade,
             bars_processed=self._cursor,
             total_bars=len(self._bars),
+            **self._vwap_at(self._cursor - 1),
         )
+
+    def vwap_at(self, i: int) -> dict:
+        """Public view of one bar's VWAP triple, for backfilling a late pane."""
+        return self._vwap_at(i)
+
+    def _vwap_at(self, i: int) -> dict:
+        """VWAP/band values at bar `i`, as plain floats (NaN -> None)."""
+        if self._vwap is None or i < 0 or i >= len(self._vwap):
+            return {"vwap": None, "vwap_upper": None, "vwap_lower": None}
+        import math
+        def clean(a):
+            x = float(a[i])
+            return None if math.isnan(x) else x
+        return {"vwap": clean(self._vwap),
+                "vwap_upper": clean(self._vwap_u),
+                "vwap_lower": clean(self._vwap_l)}
 
     def get_results(self) -> BacktestResults:
         """Build a full BacktestResults from current engine state."""

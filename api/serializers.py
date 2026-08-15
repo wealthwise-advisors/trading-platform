@@ -5,18 +5,35 @@ is not touched -- all conversion logic lives here.
 """
 
 import math
+import numpy as np
+from datetime import time as time_type
 import pandas as pd
 
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
-from src.analysis.indicators import calc_rsi, calc_stoch
+from src.analysis.indicators import (
+    calc_rsi, calc_stoch, calc_vwap_bands, calc_volume_profile,
+)
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 
 
 def _safe(x):
-    """NaN/inf -> None so it survives JSON serialization."""
+    """NaN/inf -> None so it survives JSON serialization.
+
+    Also narrows numpy scalars to Python types. ExternalCSVProvider reads
+    price columns as float32 to keep large archives in memory, and FastAPI's
+    jsonable_encoder cannot serialize numpy.float32 -- so every /price-data
+    and /candlestick-patterns call for a CSV-backed backtest returned 500
+    with "'numpy.float32' object is not iterable".
+
+    Synthetic data never hit this because numpy.float64 subclasses float and
+    encodes fine; float32 does not subclass it, so it also slipped past the
+    isnan/isinf check below and NaNs would have leaked through as well.
+    """
     if x is None:
         return None
+    if isinstance(x, np.generic):
+        x = x.item()
     if isinstance(x, float) and (math.isnan(x) or math.isinf(x)):
         return None
     return x
@@ -77,11 +94,12 @@ def trades_to_records(results: BacktestResults, quality_by_index: dict | None = 
     return out
 
 
-def price_data_to_response(df: pd.DataFrame) -> dict:
+def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = None) -> dict:
     bars = [
         {
             "t": ts.isoformat(),
-            "o": row["open"], "h": row["high"], "l": row["low"], "c": row["close"],
+            "o": _safe(row["open"]), "h": _safe(row["high"]),
+            "l": _safe(row["low"]), "c": _safe(row["close"]),
             "v": _safe(row.get("volume")),
         }
         for ts, row in df.iterrows()
@@ -92,6 +110,15 @@ def price_data_to_response(df: pd.DataFrame) -> dict:
     rsi2 = calc_rsi(df["close"], 2)
     rsi13 = calc_rsi(df["close"], 13)
     stoch_k, stoch_d = calc_stoch(df["high"], df["low"], df["close"])
+    # Session VWAP ±2σ. Comes back all-NaN when the dataset carries no volume
+    # column, which serialises to nulls -- the chart then simply has nothing to
+    # draw rather than plotting a fake line.
+    # session_start anchors the daily reset. Without it an overnight session
+    # (18:00-17:00) resets at midnight, i.e. mid-session -- see calc_vwap_bands.
+    vwap, vwap_u, vwap_l = calc_vwap_bands(
+        df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
+        session_start=session_start,
+    )
 
     def series_to_list(s: pd.Series) -> list:
         return [_safe(float(v)) if pd.notna(v) else None for v in s]
@@ -103,8 +130,16 @@ def price_data_to_response(df: pd.DataFrame) -> dict:
         "rsi13": series_to_list(rsi13),
         "stoch_k": series_to_list(stoch_k),
         "stoch_d": series_to_list(stoch_d),
+        "vwap": series_to_list(vwap),
+        "vwap_upper": series_to_list(vwap_u),
+        "vwap_lower": series_to_list(vwap_l),
     }
-    return {"bars": bars, "indicators": indicators}
+    # Volume Profile is price-indexed, not bar-indexed, so it travels beside
+    # the per-bar series rather than inside them.
+    volume_profile = calc_volume_profile(
+        df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
+    )
+    return {"bars": bars, "indicators": indicators, "volume_profile": volume_profile}
 
 
 def equity_curve_to_records(results: BacktestResults) -> list[dict]:
@@ -301,4 +336,10 @@ def frame_to_dict(frame: FrameState) -> dict:
         "open_trade": _trade_to_dict(frame.open_trade) if frame.open_trade else None,
         "bars_processed": frame.bars_processed,
         "total_bars": frame.total_bars,
+        # Session VWAP at 2 sigma. The client recovers sigma as
+        # (upper - vwap) / 2 and re-scales to whatever deviation the user picks,
+        # so changing the setting needs no round trip.
+        "vwap": _safe(frame.vwap),
+        "vwap_upper": _safe(frame.vwap_upper),
+        "vwap_lower": _safe(frame.vwap_lower),
     }

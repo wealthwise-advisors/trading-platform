@@ -43,8 +43,10 @@ from api.report.report import generate_html_report
 # (api/routers/backtests.py::get_report / generate_html_report's own
 # defaults) must use the SAME deviations, or the same backtest renders a
 # different swing structure in each -- the exact bug fixed 2026-08-02.
-DEV_10 = 0.003
-DEV_3 = 0.003
+# Fractions: 0.0010 == 0.10%. Matched to the shipped defaults in
+# api/schemas/backtest.py so the regression suite exercises what users get.
+DEV_10 = 0.0010
+DEV_3 = 0.0005
 
 DECIMAL_LABEL_RE = re.compile(r"^\d+\.\d+$")
 LETTER_LABEL_RE = re.compile(r"^[A-Z]+$")
@@ -184,9 +186,11 @@ class TestLiveAndReportIdentical:
     identical swing/label output for the same backtest."""
 
     def test_deviation_defaults_match_across_layers(self):
-        """web/src/features/backtest/ResultsPage.tsx hardcodes
-        api.getZigZag(id, 0.003, 0.003) for the live chart -- these
-        assertions pin the Python-side defaults that must keep matching it.
+        """web/src/features/backtest/ResultsPage.tsx calls
+        api.getZigZag(id, ZIGZAG_DEV_3_DEFAULT / 100, ZIGZAG_DEV_10_DEFAULT / 100)
+        for the live chart, from the constants in web/src/store/configStore.ts
+        -- these assertions pin the Python-side defaults that must keep
+        matching them.
         If this test fails, either the frontend or one of these two
         backend defaults changed without the other -- update whichever one
         drifted, don't just adjust the constant here."""
@@ -252,3 +256,181 @@ class TestEndToEndReportGeneration:
         assert swing_nums, "reference backtest produced no swings -- fixture regressed"
         for swing_num in swing_nums:
             assert f"Swing {swing_num}" in html, f"Swing {swing_num} header missing from report HTML"
+
+
+class TestSwingOrientation:
+    """
+    Requirement: a pivot typed 'H' really is a swing high and 'L' a swing low.
+
+    pandas_ta's swing signal is +1 for a high and -1 for a low; calc_zigzag
+    once mapped it the other way round, so every peak was labelled 'L' and
+    every trough 'H'. Nothing downstream compensated -- `type` drives the
+    legend name, the hover text and the marker colour (red for H, green for
+    L) -- so the chart drew red "Swing High" markers at every trough.
+
+    Measured against real ES bars before the fix: of 26 pivots typed 'H',
+    zero sat at their bar's high; of 26 typed 'L', all 26 did.
+
+    Asserting against the bar's own high/low is exact and orientation-only:
+    it does not constrain how many pivots the deviation threshold selects.
+    """
+
+    @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
+    def test_H_pivots_sit_on_bar_highs_and_L_on_bar_lows(self, bars, seed):
+        df = _reference_df(bars=bars, seed=seed)
+        zz = calc_zigzag(df["high"], df["low"], df["close"], deviation=DEV_10, legs=10)
+        assert not zz.empty, "no pivots produced -- fixture or threshold is wrong"
+
+        wrong_high, wrong_low = [], []
+        for ts, row in zz.iterrows():
+            bar = df.loc[ts]
+            if row["type"] == "H" and abs(row["price"] - bar["high"]) > 1e-9:
+                wrong_high.append((ts, row["price"], bar["high"]))
+            if row["type"] == "L" and abs(row["price"] - bar["low"]) > 1e-9:
+                wrong_low.append((ts, row["price"], bar["low"]))
+
+        assert not wrong_high, f"{len(wrong_high)} 'H' pivots not at their bar's high, e.g. {wrong_high[:3]}"
+        assert not wrong_low, f"{len(wrong_low)} 'L' pivots not at their bar's low, e.g. {wrong_low[:3]}"
+
+    @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
+    def test_both_orientations_are_present(self, bars, seed):
+        # Guards against a "fix" that satisfies the test above by emitting only
+        # one type, and against the alternating sequence collapsing.
+        df = _reference_df(bars=bars, seed=seed)
+        zz = calc_zigzag(df["high"], df["low"], df["close"], deviation=DEV_10, legs=10)
+        assert set(zz["type"]) == {"H", "L"}
+
+    @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
+    def test_a_high_is_priced_above_its_neighbouring_lows(self, bars, seed):
+        df = _reference_df(bars=bars, seed=seed)
+        zz = calc_zigzag(df["high"], df["low"], df["close"], deviation=DEV_10, legs=10)
+        rows = list(zz.itertuples())
+        for prev, cur, nxt in zip(rows, rows[1:], rows[2:]):
+            if cur.type == "H":
+                assert cur.price >= prev.price and cur.price >= nxt.price, (
+                    f"swing high at {cur.Index} priced below a neighbouring low"
+                )
+            else:
+                assert cur.price <= prev.price and cur.price <= nxt.price, (
+                    f"swing low at {cur.Index} priced above a neighbouring high"
+                )
+
+    @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
+    def test_minor_zigzag_has_the_same_orientation(self, bars, seed):
+        df = _reference_df(bars=bars, seed=seed)
+        _, zz3 = _major_and_minor(df)
+        for ts, row in zz3.iterrows():
+            bar = df.loc[ts]
+            expected = bar["high"] if row["type"] == "H" else bar["low"]
+            assert abs(row["price"] - expected) < 1e-9, (
+                f"minor pivot typed {row['type']} at {ts} is not at the bar's "
+                f"{'high' if row['type'] == 'H' else 'low'}"
+            )
+
+
+class TestDeviationUnits:
+    """
+    Requirement: the number on the UI slider means what it says.
+
+    pandas_ta.zigzag's `deviation` is a PERCENTAGE ("when deviation=10, it
+    shows movements greater than 10%"). calc_zigzag takes a FRACTION, matching
+    the API schema and the slider (which shows percent and divides by 100).
+    The *100 conversion between them was missing, so a "0.30 %" slider applied
+    0.003% -- a 0.23-point threshold on ES near 7,780, below the 0.25 tick, so
+    the filter passed essentially every fractal pivot.
+
+    These tests pin the relationship rather than any particular pivot count,
+    so they stay valid if the defaults are retuned again.
+    """
+
+    def _df(self):
+        return _reference_df(bars=2000, seed=42)
+
+    def test_every_leg_clears_the_advertised_threshold(self):
+        # Implementation-independent statement of what the number means: with
+        # deviation d, the move between consecutive pivots must be at least d
+        # of price. Replaces an older test that asserted calc_zigzag delegated
+        # to pandas_ta with deviation*100 -- pandas_ta's deviation stage was
+        # removed (see _alternate_by_deviation), so that pinned a detail that
+        # no longer exists while saying nothing about behaviour.
+        df = self._df()
+        for dev in (0.0005, 0.001, 0.002, 0.005):
+            zz = calc_zigzag(df["high"], df["low"], df["close"], deviation=dev, legs=10)
+            prices = zz["price"].tolist()
+            for a, b in zip(prices, prices[1:]):
+                assert abs(b - a) / a >= dev - 1e-12, (
+                    f"leg {a:.2f} -> {b:.2f} is {abs(b-a)/a*100:.4f}%, "
+                    f"below the {dev*100:.4f}% threshold"
+                )
+
+    def test_does_not_collapse_to_a_single_pivot(self):
+        # The bug this replaced: pandas_ta's backward scan, seeded on the final
+        # bar and unable to relocate that seed, returned exactly ONE pivot above
+        # a data-dependent threshold. On ES 5m it fell off the cliff between
+        # 0.08% (32 pivots) and 0.10% (1), which is the shipped default -- so a
+        # normal session charted a single swing.
+        df = self._df()
+        for dev in (0.0005, 0.0008, 0.001, 0.0012, 0.0015, 0.002):
+            n = len(calc_zigzag(df["high"], df["low"], df["close"], deviation=dev, legs=10))
+            assert n > 2, f"deviation {dev*100:.2f}% collapsed to {n} pivot(s)"
+
+    def test_pivot_count_degrades_smoothly(self):
+        # A cliff is the signature of the old defect: counts should taper as the
+        # threshold rises, never fall off by an order of magnitude in one step.
+        df = self._df()
+        devs = [0.0005, 0.0008, 0.001, 0.0012, 0.0015, 0.002, 0.003]
+        counts = [len(calc_zigzag(df["high"], df["low"], df["close"], deviation=d, legs=10))
+                  for d in devs]
+        assert counts == sorted(counts, reverse=True), f"not monotonic: {counts}"
+        for d, (a, b) in zip(devs[1:], zip(counts, counts[1:])):
+            assert b >= a * 0.35, (
+                f"pivot count fell {a} -> {b} at deviation {d*100:.2f}% -- "
+                f"that is a cliff, not a taper"
+            )
+
+    def test_threshold_is_the_advertised_percentage_of_price(self):
+        # A reversal smaller than the threshold must not create a pivot, and a
+        # clearly larger one must. Uses the fixture's own price level so the
+        # assertion tracks the data rather than a hardcoded tick size.
+        df = self._df()
+        mid = float(df["close"].mean())
+        coarse = calc_zigzag(df["high"], df["low"], df["close"], deviation=0.01, legs=10)   # 1.00%
+        fine = calc_zigzag(df["high"], df["low"], df["close"], deviation=0.0002, legs=10)   # 0.02%
+        assert len(fine) > len(coarse), (
+            f"a 0.02% threshold ({mid*0.0002:.2f}pt) must admit more pivots than "
+            f"1.00% ({mid*0.01:.2f}pt); got {len(fine)} vs {len(coarse)}"
+        )
+
+    def test_monotonic_in_deviation(self):
+        # Raising the threshold can never add pivots.
+        df = self._df()
+        counts = [
+            len(calc_zigzag(df["high"], df["low"], df["close"], deviation=d, legs=10))
+            for d in (0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01)
+        ]
+        assert counts == sorted(counts, reverse=True), f"not monotonic: {counts}"
+
+    def test_column_lookup_matches_exactly_and_does_not_guess(self):
+        # The old code built the column name from deviation*100 while passing
+        # the raw fraction, so the name never matched and a silent fallback
+        # hid the mismatch. The name must now be hit exactly.
+        import pandas_ta as ta
+        df = self._df()
+        for dev in (0.0005, 0.001, 0.003, 0.01):
+            r = ta.zigzag(high=df["high"], low=df["low"], close=df["close"],
+                          legs=10, deviation=round(dev * 100.0, 9), offset=0)
+            expected = f"ZIGZAGs_{round(dev * 100.0, 9)}%_10"
+            assert expected in r.columns, (
+                f"calc_zigzag would build {expected!r}, pandas_ta produced "
+                f"{[c for c in r.columns if c.startswith('ZIGZAGs')]}"
+            )
+
+    def test_shipped_defaults_are_in_the_slider_range(self):
+        # Keeps the API defaults and the UI slider bounds from drifting apart.
+        from api.schemas.backtest import BacktestRequest
+        d3 = BacktestRequest.model_fields["zigzag_dev_3"].default
+        d10 = BacktestRequest.model_fields["zigzag_dev_10"].default
+        # Slider is in percent, min 0.01 max 2 (web/src/store/configStore.ts).
+        for name, frac in (("zigzag_dev_3", d3), ("zigzag_dev_10", d10)):
+            assert 0.01 <= frac * 100 <= 2, f"{name}={frac} is outside the slider range"
+        assert d3 < d10, "the minor zigzag must be finer than the major one it nests in"

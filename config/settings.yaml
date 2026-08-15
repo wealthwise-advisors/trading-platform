@@ -51,9 +51,40 @@ contracts:
     point_value: 25000.0
     margin_initial: 4700.0
     margin_maintenance: 4300.0
+  GC:
+    name: "Gold"
+    exchange: "COMEX"
+    tick_size: 0.10
+    tick_value: 10.00
+    point_value: 100.0
+    margin_initial: 11000.0
+    margin_maintenance: 10000.0
+
+  # Cash instruments shipped in data/sample/. Sized as ONE SHARE (or one coin),
+  # not as a futures contract: "contracts per trade" therefore means shares.
+  # Without these, get_contract_spec() falls back to the E-mini default and
+  # values a $1 move in NVDA at $50 instead of $1.
+  AAPL: &equity {name: "Equity (1 share)", exchange: "NASDAQ", tick_size: 0.01, tick_value: 0.01, point_value: 1.0, margin_initial: 0.0, margin_maintenance: 0.0}
+  AMD:  *equity
+  COIN: *equity
+  CRWV: *equity
+  META: *equity
+  NVDA: *equity
+  SMCI: *equity
+  TSLA: *equity
+  UPST: *equity
+  BTC:
+    name: "Bitcoin (spot, 1 unit)"
+    exchange: "CRYPTO"
+    tick_size: 0.01
+    tick_value: 0.01
+    point_value: 1.0
+    margin_initial: 0.0
+    margin_maintenance: 0.0
 
 data:
-  external_dir: "C:/Data"        # Directory with your own CSV files (ES_FULL.csv, GC_FULL.csv, etc.)
+  external_dir: "data/sample"    # Bundled 1-minute bars for 16 instruments. Point at
+                                 # your own archive (e.g. "C:/Data") to use full history.
 
 rithmic:
   gateway: "paper"               # "paper" or "live"

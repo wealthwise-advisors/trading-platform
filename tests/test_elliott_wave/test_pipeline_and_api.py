@@ -247,7 +247,17 @@ class TestExistingApiUnchanged:
         assert names == ["backtest_id", "zz_dev", "zz_dev_3", "format"]
 
     def test_only_one_new_path_added(self):
+        """The Elliott Wave phase was allowed exactly one new route.
+
+        The count is deliberately exact so that unrelated endpoints cannot be
+        smuggled in under this work. It has been raised once since, from 24 to
+        25, for /api/symbols -- added so the frontend's Symbol dropdown could
+        stop hardcoding ["ES","NQ","MES","CL","HG"] and report what the
+        selected data source can actually serve. That is a separate, declared
+        change, not Elliott Wave scope creep.
+        """
         from api.main import app
         paths = set(app.openapi()["paths"])
         assert "/api/backtests/{backtest_id}/elliott-wave" in paths
-        assert len(paths) == 24
+        assert "/api/symbols" in paths
+        assert len(paths) == 25

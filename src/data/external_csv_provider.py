@@ -32,6 +32,7 @@ import pandas as pd
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
+from .resample import bar_anchor, resample_ohlcv
 from ..config import resolve_config_dir
 
 
@@ -41,7 +42,8 @@ _OHLCV_AGG = {"open": "first", "high": "max", "low": "min", "close": "last", "vo
 # Maps timeframe string → pandas offset alias
 _TF_ALIAS = {
     "1m": "1min", "3m": "3min", "5m": "5min", "8m": "8min",
-    "10m": "10min", "15m": "15min", "20m": "20min", "30m": "30min",
+    "10m": "10min", "15m": "15min", "20m": "20min", "25m": "25min",
+    "30m": "30min", "35m": "35min", "40m": "40min", "45m": "45min",
     "1h": "1h", "2h": "2h", "4h": "4h", "1d": "1D",
 }
 
@@ -55,7 +57,10 @@ class ExternalCSVProvider(DataProvider):
                   Falls back to settings.yaml → data.external_dir if not given.
     """
 
-    def __init__(self, data_dir: Optional[str] = None):
+    def __init__(self, data_dir: Optional[str] = None, session_start=None):
+        #: Session open, used only to anchor resample bins -- see _resample.
+        #: None keeps pandas' calendar-day default, correct for a 24h chart.
+        self.session_start = session_start
         if data_dir is None:
             data_dir = self._dir_from_config()
         self.data_dir = Path(data_dir)
@@ -157,7 +162,7 @@ class ExternalCSVProvider(DataProvider):
 
         # Resample if not 1-minute
         if timeframe != "1m":
-            df = self._resample(df, timeframe)
+            df = self._resample(df, timeframe, symbol)
 
         logger.info(f"  {len(df)} {timeframe} bars  ({df.index.min()} → {df.index.max()})")
         return df
@@ -213,15 +218,24 @@ class ExternalCSVProvider(DataProvider):
     # Resampling
     # ------------------------------------------------------------------
 
-    def _resample(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-        alias = _TF_ALIAS.get(timeframe)
-        if alias is None:
+    def _resample(self, df: pd.DataFrame, timeframe: str,
+                  symbol: str | None = None) -> pd.DataFrame:
+        """
+        Aggregate 1-minute bars up to `timeframe`, anchored on the session.
+
+        Delegates to the shared aggregator rather than resampling here. This
+        used to pass a single `origin` for the whole frame, which is right for
+        one session and wrong for two: a 18:00-17:00 session is 1380 minutes and
+        1380 % 25, 35, 40, 45 are all non-zero, so each following session started
+        further off the grid than the last. The shared version restarts the bins
+        at every session open.
+        """
+        if timeframe not in _TF_ALIAS:
             raise ValueError(
                 f"Unknown timeframe '{timeframe}'. "
                 f"Supported: {list(_TF_ALIAS.keys())}"
             )
-        resampled = df.resample(alias).agg(_OHLCV_AGG).dropna()
-        return resampled
+        return resample_ohlcv(df, timeframe, bar_anchor(symbol))
 
     # ------------------------------------------------------------------
     # Streaming (not supported for CSV)

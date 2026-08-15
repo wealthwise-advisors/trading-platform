@@ -17,10 +17,15 @@ class BacktestRequest(BaseModel):
     commission_per_contract: float = 2.50
     start_date: date
     end_date: date
-    session_start: time = time(9, 30)
-    session_end: time = time(16, 0)
-    zigzag_dev_3: float = 0.003
-    zigzag_dev_10: float = 0.003
+    # None on either side means "don't filter that edge" -- both None is the
+    # 24-hour session, which is the correct default for anything that trades
+    # continuously (crypto) and the only way to see pre/post-market activity.
+    session_start: Optional[time] = time(9, 30)
+    session_end: Optional[time] = time(16, 0)
+    # Fractions, not percentages: 0.0005 == 0.05%. The minor (3-leg)
+    # zigzag must be finer than the major (10-leg) one it nests inside.
+    zigzag_dev_3: float = 0.0005
+    zigzag_dev_10: float = 0.0010
 
 
 class BacktestSummary(BaseModel):
@@ -30,8 +35,8 @@ class BacktestSummary(BaseModel):
     timeframe: str
     start_date: date
     end_date: date
-    session_start: time
-    session_end: time
+    session_start: Optional[time]
+    session_end: Optional[time]
     data_source: str
     initial_capital: float
     final_capital: float
