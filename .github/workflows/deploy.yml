@@ -107,33 +107,57 @@ jobs:
           echo "Could not reach ${{ secrets.EC2_HOST }}:22 after 60s — the security group rule never took effect."
           exit 1
 
+      # Authenticates the server's `git fetch`. Replaces the SSH deploy key:
+      # the token is minted per run, scoped to this repository alone, and
+      # revoked when the job ends -- so no long-lived credential for GitHub
+      # sits on the box at all. APP_ID is a public identifier rather than a
+      # secret, so it falls back to the literal when the secret is unset.
+      - name: Mint a GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID || '4607282' }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Pull and rebuild on the host
         run: |
           ssh -o BatchMode=yes -o ConnectTimeout=20 \
               ec2-user@"${{ secrets.EC2_HOST }}" bash -euo pipefail <<'REMOTE'
-            # Actions substitutes this before the remote shell sees it, so the
-            # deploy always follows the branch that triggered it.
+            # Actions substitutes these before the remote shell sees them, so
+            # the token travels over ssh's encrypted stdin -- it is never an
+            # argument, so it never appears in the box's process list.
             DEPLOY_BRANCH="${{ github.ref_name }}"
+            REPO="${{ github.repository }}"
+            TOKEN="${{ steps.app-token.outputs.token }}"
 
             cd /opt/wealthwise/repo
 
-            # The checkout on this box was cloned from the previous repository.
-            # Re-point it, idempotently, so the cutover needs no manual SSH.
-            # Requires the box's existing deploy key to be registered on this
-            # repo as well -- same key, it just has to be added here too.
-            # github-wwa is a host alias in the box's ~/.ssh/config that maps to
-            # github.com with this repository's own deploy key. A deploy key is
-            # scoped to one repo and ssh does not retry after a successful
-            # authentication, so the previous repo's key cannot be reused here --
-            # the two must be reached through separate Host entries.
-            WANT="git@github-wwa:${{ github.repository }}.git"
+            # This checkout was originally cloned from the previous repository
+            # over SSH. Re-point it, idempotently, so the cutover needs no
+            # manual session. The URL is deliberately credential-free: nothing
+            # durable is written into .git/config.
+            WANT="https://github.com/$REPO.git"
             if [ "$(git remote get-url origin)" != "$WANT" ]; then
               echo "re-pointing origin -> $WANT"
               git remote set-url origin "$WANT"
             fi
 
-            # Shallow fetch: history (and its old token blobs) never lands here.
-            git fetch --depth 1 origin "$DEPLOY_BRANCH"
+            # The installation token is supplied through a 0600 credential file
+            # that is deleted immediately and again on any exit path. Embedding
+            # it in the remote URL instead would persist it in .git/config long
+            # after the run, which is exactly what this approach avoids.
+            CRED="$(mktemp)"
+            trap 'rm -f "$CRED"' EXIT
+            chmod 600 "$CRED"
+            printf 'https://x-access-token:%s@github.com\n' "$TOKEN" > "$CRED"
+
+            # The leading empty credential.helper clears any inherited helper,
+            # so ours is the only one consulted.
+            git -c credential.helper= \
+                -c credential.helper="store --file=$CRED" \
+                fetch --depth 1 origin "$DEPLOY_BRANCH"
+            rm -f "$CRED"
+
             git reset --hard "origin/$DEPLOY_BRANCH"
             git clean -fd -e docker-compose.override.yml
             echo "now at: $(git log --oneline -1)"
