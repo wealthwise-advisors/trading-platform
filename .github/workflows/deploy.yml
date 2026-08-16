@@ -158,7 +158,7 @@ jobs:
                 fetch --depth 1 origin "$DEPLOY_BRANCH"
             rm -f "$CRED"
 
-            git reset --hard "origin/$DEPLOY_BRANCH"
+            git reset --hard FETCH_HEAD
             git clean -fd -e docker-compose.override.yml
             echo "now at: $(git log --oneline -1)"
 
