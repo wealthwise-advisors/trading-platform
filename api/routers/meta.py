@@ -1,5 +1,6 @@
 """Health check and reference/meta endpoints."""
 
+import os
 from functools import lru_cache
 
 from fastapi import APIRouter
@@ -27,7 +28,18 @@ def get_version():
         pkg_version = version("autotrader")
     except PackageNotFoundError:
         pkg_version = "unknown (not installed as a package)"
-    return {"version": pkg_version, "api": "autotrader"}
+
+    # The commit this container was started for, supplied by the deploy as an
+    # environment variable. This is what lets a deploy prove the container
+    # answering is the one it just started: "version" is 1.0.0 on every build
+    # and so cannot tell a fresh container from a stale one holding the same
+    # port. That exact ambiguity let a deploy report success while the previous
+    # stack was still serving. "unknown" outside a deploy.
+    return {
+        "version": pkg_version,
+        "api": "autotrader",
+        "commit": os.getenv("AUTOTRADER_COMMIT", "unknown"),
+    }
 
 
 @router.get("/strategies")
