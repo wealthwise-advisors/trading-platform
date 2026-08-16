@@ -155,6 +155,37 @@ jobs:
               echo "SCHWAB_CREDENTIALS_YAML_B64 not set -- live data stays disabled"
             fi
 
+            # ---- Schwab OAuth tokens (one-time seed) -------------------------
+            # Restores what the migration destroyed: the app previously held a
+            # working config/schwab_tokens.json under trading-platform/, and the
+            # directory move left it unignored so `git clean -fd` removed it
+            # ("Removing trading-platform/config/", run 31928311545).
+            #
+            # SEED ONLY -- written just once, when the file is absent.
+            # The container rotates this file itself: the access token refreshes
+            # every 30 minutes and is written back. Overwriting on every deploy
+            # would keep reverting it to whatever the secret held, discarding a
+            # newer token and eventually breaking auth. So an existing file is
+            # always left alone.
+            #
+            # Once a fresh authorisation is done through the app, this secret is
+            # dead weight and should be deleted.
+            TOKENS_B64="${{ secrets.SCHWAB_TOKENS_JSON_B64 }}"
+            if [ -n "$TOKENS_B64" ]; then
+              if [ -f config/schwab_tokens.json ]; then
+                echo "schwab_tokens.json already present -- left untouched (the app owns it)"
+              else
+                umask 077
+                printf '%s' "$TOKENS_B64" | base64 -d > config/schwab_tokens.json
+                chmod 600 config/schwab_tokens.json
+                # Shape only, never values. refresh_token_issued drives expiry.
+                echo "schwab_tokens.json seeded: $(wc -c < config/schwab_tokens.json) bytes"
+                python3 -c "import json,sys;d=json.load(open('config/schwab_tokens.json'));print('  refresh_token_issued:',d.get('refresh_token_issued','?'))" 2>/dev/null || true
+              fi
+            else
+              echo "SCHWAB_TOKENS_JSON_B64 not set -- no token seeded"
+            fi
+
             # This checkout was originally cloned from the previous repository
             # over SSH. Re-point it, idempotently, so the cutover needs no
             # manual session. The URL is deliberately credential-free: nothing
