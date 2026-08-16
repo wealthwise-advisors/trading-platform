@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import type { ReplayBar, ReplayTrade, ReplaySignal, ReplayWsMessage, ReplayFrameMessage, ReplayBackfill } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -931,6 +932,14 @@ export function ReplayPage() {
               </SelectContent>
             </Select>
           </div>
+          {/* Authorising with Schwab used to live only on the Backtest page, so
+              selecting Schwab here offered no way to connect -- the option was
+              enabled but unusable from replay, which is the page in daily use. */}
+          {dataSource === "schwab" && (
+            <div className="col-span-2">
+              <SchwabAuthWidget />
+            </div>
+          )}
           <div className="space-y-1 col-span-2" title={lockTitle("strategy")}>
             <Label className="text-xs">Strategy</Label>
             <Select
