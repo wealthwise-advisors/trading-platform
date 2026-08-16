@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
+import { bandAgreement, agreeingLabels } from "@/lib/bandAgreement"
 import type { ReplayBar, ReplayTrade, ReplaySignal, ReplayWsMessage, ReplayFrameMessage, ReplayBackfill } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -343,6 +344,14 @@ export function ReplayPage() {
   // bars, exactly as the Backtest chart does, so bins / value-area also apply
   // instantly.
   const [showVp, setShowVp] = useState(true)
+
+  /**
+   * Highlight band values that several timeframes agree on, to the whole
+   * number. Comparing columns by eye across three timeframes is exactly the
+   * kind of thing a screen should do for you, and the whole number is the
+   * unit that matters when checking against the reference platform.
+   */
+  const [markAgreement, setMarkAgreement] = useState(true)
   const [vpBins, setVpBins] = useState(48)
   const [vpValueArea, setVpValueArea] = useState(70)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -684,6 +693,16 @@ export function ReplayPage() {
   const shownTimeframes = activeTimeframes
     .filter((tf) => timeframes.includes(tf))
     .sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])
+
+  // Band values per shown timeframe, in the same column order the tape
+  // renders them: [+d0, -d0, +d1, -d1, ...]. Computed once for the whole
+  // table because agreement is a property of a COLUMN, which no single row
+  // can see on its own.
+  const tapeBandRows = shownTimeframes.map((tf) => {
+    const pane = panes[tf] ?? emptyPane(initialCapital)
+    return devLevels.flatMap((d) => [atDev(pane, d), atDev(pane, -d)])
+  })
+  const tapeAgreement = bandAgreement(tapeBandRows, shownTimeframes)
 
   // The summary has to follow a pane that is actually on screen. Derived rather
   // than synced through an effect: hiding the focused timeframe would otherwise
@@ -1327,6 +1346,16 @@ export function ReplayPage() {
                          onChange={(e) => setShowVp(e.target.checked)} />
                   <span>Volume Profile</span>
                 </label>
+                <label className="flex items-center gap-2"
+                       title="Tint band values that two or more shown timeframes agree on, comparing only the digits before the decimal.">
+                  <input type="checkbox" checked={markAgreement}
+                         aria-label="Highlight matching band levels"
+                         onChange={(e) => setMarkAgreement(e.target.checked)} />
+                  <span>Match across timeframes</span>
+                </label>
+                <span className="text-xs text-muted-foreground font-mono">
+                  whole numbers only
+                </span>
                 <span className="text-xs text-muted-foreground font-mono">
                   {vpBins} rows · VA {vpValueArea}%
                 </span>
@@ -1513,10 +1542,37 @@ export function ReplayPage() {
                             {pnl >= 0 ? "+" : ""}${Math.round(pnl).toLocaleString()}
                           </td>
                           {showVwap && <td className="p-2 text-right font-mono" style={{ color: "#ce93d8" }}>{num(pane.vwap)}</td>}
-                          {showVwap && bands.map((b, k) => (
-                            <td key={k} className="p-2 text-right font-mono"
-                                style={{ color: k % 2 === 0 ? "#e3b341" : "#f06292" }}>{num(b)}</td>
-                          ))}
+                          {showVwap && bands.map((b, k) => {
+                            // Who else lands on this whole number? Empty unless
+                            // two or more timeframes share it, so a tape showing
+                            // a single timeframe never lights up.
+                            const alsoOn = markAgreement
+                              ? agreeingLabels(tapeAgreement, k, b, tf)
+                              : []
+                            const agreed = alsoOn.length > 0
+                            return (
+                              <td key={k}
+                                  className="p-2 text-right font-mono"
+                                  title={agreed
+                                    ? `${Math.trunc(b as number)} also on ${alsoOn.join(", ")}`
+                                    : undefined}
+                                  style={{
+                                    color: k % 2 === 0 ? "#e3b341" : "#f06292",
+                                    // One highlight colour for both sides: the text
+                                    // colour already separates upper from lower, so
+                                    // tinting by side would say nothing new, and a
+                                    // green would read as P&L.
+                                    ...(agreed ? {
+                                      backgroundColor: "rgba(45, 212, 191, 0.16)",
+                                      boxShadow: "inset 0 0 0 1px rgba(45, 212, 191, 0.55)",
+                                      borderRadius: 4,
+                                      fontWeight: 600,
+                                    } : {}),
+                                  }}>
+                                {num(b)}
+                              </td>
+                            )
+                          })}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>{num(vp?.poc)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
