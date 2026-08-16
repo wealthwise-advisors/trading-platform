@@ -162,8 +162,53 @@ jobs:
             git clean -fd -e docker-compose.override.yml
             echo "now at: $(git log --oneline -1)"
 
+            # ---- one-time cutover: retire the previous project's stack ------
+            # Compose derives its project name from the working directory. The
+            # migration moved the app from repo/trading-platform up to repo/,
+            # so the project changed from "trading-platform" to "repo" and the
+            # old containers stopped being visible to --remove-orphans. They
+            # kept running, kept port 80, and answered every health check --
+            # so the deploy passed while serving the previous build.
+            # Idempotent: a no-op once they are gone.
+            for c in trading-platform-web-1 trading-platform-api-1; do
+              if docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
+                echo "retiring legacy container: $c"
+                docker rm -f "$c"
+              fi
+            done
+
+            # ---- disk guard --------------------------------------------------
+            # 8 GiB root. Two stacks and their build caches took it to 86%, and
+            # a --build needs headroom. Prune only when actually short, so
+            # normal deploys keep their cache and stay fast.
+            avail_mb=$(df --output=avail -m / | tail -1 | tr -d ' ')
+            echo "disk available: ${avail_mb} MiB"
+            if [ "$avail_mb" -lt 2048 ]; then
+              echo "below 2 GiB free -- pruning build cache"
+              docker builder prune -af || true
+              docker image prune -af --filter "until=24h" || true
+              echo "after prune: $(df --output=avail -m / | tail -1 | tr -d ' ') MiB"
+            fi
+
+            # Production settings are passed as variables the tracked compose
+            # file reads, rather than living in an untracked override on the
+            # box -- that override was stranded by the directory move and is
+            # why port 80 was left to the previous stack.
+            #
+            # AUTOTRADER_COMMIT is a runtime variable, not a build arg. Its
+            # value changes every deploy, so compose is forced to recreate the
+            # api container each time -- which is what makes /api/version
+            # trustworthy: a container that was not recreated by this run
+            # cannot be reporting this run's commit.
+            WEB_PORT=80 \
+            AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }}" \
+            AUTOTRADER_COMMIT="${{ github.sha }}" \
             docker compose up --build -d --remove-orphans
+
             docker image prune -f          # t3.micro has an 8 GiB disk
+
+            echo "---- listening after deploy ----"
+            docker ps --format '  {{.Names}}  {{.Status}}  {{.Ports}}'
           REMOTE
 
       - name: Wait for the API to report healthy
@@ -175,6 +220,36 @@ jobs:
             sleep 5
           done
           echo "API did not become healthy"; exit 1
+
+      # THE CHECK THAT MATTERS. Everything above this point can pass against a
+      # stale container: a leftover stack from an earlier project name kept
+      # port 80 through an entire deploy, so /api/health returned 200, the
+      # dashboard served <title>AutoTrader</title>, and /api/strategies listed
+      # rsi_divergence -- all from the previous build. Nothing in that set can
+      # tell two builds of the same app apart.
+      #
+      # The commit is baked into the image at build time, so this assertion
+      # fails unless the container answering on port 80 is the one this run
+      # just built.
+      - name: Verify the deployed commit is the one we just built
+        run: |
+          set -e
+          body=$(curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/version")
+          echo "  /api/version -> $body"
+          served=$(printf '%s' "$body" | sed -n 's/.*"commit"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+          if [ -z "$served" ]; then
+            echo "  FAIL: /api/version reported no commit field."
+            echo "        The container on port 80 predates this check, which"
+            echo "        means it is not the build this run produced."
+            exit 1
+          fi
+          if [ "$served" != "${{ github.sha }}" ]; then
+            echo "  FAIL: port 80 is served by a different build."
+            echo "        expected ${{ github.sha }}"
+            echo "        serving  $served"
+            exit 1
+          fi
+          echo "  CONFIRMED: port 80 is served by ${{ github.sha }}"
 
       - name: Smoke test the deployed app
         run: |

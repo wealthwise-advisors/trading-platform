@@ -23,7 +23,11 @@ services:
     image: autotrader-api:1.0.0
     restart: unless-stopped
     environment:
-      AUTOTRADER_CORS_ORIGINS: "http://localhost:8080"
+      AUTOTRADER_CORS_ORIGINS: "${AUTOTRADER_CORS_ORIGINS:-http://localhost:8080}"
+      # Surfaced by /api/version so a deploy can prove the container answering
+      # is the one it just built. "unknown" locally; the deploy workflow sets
+      # it to the commit being shipped.
+      AUTOTRADER_COMMIT: "${AUTOTRADER_COMMIT:-unknown}"
     volumes:
       # NOT read-only. The Schwab client persists refreshed OAuth tokens back
       # to config/schwab_tokens.json (see src/data/schwab_provider.py), so a
@@ -53,8 +57,33 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "8080:80"
+      # Configurable rather than fixed, and deliberately NOT split across a
+      # second compose file: compose CONCATENATES `ports` when merging files,
+      # so an overlay would publish 8080 and 80 both. One variable keeps the
+      # difference in one place and works on every compose version.
+      #
+      # 8080 by default because ports below 1024 need privileges on a laptop.
+      # The deploy sets WEB_PORT=80. That difference previously lived in an
+      # untracked docker-compose.override.yml on the box; when the app moved
+      # up one directory the override was stranded, the deploy published 8080,
+      # and the previous stack kept port 80 and kept answering every check.
+      - "${WEB_PORT:-8080}:80"
 
+# Volume names are pinned explicitly.
+#
+# Without a `name:`, compose prefixes each volume with the project name, which
+# it derives from the working directory. The repository migration moved the app
+# from /opt/wealthwise/repo/trading-platform up to /opt/wealthwise/repo, so the
+# project silently changed from "trading-platform" to "repo" and the deploy
+# mounted a brand-new, empty pair of volumes -- the live data was still on disk
+# but no longer attached to anything.
+#
+# The names below are the ones that actually hold the production data. They
+# read oddly in this repository, and that is the point: renaming them would
+# orphan the data again. A cosmetic rename is a deliberate migration for
+# another day, not a side effect of a directory move.
 volumes:
   autotrader-data:
+    name: trading-platform_autotrader-data
   autotrader-logs:
+    name: trading-platform_autotrader-logs
