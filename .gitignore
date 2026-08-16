@@ -15,6 +15,12 @@ env/
 .env
 config/credentials.yaml
 config/schwab_tokens.json
+# Wildcard, not just the exact name: a hand-made backup such as
+# schwab_tokens.json.bak-11aug does NOT match the bare filename and
+# would be staged by `git add -A`. That is how OAuth tokens reached a
+# previous repository's history.
+config/schwab_tokens.json*
+config/credentials.yaml*
 
 # Rithmic credential files
 *.ini
