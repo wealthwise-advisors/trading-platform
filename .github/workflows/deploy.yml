@@ -132,6 +132,29 @@ jobs:
 
             cd /opt/wealthwise/repo
 
+            # ---- Schwab credentials -----------------------------------------
+            # Written from a repository secret, never committed. config/ is
+            # gitignored for credentials.yaml, and `git clean -fd` leaves
+            # gitignored files alone, so this survives every redeploy.
+            #
+            # Only the app key/secret live here. The OAuth tokens are obtained
+            # through the app's own /api/schwab/complete-auth flow and written
+            # to config/schwab_tokens.json by the container.
+            #
+            # Skipped entirely when the secret is unset, so a deploy without it
+            # behaves exactly as before -- synthetic data, no live feed.
+            CREDS_B64="${{ secrets.SCHWAB_CREDENTIALS_YAML_B64 }}"
+            if [ -n "$CREDS_B64" ]; then
+              mkdir -p config
+              umask 077
+              printf '%s' "$CREDS_B64" | base64 -d > config/credentials.yaml
+              chmod 600 config/credentials.yaml
+              # Report shape only -- never the values.
+              echo "credentials.yaml written: $(wc -c < config/credentials.yaml) bytes, keys: $(grep -cE '^[a-z_]+:' config/credentials.yaml)"
+            else
+              echo "SCHWAB_CREDENTIALS_YAML_B64 not set -- live data stays disabled"
+            fi
+
             # This checkout was originally cloned from the previous repository
             # over SSH. Re-point it, idempotently, so the cutover needs no
             # manual session. The URL is deliberately credential-free: nothing
