@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll,
   followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind,
-  lagNote, type FollowState,
+  lagNote, canReceiveNewBars, type FollowState,
 } from "./followLive"
 
 const reply = (over: Partial<Parameters<typeof applyExtendReply>[1]> = {}) => ({
@@ -317,5 +317,59 @@ describe("explaining the gap honestly", () => {
 
   it("is null when the gap is unknown", () => {
     expect(lagNote(null, 1)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// A HISTORICAL SESSION IS NOT "BEHIND"
+//
+// Shipped bug, reported from the app. A session ending 2025-01-07, opened on
+// 2026-08-17, displayed:
+//
+//   845728 min behind the clock — further behind than the 6 min this design
+//   accounts for, so the feed itself may be delayed.
+//
+// The arithmetic was correct and the statement was nonsense: nothing is delayed,
+// that session belongs to last year. Worse, it blamed the data provider, which
+// is the sort of message that sends someone hunting a fault that does not exist.
+// ---------------------------------------------------------------------------
+describe("the lag note stays silent on a session that cannot go live", () => {
+  const NOW = "2026-08-17 15:43"
+
+  it("says nothing for a historical session, however large the gap", () => {
+    expect(lagNote(845728, 5, false)).toBeNull()
+    expect(lagNote(1, 1, false)).toBeNull()
+  })
+
+  it("still speaks for a live session", () => {
+    expect(lagNote(1, 1, true)).not.toBeNull()
+  })
+
+  it("defaults to speaking, so an un-updated caller is not silenced", () => {
+    expect(lagNote(1, 1)).not.toBeNull()
+  })
+
+  it("canReceiveNewBars is false exactly when the lag note is meaningless", () => {
+    expect(canReceiveNewBars("2025-01-07", NOW, "schwab")).toBe(false)
+    expect(canReceiveNewBars("2026-08-16", NOW, "schwab")).toBe(false)
+    expect(canReceiveNewBars("2026-08-17", NOW, "schwab")).toBe(true)
+    expect(canReceiveNewBars("2026-08-20", NOW, "schwab")).toBe(true)
+    expect(canReceiveNewBars("2026-08-17", NOW, "synthetic")).toBe(false)
+  })
+
+  it("agrees with shouldAutoFollow — one rule, two uses", () => {
+    // They diverged before, which is how the bad line reached the screen: the
+    // auto-start knew the session was historical and the lag line did not.
+    for (const end of ["2025-01-07", "2026-08-16", "2026-08-17", "2026-08-20", "bad"]) {
+      for (const src of ["schwab", "external_csv", "synthetic"]) {
+        expect(shouldAutoFollow(end, NOW, src)).toBe(canReceiveNewBars(end, NOW, src))
+      }
+    }
+  })
+
+  it("the reported case produces no lag line at all", () => {
+    const live = canReceiveNewBars("2025-01-07", NOW, "external_csv")
+    expect(live).toBe(false)
+    expect(lagNote(minutesBehind("2025-01-07T08:20:00", NOW), 5, live)).toBeNull()
   })
 })
