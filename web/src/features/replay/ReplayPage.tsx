@@ -905,9 +905,15 @@ export function ReplayPage() {
   // next render with no effect or cache to invalidate. Upper values from every
   // level pool into one side, lower into the other; the two never share a
   // colour.
-  const tapeUpperValues = tapeWindow.flatMap((r) => devLevels.map((d) => rowBand(r, d)))
-  const tapeLowerValues = tapeWindow.flatMap((r) => devLevels.map((d) => rowBand(r, -d)))
-  const tapeDevColors = buildDeviationColorGroups(tapeUpperValues, tapeLowerValues, {
+  // One entry per rendered column, in render order: [+d0, -d0, +d1, -d1, ...].
+  // Each column is grouped on its own -- Upper +1s and Upper +2s are different
+  // bands, so a shared whole number between them is coincidence, not two
+  // timeframes agreeing on a level.
+  const tapeDevColumns = devLevels.flatMap((d) => [
+    { side: "upper" as const, values: tapeWindow.map((r) => rowBand(r, d)) },
+    { side: "lower" as const, values: tapeWindow.map((r) => rowBand(r, -d)) },
+  ])
+  const tapeDevColors = buildDeviationColorGroups(tapeDevColumns, {
     upperPalette: devPalettes.upper,
     lowerPalette: devPalettes.lower,
   })
@@ -1435,8 +1441,8 @@ export function ReplayPage() {
                     palettes={devPalettes}
                     onChange={updateDevPalettes}
                     onReset={resetDevPalettes}
-                    upperGroups={tapeDevColors.upperOrder}
-                    lowerGroups={tapeDevColors.lowerOrder}
+                    upperGroups={tapeDevColors.upperGroups}
+                    lowerGroups={tapeDevColors.lowerGroups}
                     savedNote={devColorNote}
                   />
                 </div>
@@ -1781,13 +1787,17 @@ export function ReplayPage() {
                               {price(r.vwap)}
                             </td>
                           )}
-                            {showVwap && devLevels.flatMap((d) => {
+                            {showVwap && devLevels.flatMap((d, li) => {
                               const up = rowBand(r, d)
                               const lo = rowBand(r, -d)
+                              // Column indices match how tapeDevColumns was
+                              // built: upper of level li, then its lower.
+                              const upCol = li * 2
+                              const loCol = li * 2 + 1
                               // null when the value is missing or NaN -- those
                               // cells keep the plain default colour.
-                              const upColor = colorFor(tapeDevColors, "upper", up)
-                              const loColor = colorFor(tapeDevColors, "lower", lo)
+                              const upColor = colorFor(tapeDevColors, upCol, up)
+                              const loColor = colorFor(tapeDevColors, loCol, lo)
                               return [
                                 <td key={`u${d}`} className="p-2 text-right font-mono"
                                     title={upColor ? `Upper group ${Math.trunc(up as number)}` : undefined}

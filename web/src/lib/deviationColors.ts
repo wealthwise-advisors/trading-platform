@@ -89,14 +89,17 @@ export function colorForSlot(
   return index < base.length ? base[index] : generated(side, index)
 }
 
+export interface DeviationColumn {
+  side: DeviationSide
+  values: ReadonlyArray<number | null | undefined>
+}
+
 export interface DeviationColorGroups {
-  /** whole number -> colour, for values in Upper columns */
-  upper: Map<number, string>
-  /** whole number -> colour, for values in Lower columns */
-  lower: Map<number, string>
-  /** the whole numbers, ascending — index is the colour slot */
-  upperOrder: number[]
-  lowerOrder: number[]
+  /** whole number -> colour, one map per column, positionally matched */
+  byColumn: Array<Map<number, string>>
+  /** groups in slot order, for the settings preview */
+  upperGroups: number[]
+  lowerGroups: number[]
 }
 
 export interface BuildOptions {
@@ -105,57 +108,56 @@ export interface BuildOptions {
 }
 
 /**
- * Group the displayed values by whole number and assign each group a colour.
+ * Group each COLUMN independently and assign every group a colour.
  *
- * Both sides are grouped independently and given colours from their own
- * palette, so an identical whole number appearing on both sides gets two
- * different colours.
+ * Per column, not per side. Upper +1s and Upper +2s are different bands: if
+ * one timeframe's +1s and another's +2s happen to land on the same whole
+ * number that is a coincidence, not two timeframes agreeing on a level.
+ * Pooling them would paint that coincidence as agreement, which is the
+ * opposite of what the colour is meant to say.
  *
- * Order is ascending numeric, which makes the mapping deterministic: the same
- * data always yields the same colours, and the lowest group is always slot 1.
- * Nothing is keyed to a particular price, so the mapping simply re-derives
- * when the date, symbol, timeframes or deviation levels change.
+ * Slots are still allocated from a single counter per SIDE, so two distinct
+ * groups anywhere in the Upper columns never share a colour -- "different
+ * group, different colour" holds across the whole table, not just within one
+ * column. Upper and Lower keep their own counters and their own palettes.
  *
- * null / undefined / NaN are skipped and get no group; the caller leaves those
- * cells at their default styling.
+ * Order within a column is ascending numeric, and columns are visited left to
+ * right, so the mapping is fully deterministic.
  */
 export function buildDeviationColorGroups(
-  upperValues: ReadonlyArray<number | null | undefined>,
-  lowerValues: ReadonlyArray<number | null | undefined>,
+  columns: ReadonlyArray<DeviationColumn>,
   opts: BuildOptions = {},
 ): DeviationColorGroups {
-  const side = (
-    values: ReadonlyArray<number | null | undefined>,
-    which: DeviationSide,
-    palette?: readonly string[],
-  ) => {
+  const next = { upper: 0, lower: 0 }
+  const byColumn: Array<Map<number, string>> = []
+  const upperGroups: number[] = []
+  const lowerGroups: number[] = []
+
+  for (const col of columns) {
     const keys = new Set<number>()
-    for (const v of values) {
+    for (const v of col.values) {
       if (v == null || !Number.isFinite(v)) continue
       keys.add(wholePart(v))
     }
-    const order = [...keys].sort((a, b) => a - b)
     const map = new Map<number, string>()
-    order.forEach((k, i) => map.set(k, colorForSlot(which, i, palette)))
-    return { order, map }
+    for (const whole of [...keys].sort((a, b) => a - b)) {
+      const palette = col.side === "upper" ? opts.upperPalette : opts.lowerPalette
+      map.set(whole, colorForSlot(col.side, next[col.side], palette))
+      ;(col.side === "upper" ? upperGroups : lowerGroups).push(whole)
+      next[col.side] += 1
+    }
+    byColumn.push(map)
   }
-
-  const u = side(upperValues, "upper", opts.upperPalette)
-  const l = side(lowerValues, "lower", opts.lowerPalette)
-  return { upper: u.map, lower: l.map, upperOrder: u.order, lowerOrder: l.order }
+  return { byColumn, upperGroups, lowerGroups }
 }
 
-/**
- * Colour for one cell, or null when the value has no group (missing/NaN) so
- * the caller can fall back to the neutral default.
- */
 export function colorFor(
   groups: DeviationColorGroups,
-  side: DeviationSide,
+  column: number,
   value: number | null | undefined,
 ): string | null {
   if (value == null || !Number.isFinite(value)) return null
-  return (side === "upper" ? groups.upper : groups.lower).get(wholePart(value)) ?? null
+  return groups.byColumn[column]?.get(wholePart(value)) ?? null
 }
 
 /**
