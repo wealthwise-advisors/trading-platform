@@ -65,18 +65,29 @@ export function wholePart(value: number): number {
   return Math.trunc(value)
 }
 
-/** Deterministic overflow colour for group `index` beyond the palette. */
+/**
+ * Deterministic overflow colour for group `index` beyond the palette.
+ *
+ * Uses the golden-ratio conjugate on the unit interval and THEN scales into
+ * the band. Stepping by the golden ANGLE (137.5 degrees) and taking a modulo
+ * of the band width does not work: the band is 140 degrees wide, so each step
+ * advanced by 137.5 - 140 = -2.5 degrees and successive groups came out within
+ * a few degrees of each other -- four "different" greens that no one can tell
+ * apart. Scaling a low-discrepancy sequence keeps the spread whatever the band
+ * width happens to be.
+ */
+const GOLDEN_CONJUGATE = 0.618033988749895
+
 function generated(side: DeviationSide, index: number): string {
   const [lo, hi] = side === "upper" ? UPPER_HUE_RANGE : LOWER_HUE_RANGE
   const span = hi - lo
-  // Golden-angle stepping wrapped into the side's own hue band: successive
-  // groups land far apart instead of drifting, and can never cross into the
-  // other side's band.
-  const hue = lo + ((index * 137.508) % span)
-  // Alternate lightness so a long run stays separable once hues start to
-  // revisit similar angles.
-  const light = index % 2 === 0 ? 66 : 52
-  return `hsl(${hue.toFixed(1)} 70% ${light}%)`
+  const frac = (index * GOLDEN_CONJUGATE) % 1
+  const hue = lo + frac * span
+  // Vary lightness and saturation on different cycles so a long run stays
+  // separable even where hues eventually revisit similar angles.
+  const light = [64, 50, 72, 57][index % 4]
+  const sat = index % 2 === 0 ? 72 : 58
+  return `hsl(${hue.toFixed(1)} ${sat}% ${light}%)`
 }
 
 /** Colour for the Nth group on a side, from the palette then generated. */
@@ -97,9 +108,8 @@ export interface DeviationColumn {
 export interface DeviationColorGroups {
   /** whole number -> colour, one map per column, positionally matched */
   byColumn: Array<Map<number, string>>
-  /** groups in slot order, for the settings preview */
-  upperGroups: number[]
-  lowerGroups: number[]
+  /** the groups found in each column, ascending — index is that column's slot */
+  perColumn: Array<{ side: DeviationSide; groups: number[] }>
 }
 
 export interface BuildOptions {
@@ -128,10 +138,8 @@ export function buildDeviationColorGroups(
   columns: ReadonlyArray<DeviationColumn>,
   opts: BuildOptions = {},
 ): DeviationColorGroups {
-  const next = { upper: 0, lower: 0 }
   const byColumn: Array<Map<number, string>> = []
-  const upperGroups: number[] = []
-  const lowerGroups: number[] = []
+  const perColumn: Array<{ side: DeviationSide; groups: number[] }> = []
 
   for (const col of columns) {
     const keys = new Set<number>()
@@ -139,16 +147,18 @@ export function buildDeviationColorGroups(
       if (v == null || !Number.isFinite(v)) continue
       keys.add(wholePart(v))
     }
+    const groups = [...keys].sort((a, b) => a - b)
     const map = new Map<number, string>()
-    for (const whole of [...keys].sort((a, b) => a - b)) {
-      const palette = col.side === "upper" ? opts.upperPalette : opts.lowerPalette
-      map.set(whole, colorForSlot(col.side, next[col.side], palette))
-      ;(col.side === "upper" ? upperGroups : lowerGroups).push(whole)
-      next[col.side] += 1
-    }
+    const palette = col.side === "upper" ? opts.upperPalette : opts.lowerPalette
+    // Slots restart at every column. Colour means "the Nth-lowest group in
+    // THIS column", which is the only comparison the column is read for, and
+    // it keeps each column inside the curated palette instead of spilling
+    // into generated colours once several sigma levels are shown.
+    groups.forEach((whole, i) => map.set(whole, colorForSlot(col.side, i, palette)))
     byColumn.push(map)
+    perColumn.push({ side: col.side, groups })
   }
-  return { byColumn, upperGroups, lowerGroups }
+  return { byColumn, perColumn }
 }
 
 export function colorFor(

@@ -16,53 +16,61 @@ interface Props {
   palettes: DeviationPalettes
   onChange: (next: DeviationPalettes) => void
   onReset: () => void
-  /** Whole numbers currently on the tape, ascending — for the live preview. */
-  upperGroups: number[]
-  lowerGroups: number[]
+  /** Groups per column currently on the tape, for the live preview. */
+  upperColumns: number[][]
+  lowerColumns: number[][]
   savedNote?: string
 }
 
 function Row({
-  label, colors, groups, onPick,
+  label, colors, columns, onPick,
 }: {
   label: string
   colors: string[]
-  groups: number[]
+  columns: number[][]
   onPick: (slot: number, color: string) => void
 }) {
+  // Slots are per column, so one slot can be painting a different number in
+  // each column. Showing them all under one swatch would be unreadable; the
+  // caption lists each column instead.
+  const inUse = Math.max(0, ...columns.map((c) => c.length))
   return (
     <div className="space-y-1">
       <div className="text-xs font-semibold">{label}</div>
       <div className="flex flex-wrap gap-2">
-        {Array.from({ length: EDITABLE_SLOTS }, (_, i) => {
-          // The group this slot is painting right now, if the tape has one.
-          const group = groups[i]
-          return (
-            <label key={i}
-                   className="flex flex-col items-center gap-1"
-                   title={group != null
-                     ? `Slot ${i + 1} — currently colouring ${group}`
-                     : `Slot ${i + 1} — no group on screen`}>
-              <input
-                type="color"
-                aria-label={`${label} colour slot ${i + 1}`}
-                value={colors[i]}
-                onChange={(e) => onPick(i, e.target.value)}
-                className="h-7 w-9 rounded cursor-pointer bg-transparent border border-white/15 p-0"
-              />
-              <span className={`text-[10px] font-mono ${group != null ? "" : "text-muted-foreground/50"}`}>
-                {group != null ? group : `#${i + 1}`}
-              </span>
-            </label>
-          )
-        })}
+        {Array.from({ length: EDITABLE_SLOTS }, (_, i) => (
+          <label key={i} className="flex flex-col items-center gap-1"
+                 title={i < inUse
+                   ? `Slot ${i + 1} — the ${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : i === 2 ? "rd" : "th"}-lowest group in each column`
+                   : `Slot ${i + 1} — unused at the moment`}>
+            <input
+              type="color"
+              aria-label={`${label} colour slot ${i + 1}`}
+              value={colors[i]}
+              onChange={(e) => onPick(i, e.target.value)}
+              className="h-7 w-9 rounded cursor-pointer bg-transparent border border-white/15 p-0"
+            />
+            <span className={`text-[10px] font-mono ${i < inUse ? "" : "text-muted-foreground/50"}`}>
+              #{i + 1}
+            </span>
+          </label>
+        ))}
       </div>
+      {columns.length > 0 && (
+        <div className="text-[10px] font-mono text-muted-foreground">
+          {columns.map((c, i) => (
+            <span key={i} className="mr-3">
+              col {i + 1}: {c.length ? c.join(" ") : "—"}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
 export function DeviationColorSettings({
-  palettes, onChange, onReset, upperGroups, lowerGroups, savedNote,
+  palettes, onChange, onReset, upperColumns, lowerColumns, savedNote,
 }: Props) {
   const collisions = paletteCollisions(palettes.upper, palettes.lower)
 
@@ -77,14 +85,14 @@ export function DeviationColorSettings({
       <div className="flex items-baseline justify-between gap-3">
         <div className="text-xs font-semibold">Deviation group colours</div>
         <div className="text-[11px] text-muted-foreground">
-          slot 1 = lowest group on screen
+          slot 1 = lowest group in each column
         </div>
       </div>
 
       <Row label="Upper deviations" colors={palettes.upper}
-           groups={upperGroups} onPick={pick("upper")} />
+           columns={upperColumns} onPick={pick("upper")} />
       <Row label="Lower deviations" colors={palettes.lower}
-           groups={lowerGroups} onPick={pick("lower")} />
+           columns={lowerColumns} onPick={pick("lower")} />
 
       {/* The choice is not overridden -- the collision is just made visible,
           since a shared colour means upper and lower can no longer be told

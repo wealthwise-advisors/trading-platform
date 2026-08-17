@@ -1441,8 +1441,10 @@ export function ReplayPage() {
                     palettes={devPalettes}
                     onChange={updateDevPalettes}
                     onReset={resetDevPalettes}
-                    upperGroups={tapeDevColors.upperGroups}
-                    lowerGroups={tapeDevColors.lowerGroups}
+                    upperColumns={tapeDevColors.perColumn
+                      .filter((c) => c.side === "upper").map((c) => c.groups)}
+                    lowerColumns={tapeDevColors.perColumn
+                      .filter((c) => c.side === "lower").map((c) => c.groups)}
                     savedNote={devColorNote}
                   />
                 </div>

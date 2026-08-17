@@ -97,21 +97,27 @@ describe("per-sigma-column grouping", () => {
     expect(colorFor(g, 1, 7842.5)).toBeNull()
   })
 
-  it("several Upper columns each keep their own grouping", () => {
+  it("several Upper columns each group independently", () => {
     const g = buildDeviationColorGroups([
       up(100.1, 100.9, 101.2),
       up(100.4, 102.7),
       up(100.8),
     ])
+    // Within a column, 100 and 101 are separate groups.
     expect(colorFor(g, 0, 100.1)).toBe(colorFor(g, 0, 100.9))
-    expect(colorFor(g, 0, 100.1)).not.toBe(colorFor(g, 1, 100.4))
-    expect(colorFor(g, 1, 100.4)).not.toBe(colorFor(g, 2, 100.8))
+    expect(colorFor(g, 0, 100.1)).not.toBe(colorFor(g, 0, 101.2))
+    // Across columns the palette restarts, so slot 1 recurs BY DESIGN --
+    // colour means "lowest group in THIS column", and columns are never
+    // compared with each other.
+    expect(colorFor(g, 0, 100.1)).toBe(colorFor(g, 1, 100.4))
+    expect(colorFor(g, 1, 100.4)).toBe(colorFor(g, 2, 100.8))
   })
 
-  it("several Lower columns each keep their own grouping", () => {
+  it("several Lower columns each group independently", () => {
     const g = buildDeviationColorGroups([lo(50.1, 50.9), lo(50.4, 51.1)])
     expect(colorFor(g, 0, 50.1)).toBe(colorFor(g, 0, 50.9))
-    expect(colorFor(g, 0, 50.1)).not.toBe(colorFor(g, 1, 50.4))
+    expect(colorFor(g, 1, 50.4)).not.toBe(colorFor(g, 1, 51.1))
+    expect(colorFor(g, 0, 50.1)).toBe(colorFor(g, 1, 50.4))   // slot 1 recurs
   })
 
   it("keeps sides apart even when every column holds the same numbers", () => {
@@ -119,10 +125,12 @@ describe("per-sigma-column grouping", () => {
     const g = buildDeviationColorGroups([up(...vals), lo(...vals), up(...vals), lo(...vals)])
     const uppers = [colorFor(g, 0, 10.1), colorFor(g, 0, 11.1), colorFor(g, 2, 10.1), colorFor(g, 2, 11.1)]
     const lowers = [colorFor(g, 1, 10.1), colorFor(g, 1, 11.1), colorFor(g, 3, 10.1), colorFor(g, 3, 11.1)]
+    // The guarantee that matters: no Upper colour is ever a Lower colour.
     expect(uppers.filter((c) => lowers.includes(c))).toEqual([])
-    // No two distinct groups on a side share a colour, across columns.
-    expect(new Set(uppers).size).toBe(4)
-    expect(new Set(lowers).size).toBe(4)
+    // Two slots per column, and the slots restart, so two distinct colours
+    // per side -- not four. Columns repeating a colour is intended.
+    expect(new Set(uppers).size).toBe(2)
+    expect(new Set(lowers).size).toBe(2)
   })
 })
 
@@ -168,8 +176,8 @@ describe("Test 8 — recalculates for a different dataset", () => {
       up(8125.43, 8125.91, 8124.27, 8123.88),
       lo(7951.32, 7951.77, 7950.42),
     ])
-    expect(g.upperGroups).toEqual([8123, 8124, 8125])
-    expect(g.lowerGroups).toEqual([7950, 7951])
+    expect(g.perColumn.filter(c => c.side === "upper").flatMap(c => c.groups)).toEqual([8123, 8124, 8125])
+    expect(g.perColumn.filter(c => c.side === "lower").flatMap(c => c.groups)).toEqual([7950, 7951])
     expect(colorFor(g, 0, 8125.43)).toBe(colorFor(g, 0, 8125.91))
     expect(colorFor(g, 1, 7951.32)).toBe(colorFor(g, 1, 7951.77))
   })
@@ -179,7 +187,7 @@ describe("Test 8 — recalculates for a different dataset", () => {
       ({ side: c.side, values: c.values.map((v) => (v as number) + 1000) })
     const a = buildDeviationColorGroups(ONE_LEVEL)
     const b = buildDeviationColorGroups(ONE_LEVEL.map(shift))
-    expect(a.upperGroups).toHaveLength(b.upperGroups.length)
+    expect(a.perColumn.filter(c => c.side === "upper").flatMap(c => c.groups)).toHaveLength(b.perColumn.filter(c => c.side === "upper").flatMap(c => c.groups).length)
     expect(colorFor(a, 0, 7842.52)).toBe(colorFor(b, 0, 8842.52))
   })
 })
@@ -191,8 +199,8 @@ describe("Test 9 — missing values are safe", () => {
     expect(colorFor(g, 0, undefined)).toBeNull()
     expect(colorFor(g, 0, NaN)).toBeNull()
     expect(colorFor(g, 0, Infinity)).toBeNull()
-    expect(g.upperGroups).toEqual([7842])
-    expect(g.lowerGroups).toEqual([])
+    expect(g.perColumn.filter(c => c.side === "upper").flatMap(c => c.groups)).toEqual([7842])
+    expect(g.perColumn.filter(c => c.side === "lower").flatMap(c => c.groups)).toEqual([])
   })
 
   it("an empty column list does not throw", () => {
@@ -259,11 +267,17 @@ describe("more groups than the palette holds", () => {
     expect(new Set(vals.map((v) => colorFor(g, 0, v))).size).toBe(n)
   })
 
-  it("groups spread over many columns still never repeat within a side", () => {
+  it("many columns stay inside the curated palette instead of overflowing", () => {
+    // 10 columns x 2 groups. Under the old side-wide numbering this needed 20
+    // slots and spilled into generated colours -- which is how four
+    // indistinguishable greens reached the screen. Per column it needs 2.
     const cols = Array.from({ length: 10 }, (_, i) => up(i * 100 + 0.5, i * 100 + 1.5))
     const g = buildDeviationColorGroups(cols)
     const seen = cols.flatMap((c, i) => c.values.map((v) => colorFor(g, i, v as number)))
-    expect(new Set(seen).size).toBe(20)
+    expect(new Set(seen)).toEqual(new Set([DEFAULT_UPPER_PALETTE[0], DEFAULT_UPPER_PALETTE[1]]))
+    for (let i = 0; i < 10; i++) {
+      expect(colorFor(g, i, i * 100 + 0.5)).not.toBe(colorFor(g, i, i * 100 + 1.5))
+    }
   })
 
   it("overflow colours stay in their side's hue band", () => {
@@ -291,12 +305,20 @@ describe("user-supplied palettes", () => {
     expect(colorFor(g, 1, 7777.04)).toBe("#444444")
   })
 
-  it("custom slots carry across columns on the same side", () => {
+  it("custom slot 1 is used by every column, since slots restart", () => {
     const g = buildDeviationColorGroups([up(10.1), up(20.1)], {
       upperPalette: ["#111111", "#222222"],
     })
     expect(colorFor(g, 0, 10.1)).toBe("#111111")
-    expect(colorFor(g, 1, 20.1)).toBe("#222222")
+    expect(colorFor(g, 1, 20.1)).toBe("#111111")
+  })
+
+  it("custom slots advance WITHIN a column", () => {
+    const g = buildDeviationColorGroups([up(10.1, 11.1)], {
+      upperPalette: ["#111111", "#222222"],
+    })
+    expect(colorFor(g, 0, 10.1)).toBe("#111111")
+    expect(colorFor(g, 0, 11.1)).toBe("#222222")
   })
 
   it("a short custom palette overflows without repeating", () => {
@@ -308,5 +330,66 @@ describe("user-supplied palettes", () => {
   it("collisions are reported, not corrected", () => {
     expect(paletteCollisions(["#e3b341", "#58A6FF"], ["#58a6ff"])).toEqual(["#58A6FF"])
     expect(paletteCollisions(["#e3b341"], ["#f06292"])).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Generated overflow colours must be DISTINGUISHABLE, not merely unequal.
+//
+// The previous formula stepped by the golden ANGLE (137.5 deg) and took a
+// modulo of the 140 deg band, so each successive group advanced by -2.5 deg.
+// Slots 11-14 came out at hues 137.6 / 135.1 / 132.6 / 130.1 -- four distinct
+// strings that are all the same green on screen. The old test only asserted
+// the strings differed, so it passed while the UI was wrong.
+// ---------------------------------------------------------------------------
+describe("generated colours are far enough apart to see", () => {
+  const hueOf = (c: string) => Number(/hsl\(([\d.]+)/.exec(c)?.[1] ?? NaN)
+
+  for (const side of ["upper", "lower"] as const) {
+    it(`${side}: consecutive generated hues differ by a visible margin`, () => {
+      const base = side === "upper" ? DEFAULT_UPPER_PALETTE : DEFAULT_LOWER_PALETTE
+      const hues: number[] = []
+      for (let i = base.length; i < base.length + 12; i++) {
+        hues.push(hueOf(colorForSlot(side, i)))
+      }
+      for (let i = 1; i < hues.length; i++) {
+        expect(Math.abs(hues[i] - hues[i - 1])).toBeGreaterThan(12)
+      }
+    })
+
+    it(`${side}: 12 generated colours span most of the band`, () => {
+      const base = side === "upper" ? DEFAULT_UPPER_PALETTE : DEFAULT_LOWER_PALETTE
+      const hues = Array.from({ length: 12 }, (_, k) => hueOf(colorForSlot(side, base.length + k)))
+      // The exact regression: this spread was 7.5 degrees.
+      expect(Math.max(...hues) - Math.min(...hues)).toBeGreaterThan(100)
+    })
+
+    it(`${side}: no two of 20 generated colours are near-identical`, () => {
+      const base = side === "upper" ? DEFAULT_UPPER_PALETTE : DEFAULT_LOWER_PALETTE
+      const cols = Array.from({ length: 20 }, (_, k) => colorForSlot(side, base.length + k))
+      for (let i = 0; i < cols.length; i++) {
+        for (let j = i + 1; j < cols.length; j++) {
+          const sameHue = Math.abs(hueOf(cols[i]) - hueOf(cols[j])) < 6
+          // Near-equal hues are only acceptable when lightness separates them.
+          if (sameHue) expect(cols[i]).not.toBe(cols[j])
+        }
+      }
+    })
+  }
+
+  it("reproduces the reported case: 4 sigma levels, no green-on-green", () => {
+    // The exact tape from the screenshot: 4 upper columns, 6 rows.
+    const cols = [
+      up(7781.96, 7782.56, 7783.30, 7782.68, 7790.92, 7782.78),
+      up(7785.07, 7785.81, 7786.66, 7785.78, 7795.63, 7785.91),
+      up(7788.19, 7789.06, 7790.02, 7788.89, 7800.34, 7789.05),
+      up(7791.30, 7792.32, 7793.39, 7792.00, 7805.05, 7792.18),
+    ]
+    const g = buildDeviationColorGroups(cols)
+    // Upper +2.0s held 7791 / 7792 / 7793 / 7805 and painted them all green.
+    const last = [7791.30, 7792.32, 7793.39, 7805.05].map((v) => colorFor(g, 3, v))
+    expect(new Set(last).size).toBe(4)
+    // And they come from the curated palette now, not generated at all.
+    for (const c of last) expect(DEFAULT_UPPER_PALETTE).toContain(c as string)
   })
 })
