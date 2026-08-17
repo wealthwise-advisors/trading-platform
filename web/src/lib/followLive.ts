@@ -158,8 +158,30 @@ export function shouldAutoFollow(
   nowET: string,
   dataSource: string,
 ): boolean {
+  return canReceiveNewBars(endDateISO, nowET, dataSource)
+}
+
+/**
+ * Whether this session can receive new bars at all.
+ *
+ * Extracted because two separate decisions need it and only one of them had it,
+ * which shipped a genuinely alarming line: a session ending 2025-01-07, loaded
+ * on 2026-08-17, reported "845728 min behind the clock -- the feed itself may be
+ * delayed". The arithmetic was right and the statement was nonsense. Nothing is
+ * behind; that session simply belongs to last year.
+ *
+ * Synthetic data is excluded for the same reason it is excluded from following:
+ * it is generated, so "new bars" is not a thing that happens to it.
+ */
+export function canReceiveNewBars(
+  endDateISO: string,
+  nowET: string,
+  dataSource: string,
+): boolean {
   if (dataSource === "synthetic") return false
   if (!/^\d{4}-\d{2}-\d{2}$/.test(endDateISO)) return false
+  // The MARKET's date. A local date would switch this off for the whole evening
+  // in Asia while New York is still trading.
   return endDateISO >= nowET.slice(0, 10)
 }
 
@@ -199,7 +221,16 @@ export function minutesBehind(dataTime: string | null, nowET: string): number | 
  * Anything past one bar plus a poll interval is NOT explained by this design,
  * and the wording says so rather than reassuring the user.
  */
-export function lagNote(behind: number | null, timeframeMinutes: number): string | null {
+export function lagNote(
+  behind: number | null,
+  timeframeMinutes: number,
+  live: boolean = true,
+): string | null {
+  // A session that cannot receive new bars is not "behind" anything -- and the
+  // reason line already says it ends in the past, so there is nothing to add.
+  // Without this, a session from last year reported six figures of lag and
+  // blamed the provider.
+  if (!live) return null
   if (behind == null) return null
   const expected = timeframeMinutes + Math.ceil(FOLLOW_POLL_MS / 60_000)
   if (behind <= timeframeMinutes) {

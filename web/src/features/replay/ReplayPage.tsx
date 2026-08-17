@@ -40,7 +40,8 @@ import { TickProgress } from "@/components/ui/tick-progress"
 import { TimeField } from "@/components/ui/time-field"
 import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
 import {
-  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, followLabel, lagNote,
+  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, canReceiveNewBars,
+  followLabel, lagNote,
   minutesBehind, shouldAutoFollow, shouldPoll, shouldResumeAfterExtend,
   type FollowState,
 } from "@/lib/followLive"
@@ -1447,8 +1448,15 @@ export function ReplayPage() {
                 "1 min behind, current bar still forming" obviously is not.
                 Measured against the market clock, not the viewer's. */}
             {(() => {
-              const behind = minutesBehind(follow.dataTime, nowEasternLabel())
-              const note = lagNote(behind, TF_MINUTES[baseTimeframe] ?? 1)
+              const nowET = nowEasternLabel()
+              // Only meaningful for a session that can still receive bars. A
+              // historical one is not lagging, it is just historical.
+              const live = canReceiveNewBars(endDate, nowET, dataSource)
+              const note = lagNote(
+                minutesBehind(follow.dataTime, nowET),
+                TF_MINUTES[baseTimeframe] ?? 1,
+                live,
+              )
               return note ? (
                 <p className="text-[11px] text-muted-foreground">{note}</p>
               ) : null
