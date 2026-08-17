@@ -13,6 +13,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
+import { DayCountStepper } from "@/components/DayCountStepper"
+import { steppedEndDate } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 
@@ -218,6 +220,20 @@ export function ConfigForm() {
           <Input type="date" value={cfg.endDate} onChange={(e) => cfg.setField("endDate", e.target.value)} />
         </div>
       </div>
+
+      {/* After the dates, before Timeframe -- the same control and the same
+          semantics as Live Replay. It writes the End date; the count itself
+          is derived from the range, so the two cannot disagree. */}
+      <DayCountStepper
+        startDate={cfg.startDate}
+        endDate={cfg.endDate}
+        onStep={(delta) => {
+          // getState() rather than the rendered props: zustand applies
+          // each set synchronously, so a burst of clicks composes.
+          const live = useConfigStore.getState()
+          cfg.setField("endDate", steppedEndDate(live.startDate, live.endDate, delta))
+        }}
+      />
       {/* Say what this symbol actually covers, rather than letting the user
           discover it from a failed request. Shown as a plain hint normally,
           and escalated when the chosen range falls outside every window. */}
