@@ -1035,7 +1035,22 @@ export function ReplayPage() {
           if (el.querySelector?.("[disabled], [data-disabled]")) setLockPrompt(true)
         }}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+        {/* THREE ROWS, NOT ONE GRID
+            Symbol / Data Source / Strategy, then the dates, then the day count.
+
+            It was a single six-column grid, which produced two complaints that
+            were really the same problem: choosing Schwab pushed Strategy onto
+            the next line, and the dates row sat beside a large empty gap.
+
+            The Schwab status was a grid CELL spanning two columns, so it
+            competed with the fields for width and reflowed the row the moment
+            it appeared. It belongs to the Data Source select, so it now sits
+            directly under it and takes no column of its own -- selecting Schwab
+            no longer moves anything.
+
+            The day count then gets its own row rather than trailing the dates,
+            which is what left three columns of dead space on that line. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
           <div className="space-y-1" title={lockTitle("symbol")}>
             <Label className="text-xs">Symbol</Label>
             <Select value={symbol} onValueChange={setSymbol} disabled={ready}>
@@ -1064,16 +1079,14 @@ export function ReplayPage() {
                 ))}
               </SelectContent>
             </Select>
+            {/* Under the select it describes, not beside it.
+                Authorising with Schwab used to live only on the Backtest page, so
+                selecting Schwab here offered no way to connect -- the option was
+                enabled but unusable from replay, which is the page in daily
+                use. */}
+            {dataSource === "schwab" && <SchwabAuthWidget />}
           </div>
-          {/* Authorising with Schwab used to live only on the Backtest page, so
-              selecting Schwab here offered no way to connect -- the option was
-              enabled but unusable from replay, which is the page in daily use. */}
-          {dataSource === "schwab" && (
-            <div className="col-span-2">
-              <SchwabAuthWidget />
-            </div>
-          )}
-          <div className="space-y-1 col-span-2" title={lockTitle("strategy")}>
+          <div className="space-y-1" title={lockTitle("strategy")}>
             <Label className="text-xs">Strategy</Label>
             <Select
               value={strategyId} disabled={ready}
@@ -1087,6 +1100,12 @@ export function ReplayPage() {
               <SelectContent>{(strategies ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Dates on their own row, side by side. Held to the same column width as
+            the row above so the fields line up in a single vertical rhythm rather
+            than stretching across the whole card. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end mt-3">
           <div className="space-y-1">
             <Label className="text-xs">Start</Label>
             <Input type="date" value={startDate} title={lockTitle("data")} disabled={ready} onChange={(e) => setStartDate(e.target.value)} />
@@ -1095,9 +1114,12 @@ export function ReplayPage() {
             <Label className="text-xs">End</Label>
             <Input type="date" value={endDate} title={lockTitle("data")} disabled={ready} onChange={(e) => setEndDate(e.target.value)} />
           </div>
-          {/* Between the dates and Timeframes, as asked. Writes the End
-              date rather than holding its own count, so the number shown
-              and the range actually requested cannot drift apart. */}
+        </div>
+
+        {/* Its own row, below the dates it derives from. Writes the End date
+            rather than holding its own count, so the number shown and the range
+            actually requested cannot drift apart. */}
+        <div className="mt-3">
           <DayCountStepper
             startDate={startDate}
             endDate={endDate}
