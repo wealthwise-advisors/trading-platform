@@ -172,16 +172,43 @@ jobs:
             # dead weight and should be deleted.
             TOKENS_B64="${{ secrets.SCHWAB_TOKENS_JSON_B64 }}"
             if [ -n "$TOKENS_B64" ]; then
-              if [ -f config/schwab_tokens.json ]; then
-                echo "schwab_tokens.json already present -- left untouched (the app owns it)"
-              else
-                umask 077
-                printf '%s' "$TOKENS_B64" | base64 -d > config/schwab_tokens.json
+              umask 077
+              printf %s "$TOKENS_B64" | base64 -d > /tmp/incoming_tokens.json
+
+              # Install when there is nothing there, or when the secret holds a
+              # NEWER refresh token than the box does.
+              #
+              # Newer-wins rather than seed-once. Seed-once was there to stop a
+              # redeploy clobbering a token the container had refreshed itself,
+              # and that still holds -- a container-refreshed token is newer, so
+              # it wins. But it also meant a genuine rotation could not be
+              # deployed at all: the file was already present, so a fresh token
+              # in the secret was ignored and the box kept running the expiring
+              # one until someone deleted the file over SSH.
+              #
+              # Compared on refresh_token_issued, which is the field the 7-day
+              # window runs from.
+              issued_of() {
+                python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['refresh_token_issued'])" "$1" 2>/dev/null
+              }
+              NEW_ISSUED=$(issued_of /tmp/incoming_tokens.json)
+              OLD_ISSUED=$(issued_of config/schwab_tokens.json)
+
+              if [ -z "$NEW_ISSUED" ]; then
+                echo "schwab_tokens: secret did not decode to valid JSON -- leaving the box alone"
+              elif [ -z "$OLD_ISSUED" ]; then
+                mv /tmp/incoming_tokens.json config/schwab_tokens.json
                 chmod 600 config/schwab_tokens.json
-                # Shape only, never values. refresh_token_issued drives expiry.
-                echo "schwab_tokens.json seeded: $(wc -c < config/schwab_tokens.json) bytes"
-                python3 -c "import json,sys;d=json.load(open('config/schwab_tokens.json'));print('  refresh_token_issued:',d.get('refresh_token_issued','?'))" 2>/dev/null || true
+                echo "schwab_tokens: installed (none present) -- issued $NEW_ISSUED"
+              elif [ "$NEW_ISSUED" \> "$OLD_ISSUED" ]; then
+                cp -a config/schwab_tokens.json "config/schwab_tokens.json.replaced-$(date +%Y%m%d-%H%M%S)"
+                mv /tmp/incoming_tokens.json config/schwab_tokens.json
+                chmod 600 config/schwab_tokens.json
+                echo "schwab_tokens: ROTATED $OLD_ISSUED -> $NEW_ISSUED"
+              else
+                echo "schwab_tokens: box already has $OLD_ISSUED, secret has $NEW_ISSUED -- left alone"
               fi
+              rm -f /tmp/incoming_tokens.json
             else
               echo "SCHWAB_TOKENS_JSON_B64 not set -- no token seeded"
             fi
