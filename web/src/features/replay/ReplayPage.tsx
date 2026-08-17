@@ -38,7 +38,7 @@ import { computeVolumeProfile } from "@/lib/volumeProfile"
 import { Loader, LoadingBlock } from "@/components/ui/loader"
 import { TickProgress } from "@/components/ui/tick-progress"
 import { TimeField } from "@/components/ui/time-field"
-import { addMinutesNaive, barCloseLabel, barOpenLabel } from "@/lib/clock"
+import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
 import { delta as signed, price } from "@/lib/priceFormat"
 
 type Status = "idle" | "loading" | "ready" | "playing" | "paused" | "done"
@@ -827,10 +827,32 @@ export function ReplayPage() {
     // were missing -- the loaded day was complete, playback had simply not reached
     // that point. Distinguish the two cases explicitly.
     if (target > newest) {
-      setJumpNote(
-        `Playback has only reached ${newestShown} ${TZ_LABEL}. Press ▶ Play to ` +
-        `carry the tape forward past ${typedShown}, then jump again.`,
-      )
+      // Three cases, and they need different answers. The message used to say
+      // "press Play" for all of them, which is advice that cannot work when the
+      // requested minute has not happened yet -- the reported case was asking
+      // for 18:00 at 09:20, where no amount of playing produces that bar.
+      const nowET = nowEasternLabel()
+      if (target > nowET) {
+        setJumpNote(
+          `${typedShown} ${TZ_LABEL} has not traded yet — it is still ahead of the ` +
+          `current time. The tape ends at ${newestShown} ${TZ_LABEL}, which is all ` +
+          `the market has produced so far.`,
+        )
+      } else if (done) {
+        // Playback finished at the edge of a snapshot taken when the session was
+        // loaded. Bars after that point exist upstream by now; reloading fetches
+        // them, whereas Play has nothing left to advance through.
+        setJumpNote(
+          `Playback finished at ${newestShown} ${TZ_LABEL}, before ${typedShown}. ` +
+          `That is where the data ended when this session loaded — reload to pull ` +
+          `the bars that have printed since.`,
+        )
+      } else {
+        setJumpNote(
+          `Playback has only reached ${newestShown} ${TZ_LABEL}. Press ▶ Play to ` +
+          `carry the tape forward past ${typedShown}, then jump again.`,
+        )
+      }
       return
     }
     if (target < oldest) {

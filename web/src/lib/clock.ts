@@ -113,3 +113,28 @@ export function barCloseLabel(iso: string, timeframeMinutes: number): string {
 export function barOpenLabel(iso: string): string {
   return addMinutesNaive(iso, 0)
 }
+
+/**
+ * "Now" in Eastern, in the same shape as a bar label.
+ *
+ * Bar timestamps are naive Eastern and every helper above does plain string
+ * arithmetic on that basis, so anything compared against a bar label has to be
+ * produced in the same frame. Reading the local clock instead is wrong for any
+ * user outside Eastern, which is the actual situation here -- the machine that
+ * reported the 18:00 case is on Central, an hour behind the tape, so a local
+ * clock would have called 18:00 "the future" a full hour later than it is.
+ *
+ * Built from Intl with an explicit zone rather than a fixed -4/-5 offset, so it
+ * stays correct across DST without a table to maintain.
+ */
+export function nowEasternLabel(at: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(at)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00"
+  // Intl can render midnight as hour 24 under hour12:false.
+  const hour = get("hour") === "24" ? "00" : get("hour")
+  return `${get("year")}-${get("month")}-${get("day")} ${hour}:${get("minute")}`
+}
