@@ -40,8 +40,9 @@ import { TickProgress } from "@/components/ui/tick-progress"
 import { TimeField } from "@/components/ui/time-field"
 import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
 import {
-  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, followLabel, shouldPoll,
-  shouldResumeAfterExtend, type FollowState,
+  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, followLabel, lagNote,
+  minutesBehind, shouldAutoFollow, shouldPoll, shouldResumeAfterExtend,
+  type FollowState,
 } from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
 
@@ -390,6 +391,11 @@ export function ReplayPage() {
   // created it, so it cannot read `status` directly.
   const statusRef = useRef<Status>("idle")
   statusRef.current = status
+  // Same reason as statusRef: read by the socket's onmessage handler.
+  const endDateRef = useRef(endDate)
+  endDateRef.current = endDate
+  const dataSourceRef = useRef(dataSource)
+  dataSourceRef.current = dataSource
 
   useEffect(() => () => wsRef.current?.close(), [])
 
@@ -551,6 +557,12 @@ export function ReplayPage() {
           resetAccumulators(); setStatus("ready")
         } else if (msg.type === "done") {
           setStatus("done")
+          // Reaching the live edge on a session that ends today IS the moment to
+          // start following. Leaving it to the checkbox meant a tape frozen at
+          // 100%, which is indistinguishable from broken live data.
+          if (shouldAutoFollow(endDateRef.current, nowEasternLabel(), dataSourceRef.current)) {
+            setFollow((f) => (f.enabled ? f : { ...f, enabled: true }))
+          }
         } else if (msg.type === "error") {
           setError(msg.message); setStatus("idle")
         }
@@ -987,22 +999,45 @@ export function ReplayPage() {
     : null
 
   const tapeWindow = jumpedRows ?? shownTape.slice(0, TAPE_WINDOW)
-  // Deviation colour groups for the consolidated tape.
+
+  // Deviation colour groups, shared by BOTH deviation tables.
   //
-  // Derived from tapeWindow and devLevels, so changing the date, the jumped
-  // moment, the timeframe selection or the sigma levels re-derives it on the
-  // next render with no effect or cache to invalidate. Upper values from every
-  // level pool into one side, lower into the other; the two never share a
-  // colour.
   // One entry per rendered column, in render order: [+d0, -d0, +d1, -d1, ...].
   // Each column is grouped on its own -- Upper +1s and Upper +2s are different
-  // bands, so a shared whole number between them is coincidence, not two
-  // timeframes agreeing on a level.
-  const tapeDevColumns = devLevels.flatMap((d) => [
-    { side: "upper" as const, values: tapeWindow.map((r) => rowBand(r, d)) },
-    { side: "lower" as const, values: tapeWindow.map((r) => rowBand(r, -d)) },
+  // bands, so a whole number shared between them is a coincidence, not two
+  // readings agreeing on a level. Upper and lower draw from disjoint palettes,
+  // so the two sides can never wear the same colour.
+  //
+  // WHY ONE GROUPING FOR TWO TABLES
+  // Live state and the Consolidated tape show the same columns from different
+  // angles: Live state is one row per TIMEFRAME at the current moment, the tape
+  // is one row per BAR over time. Grouping them separately would be simpler, and
+  // wrong in a way that matters -- 7816 could come out gold in one table and
+  // green in the other, so the colour would stop meaning "same level" the moment
+  // you looked from one table to the next. Feeding both value sets into one
+  // grouping keeps a whole number tied to one colour everywhere on the page.
+  //
+  // Derived on every render from the tape window, the visible timeframes, the
+  // panes and the sigma levels, so changing the date, the jumped moment, the
+  // timeframe selection or the sigma set re-derives it with no cache to
+  // invalidate.
+  const devColumns = devLevels.flatMap((d) => [
+    {
+      side: "upper" as const,
+      values: [
+        ...tapeWindow.map((r) => rowBand(r, d)),
+        ...shownTimeframes.map((tf) => atDev(panes[tf] ?? emptyPane(initialCapital), d)),
+      ],
+    },
+    {
+      side: "lower" as const,
+      values: [
+        ...tapeWindow.map((r) => rowBand(r, -d)),
+        ...shownTimeframes.map((tf) => atDev(panes[tf] ?? emptyPane(initialCapital), -d)),
+      ],
+    },
   ])
-  const tapeDevColors = buildDeviationColorGroups(tapeDevColumns, {
+  const devColors = buildDeviationColorGroups(devColumns, {
     upperPalette: devPalettes.upper,
     lowerPalette: devPalettes.lower,
   })
@@ -1394,13 +1429,26 @@ export function ReplayPage() {
              whose entire value is "the number on screen is current" has to keep
              saying so, because an outage that displays nothing looks exactly
              like a quiet market. */
-          <p
-            className={`mt-2 text-xs ${follow.lastReason ? "text-amber-500" : "text-muted-foreground"}`}
-            role="status"
-            aria-live="polite"
-          >
-            {followLabel(follow)}
-          </p>
+          <div className="mt-2 space-y-0.5">
+            <p
+              className={`text-xs ${follow.lastReason ? "text-amber-500" : "text-muted-foreground"}`}
+              role="status"
+              aria-live="polite"
+            >
+              {followLabel(follow)}
+            </p>
+            {/* The gap, stated. It was invisible and got read as a fault: a tape
+                on 13:00 beside a broker platform on 13:02 looks broken, while
+                "1 min behind, current bar still forming" obviously is not.
+                Measured against the market clock, not the viewer's. */}
+            {(() => {
+              const behind = minutesBehind(follow.dataTime, nowEasternLabel())
+              const note = lagNote(behind, TF_MINUTES[baseTimeframe] ?? 1)
+              return note ? (
+                <p className="text-[11px] text-muted-foreground">{note}</p>
+              ) : null
+            })()}
+          </div>
         )}
         {ready && totalTicks > 0 && (
           <div className="mt-3">
@@ -1602,9 +1650,9 @@ export function ReplayPage() {
                     palettes={devPalettes}
                     onChange={updateDevPalettes}
                     onReset={resetDevPalettes}
-                    upperColumns={tapeDevColors.perColumn
+                    upperColumns={devColors.perColumn
                       .filter((c) => c.side === "upper").map((c) => c.groups)}
-                    lowerColumns={tapeDevColors.perColumn
+                    lowerColumns={devColors.perColumn
                       .filter((c) => c.side === "lower").map((c) => c.groups)}
                     savedNote={devColorNote}
                   />
@@ -1733,10 +1781,24 @@ export function ReplayPage() {
                             {pnl >= 0 ? "+" : ""}${Math.round(pnl).toLocaleString()}
                           </td>
                           {showVwap && <td className="p-2 text-right font-mono" style={{ color: "#ce93d8" }}>{num(pane.vwap)}</td>}
-                          {showVwap && bands.map((b, k) => (
-                            <td key={k} className="p-2 text-right font-mono"
-                                style={{ color: k % 2 === 0 ? "#e3b341" : "#f06292" }}>{num(b)}</td>
-                          ))}
+                          {/* Grouped by whole number, exactly as the Consolidated
+                              tape is, and off the SAME grouping -- so a level that
+                              is gold down there is gold up here.
+
+                              Every upper column used one gold and every lower one
+                              pink before this, which said only "this is an upper
+                              band" -- something the header already says. Now the
+                              colour says which timeframes are sitting on the same
+                              level, read down a column. `bands` is built
+                              [+d0, -d0, +d1, -d1, ...], the order devColumns
+                              uses, so k IS the column index. */}
+                          {showVwap && bands.map((b, k) => {
+                            const c = colorFor(devColors, k, b)
+                            return (
+                              <td key={k} className="p-2 text-right font-mono"
+                                  style={c ? { color: c } : undefined}>{num(b)}</td>
+                            )
+                          })}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>{num(vp?.poc)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
@@ -1953,14 +2015,14 @@ export function ReplayPage() {
                             {showVwap && devLevels.flatMap((d, li) => {
                               const up = rowBand(r, d)
                               const lo = rowBand(r, -d)
-                              // Column indices match how tapeDevColumns was
+                              // Column indices match how devColumns was
                               // built: upper of level li, then its lower.
                               const upCol = li * 2
                               const loCol = li * 2 + 1
                               // null when the value is missing or NaN -- those
                               // cells keep the plain default colour.
-                              const upColor = colorFor(tapeDevColors, upCol, up)
-                              const loColor = colorFor(tapeDevColors, loCol, lo)
+                              const upColor = colorFor(devColors, upCol, up)
+                              const loColor = colorFor(devColors, loCol, lo)
                               return [
                                 <td key={`u${d}`} className="p-2 text-right font-mono"
                                     title={upColor ? `Upper group ${Math.trunc(up as number)}` : undefined}

@@ -18,12 +18,24 @@
 /**
  * How often to ask, once following.
  *
- * One minute, matched to the one-minute source resolution: asking more often
- * cannot produce a bar that does not exist yet, it just multiplies provider
- * requests. Bars are also withheld by the server until they have actually
- * closed, so a faster poll would mostly be told "still forming".
+ * FIFTEEN seconds, not sixty.
+ *
+ * One minute was the obvious choice -- a one-minute chart cannot produce a bar
+ * more often than that, so a faster poll usually just gets told "still forming".
+ * The reasoning was about how often a bar APPEARS and missed how long one waits
+ * to be COLLECTED. A bar closing a second after a poll sat unseen for the next
+ * 59, so the tape ran up to a minute behind for no reason other than the timer.
+ *
+ * Reported as a two-minute lag against thinkorswim, of which this was about
+ * half. Fifteen seconds bounds the collection delay at fifteen seconds, at the
+ * cost of three extra provider requests a minute -- cheap next to a tape that
+ * looks a minute stale.
+ *
+ * Not faster than that: each poll refetches and resamples the session's window
+ * (see MultiReplaySession.extend), so the work is real, and below roughly ten
+ * seconds a slow provider would still be answering the previous request.
  */
-export const FOLLOW_POLL_MS = 60_000
+export const FOLLOW_POLL_MS = 15_000
 
 /** The server's reply to one poll, narrowed to the parts a decision needs. */
 export interface ExtendReply {
@@ -121,6 +133,85 @@ export function applyExtendReply(state: FollowState, reply: ExtendReply): Follow
     // blanking a time the user was reading.
     dataTime: reply.data_time ?? state.dataTime,
   }
+}
+
+/**
+ * Whether to start following on its own once playback reaches the live edge.
+ *
+ * Requested after a session sat frozen at 100% because the checkbox had not been
+ * ticked -- which reads as "the live data does not work", and is the worst
+ * failure available here: indistinguishable from a broken feed. Loading a session
+ * that ends today is already a statement of intent to watch it live, so the
+ * checkbox should be a way to STOP, not a step to remember.
+ *
+ * Only when new bars can actually arrive. Auto-following a past date, or
+ * synthetic data, would light the control and then report that nothing will ever
+ * print -- noise in place of a frozen tape.
+ *
+ * `endDateISO` is the session's end date (YYYY-MM-DD); `nowET` is a full
+ * nowEasternLabel, so the comparison is against the MARKET's date. Comparing
+ * against a local date would turn following off for the whole evening in Asia,
+ * while New York is still trading.
+ */
+export function shouldAutoFollow(
+  endDateISO: string,
+  nowET: string,
+  dataSource: string,
+): boolean {
+  if (dataSource === "synthetic") return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDateISO)) return false
+  return endDateISO >= nowET.slice(0, 10)
+}
+
+/**
+ * How far the newest shown bar sits behind the clock, in minutes.
+ *
+ * Reported because the gap was invisible and got read as a fault. A tape showing
+ * 13:00 next to a broker platform showing 13:02 looks broken; the same tape
+ * saying "1 bar behind the live edge" is obviously working as intended.
+ *
+ * Both arguments are naive Eastern labels (see nowEasternLabel), so the
+ * arithmetic is on the market's clock, not the viewer's.
+ */
+export function minutesBehind(dataTime: string | null, nowET: string): number | null {
+  const edge = liveEdgeLabel(dataTime)
+  if (!edge) return null
+  const ms = Date.parse(`${nowET.replace(" ", "T")}:00Z`)
+         - Date.parse(`${edge.replace(" ", "T")}:00Z`)
+  if (!Number.isFinite(ms)) return null
+  return Math.max(0, Math.round(ms / 60_000))
+}
+
+/**
+ * Why the tape is not on the current minute, in the user's terms.
+ *
+ * Two of the three causes are deliberate and one is not, and lumping them
+ * together as "lag" is what made this look like a defect:
+ *
+ *   * one bar is withheld until it has CLOSED. A broker platform draws the bar
+ *     in progress, whose high, low and close are still moving; this app shows
+ *     only finished bars, because a bar that changes after the fact is what
+ *     jammed live-follow in the first place. That is a difference in what is
+ *     displayed, not a delay.
+ *   * up to FOLLOW_POLL_MS passes before a closed bar is collected.
+ *   * the provider's own feed may itself be behind.
+ *
+ * Anything past one bar plus a poll interval is NOT explained by this design,
+ * and the wording says so rather than reassuring the user.
+ */
+export function lagNote(behind: number | null, timeframeMinutes: number): string | null {
+  if (behind == null) return null
+  const expected = timeframeMinutes + Math.ceil(FOLLOW_POLL_MS / 60_000)
+  if (behind <= timeframeMinutes) {
+    return `${behind} min behind the clock — the current bar is still forming and ` +
+           `is shown only once it closes.`
+  }
+  if (behind <= expected) {
+    return `${behind} min behind the clock — one unfinished bar, plus up to ` +
+           `${Math.ceil(FOLLOW_POLL_MS / 1000)}s to collect the last closed one.`
+  }
+  return `${behind} min behind the clock — further behind than the ` +
+         `${expected} min this design accounts for, so the feed itself may be delayed.`
 }
 
 /**
