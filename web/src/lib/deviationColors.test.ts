@@ -393,3 +393,76 @@ describe("generated colours are far enough apart to see", () => {
     for (const c of last) expect(DEFAULT_UPPER_PALETTE).toContain(c as string)
   })
 })
+
+// ---------------------------------------------------------------------------
+// ONE GROUPING, TWO TABLES
+//
+// Live state (one row per TIMEFRAME, now) and the Consolidated tape (one row per
+// BAR, over time) show the same deviation columns from different angles. Both
+// read from a single grouping built from both value sets, so a whole number wears
+// one colour across the whole page.
+//
+// Grouping them separately is the tempting simplification and it breaks the only
+// thing the colour is for: 7816 coming out gold in one table and green in the
+// other means "same colour" stops implying "same level" the moment your eye moves
+// between the two tables.
+// ---------------------------------------------------------------------------
+describe("Live state and the tape share one grouping", () => {
+  // Column order both tables render: [+1s, -1s, +2s, -2s]
+  const tapeUpper1 = [7816.4, 7817.9, 7820.1]
+  const liveUpper1 = [7816.8, 7822.3]        // 7816 also appears in Live state
+  const columns = [
+    { side: "upper" as const, values: [...tapeUpper1, ...liveUpper1] },
+    { side: "lower" as const, values: [7783.9, 7784.2, 7781.0, 7783.1] },
+  ]
+
+  it("gives a whole number ONE colour regardless of which table it came from", () => {
+    const g = buildDeviationColorGroups(columns)
+    // 7816.4 is a tape value, 7816.8 a Live state value: same integer part.
+    expect(colorFor(g, 0, 7816.4)).toBe(colorFor(g, 0, 7816.8))
+  })
+
+  it("still separates different whole numbers", () => {
+    const g = buildDeviationColorGroups(columns)
+    expect(colorFor(g, 0, 7816.4)).not.toBe(colorFor(g, 0, 7817.9))
+    expect(colorFor(g, 0, 7816.4)).not.toBe(colorFor(g, 0, 7822.3))
+  })
+
+  it("a value only present in Live state still gets a colour", () => {
+    // It would be null if the grouping had been built from the tape alone --
+    // which is exactly the bug this shared grouping avoids.
+    const g = buildDeviationColorGroups(columns)
+    expect(colorFor(g, 0, 7822.3)).not.toBeNull()
+  })
+
+  it("upper and lower still never share a colour across the page", () => {
+    const g = buildDeviationColorGroups(columns)
+    const uppers = [7816.4, 7817.9, 7820.1, 7822.3].map((v) => colorFor(g, 0, v))
+    const lowers = [7783.9, 7781.0].map((v) => colorFor(g, 1, v))
+    for (const u of uppers) expect(lowers).not.toContain(u)
+  })
+
+  it("each column is still grouped on its own", () => {
+    // A whole number shared between +1s and +2s is coincidence, not agreement,
+    // so the two columns are allowed to colour it differently.
+    const same = [
+      { side: "upper" as const, values: [7816.2] },
+      { side: "upper" as const, values: [7816.7] },
+    ]
+    const g = buildDeviationColorGroups(same)
+    expect(g.perColumn.length).toBe(2)
+    expect(g.byColumn[0].get(7816)).toBeDefined()
+    expect(g.byColumn[1].get(7816)).toBeDefined()
+  })
+
+  it("an empty tape does not stop Live state values being coloured", () => {
+    // Before Play is pressed the tape is empty but the panes may already hold
+    // bands, so the grouping must cope with only the Live state half present.
+    const g = buildDeviationColorGroups([
+      { side: "upper" as const, values: liveUpper1 },
+      { side: "lower" as const, values: [] },
+    ])
+    expect(colorFor(g, 0, 7816.8)).not.toBeNull()
+    expect(colorFor(g, 1, 7783.9)).toBeNull()   // nothing in that column yet
+  })
+})
