@@ -349,8 +349,13 @@ export function ReplayPage() {
    * Each level N renders an "Upper +Ns" and a "Lower -Ns" column: sigma is a
    * distance and the bands are symmetric about the VWAP, so a separate up and
    * down multiplier only ever described the same distance twice.
+   *
+   * DEFAULTS TO 1s AND 2s, not 2s alone. Those are the two levels actually read
+   * side by side against a broker platform, and having to tick 1s on every fresh
+   * session was a step with no decision in it. The remaining levels (0.5, 1.5,
+   * 2.5, 3) stay available and unticked.
    */
-  const [devLevels, setDevLevels] = useState<number[]>([2])
+  const [devLevels, setDevLevels] = useState<number[]>([1, 2])
   // Volume Profile is computed in the browser from each pane's accumulated
   // bars, exactly as the Backtest chart does, so bins / value-area also apply
   // instantly.
