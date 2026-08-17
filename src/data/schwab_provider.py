@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import base64
 import datetime
+from urllib.parse import urlparse, parse_qs, unquote
 import json
 from datetime import timezone
 from pathlib import Path
@@ -252,14 +253,24 @@ class SchwabDataProvider(DataProvider):
         Writes schwab_tokens.json and resets the internal client so the next
         load() call creates a fresh authenticated Client.
         """
-        try:
-            code_start = redirect_url.index("code=") + 5
-            code_end   = redirect_url.index("%40")
-            code = redirect_url[code_start:code_end] + "@"
-        except ValueError:
+        # Parse the query string properly rather than slicing between "code="
+        # and a literal "%40".
+        #
+        # Schwab auth codes end with "@". The address bar shows that
+        # percent-encoded, but several browsers COPY the decoded form, and the
+        # old slice raised "Could not parse auth code" on exactly that -- the
+        # most common way a user pastes this. It also failed when the code had
+        # no trailing "@" at all, and could slice backwards if "%40" happened
+        # to appear before "code=".
+        #
+        # unquote() is a no-op on an already-decoded value, so both forms work.
+        parsed = urlparse(redirect_url.strip())
+        code = unquote(parse_qs(parsed.query).get("code", [""])[0]).strip()
+        if not code:
             raise ValueError(
-                "Could not parse auth code from the URL.\n"
-                "Make sure you copied the full address bar URL after authorization."
+                "Could not find an auth code in that URL.\n"
+                "Paste the whole address bar URL from after you approved at "
+                "Schwab -- it looks like https://127.0.0.1/?code=...&session=..."
             )
         resp = self._post_oauth_token("authorization_code", code)
         if not resp.ok:
