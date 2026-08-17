@@ -14,6 +14,11 @@ import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
+import { DeviationColorSettings } from "@/components/DeviationColorSettings"
+import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
+import {
+  loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
+} from "@/lib/deviationColorSettings"
 import type { ReplayBar, ReplayTrade, ReplaySignal, ReplayWsMessage, ReplayFrameMessage, ReplayBackfill } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -343,6 +348,25 @@ export function ReplayPage() {
   // bars, exactly as the Backtest chart does, so bins / value-area also apply
   // instantly.
   const [showVp, setShowVp] = useState(true)
+
+  /**
+   * Colour the deviation columns by the whole number each value lands on, so
+   * timeframes agreeing on a level are visible without reading down the
+   * column. Palettes are user-editable and persisted; grouping is not.
+   */
+  const [devPalettes, setDevPalettes] = useState<DeviationPalettes>(() => loadPalettes())
+  const [devColorNote, setDevColorNote] = useState("")
+
+  const updateDevPalettes = (next: DeviationPalettes) => {
+    setDevPalettes(next)
+    setDevColorNote(savePalettes(next) ? "Saved." : "Could not save (browser storage unavailable).")
+    window.setTimeout(() => setDevColorNote(""), 2500)
+  }
+  const resetDevPalettes = () => {
+    setDevPalettes(resetPalettes())
+    setDevColorNote("Reset to default colours.")
+    window.setTimeout(() => setDevColorNote(""), 2500)
+  }
   const [vpBins, setVpBins] = useState(48)
   const [vpValueArea, setVpValueArea] = useState(70)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -685,6 +709,7 @@ export function ReplayPage() {
     .filter((tf) => timeframes.includes(tf))
     .sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])
 
+
   // The summary has to follow a pane that is actually on screen. Derived rather
   // than synced through an effect: hiding the focused timeframe would otherwise
   // paint one frame of a pane that is no longer in the table before the effect
@@ -873,6 +898,25 @@ export function ReplayPage() {
     : null
 
   const tapeWindow = jumpedRows ?? shownTape.slice(0, TAPE_WINDOW)
+  // Deviation colour groups for the consolidated tape.
+  //
+  // Derived from tapeWindow and devLevels, so changing the date, the jumped
+  // moment, the timeframe selection or the sigma levels re-derives it on the
+  // next render with no effect or cache to invalidate. Upper values from every
+  // level pool into one side, lower into the other; the two never share a
+  // colour.
+  // One entry per rendered column, in render order: [+d0, -d0, +d1, -d1, ...].
+  // Each column is grouped on its own -- Upper +1s and Upper +2s are different
+  // bands, so a shared whole number between them is coincidence, not two
+  // timeframes agreeing on a level.
+  const tapeDevColumns = devLevels.flatMap((d) => [
+    { side: "upper" as const, values: tapeWindow.map((r) => rowBand(r, d)) },
+    { side: "lower" as const, values: tapeWindow.map((r) => rowBand(r, -d)) },
+  ])
+  const tapeDevColors = buildDeviationColorGroups(tapeDevColumns, {
+    upperPalette: devPalettes.upper,
+    lowerPalette: devPalettes.lower,
+  })
   const { completedTrades, position, portfolioValue, lastSignal } = shown
 
   const pnls = completedTrades.map((t) => t.pnl)
@@ -1389,6 +1433,19 @@ export function ReplayPage() {
                   Bands re-scale from the session sigma already computed for
                   these bars, so changes apply immediately.
                 </div>
+                {/* Full-width row inside the settings grid: the swatches need
+                    the space, and they belong beside the deviation controls
+                    whose output they recolour. */}
+                <div className="col-span-full">
+                  <DeviationColorSettings
+                    palettes={devPalettes}
+                    onChange={updateDevPalettes}
+                    onReset={resetDevPalettes}
+                    upperGroups={tapeDevColors.upperGroups}
+                    lowerGroups={tapeDevColors.lowerGroups}
+                    savedNote={devColorNote}
+                  />
+                </div>
               </div>
             )}
           </Card>
@@ -1730,14 +1787,30 @@ export function ReplayPage() {
                               {price(r.vwap)}
                             </td>
                           )}
-                            {showVwap && devLevels.flatMap((d) => [
-                              <td key={`u${d}`} className="p-2 text-right font-mono" style={{ color: "#e3b341" }}>
-                                {tapeNum(rowBand(r, d))}
-                              </td>,
-                              <td key={`l${d}`} className="p-2 text-right font-mono" style={{ color: "#f06292" }}>
-                                {tapeNum(rowBand(r, -d))}
-                              </td>,
-                            ])}
+                            {showVwap && devLevels.flatMap((d, li) => {
+                              const up = rowBand(r, d)
+                              const lo = rowBand(r, -d)
+                              // Column indices match how tapeDevColumns was
+                              // built: upper of level li, then its lower.
+                              const upCol = li * 2
+                              const loCol = li * 2 + 1
+                              // null when the value is missing or NaN -- those
+                              // cells keep the plain default colour.
+                              const upColor = colorFor(tapeDevColors, upCol, up)
+                              const loColor = colorFor(tapeDevColors, loCol, lo)
+                              return [
+                                <td key={`u${d}`} className="p-2 text-right font-mono"
+                                    title={upColor ? `Upper group ${Math.trunc(up as number)}` : undefined}
+                                    style={{ color: upColor ?? "#e3b341" }}>
+                                  {tapeNum(up)}
+                                </td>,
+                                <td key={`l${d}`} className="p-2 text-right font-mono"
+                                    title={loColor ? `Lower group ${Math.trunc(lo as number)}` : undefined}
+                                    style={{ color: loColor ?? "#f06292" }}>
+                                  {tapeNum(lo)}
+                                </td>,
+                              ]
+                            })}
                             {showVp && (
                               <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>
                                 {tapeNum(vp?.poc)}
