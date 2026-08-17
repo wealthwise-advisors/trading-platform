@@ -27,11 +27,12 @@ import asyncio
 from datetime import datetime, time as time_type, timedelta
 from zoneinfo import ZoneInfo
 
-import pandas as pd
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from src.data.sample_data import generate_sample_data
-from src.backtesting.multi_replay import MultiReplaySession, TF_MINUTES
+from src.backtesting.multi_replay import (
+    MultiReplaySession, TF_MINUTES, trim_to_closed_bars,
+)
 
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
@@ -195,32 +196,6 @@ def _apply_session(df, session_start, session_end):
     return df[mask]
 
 
-def _drop_forming_tail(df, source_tf: str, now: datetime):
-    """
-    Drop trailing bars that have not finished forming.
-
-    A provider asked for "today" returns the bar currently in progress. Loading
-    it replays a bar whose high, low, close and volume are still moving as though
-    it had closed, so the last row of the tape is not a real bar -- and every
-    later refetch legitimately disagrees with it.
-
-    That is not theoretical. Against the live provider at 11:05:35 ET the loaded
-    snapshot ended with an "11:05" bar holding 35 seconds of trade; the first
-    attempt to follow the market was refused outright, because the bar the
-    session had already replayed had changed underneath it. Trimming here is what
-    makes following the market possible at all, and it fixes the displayed bar
-    independently of that.
-
-    A bar stamped T is complete once T + one source interval has passed -- the
-    same rule MultiReplaySession.extend applies to arriving bars, so the seam
-    between loading and following is judged one way.
-    """
-    if df is None or df.empty:
-        return df
-    delta = pd.Timedelta(minutes=_TF_MINUTES[source_tf])
-    return df[df.index + delta <= pd.Timestamp(now)]
-
-
 def _market_now() -> datetime:
     """
     Now, as a naive Eastern datetime -- the frame every bar timestamp is in.
@@ -310,13 +285,17 @@ def create_replay(req: ReplayCreateRequest):
     # forming" -- and its bars can legitimately run past the wall clock. Every
     # real source is trimmed to the last CLOSED bar.
     if req.data_source != "synthetic":
-        df = _drop_forming_tail(df, source_tf, _market_now())
+        # base_tf, not just source_tf: the clock ticks once per BASE bar and
+        # emits every one of them, so a partially-covered trailing base bin would
+        # reach the tape as a closed bar and then change on the next poll. See
+        # trim_to_closed_bars.
+        df = trim_to_closed_bars(df, source_tf, base_tf, req.symbol, _market_now())
         if df.empty:
             raise HTTPException(
                 400,
                 f"No {req.symbol} bar has closed yet in the "
                 f"{req.session_start}-{req.session_end} session today. Wait for the "
-                f"first {source_tf} bar to complete, or pick an earlier date.",
+                f"first {base_tf} bar to complete, or pick an earlier date.",
             )
 
     try:
