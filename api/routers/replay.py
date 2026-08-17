@@ -25,7 +25,9 @@ Two things changed when the multi-timeframe grid was added:
 
 import asyncio
 from datetime import datetime, time as time_type, timedelta
+from zoneinfo import ZoneInfo
 
+import pandas as pd
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from src.data.sample_data import generate_sample_data
@@ -193,6 +195,95 @@ def _apply_session(df, session_start, session_end):
     return df[mask]
 
 
+def _drop_forming_tail(df, source_tf: str, now: datetime):
+    """
+    Drop trailing bars that have not finished forming.
+
+    A provider asked for "today" returns the bar currently in progress. Loading
+    it replays a bar whose high, low, close and volume are still moving as though
+    it had closed, so the last row of the tape is not a real bar -- and every
+    later refetch legitimately disagrees with it.
+
+    That is not theoretical. Against the live provider at 11:05:35 ET the loaded
+    snapshot ended with an "11:05" bar holding 35 seconds of trade; the first
+    attempt to follow the market was refused outright, because the bar the
+    session had already replayed had changed underneath it. Trimming here is what
+    makes following the market possible at all, and it fixes the displayed bar
+    independently of that.
+
+    A bar stamped T is complete once T + one source interval has passed -- the
+    same rule MultiReplaySession.extend applies to arriving bars, so the seam
+    between loading and following is judged one way.
+    """
+    if df is None or df.empty:
+        return df
+    delta = pd.Timedelta(minutes=_TF_MINUTES[source_tf])
+    return df[df.index + delta <= pd.Timestamp(now)]
+
+
+def _market_now() -> datetime:
+    """
+    Now, as a naive Eastern datetime -- the frame every bar timestamp is in.
+
+    SchwabProvider converts each candle to America/New_York and drops the
+    tzinfo, so the whole system compares naive Eastern values. Using the
+    server's own clock instead would break the comparison on any box that is
+    not Eastern, and the deployment box is UTC: bars would look four hours
+    older than they are and every one of them would be treated as closed,
+    which is the exact mistake the completeness check exists to prevent.
+    """
+    return datetime.now(ZoneInfo("America/New_York")).replace(tzinfo=None)
+
+
+def _extend_session(stored) -> dict:
+    """
+    Pull whatever has printed since this session loaded, and grow it.
+
+    Polls the provider rather than streaming. SchwabProvider.stream() raises
+    NotImplementedError, but following the live market does not actually need a
+    stream: re-requesting the same window returns the bars that have closed
+    since, and one request per minute is all a one-minute chart can use.
+
+    The refetch deliberately reuses _load_bars and _apply_session with the
+    ORIGINAL request. A narrower "just the new bars" fetch would be cheaper and
+    would be a second implementation of the fetch window, the session filter and
+    the overnight-history rule -- three things that are already subtle enough
+    once. Cost is one day of one-minute bars per poll, which is nothing next to
+    a pane whose VWAP anchor silently disagrees with the one beside it.
+
+    Never raises: this runs inside the WebSocket loop, where an exception would
+    drop a socket the user is watching. Every failure comes back as `reason`.
+    """
+    session = stored.session
+    req = stored.request
+
+    if req is None:
+        return session.no_extension(
+            "this session was created before live follow existed -- start a new "
+            "one to use it")
+    if req.data_source == "synthetic":
+        return session.no_extension(
+            "synthetic data does not grow. Switch the data source to Live (Schwab) "
+            "to follow the real market.")
+
+    now = _market_now()
+    if req.end_date < now.date():
+        return session.no_extension(
+            f"this session ends {req.end_date}, which is in the past -- no new bars "
+            f"will print for it")
+
+    try:
+        source_tf = _source_timeframe(req.timeframes or [req.timeframe])
+        df = _load_bars(req, source_tf, get_contract_spec(req.symbol))
+        df = _apply_session(df, req.session_start, req.session_end)
+    except HTTPException as exc:
+        return session.no_extension(f"could not reach the data source: {exc.detail}")
+    except Exception as exc:                                  # noqa: BLE001
+        return session.no_extension(f"could not reach the data source: {exc}")
+
+    return session.extend(df, now=now)
+
+
 @router.post("", response_model=ReplayCreateResponse)
 def create_replay(req: ReplayCreateRequest):
     timeframes = req.timeframes or [req.timeframe]
@@ -214,6 +305,19 @@ def create_replay(req: ReplayCreateRequest):
             f"No {req.symbol} bars left after applying the "
             f"{req.session_start}-{req.session_end} session filter.",
         )
+
+    # Synthetic data is generated, not observed, so nothing about it is "still
+    # forming" -- and its bars can legitimately run past the wall clock. Every
+    # real source is trimmed to the last CLOSED bar.
+    if req.data_source != "synthetic":
+        df = _drop_forming_tail(df, source_tf, _market_now())
+        if df.empty:
+            raise HTTPException(
+                400,
+                f"No {req.symbol} bar has closed yet in the "
+                f"{req.session_start}-{req.session_end} session today. Wait for the "
+                f"first {source_tf} bar to complete, or pick an earlier date.",
+            )
 
     try:
         session = MultiReplaySession(
@@ -239,7 +343,8 @@ def create_replay(req: ReplayCreateRequest):
     fetch_start = _fetch_start(req)
     strategy_name = session.panes[base_tf].engine.strategy.name
     replay_id = replay_store.save(session, df, req.symbol, strategy_name,
-                                  req.initial_capital, req.data_source)
+                                  req.initial_capital, req.data_source,
+                                  request=req)
 
     return ReplayCreateResponse(
         replay_id=replay_id,
@@ -289,6 +394,30 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                     session.reset()
                     running = False
                     await websocket.send_json({"type": "reset"})
+                elif action == "extend":
+                    # Following the live market: pull anything that has printed
+                    # since the snapshot was loaded and grow the session.
+                    #
+                    # Off-loop for the same reason add_timeframes is -- a provider
+                    # request plus a resample plus the catch-up replay is far too
+                    # much to do between socket reads.
+                    #
+                    # `playing` is reported back so the client does not have to
+                    # guess whether it should resume: a session that had finished
+                    # is no longer finished once bars arrive.
+                    result = await asyncio.to_thread(_extend_session, stored)
+                    await websocket.send_json({
+                        "type": "extended",
+                        "added": result["added"],
+                        "reason": result["reason"],
+                        "total_ticks": result["total_ticks"],
+                        "bar_counts": result["bar_counts"],
+                        "market_time": session.market_time.isoformat()
+                        if session.market_time else None,
+                        "data_time": session.last_source_time.isoformat()
+                        if session.last_source_time is not None else None,
+                        "is_done": session.is_done,
+                    })
                 elif action == "add_timeframes":
                     # Bringing a timeframe in mid-session. Only ADDING needs the
                     # backend: removal is a client-side render filter, so a pane

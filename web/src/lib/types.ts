@@ -391,10 +391,35 @@ export interface ReplayTimeframesMessage {
   backfill: Record<string, ReplayBackfill>
 }
 
+/** Reply to `extend` -- the result of polling the provider for bars that have
+ *  printed since the session loaded.
+ *
+ *  `added` counts SOURCE bars, which are always one-minute. `total_ticks` counts
+ *  BASE bars. On a 5m session ten new minutes are two new ticks, so the two
+ *  numbers legitimately disagree and neither is a progress figure for the other.
+ *
+ *  `reason` is null when the poll simply found nothing new, which is the normal
+ *  state between bar closes. It carries text only when there is something the
+ *  user could act on -- a still-forming bar, a past date, an unreachable
+ *  provider. */
+export interface ReplayExtendedMessage {
+  type: "extended"
+  added: number
+  reason: string | null
+  total_ticks: number
+  bar_counts: Record<string, number>
+  /** Where the REPLAY has reached. */
+  market_time: string | null
+  /** Where the DATA now reaches, which runs ahead of the replay. */
+  data_time: string | null
+  is_done: boolean
+}
+
 export type ReplayWsMessage =
   | ReplayFramesMessage
   | ReplayFrameMessage
   | ReplayTimeframesMessage
+  | ReplayExtendedMessage
   | { type: "reset" }
   | { type: "done" }
   | { type: "error"; message: string }
