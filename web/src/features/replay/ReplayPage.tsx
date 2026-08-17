@@ -15,6 +15,8 @@ import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
+import { DayCountStepper } from "@/components/DayCountStepper"
+import { steppedEndDate } from "@/lib/dayRange"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -1006,6 +1008,20 @@ export function ReplayPage() {
             <Label className="text-xs">End</Label>
             <Input type="date" value={endDate} title={lockTitle("data")} disabled={ready} onChange={(e) => setEndDate(e.target.value)} />
           </div>
+          {/* Between the dates and Timeframes, as asked. Writes the End
+              date rather than holding its own count, so the number shown
+              and the range actually requested cannot drift apart. */}
+          <DayCountStepper
+            startDate={startDate}
+            endDate={endDate}
+            onStep={(delta) =>
+              // Functional update: prev is the latest committed end, so
+              // several clicks in one tick each advance a day.
+              setEndDate((prev) => steppedEndDate(startDate, prev, delta))
+            }
+            disabled={ready}
+            disabledReason={lockTitle("data")}
+          />
         </div>
 
         {/* Coverage, stated before Load rather than after a failed one. The
