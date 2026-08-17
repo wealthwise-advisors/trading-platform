@@ -358,6 +358,162 @@ class MultiReplaySession:
 
         return {"added": added, "rejected": rejected, "backfill": backfill}
 
+    # ------------------------------------------------------------------
+    # Growing a session that has caught up to the live edge
+    # ------------------------------------------------------------------
+
+    def extend(self, new_df: pd.DataFrame, now=None) -> dict:
+        """
+        Append newly-printed source bars, so a session that ran out of data can
+        carry on instead of ending.
+
+        A session loads a snapshot of history and replays it. Reaching the end of
+        that snapshot is not the same as reaching the end of the market -- while
+        the replay was running, the market kept printing. Without this, the only
+        way to see those bars was to throw the session away and build a new one,
+        which restarts the clock and loses the tape.
+
+        WHY REBUILD THE PANES RATHER THAN APPEND TO THEM
+        -----------------------------------------------
+        Appending is wrong at the seam. Coarse panes are RESAMPLED from the
+        source, so the last bin of a snapshot is usually partial: 1m data ending
+        09:26 gives a 1h pane a bar labelled 09:00 holding 26 minutes of trade.
+        Adding 09:27 onwards has to reopen that bin and recompute its high, low,
+        close and volume -- an append cannot, and would leave a permanently
+        truncated bar in the middle of the series.
+
+        So the panes are rebuilt from the extended source and replayed forward to
+        the current clock, exactly as add_timeframes does for a pane that arrives
+        late. The strategies are deterministic, so a replayed engine lands in the
+        same state it was already in, and the client's existing frames stay true.
+
+        WHAT PROTECTS THE BARS ALREADY SENT
+        ----------------------------------
+        Two guards, because both failure modes are silent.
+
+        `now` drops trailing bars that have not finished forming. A provider
+        polled at 09:26:30 will happily return a bar stamped 09:26 containing 30
+        seconds of trade; emitting it as closed would show a bar whose high and
+        low are still moving, and the next poll would change numbers already on
+        screen. A bar stamped T is only complete once T + one source interval has
+        passed. Pass `now` for live polling; omit it when the caller already
+        knows every supplied bar is closed.
+
+        The rebuilt base pane's first `_clock_index` timestamps must match the
+        ones already issued. If a provider revises history -- a corrected or
+        backfilled bar earlier in the day -- the clock would silently point at a
+        different moment than the one the client is displaying. That is refused
+        rather than absorbed: the session is left exactly as it was and the
+        reason is reported, so the caller can start a fresh session instead of
+        trusting a tape whose past changed underneath it.
+
+        Returns {"added", "total_ticks", "bar_counts", "reason"}. `added` counts
+        new SOURCE bars; `reason` is None on success and a short explanation when
+        nothing was taken.
+        """
+        if new_df is None or len(new_df) == 0:
+            return self._extend_result(0, "the provider returned no bars")
+
+        src_delta = pd.Timedelta(minutes=TF_MINUTES[self.source_timeframe])
+
+        # keep="last": a provider revising a bar we already hold is taken at its
+        # word for the VALUE. Whether that revision is acceptable at all is the
+        # prefix guard's decision, below.
+        combined = pd.concat([self._source_df, new_df])
+        combined = combined[~combined.index.duplicated(keep="last")].sort_index()
+
+        withheld = 0
+        if now is not None:
+            complete = combined.index + src_delta <= pd.Timestamp(now)
+            withheld = int((~complete).sum())
+            if withheld:
+                combined = combined[complete]
+
+        if combined.empty:
+            return self._extend_result(0, "every bar supplied is still forming")
+
+        added = len(combined) - len(self._source_df)
+        if added <= 0 and combined.index.equals(self._source_df.index):
+            # A poll that finds nothing new is the normal case between bar
+            # closes, so that is not worth reporting. A poll that found something
+            # and had to hold it back IS worth reporting -- it distinguishes
+            # "waiting for this bar to close" from "the feed has gone quiet",
+            # which look identical from the outside.
+            return self._extend_result(
+                0,
+                f"the newest bar is still forming ({withheld} withheld)"
+                if withheld else None,
+            )
+
+        previous_source = self._source_df
+        previous_panes = self.panes
+        # Compared by VALUE, not just by timestamp. A revision can land inside a
+        # bar that has already been replayed without adding or removing a single
+        # stamp -- an off-grid trade at 09:40:30 falls into the existing 09:40
+        # bin and silently rewrites its high, low, close and volume. A
+        # stamp-only check waves that straight through, which is the one thing
+        # this guard exists to prevent.
+        already_issued = self._base.df.iloc[:self._clock_index]
+
+        self._source_df = combined
+        try:
+            rebuilt = {tf: self._build_pane(tf) for tf in self.panes}
+        except Exception:
+            self._source_df = previous_source
+            raise
+
+        if not rebuilt[self.base_timeframe].df.iloc[:self._clock_index].equals(already_issued):
+            self._source_df = previous_source
+            return self._extend_result(
+                0,
+                "the provider revised bars that have already been replayed, so the "
+                "clock no longer means what the tape shows -- start a new session "
+                "to pick up the corrected history",
+            )
+
+        # Committed. Replaying each fresh pane forward to the current clock puts
+        # it where it already was; the clock itself is untouched because the
+        # prefix was just proven identical.
+        self.panes = rebuilt
+        try:
+            for pane in self.panes.values():
+                self._catch_up(pane)
+        except Exception:
+            self.panes = previous_panes
+            self._source_df = previous_source
+            raise
+
+        return self._extend_result(max(added, 0), None)
+
+    def no_extension(self, reason: Optional[str]) -> dict:
+        """
+        What extend() would return had it declined to try, for a caller that can
+        rule the attempt out before fetching anything. Same shape either way, so
+        the client has one message format to handle rather than two.
+        """
+        return self._extend_result(0, reason)
+
+    def _extend_result(self, added: int, reason: Optional[str]) -> dict:
+        return {
+            "added": int(added),
+            "total_ticks": self.total_ticks,
+            "bar_counts": self.bar_counts(),
+            "reason": reason,
+        }
+
+    @property
+    def last_source_time(self) -> Optional[pd.Timestamp]:
+        """
+        Newest source bar held, which is where a refetch should resume from.
+
+        Not the same as `market_time`: this is the edge of the DATA, that is the
+        edge of the REPLAY, and the gap between them is the part still waiting to
+        be played.
+        """
+        if self._source_df.empty:
+            return None
+        return self._source_df.index[-1]
+
     def backfill_of(self, tf: str, frame=None, max_bars: int = 500) -> dict:
         """
         The history a just-added pane needs to render as if it had always been

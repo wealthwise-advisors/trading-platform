@@ -39,6 +39,10 @@ import { Loader, LoadingBlock } from "@/components/ui/loader"
 import { TickProgress } from "@/components/ui/tick-progress"
 import { TimeField } from "@/components/ui/time-field"
 import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
+import {
+  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, followLabel, shouldPoll,
+  shouldResumeAfterExtend, type FollowState,
+} from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
 
 type Status = "idle" | "loading" | "ready" | "playing" | "paused" | "done"
@@ -375,6 +379,18 @@ export function ReplayPage() {
 
   const wsRef = useRef<WebSocket | null>(null)
 
+  // Following the live market. `follow` is what the UI reads; followRef is what
+  // the poll timer reads, because the interval closes over its first value and
+  // would otherwise keep polling after the toggle was switched off.
+  const [follow, setFollow] = useState<FollowState>(IDLE_FOLLOW)
+  const followRef = useRef(follow)
+  followRef.current = follow
+
+  // The socket's onmessage handler closes over the status from the render that
+  // created it, so it cannot read `status` directly.
+  const statusRef = useRef<Status>("idle")
+  statusRef.current = status
+
   useEffect(() => () => wsRef.current?.close(), [])
 
   const currentStrategy = strategies?.find((s) => s.id === strategyId)
@@ -517,6 +533,20 @@ export function ReplayPage() {
               `(${bars.join(", ")} bars of history).`,
             )
           }
+        } else if (msg.type === "extended") {
+          setFollow((f) => applyExtendReply(f, msg))
+          setTotalTicks(msg.total_ticks)
+          // `done` means the replay had consumed everything it had, i.e. it was
+          // parked at the live edge waiting for data. Read from the ref rather
+          // than `done`, because this handler closes over the status from the
+          // render that opened the socket.
+          if (shouldResumeAfterExtend(msg, statusRef.current === "done")) {
+            // Parked at the edge and bars have arrived, so carry the tape forward
+            // without the user pressing anything. A DELIBERATE pause is left
+            // alone -- see shouldResumeAfterExtend.
+            send("play")
+            setStatus("playing")
+          }
         } else if (msg.type === "reset") {
           resetAccumulators(); setStatus("ready")
         } else if (msg.type === "done") {
@@ -541,6 +571,41 @@ export function ReplayPage() {
   const play = () => { send("play"); setStatus("playing") }
   const pause = () => { send("pause"); setStatus("paused") }
   const reset = () => { send("reset") }
+
+  /**
+   * Ask the server for bars that have printed since the session loaded.
+   *
+   * Guarded by shouldPoll so a slow provider cannot have several requests in
+   * flight at once -- each one costs a refetch and a full resample, and one late
+   * reply would otherwise arrive as a burst.
+   */
+  const pollLive = () => {
+    if (!shouldPoll(followRef.current, wsRef.current?.readyState === WebSocket.OPEN)) return
+    setFollow((f) => ({ ...f, waiting: true }))
+    send("extend")
+  }
+
+  /**
+   * The minute timer, alive only while following.
+   *
+   * Polls once immediately on switch-on rather than waiting a full minute for
+   * the first answer -- the user has just asked whether anything is new, and a
+   * silent minute reads as a control that did nothing.
+   */
+  useEffect(() => {
+    if (!follow.enabled) return
+    pollLive()
+    const id = window.setInterval(pollLive, FOLLOW_POLL_MS)
+    return () => window.clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [follow.enabled])
+
+  const toggleFollow = (on: boolean) =>
+    setFollow((f) => on
+      ? { ...f, enabled: true }
+      // Clear the last result too: a stale "3 new bars" line under an unticked
+      // box reads as though it were still happening.
+      : { ...IDLE_FOLLOW })
 
   /**
    * Release the session and hand the form back.
@@ -1252,6 +1317,25 @@ export function ReplayPage() {
             ↺ Reset
           </Button>
           {ready && (
+            <label
+              className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm cursor-pointer select-none"
+              title={
+                "Check every minute for bars that have printed since this session "
+                + "loaded, and play them automatically. A session only ever holds a "
+                + "snapshot of history, so without this the tape stops at the last "
+                + "bar that existed when you pressed Load Data."
+              }
+            >
+              <input
+                type="checkbox"
+                className="accent-primary"
+                checked={follow.enabled}
+                onChange={(e) => toggleFollow(e.target.checked)}
+              />
+              ⟳ Follow live
+            </label>
+          )}
+          {ready && (
             /* Styled apart from Pause/Reset on purpose. It sat fifth in this row
                with the identical secondary background, so it read as one more
                transport control rather than the way out of a locked form. */
@@ -1279,6 +1363,23 @@ export function ReplayPage() {
             </span>
           )}
         </div>
+        {ready && follow.enabled && (
+          /* Directly under the checkbox it belongs to. It first went in the
+             timeframes block, which put the answer half a screen away from the
+             control that asked the question.
+
+             Always rendered while following, never only on failure: a feature
+             whose entire value is "the number on screen is current" has to keep
+             saying so, because an outage that displays nothing looks exactly
+             like a quiet market. */
+          <p
+            className={`mt-2 text-xs ${follow.lastReason ? "text-amber-500" : "text-muted-foreground"}`}
+            role="status"
+            aria-live="polite"
+          >
+            {followLabel(follow)}
+          </p>
+        )}
         {ready && totalTicks > 0 && (
           <div className="mt-3">
             <TickProgress
