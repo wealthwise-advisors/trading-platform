@@ -237,11 +237,19 @@ class TestGrowthThroughTheSocket:
     situation: the reported case had data ending 09:26.
     """
 
-    def _session_at(self, monkeypatch, minutes: int) -> tuple[str, object]:
-        """A drained session holding `minutes` bars, ready to be extended."""
+    def _session_at(self, monkeypatch, minutes: int,
+                    base: str = "5m") -> tuple[str, object]:
+        """
+        A drained session holding `minutes` bars, ready to be extended.
+
+        `base` is explicit because trimming is base-aware: a 1m base cuts at the
+        minute, a 5m base cuts back to the last whole five minutes. Tests about
+        the one-minute rule pass "1m" so the base cut does not also apply.
+        """
         monkeypatch.setattr(replay_router, "_load_bars",
                             lambda *a, **k: _morning(minutes))
-        replay_id = _create(data_source="external_csv",
+        replay_id = _create(data_source="external_csv", timeframe=base,
+                            timeframes=[base],
                             start_date=_DAY.isoformat(), end_date=_DAY.isoformat())
         stored = replay_store.get(replay_id)
         # end_date in the future, so the past-session guard does not fire. The
@@ -297,7 +305,9 @@ class TestGrowthThroughTheSocket:
         assert session.market_time == end_of_snapshot + timedelta(minutes=10)
 
     def test_the_still_forming_bar_is_withheld_end_to_end(self, monkeypatch):
-        replay_id, stored = self._session_at(monkeypatch, 60)
+        # 1m base: this is about the SOURCE cut. The base cut has its own
+        # coverage in tests/test_follow_live_matrix.py.
+        replay_id, stored = self._session_at(monkeypatch, 60, base="1m")
         grown = _morning(62)
         monkeypatch.setattr(replay_router, "_load_bars", lambda *a, **k: grown)
         # Polled 30 seconds into the last new bar: only the first of the two has
@@ -312,7 +322,7 @@ class TestGrowthThroughTheSocket:
         assert reply["data_time"] == grown.index[-2].isoformat()
 
     def test_polling_again_picks_up_the_withheld_bar(self, monkeypatch):
-        replay_id, stored = self._session_at(monkeypatch, 60)
+        replay_id, stored = self._session_at(monkeypatch, 60, base="1m")
         grown = _morning(62)
         monkeypatch.setattr(replay_router, "_load_bars", lambda *a, **k: grown)
 
@@ -361,7 +371,8 @@ class TestTheSessionNeverLoadsAFormingBar:
             lambda: datetime.combine(_DAY, datetime.min.time())
             .replace(hour=10, minute=30, second=20))
 
-        replay_id = _create(data_source="external_csv",
+        replay_id = _create(data_source="external_csv", timeframe="1m",
+                            timeframes=["1m"],
                             start_date=_DAY.isoformat(), end_date=_DAY.isoformat())
         session = replay_store.get(replay_id).session
         assert len(session._source_df) == 60
@@ -374,7 +385,8 @@ class TestTheSessionNeverLoadsAFormingBar:
             replay_router, "_market_now",
             lambda: datetime.combine(_DAY, datetime.min.time())
             .replace(hour=10, minute=31, second=1))
-        replay_id = _create(data_source="external_csv",
+        replay_id = _create(data_source="external_csv", timeframe="1m",
+                            timeframes=["1m"],
                             start_date=_DAY.isoformat(), end_date=_DAY.isoformat())
         assert len(replay_store.get(replay_id).session._source_df) == 61
 
@@ -388,7 +400,8 @@ class TestTheSessionNeverLoadsAFormingBar:
         monkeypatch.setattr(replay_router, "_load_bars", lambda *a, **k: _morning(61))
         monkeypatch.setattr(replay_router, "_market_now", lambda: at_creation)
 
-        replay_id = _create(data_source="external_csv",
+        replay_id = _create(data_source="external_csv", timeframe="1m",
+                            timeframes=["1m"],
                             start_date=_DAY.isoformat(), end_date=_DAY.isoformat())
         stored = replay_store.get(replay_id)
         stored.request.end_date = at_creation.date() + timedelta(days=1)

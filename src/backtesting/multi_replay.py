@@ -99,7 +99,71 @@ from src.data.resample import (  # noqa: E402,F401
 )
 
 __all__ = ["TF_MINUTES", "TF_ALIAS", "session_origin", "resample_ohlcv",
-           "MultiReplaySession", "TimeframePane"]
+           "trim_to_closed_bars", "MultiReplaySession", "TimeframePane"]
+
+
+def trim_to_closed_bars(df: pd.DataFrame, source_timeframe: str,
+                        base_timeframe: str, symbol: str, now) -> pd.DataFrame:
+    """
+    Drop trailing bars that would put an UNFINISHED bar on the tape.
+
+    Two cuts, because there are two ways a bar can be unfinished and only the
+    first is obvious.
+
+    A SOURCE bar stamped T is complete once T + one source interval has passed.
+    A provider polled at 12:16:30 returns a bar stamped 12:16 holding 30 seconds
+    of trade; replaying it shows a bar whose high and low are still moving.
+
+    A BASE bar can be unfinished even when every source bar inside it is closed.
+    This is the one that bites. The clock ticks once per base bar, so the base
+    pane's bars are all emitted -- including a trailing bin that is only
+    partially covered. With 1m source and a 5m base, source trimmed to 12:15
+    leaves the 5m bin starting 12:15 holding a single minute, and the clock emits
+    it as a closed 5-minute bar. When 12:16 onwards arrive that bin fills out and
+    its high, low, close and volume all change, so the next refetch is refused as
+    revised history and following the market jams permanently.
+
+    Reported from a real 5m session. It did not show up in testing because a 1m
+    base makes source and base the same resolution, which hides the second cut
+    entirely -- 67 of the 107 cases in tests/test_follow_live_matrix.py fail
+    without it, and every one of those is a base coarser than the source.
+
+    Coarser PANES need no such care: a 1h bin is only emitted once the CLOCK
+    passes its close, and the clock cannot outrun the base bar, so a partial 1h
+    bin is never sent. The base timeframe is the exact place the rule is needed.
+
+    Binning uses resample_ohlcv with the same bar_anchor the panes use, rather
+    than arithmetic on the timestamps. The anchor is 01:00 for futures, not
+    midnight and not the session open, so 25m/35m/40m/45m bins land at offsets
+    that cannot be derived by dividing the clock time -- and a second
+    implementation of the tiling is how panes end up disagreeing about where a
+    bar starts.
+    """
+    if df is None or df.empty or now is None:
+        return df
+
+    now = pd.Timestamp(now)
+    src_delta = pd.Timedelta(minutes=TF_MINUTES[source_timeframe])
+    df = df[df.index + src_delta <= now]
+    if df.empty or base_timeframe == source_timeframe:
+        return df
+
+    base_delta = pd.Timedelta(minutes=TF_MINUTES[base_timeframe])
+    anchor = bar_anchor(symbol)
+    # Bounded rather than `while True`: dropping the final bin exposes a bin that
+    # ends where the dropped one began, which has necessarily passed, so one pass
+    # suffices. The loop is belt-and-braces against an anchor that tiles unevenly.
+    for _ in range(4):
+        bins = resample_ohlcv(df, base_timeframe, anchor)
+        if bins.empty:
+            return df
+        last = bins.index[-1]
+        if last + base_delta <= now:
+            return df
+        df = df[df.index < last]
+        if df.empty:
+            return df
+    return df
 
 
 @dataclass
@@ -414,8 +478,6 @@ class MultiReplaySession:
         if new_df is None or len(new_df) == 0:
             return self._extend_result(0, "the provider returned no bars")
 
-        src_delta = pd.Timedelta(minutes=TF_MINUTES[self.source_timeframe])
-
         # keep="last": a provider revising a bar we already hold is taken at its
         # word for the VALUE. Whether that revision is acceptable at all is the
         # prefix guard's decision, below.
@@ -424,10 +486,16 @@ class MultiReplaySession:
 
         withheld = 0
         if now is not None:
-            complete = combined.index + src_delta <= pd.Timestamp(now)
-            withheld = int((~complete).sum())
-            if withheld:
-                combined = combined[complete]
+            # Same rule as session creation, and it has to be: trimming only
+            # source bars here would leave a partial BASE bin, which the clock
+            # emits as a closed bar and the next poll then sees revised. See
+            # trim_to_closed_bars.
+            before = len(combined)
+            combined = trim_to_closed_bars(
+                combined, self.source_timeframe, self.base_timeframe,
+                self.symbol, now,
+            )
+            withheld = before - len(combined)
 
         if combined.empty:
             return self._extend_result(0, "every bar supplied is still forming")
