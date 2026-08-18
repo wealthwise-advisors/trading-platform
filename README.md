@@ -248,7 +248,7 @@ dashboard drew.
 ## 📡 Live Replay
 
 <div align="center">
-<img src="docs/assets/live-tape.svg" alt="Candles arriving on their own as the market prints them, with the status line reporting what is happening" width="100%">
+<img src="docs/assets/live-tape.svg" alt="Candles arriving on their own as the market prints them, with VWAP and its two-sigma bands, the forming bar withheld, and the polling loop that decides when the tape advances" width="100%">
 </div>
 
 <br>
