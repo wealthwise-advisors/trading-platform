@@ -93,6 +93,27 @@ STAGES = [
 ]
 
 
+# ── the activation envelope ───────────────────────────────────────────────
+# Every layer of a node brightens off THIS, so they cannot disagree about when
+# the stage fires. They used to: the halo carried keyTimes putting its peak at
+# 0.16 of the cycle while the inner ring carried none, so its values peaked at
+# the middle -- 1.27s later. The node lit twice per cycle, in two places, and the
+# result read as ambient shimmer rather than a stage activating.
+#
+# Fast attack, slower decay, then dark for the rest of the cycle: that is what a
+# thing switching on looks like, as opposed to a thing breathing.
+PULSE_KEYTIMES = "0;0.10;0.38;1"
+PULSE_SPLINES = "0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"
+
+
+def pulse(attr: str, lo: float, hi: float, begin: float) -> str:
+    """One <animate> for one attribute, on the shared activation envelope."""
+    return (f'<animate attributeName="{attr}" '
+            f'values="{lo};{hi};{lo};{lo}" dur="{CYCLE:.2f}s" '
+            f'begin="{begin:.2f}s" repeatCount="indefinite" calcMode="spline" '
+            f'keyTimes="{PULSE_KEYTIMES}" keySplines="{PULSE_SPLINES}"/>')
+
+
 def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -312,12 +333,11 @@ def build() -> str:
         a("  <g>")
 
         # 1. atmosphere
+        # Trough at .30 rather than .50: the pulse was 1.78x peak-to-trough,
+        # measured, which is not enough to read as an event. It is 3.3x now.
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_GLOW}" fill="url(#halo{i})" '
-          f'opacity=".5">')
-        a(f'      <animate attributeName="opacity" values=".5;1;.5" '
-          f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
-          f'calcMode="spline" keyTimes="0;0.16;1" '
-          f'keySplines="0.3 0 0.2 1;0.4 0 0.3 1"/>')
+          f'opacity=".30">')
+        a("      " + pulse("opacity", 0.30, 1.0, begin))
         a("    </circle>")
 
         # 2. technical ticks on the rim -- top and bottom arcs only.
@@ -358,22 +378,29 @@ def build() -> str:
             a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{rad}" fill="none" '
               f'stroke="{accent}" stroke-width="{sw}" stroke-linecap="round" '
               f'stroke-dasharray="{circ * frac:.1f} {circ:.1f}" '
+              f'stroke-opacity=".62" '
               f'transform="rotate({-90 + i * 47} {cx:.1f} {CY})">')
             a(f'      <animateTransform attributeName="transform" type="rotate" '
               f'from="{frm} {cx:.1f} {CY}" to="{to} {cx:.1f} {CY}" dur="{dur}s" '
               f'begin="{-i * 1.1:.1f}s" repeatCount="indefinite"/>')
+            a("      " + pulse("stroke-opacity", 0.62, 1.0, begin))
             a("    </circle>")
 
         # 5. illuminated inner ring, brightening as the pulse lands
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
-          f'stroke="{accent}" stroke-width="1.7" stroke-opacity=".52">')
-        a(f'      <animate attributeName="stroke-opacity" values=".45;1;.45" '
-          f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite"/>')
+          f'stroke="{accent}" stroke-width="1.7" stroke-opacity=".34">')
+        a("      " + pulse("stroke-opacity", 0.34, 1.0, begin))
         a("    </circle>")
 
-        # 6. the seat
+        # 6. the seat, plus a wash over it that lifts on activation. Without
+        #    this the icon stayed at one brightness while everything around it
+        #    moved, which is what made the node look like a decal.
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="#070e1a"/>')
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="url(#disc{i})"/>')
+        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="{accent}" '
+          f'fill-opacity="0">')
+        a("      " + pulse("fill-opacity", 0.0, 0.24, begin))
+        a("    </circle>")
 
         # 7. a ring that expands out of the node on activation
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
@@ -384,9 +411,10 @@ def build() -> str:
         a("    </circle>")
         a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
           f'stroke="{accent}" stroke-width="1.6" opacity="0">')
-        a(f'      <animate attributeName="opacity" values="0;.75;0" '
+        a(f'      <animate attributeName="opacity" values="0;.9;0;0" '
           f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
-          f'keyTimes="0;0.06;0.30"/>')
+          f'calcMode="spline" keyTimes="{PULSE_KEYTIMES}" '
+          f'keySplines="{PULSE_SPLINES}"/>')
         a("    </circle>")
 
         # 8. the icon
