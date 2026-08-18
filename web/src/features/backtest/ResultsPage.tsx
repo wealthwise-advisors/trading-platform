@@ -17,7 +17,6 @@ import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
-import { PipelineFlow } from "@/components/PipelineFlow"
 import { LoadingBlock } from "@/components/ui/loader"
 
 export function ResultsPage() {
@@ -78,23 +77,9 @@ export function ResultsPage() {
     enabled: !!backtestId,
   })
   if (!backtestId) {
-    // Before a run there are no results to show, so the pane shows the machine
-    // instead: the six stages a backtest goes through. It replaced a single
-    // sentence adrift in an empty screen.
-    // The results pane is a flex column inside an overflow-hidden h-screen
-    // shell. Centring the pipeline directly in it let flex compress it -- at
-    // 640px wide it was squashed from 508px of content into 66px and pushed
-    // below the fold with no way to scroll to it. The scroll container plus
-    // min-h-full centres it when there is room and scrolls when there is not,
-    // and the top stays reachable either way.
     return (
-      <div className="h-full overflow-y-auto p-8">
-        <div className="flex min-h-full flex-col items-center justify-center gap-6">
-          <PipelineFlow />
-          <p className="text-center text-sm text-muted-foreground">
-            Configure your backtest in the sidebar and click <b>▶ Run Backtest</b>.
-          </p>
-        </div>
+      <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+        <p>Configure your backtest in the sidebar and click <b>▶ Run Backtest</b>.</p>
       </div>
     )
   }
