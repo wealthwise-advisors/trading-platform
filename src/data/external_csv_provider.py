@@ -41,7 +41,7 @@ _OHLCV_AGG = {"open": "first", "high": "max", "low": "min", "close": "last", "vo
 
 # Maps timeframe string → pandas offset alias
 _TF_ALIAS = {
-    "1m": "1min", "3m": "3min", "5m": "5min", "8m": "8min",
+    "1m": "1min", "2m": "2min", "3m": "3min", "5m": "5min", "8m": "8min",
     "10m": "10min", "15m": "15min", "20m": "20min", "25m": "25min",
     "30m": "30min", "35m": "35min", "40m": "40min", "45m": "45min",
     "1h": "1h", "2h": "2h", "4h": "4h", "1d": "1D",

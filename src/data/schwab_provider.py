@@ -33,7 +33,7 @@ import requests
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
-from .resample import bar_anchor, resample_ohlcv
+from .resample import TF_MINUTES as _TF_MINUTES, bar_anchor, resample_ohlcv
 from ..config import resolve_config_dir
 
 
@@ -78,8 +78,10 @@ _TF_MAP: dict[str, tuple[str, int]] = {
 #: that DIVIDES it and aggregated here. Resampling from a non-divisor would put
 #: the wrong amount of market time in a bar -- a 45m bar built from 30m data
 #: would hold 30 or 60 minutes -- so the divisor requirement is not optional.
-_TF_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
-               "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60}
+# _TF_MINUTES is imported from resample rather than redeclared. It used to be a
+# third copy of the same table, so adding a timeframe to the aggregator left this
+# provider rejecting it -- which is how "2m" reached the selector while
+# build_timeframe still raised "Unsupported timeframe '2m'".
 _NATIVE_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "30m": 30}
 
 

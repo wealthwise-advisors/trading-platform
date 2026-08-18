@@ -81,10 +81,10 @@ const TZ_CHOICES = [
 ] as const
 
 const ALL_TIMEFRAMES = [
-  "1m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "40m", "45m", "1h",
+  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h",
 ] as const
 const TF_MINUTES: Record<string, number> = {
-  "1m": 1, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
+  "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
   "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60,
 }
 

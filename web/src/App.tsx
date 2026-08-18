@@ -20,6 +20,10 @@ const REPORT_FORMATS = [
 
 function App() {
   const page = useConfigStore((s) => s.page)
+  // Display-only: whether the config panel is showing. Hiding it changes nothing
+  // about the configuration or the request -- the same store backs the form
+  // either way, so reopening restores exactly what was there.
+  const [configOpen, setConfigOpen] = useState(true)
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
   const [reportFormat, setReportFormat] = useState("html")
@@ -38,18 +42,43 @@ function App() {
     // resolve to "fill remaining viewport space" instead of an arbitrary
     // fixed pixel guess.
     <div className="h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden">
-      {page === "backtest" && (
-        <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
+      {page === "backtest" && configOpen && (
+        <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
                style={{ background: "linear-gradient(180deg, #0b1325 0%, #060b18 100%)" }}>
-          <ConfigForm />
+          <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
       <main className="flex-1 min-w-0 h-screen flex flex-col overflow-hidden">
         <header className="p-3 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">📈 AutoTrader</h1>
+          {/* The brand artwork rather than the name in text. The monogram and the
+              wordmark are separate crops of the same poster: dropping the whole
+              1536x1024 image into a 56px header would render the lettering about
+              four pixels tall. The h1 is kept for the document outline, with the
+              wordmark carrying its alt text. */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/brand/mark.png"
+              alt=""
+              aria-hidden
+              className="h-9 w-9 shrink-0 rounded-lg object-cover
+                         ring-1 ring-sky-400/20 shadow-lg shadow-sky-900/30"
+            />
+            <h1 className="min-w-0">
+              <img
+                src="/brand/wordmark.png"
+                alt="AutoTrader"
+                className="h-6 sm:h-7 w-auto object-contain"
+              />
+            </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* The way back, so collapsing the panel is never a one-way door. */}
+            {page === "backtest" && !configOpen && (
+              <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
+                      title="Show the config panel">
+                Config
+              </Button>
+            )}
             <Button size="sm" variant={page === "backtest" ? "default" : "secondary"} onClick={() => setPage("backtest")}>
               📊 Backtest
             </Button>

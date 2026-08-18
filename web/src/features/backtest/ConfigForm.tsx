@@ -21,6 +21,7 @@ import { Section, Panel, Choice, FieldRow, SliderField } from "./ConfigParts"
 import {
   Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock, Target,
   TrendingUp, Waves, ArrowUpRight, GitCompareArrows, Wallet, Layers, Percent, Play,
+  ChevronsLeft,
 } from "lucide-react"
 
 /** Icon and one-line description per data source, keyed on the API's id. */
@@ -40,7 +41,9 @@ const STRATEGY_ICON: Record<string, typeof Target> = {
   regime_adaptive:    Settings2,
 }
 
-export function ConfigForm() {
+/** `onCollapse` is display-only: it hides the panel, and changes nothing about
+ *  the configuration or the request. Omitted, the chevron is not rendered. */
+export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
   const cfg = useConfigStore()
   const queryClient = useQueryClient()
 
@@ -127,11 +130,24 @@ export function ConfigForm() {
                          border border-violet-400/25 bg-violet-500/10">
           <Settings2 className="h-5 w-5 text-violet-300" aria-hidden />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold leading-tight">Backtest Config</h2>
           <p className="text-xs text-muted-foreground">Configure your backtest parameters</p>
         </div>
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            title="Hide the config panel"
+            aria-label="Hide the config panel"
+            className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors
+                       hover:bg-white/[0.06] hover:text-foreground"
+          >
+            <ChevronsLeft className="h-5 w-5" aria-hidden />
+          </button>
+        )}
       </header>
+      <div className="h-px bg-white/8" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
       <Section icon="source" label="Data Source" accent="blue">
@@ -165,10 +181,7 @@ export function ConfigForm() {
               <SelectItem key={s.symbol} value={s.symbol}>
                 <span className="flex items-center gap-2.5">
                   <SymbolMark symbol={s.symbol} />
-                  <span className="font-semibold">{s.symbol}</span>
-                  {s.name && s.name !== s.symbol && (
-                    <span className="text-muted-foreground">{s.name}</span>
-                  )}
+                  <span>{s.name && s.name !== s.symbol ? s.name : s.symbol}</span>
                 </span>
               </SelectItem>
             ))}
@@ -184,7 +197,7 @@ export function ConfigForm() {
             {/* Same eleven the Live Replay grid offers. This was five, so a backtest
                 could not use the intervals a replay could -- and asking for one
                 that the provider had no alias for surfaced as a 500. */}
-            {["1m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "40m", "45m", "1h"]
+            {["1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h"]
               .map((tf) => (
                 <SelectItem key={tf} value={tf}>
                   <span className="flex items-center gap-2">
@@ -377,9 +390,9 @@ export function ConfigForm() {
 
       {/* ── run ──────────────────────────────────────────────────────────── */}
       <Button
-        className="w-full bg-gradient-to-r from-violet-600 to-sky-500
-                   hover:from-violet-500 hover:to-sky-400
-                   text-white font-semibold shadow-lg shadow-violet-900/30"
+        className="w-full h-12 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8]
+                   text-white text-base font-semibold
+                   shadow-lg shadow-blue-900/40 transition-colors"
         size="lg"
         disabled={runMutation.isPending || !rangeIsValid}
         onClick={() => runMutation.mutate()}
