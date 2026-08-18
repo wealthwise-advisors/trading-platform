@@ -678,3 +678,259 @@ input:focus-visible {
 .setup-locked [data-disabled] {
   pointer-events: none;
 }
+
+/* ─── Six-stage pipeline (components/PipelineFlow.tsx) ──────────────────────
+ *
+ * Everything animated here is transform or opacity only, so it composites on
+ * the GPU and cannot compete with the chart for the main thread. The travelling
+ * dot reuses the tickbar-shimmer idiom above: a full-width element carrying one
+ * narrow bright band, translated across. That needs no knowledge of the track's
+ * pixel width, which is what makes it survive a resize.
+ */
+
+.pipeline {
+  position: relative;
+  /* Never let a flex parent compress it. Without this the whole thing collapsed
+     to the height of its own padding inside the results column. */
+  flex: none;
+  width: 100%;
+  max-width: 74rem;
+  padding: 2.25rem 1.5rem 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 1.25rem;
+  /* A technical grid, and a wash that lifts the middle off the page. */
+  background-image:
+    radial-gradient(120% 90% at 50% 0%, rgba(56, 189, 248, 0.07), transparent 60%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 100% 100%, 34px 34px, 34px 34px;
+  overflow: hidden;
+}
+
+/* ── the connector ── */
+
+.pipeline-track {
+  position: absolute;
+  /* Matches the ring centre: top padding + index row + stem + half the ring. */
+  top: calc(2.25rem + 1.15rem + 0.75rem + 2.25rem);
+  /* Six equal columns put the first node's centre at 1/12 of the width and the
+     last at 11/12, so the track spans exactly centre to centre -- no measuring,
+     and it stays correct at any width. */
+  left: 8.3333%;
+  right: 8.3333%;
+  display: flex;
+  height: 2px;
+  pointer-events: none;
+}
+
+/* One gap between two nodes. The 2.25rem inset is the node radius, so the link
+   begins and ends on the circles' edges rather than under them. */
+.pipeline-link {
+  position: relative;
+  flex: 1 1 0;
+  margin-inline: 2.25rem;
+  min-width: 0;
+}
+
+.pipeline-rail {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--from) 55%, transparent),
+    color-mix(in srgb, var(--to) 55%, transparent));
+}
+
+/* The bright pip where a link meets a ring. */
+.pipeline-rail::before,
+.pipeline-rail::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.pipeline-rail::before {
+  left: -2px;
+  background: var(--from);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--from) 80%, transparent);
+}
+
+.pipeline-rail::after {
+  right: -2px;
+  background: var(--to);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--to) 80%, transparent);
+}
+
+.pipeline-comet {
+  position: absolute;
+  inset: -1px 0;
+  /* One narrow band at dead centre. Translating -50% to +50% therefore sweeps
+     it from the left end of the link to the right end, with no need to know the
+     link's pixel width -- which is what makes it survive a resize. */
+  background: linear-gradient(90deg,
+    transparent 44%,
+    rgba(186, 230, 253, 0.95) 48.6%,
+    rgba(224, 242, 254, 1) 50%,
+    rgba(186, 230, 253, 0.95) 51.4%,
+    transparent 56%);
+  filter: drop-shadow(0 0 5px rgba(125, 211, 252, 0.95));
+  animation: pipeline-comet 2.6s linear infinite;
+  /* Staggered per link: the dot leaves 01 first, then 02, so the run reads as
+     one wave moving down the pipeline. */
+  animation-delay: calc(var(--k) * 0.5s);
+}
+
+@keyframes pipeline-comet {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(50%); }
+}
+
+/* ── the stages ── */
+
+.pipeline-stages {
+  position: relative;
+  display: grid;
+  /* Two across on a phone, three on a tablet, all six where there is room. The
+     connector only appears at the six-across size, below which a straight
+     horizontal line would join nothing. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pipeline-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.pipeline-index {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  line-height: 1.15rem;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* The tick joining the number to its ring. */
+.pipeline-stem {
+  width: 1px;
+  height: 0.75rem;
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+}
+
+.pipeline-node {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  color: var(--accent);
+  /* Sequential: each stage lights half a second after the one before it, so the
+     pulse reads as a run travelling 01 to 06 rather than six things blinking. */
+  animation: pipeline-pulse 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.5s);
+}
+
+.pipeline-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.pipeline-arc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pipeline-arc-spin 7s linear infinite;
+  animation-delay: calc(var(--i) * -0.9s);
+}
+
+.pipeline-icon {
+  position: relative;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+@keyframes pipeline-pulse {
+  0%, 62%, 100% {
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 35%, transparent));
+    transform: scale(1);
+  }
+  18% {
+    filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 85%, transparent));
+    transform: scale(1.045);
+  }
+}
+
+@keyframes pipeline-arc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── labels ── */
+
+.pipeline-title {
+  margin: 0.85rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--foreground);
+}
+
+.pipeline-desc {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  max-width: 11rem;
+}
+
+.pipeline-badge {
+  margin-top: 0.65rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .pipeline-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .pipeline-stages { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* Below six-across the nodes wrap, so the straight rail would cut through
+   text rather than join anything. */
+@media (max-width: 1023.98px) {
+  .pipeline-track { display: none; }
+}
+
+/* Same bargain as the loading ring and the tick bar: keep every colour, every
+   ring and every glow, drop the motion. Nothing here carries information that
+   only the animation conveys, so nothing is lost. */
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-comet { animation: none; opacity: 0; }
+  .pipeline-node { animation: none; }
+  .pipeline-arc { animation: none; }
+}
