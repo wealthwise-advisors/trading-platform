@@ -24,3 +24,6 @@ benchmark/exports
 benchmark/*.db
 validation/charts
 validation/*.db
+
+# Archived repositories -- reference only, never part of an image.
+legacy

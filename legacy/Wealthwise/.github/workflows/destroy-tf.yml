@@ -1,0 +1,50 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:  # This allows you to manually trigger the workflow from the GitHub Actions UI
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest  # The GitHub runner machine
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Step 2: Set up Terraform
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: '1.5.0'  # Specify the Terraform version you want to use
+
+    # Step 3: Set up AWS credentials
+    - name: Set up AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # Step 4: Initialize Terraform
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./terraform  # Path to your Terraform configuration
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    # Step 5: Terraform Destroy (Manually Triggered)
+    - name: Terraform Destroy (Manually Triggered)
+      run: terraform destroy -auto-approve
+      working-directory: ./terraform  # Path to your Terraform configuration
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    # Optional: Output the Terraform state (e.g., EC2 instance details) after destruction
+    - name: Terraform Outputs
+      run: terraform output -json
+      working-directory: ./terraform
