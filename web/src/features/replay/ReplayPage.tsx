@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
-import { SymbolMark } from "@/components/SymbolMark"
+import { SymbolRow } from "@/components/SymbolMark"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
@@ -1100,13 +1100,7 @@ export function ReplayPage() {
               <SelectContent>
                 {(symbols ?? [{ symbol: "ES", name: "E-mini S&P 500", has_spec: true }]).map((s) => (
                   <SelectItem key={s.symbol} value={s.symbol}>
-                    <span className="flex items-center gap-2">
-                      <SymbolMark symbol={s.symbol} />
-                      <span className="font-medium">{s.symbol}</span>
-                      {s.name && s.name !== s.symbol && (
-                        <span className="text-muted-foreground">{s.name}</span>
-                      )}
-                    </span>
+                    <SymbolRow symbol={s.symbol} name={s.name} />
                   </SelectItem>
                 ))}
               </SelectContent>

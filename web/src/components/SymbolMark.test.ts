@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { assetClassOf } from "./SymbolMark"
+import { assetClassOf, markStyle } from "./SymbolMark"
 
 /**
  * The mark's colour comes from the asset class, so a misclassification is not a
@@ -61,5 +61,58 @@ describe("asset classification", () => {
     // classify every micro as its parent.
     expect(assetClassOf("MES")).not.toBe(assetClassOf("ES"))
     expect(assetClassOf("MNQ")).not.toBe(assetClassOf("NQ"))
+  })
+})
+
+/**
+ * The mark exists to tell one row from another. A colour shared between two
+ * contracts is therefore not a cosmetic slip, it is the feature not working --
+ * and it is invisible to a render test, which is how the first version shipped
+ * with ES, NQ, YM and RTY all drawing the same violet disc.
+ */
+describe("disc colours", () => {
+  /** Every contract the settings file actually offers. */
+  const OFFERED = [
+    "ES", "NQ", "MES", "MNQ", "YM", "RTY", "CL", "NG", "GC", "SI", "HG",
+  ] as const
+
+  it("gives every offered contract its own disc colour", () => {
+    const seen = new Map<string, string>()
+    for (const s of OFFERED) {
+      const { disc } = markStyle(s)
+      expect(seen.has(disc), `${s} and ${seen.get(disc)} share ${disc}`).toBe(false)
+      seen.set(disc, s)
+    }
+    expect(seen.size).toBe(OFFERED.length)
+  })
+
+  it("keeps a micro distinct from its full-size parent", () => {
+    expect(markStyle("MES").disc).not.toBe(markStyle("ES").disc)
+    expect(markStyle("MNQ").disc).not.toBe(markStyle("NQ").disc)
+  })
+
+  it("darkens the ink on the discs a white glyph would vanish into", () => {
+    // Gold and silver are pale; white-on-pale is the one combination that
+    // renders as an empty circle.
+    for (const s of ["GC", "SI"]) expect(markStyle(s).ink).not.toBe("#ffffff")
+    for (const s of ["ES", "CL", "HG"]) expect(markStyle(s).ink).toBe("#ffffff")
+  })
+
+  it("gives an unknown ticker a colour rather than undefined", () => {
+    // A contract added to settings.yaml before anyone teaches this file about it
+    // must still render, not crash on a missing table entry.
+    for (const s of ["ZB", "6E", ""]) {
+      expect(markStyle(s).disc).toMatch(/^(#|hsl)/)
+    }
+  })
+
+  it("keeps equity hues out of the rising-candle green band", () => {
+    // A mark that reads as a direction on a trading screen is worse than no mark.
+    for (const s of ["AAPL", "NVDA", "TSLA", "META", "AMD", "COIN", "UPST"]) {
+      const m = /^hsl\((\d+(?:\.\d+)?)/.exec(markStyle(s).disc)
+      expect(m, `${s} should take a generated hue`).not.toBeNull()
+      const hue = Number(m![1])
+      expect(hue < 95 || hue >= 170, `${s} landed on hue ${hue}`).toBe(true)
+    }
   })
 })

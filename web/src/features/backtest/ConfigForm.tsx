@@ -17,7 +17,7 @@ import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 import { DateField } from "@/components/ui/date-field"
-import { SymbolMark } from "@/components/SymbolMark"
+import { SymbolRow } from "@/components/SymbolMark"
 import {
   Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
 } from "./ConfigParts"
@@ -182,22 +182,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           <SelectContent>
             {(symbols ?? []).map((s) => (
               <SelectItem key={s.symbol} value={s.symbol}>
-                <span className="flex items-center gap-2.5">
-                  {/* Badge and name, no separate ticker. The badge for an index or
-                      equity IS the ticker in a coloured disc, so printing it again
-                      beside the name rendered "ES  ES — E-mini S&P 500". The two
-                      references differ here: one shows a glyph badge with the ticker
-                      spelled out beside it, the panel view shows the lettered badge
-                      and the name. The badge is lettered, so the panel view is the
-                      one that stays consistent. */}
-                  {/* Ticker and name, as the reference shows. The badge is a
-                      glyph rather than letters, so the ticker appears once. */}
-                  <SymbolMark symbol={s.symbol} />
-                  <span className="font-semibold">{s.symbol}</span>
-                  {s.name && s.name !== s.symbol && (
-                    <span className="text-muted-foreground">— {s.name}</span>
-                  )}
-                </span>
+                <SymbolRow symbol={s.symbol} name={s.name} />
               </SelectItem>
             ))}
           </SelectContent>
