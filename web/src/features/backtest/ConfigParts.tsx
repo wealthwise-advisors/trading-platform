@@ -202,3 +202,74 @@ export function SliderField({
     </div>
   )
 }
+
+/**
+ * A toggle switch, as the references show, rather than a native checkbox.
+ *
+ * Built from a button and two divs -- the project has Radix for menus and selects
+ * but no switch primitive, and one control is not worth a dependency. The button
+ * carries role="switch" and aria-checked, so it is announced correctly and driven
+ * by Space/Enter exactly as a checkbox would be.
+ */
+export function ToggleSwitch({
+  checked, onChange, label, hint, disabled,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: ReactNode
+  hint?: ReactNode
+  disabled?: boolean
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 cursor-pointer">
+      <span className="min-w-0 text-xs">
+        {label}
+        {hint && <span className="text-muted-foreground"> {hint}</span>}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50
+                    disabled:opacity-50 ${checked ? "bg-sky-500" : "bg-white/15"}`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform
+                      ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+        />
+      </button>
+    </label>
+  )
+}
+
+/**
+ * Date-range shortcuts. Each writes the SAME two fields the pickers write, so
+ * nothing new is stored and the pickers remain the source of truth.
+ */
+export function QuickPresets({
+  onPick,
+}: { onPick: (days: number) => void }) {
+  const PRESETS: ReadonlyArray<readonly [string, number]> = [
+    ["1D", 1], ["5D", 5], ["1M", 30], ["3M", 90], ["6M", 180],
+  ]
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] text-muted-foreground mr-0.5">Quick presets</span>
+      {PRESETS.map(([label, days]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => onPick(days)}
+          className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1
+                     text-[11px] font-medium text-muted-foreground transition-colors
+                     hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-300"
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}

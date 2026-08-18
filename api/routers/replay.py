@@ -275,11 +275,30 @@ def create_replay(req: ReplayCreateRequest):
     df = _load_bars(req, source_tf, spec)
     df = _apply_session(df, req.session_start, req.session_end)
     if df.empty:
-        raise HTTPException(
-            400,
-            f"No {req.symbol} bars left after applying the "
-            f"{req.session_start}-{req.session_end} session filter.",
+        # Naming the filter is accurate and unhelpful on its own: the commonest
+        # cause by far is asking for TODAY before the session has opened, and
+        # "no bars after the session filter" reads like a fault rather than
+        # "wait eight minutes". Say which of the two it is.
+        now_et = _market_now()
+        not_open_yet = (
+            req.end_date >= now_et.date()
+            and req.session_start is not None
+            and now_et.time() < req.session_start
         )
+        if not_open_yet:
+            detail = (
+                f"The {req.session_start:%H:%M}-{req.session_end:%H:%M} session has "
+                f"not opened yet today - it is {now_et:%H:%M} ET. Wait for the open, "
+                f"or pick an earlier date."
+            )
+        else:
+            detail = (
+                f"No {req.symbol} bars in the {req.session_start}-{req.session_end} "
+                f"session between {req.start_date} and {req.end_date}. Try another "
+                f"date range, or 24-hour session hours if this instrument trades "
+                f"outside regular hours."
+            )
+        raise HTTPException(400, detail)
 
     # Synthetic data is generated, not observed, so nothing about it is "still
     # forming" -- and its bars can legitimately run past the wall clock. Every
