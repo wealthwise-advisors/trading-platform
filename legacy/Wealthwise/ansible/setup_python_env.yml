@@ -1,0 +1,26 @@
+---
+  - name: Install Python, Create Virtual Environment, and Install Requirements
+    hosts: ew_ec2_host
+    become: yes  # Apply sudo for tasks that require elevated privileges
+    tasks:
+  
+      # Install Python 3.10 and required packages
+      - name: Install Python 3.10 and required packages
+        apt:
+          name:
+            - python3.10
+            - python3.10-venv
+            - python3.10-dev
+          state: present
+          update_cache: yes
+  
+      # Create a virtual environment (No need for sudo)
+      - name: Create virtual environment with Python 3.10
+        command: python3.10 -m venv ~/py-venv creates=~/py-venv
+  
+      # Install the dependencies from requirements.txt inside the virtual environment
+      - name: Install Python packages from requirements.txt
+        pip:
+          requirements: /home/ubuntu/code_repo/Wealthwise/requirements.txt  # Reference the absolute path to requirements.txt
+          virtualenv: ~/py-venv
+          virtualenv_command: python3.10 -m venv  

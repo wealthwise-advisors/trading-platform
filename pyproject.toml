@@ -89,7 +89,12 @@ testpaths = ["tests"]
 # with `# noqa: E501` rather than pushed into a still-higher global limit.
 line-length = 160
 target-version = "py312"
-exclude = ["src/data/schwabdev"]   # vendored third-party client, kept as-imported from upstream
+# legacy/ is an archive of the retired repositories, kept so they could be deleted
+# without losing code. It is not built, imported or deployed, and it predates every
+# convention this project now holds -- linting it would report ~13,000 findings
+# about code nobody is going to change. CI runs `ruff check .`, so the exclusion has
+# to live here rather than in the command.
+exclude = ["src/data/schwabdev", "legacy"]   # vendored client; archived repositories
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
