@@ -39,11 +39,11 @@ import pathlib
 import sys
 
 W = 1280
-H = 650
+H = 700
 
 # ── panels ────────────────────────────────────────────────────────────────
 PA = (16, 16, W - 32, 340)          # chart panel: x, y, w, h
-PB = (16, 372, W - 32, 262)         # pipeline panel
+PB = (16, 372, W - 32, 312)         # flowchart panel
 
 # ── chart ─────────────────────────────────────────────────────────────────
 # The plot stops well short of the right edge so the axis labels and the
@@ -71,29 +71,41 @@ FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
 MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 
 # ── pipeline ──────────────────────────────────────────────────────────────
-CARD_W, CARD_H = 108, 88
-CARD_GAP = 30
-CARD_X0 = 42
-FLOW_Y = PB[1] + 112                # centre line the cards sit on
+# Cards are square-ish now, with the icon high and the label under it, and a
+# status light plus a floor pool below. The pool is what stops the row reading
+# as shapes floating on a flat backdrop, and it needs vertical room.
+CARD_W, CARD_H = 108, 112
+CARD_GAP = 26
+CARD_X0 = 40
+FLOW_Y = PB[1] + 128                # centre line the cards sit on
 
 # The decision node's energy ring expands to DIAMOND_R + 20. At the first
 # attempt the node sat at 872 with R=62, so that ring reached back to x=776 and
 # swallowed the right-hand edge of the Poll card. Placed and sized so the widest
 # moment of the animation still clears the card.
-DIAMOND_CX = 790
-DIAMOND_R = 54
-HALO_MAX = DIAMOND_R + 20
+# The decision node is the focal point, so it is larger than anything else and
+# carries three halo rings. Its widest ring reaches DIAMOND_R + 34; the last
+# card ends at 40 + 5*134 = 710, so the node clears it.
+DIAMOND_CX = 800
+DIAMOND_R = 66
+HALO_MAX = DIAMOND_R + 34
 
 # The elbow both branches share before splitting up and down.
-ELBOW_X = DIAMOND_CX + DIAMOND_R + 22
+ELBOW_X = DIAMOND_CX + DIAMOND_R + 24
 
-OUT_X, OUT_W, OUT_H = 950, 282, 72
-YES_CY = FLOW_Y - 52
-NO_CY = FLOW_Y + 56
+OUT_X, OUT_W, OUT_H = 962, 278, 78
+YES_CY = FLOW_Y - 62
+NO_CY = FLOW_Y + 66
 
 # One pass of the travelling pulse.
+#
+# The five cards fire at 0, HOP, 2*HOP, 3*HOP, 4*HOP; the decision node at
+# 5*HOP; the outcomes just after. CYCLE is the full loop, long enough that the
+# last card has gone dark before the first lights again -- otherwise the wave
+# has no head and no tail and reads as everything blinking at once.
 HOP = 0.40
 HOP_DUR = 1.5
+CYCLE = 4.0
 
 STAGES = [
     ("Load Data",      None,               "download", CYAN),
@@ -102,6 +114,22 @@ STAGES = [
     ("Follow live",    "starts by itself",  "follow",   GREEN),
     ("Poll every 15s", None,               "clock",    SKY),
 ]
+
+
+# ── the activation envelope ───────────────────────────────────────────────
+# Every layer of a card brightens off THIS, so they cannot peak at different
+# moments. Fast attack, slower decay, then dark: what switching on looks like,
+# as opposed to breathing.
+PULSE_KEYTIMES = "0;0.10;0.38;1"
+PULSE_SPLINES = "0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"
+
+
+def pulse_b(attr: str, lo: float, hi: float, begin: float) -> str:
+    """One <animate> for one attribute, on the shared activation envelope."""
+    return (f'<animate attributeName="{attr}" values="{lo};{hi};{lo};{lo}" '
+            f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
+            f'calcMode="spline" keyTimes="{PULSE_KEYTIMES}" '
+            f'keySplines="{PULSE_SPLINES}"/>')
 
 
 def esc(s: str) -> str:
@@ -124,10 +152,14 @@ def glyph(key: str, ink: str) -> list[str]:
         ],
         "play": [f'<path d="M8.4 5.2 19 12 8.4 18.8z" fill="{ink}"/>'],
         "trend": [
-            f'<path d="M3.6 17.6 9.4 11.8l3.6 3.6L20.4 8" fill="none" stroke="{ink}" '
-            f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
-            f'<path d="M15.4 8h5v5" fill="none" stroke="{ink}" stroke-width="2.2" '
-            f'stroke-linecap="round" stroke-linejoin="round"/>',
+            # Axes plus a series with its points marked. The first cut was the
+            # bare arrow, which reads as "up", not as "the edge of a chart".
+            f'<path d="M4 3.6v16.8h16.4" fill="none" stroke="{ink}" stroke-width="1.8" '
+            f'stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".65"/>',
+            f'<path d="M6.8 16.4 10.6 11.6l3.3 2.6 5.1-6.8" fill="none" stroke="{ink}" '
+            f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+            f'<circle cx="10.6" cy="11.6" r="1.5" fill="{ink}"/>',
+            f'<circle cx="19" cy="7.4" r="1.8" fill="{ink}"/>',
         ],
         "follow": [                                    # a refresh arc
             f'<path d="M20 12a8 8 0 1 1-2.4-5.7" fill="none" stroke="{ink}" '
@@ -272,6 +304,27 @@ def build() -> str:
     a('      <stop offset="0%" stop-color="#ffffff" stop-opacity=".055"/>')
     a('      <stop offset="100%" stop-color="#ffffff" stop-opacity=".014"/>')
     a("    </linearGradient>")
+    a('    <pattern id="fineGrid" width="16" height="16" patternUnits="userSpaceOnUse">')
+    a('      <path d="M16 0H0v16" fill="none" stroke="#8ec5ff" stroke-opacity=".028" '
+      'stroke-width=".6"/>')
+    a("    </pattern>")
+    a(f'    <radialGradient id="skyB" cx="50%" cy="0%" r="85%">')
+    a(f'      <stop offset="0%" stop-color="{CYAN}" stop-opacity=".10"/>')
+    a(f'      <stop offset="60%" stop-color="{BLUE}" stop-opacity=".03"/>')
+    a(f'      <stop offset="100%" stop-color="{BLUE}" stop-opacity="0"/>')
+    a("    </radialGradient>")
+    a('    <radialGradient id="vigB" cx="50%" cy="50%" r="72%">')
+    a('      <stop offset="55%" stop-color="#000000" stop-opacity="0"/>')
+    a('      <stop offset="100%" stop-color="#000000" stop-opacity=".45"/>')
+    a("    </radialGradient>")
+    a('    <linearGradient id="cardSurf" x1="0" y1="0" x2="0" y2="1">')
+    a('      <stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/>')
+    a('      <stop offset="100%" stop-color="#ffffff" stop-opacity=".016"/>')
+    a("    </linearGradient>")
+    a(f'    <marker id="arViolet" viewBox="0 0 10 10" refX="8.4" refY="5" '
+      f'markerWidth="6.6" markerHeight="6.6" orient="auto-start-reverse">')
+    a(f'      <path d="M0 1 9 5 0 9z" fill="{VIOLET}"/>')
+    a("    </marker>")
     a(f'    <marker id="ar" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
       f'markerHeight="6.6" orient="auto-start-reverse">')
     a(f'      <path d="M0 1 9 5 0 9z" fill="{SKY}"/>')
@@ -410,200 +463,336 @@ def build() -> str:
 
     # ══ panel B: the loop ═════════════════════════════════════════════════
     x, y, w, h = PB
-    a(f'  <g>')
-    a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#panel)" '
-      f'stroke="#ffffff" stroke-opacity=".075"/>')
+    a("  <g>")
+    a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" '
+      f'fill="url(#panel)" stroke="#ffffff" stroke-opacity=".075"/>')
+    a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#fineGrid)"/>')
     a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#grid)"/>')
+    a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#skyB)"/>')
 
-    # ── connectors between the five cards ──
+    # Circuit traces: right-angled runs at very low opacity. They are the
+    # difference between a dark rectangle and a surface something is built on.
+    tseed = 90210
+    for _ in range(14):
+        tseed = (tseed * 1103515245 + 12345) & 0x7FFFFFFF
+        tx = x + 30 + (tseed >> 9) % (w - 60)
+        tseed = (tseed * 1103515245 + 12345) & 0x7FFFFFFF
+        ty = y + 20 + (tseed >> 9) % (h - 40)
+        tseed = (tseed * 1103515245 + 12345) & 0x7FFFFFFF
+        run = 26 + (tseed >> 11) % 70
+        tseed = (tseed * 1103515245 + 12345) & 0x7FFFFFFF
+        drop = 14 + (tseed >> 11) % 40
+        sgn = 1 if (tseed >> 7) % 2 else -1
+        a(f'    <path d="M{tx} {ty} h{run} l{sgn * 9} {sgn * 9} v{drop}" fill="none" '
+          f'stroke="{CYAN}" stroke-opacity=".055" stroke-width="1"/>')
+        a(f'    <circle cx="{tx}" cy="{ty}" r="1.6" fill="{CYAN}" opacity=".10"/>')
+
+    # Motes.
+    mseed = 4711
+    for _ in range(38):
+        mseed = (mseed * 1103515245 + 12345) & 0x7FFFFFFF
+        px = x + 14 + (mseed >> 9) % (w - 28)
+        mseed = (mseed * 1103515245 + 12345) & 0x7FFFFFFF
+        py = y + 12 + (mseed >> 9) % (h - 24)
+        mseed = (mseed * 1103515245 + 12345) & 0x7FFFFFFF
+        a(f'    <circle cx="{px}" cy="{py}" r="{0.7 + ((mseed >> 11) % 90) / 120:.2f}" '
+          f'fill="#bfe3ff" opacity="{0.05 + ((mseed >> 5) % 90) / 700:.3f}"/>')
+
+    a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#vigB)"/>')
+
+    # HUD corner brackets, with a detached tick on the long arm.
+    for cx0, cy0, sx, sy in ((x + 14, y + 14, 1, 1), (x + w - 14, y + 14, -1, 1),
+                             (x + 14, y + h - 14, 1, -1), (x + w - 14, y + h - 14, -1, -1)):
+        a(f'    <path d="M{cx0} {cy0 + sy * 30} V{cy0 + sy * 9} '
+          f'Q{cx0} {cy0} {cx0 + sx * 9} {cy0} H{cx0 + sx * 34}" fill="none" '
+          f'stroke="{CYAN}" stroke-opacity=".38" stroke-width="1.7"/>')
+        a(f'    <path d="M{cx0 + sx * 42} {cy0} h{sx * 12}" stroke="{CYAN}" '
+          f'stroke-opacity=".22" stroke-width="1.7"/>')
+
+    # ── connectors between the five cards ──────────────────────────────────
     for i in range(len(STAGES) - 1):
         x1 = card_x(i) + CARD_W
         x2 = card_x(i + 1)
-        a(f'    <line x1="{x1 + 5}" y1="{FLOW_Y}" x2="{x2 - 7}" y2="{FLOW_Y}" '
-          f'stroke="{SKY}" stroke-opacity=".5" stroke-width="1.8" marker-end="url(#ar)"/>')
-        a(f'    <circle cx="{x1 + 5:.1f}" cy="{FLOW_Y}" r="2.8" fill="#dff3ff">')
-        a(f'      <animate attributeName="cx" from="{x1 + 5:.1f}" to="{x2 - 9:.1f}" '
-          f'dur="{HOP_DUR}s" begin="{i * HOP:.2f}s" repeatCount="indefinite"/>')
-        a("    </circle>")
+        col = STAGES[i + 1][3]
+        begin = i * HOP
+        a(f'    <line x1="{x1 + 4}" y1="{FLOW_Y}" x2="{x2 - 4}" y2="{FLOW_Y}" '
+          f'stroke="{col}" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>')
+        a(f'    <line x1="{x1 + 4}" y1="{FLOW_Y}" x2="{x2 - 4}" y2="{FLOW_Y}" '
+          f'stroke="{col}" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>')
+        a(f'    <line x1="{x1 + 8}" y1="{FLOW_Y + 6}" x2="{x2 - 8}" y2="{FLOW_Y + 6}" '
+          f'stroke="{col}" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>')
+        for px in (x1 + 4, x2 - 4):
+            a(f'    <circle cx="{px}" cy="{FLOW_Y}" r="4.2" fill="{col}" fill-opacity=".26"/>')
+            a(f'    <circle cx="{px}" cy="{FLOW_Y}" r="2.1" fill="{col}"/>')
+        cm = (x1 + x2) / 2
+        for k in range(2):
+            chx = cm - 5 + k * 9
+            a(f'    <path d="M{chx:.1f} {FLOW_Y - 4.6} l4.6 4.6 -4.6 4.6" fill="none" '
+              f'stroke="{col}" stroke-width="1.9" stroke-linecap="round" '
+              f'stroke-linejoin="round" opacity=".28">')
+            a(f'      <animate attributeName="opacity" values=".28;1;.28" '
+              f'dur="{CYCLE:.2f}s" begin="{begin + k * 0.14:.2f}s" '
+              f'repeatCount="indefinite"/>')
+            a("    </path>")
+        for k, (rr, op) in enumerate(((3.2, 1.0), (2.0, 0.55))):
+            a(f'    <circle cx="{x1 + 4}" cy="{FLOW_Y}" r="{rr}" fill="#f2fbff" '
+              f'opacity="{op}">')
+            a(f'      <animate attributeName="cx" from="{x1 + 4}" to="{x2 - 4}" '
+              f'dur="{HOP_DUR}s" begin="{begin + k * 0.15:.2f}s" '
+              f'repeatCount="indefinite"/>')
+            a("    </circle>")
 
-    # card -> diamond
+    # last card -> diamond
     x1 = card_x(4) + CARD_W
     x2 = DIAMOND_CX - DIAMOND_R
-    a(f'    <line x1="{x1 + 5}" y1="{FLOW_Y}" x2="{x2 - 7}" y2="{FLOW_Y}" '
-      f'stroke="{VIOLET}" stroke-opacity=".55" stroke-width="1.8" '
-      f'marker-end="url(#ar)"/>')
-    a(f'    <circle cx="{x1 + 5:.1f}" cy="{FLOW_Y}" r="2.8" fill="#e9d5ff">')
-    a(f'      <animate attributeName="cx" from="{x1 + 5:.1f}" to="{x2 - 9:.1f}" '
+    a(f'    <line x1="{x1 + 4}" y1="{FLOW_Y}" x2="{x2 - 6}" y2="{FLOW_Y}" '
+      f'stroke="{VIOLET}" stroke-opacity=".14" stroke-width="8" stroke-linecap="round"/>')
+    a(f'    <line x1="{x1 + 4}" y1="{FLOW_Y}" x2="{x2 - 6}" y2="{FLOW_Y}" '
+      f'stroke="{VIOLET}" stroke-opacity=".8" stroke-width="1.8" stroke-linecap="round"/>')
+    for k in range(2):
+        chx = (x1 + x2) / 2 - 5 + k * 9
+        a(f'    <path d="M{chx:.1f} {FLOW_Y - 4.6} l4.6 4.6 -4.6 4.6" fill="none" '
+          f'stroke="{VIOLET}" stroke-width="1.9" stroke-linecap="round" '
+          f'stroke-linejoin="round" opacity=".28">')
+        a(f'      <animate attributeName="opacity" values=".28;1;.28" dur="{CYCLE:.2f}s" '
+          f'begin="{4 * HOP + k * 0.14:.2f}s" repeatCount="indefinite"/>')
+        a("    </path>")
+    a(f'    <circle cx="{x1 + 4}" cy="{FLOW_Y}" r="3.2" fill="#f0e6ff">')
+    a(f'      <animate attributeName="cx" from="{x1 + 4}" to="{x2 - 6}" '
       f'dur="{HOP_DUR}s" begin="{4 * HOP:.2f}s" repeatCount="indefinite"/>')
     a("    </circle>")
 
-    # ── the five cards ──
+    # ── the five cards ─────────────────────────────────────────────────────
     for i, (t1, t2, gkey, accent) in enumerate(STAGES):
         cx0 = card_x(i)
-        cyc = FLOW_Y
-        a(f'    <g>')
-        a(f'      <rect x="{cx0}" y="{cyc - CARD_H / 2:.0f}" width="{CARD_W}" '
-          f'height="{CARD_H}" rx="13" fill="url(#card)" stroke="{accent}" '
-          f'stroke-opacity=".42" stroke-width="1.3">')
-        a(f'        <animate attributeName="stroke-opacity" values=".42;.95;.42" '
-          f'dur="{HOP_DUR + HOP * 4:.2f}s" begin="{i * HOP:.2f}s" '
-          f'repeatCount="indefinite"/>')
+        ccx = cx0 + CARD_W / 2
+        top = FLOW_Y - CARD_H / 2
+        begin = i * HOP
+
+        a("    <g>")
+        # Outer glow: three rounded rects, growing and fading. Approximates a
+        # blur without a filter, which GitHub's proxy renders inconsistently.
+        for grow, op in ((10, 0.05), (6, 0.08), (3, 0.11)):
+            a(f'      <rect x="{cx0 - grow}" y="{top - grow}" '
+              f'width="{CARD_W + grow * 2}" height="{CARD_H + grow * 2}" '
+              f'rx="{16 + grow}" fill="none" stroke="{accent}" '
+              f'stroke-opacity="{op}" stroke-width="2"/>')
+        a(f'      <rect x="{cx0}" y="{top}" width="{CARD_W}" height="{CARD_H}" rx="16" '
+          f'fill="url(#cardSurf)"/>')
+        a(f'      <rect x="{cx0}" y="{top}" width="{CARD_W}" height="{CARD_H}" rx="16" '
+          f'fill="{accent}" fill-opacity=".05"/>')
+        a(f'      <rect x="{cx0 + .7}" y="{top + .7}" width="{CARD_W - 1.4}" '
+          f'height="{CARD_H - 1.4}" rx="15.4" fill="none" stroke="{accent}" '
+          f'stroke-opacity=".55" stroke-width="1.4">')
+        a(f'        <animate attributeName="stroke-opacity" values=".55;1;.55;.55" '
+          f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
+          f'calcMode="spline" keyTimes="{PULSE_KEYTIMES}" '
+          f'keySplines="{PULSE_SPLINES}"/>')
         a("      </rect>")
-        gx = cx0 + CARD_W / 2 - 13
-        gy = cyc - CARD_H / 2 + 15
-        a(f'      <g transform="translate({gx:.1f} {gy:.1f}) scale(1.08)">')
+        # Inner hairline: the detail that makes the surface read as glass.
+        a(f'      <rect x="{cx0 + 5}" y="{top + 5}" width="{CARD_W - 10}" '
+          f'height="{CARD_H - 10}" rx="12" fill="none" stroke="{accent}" '
+          f'stroke-opacity=".14" stroke-width="1"/>')
+
+        s = 34 / 24
+        a(f'      <g transform="translate({ccx - 17:.1f} {top + 20:.1f}) scale({s:.4f})">')
         for p in glyph(gkey, accent):
             a("        " + p)
         a("      </g>")
-        ty = cyc + 20
-        a(f'      <text x="{cx0 + CARD_W / 2:.1f}" y="{ty}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="12.4" font-weight="600" '
+
+        ty = top + 82
+        a(f'      <text x="{ccx:.1f}" y="{ty}" text-anchor="middle" '
+          f'font-family="{FONT}" font-size="12.8" font-weight="600" '
           f'fill="{INK}">{esc(t1)}</text>')
         if t2:
-            a(f'      <text x="{cx0 + CARD_W / 2:.1f}" y="{ty + 15}" '
-              f'text-anchor="middle" font-family="{FONT}" font-size="11" '
-              f'font-style="italic" fill="{accent}" '
-              f'fill-opacity=".95">{esc(t2)}</text>')
-        # the three processing pips under each card
-        for k in range(3):
-            px = cx0 + CARD_W / 2 + (k - 1) * 11
-            a(f'      <circle cx="{px:.1f}" cy="{cyc + CARD_H / 2 + 13:.0f}" r="2.5" '
-              f'fill="{accent}" opacity=".3">')
-            a(f'        <animate attributeName="opacity" values=".3;1;.3" dur="1.35s" '
-              f'begin="{i * HOP + k * 0.16:.2f}s" repeatCount="indefinite"/>')
-            a("      </circle>")
+            a(f'      <text x="{ccx:.1f}" y="{ty + 16}" text-anchor="middle" '
+              f'font-family="{FONT}" font-size="11" font-style="italic" '
+              f'fill="{accent}">{esc(t2)}</text>')
+
+        # Status light and the pool it throws on the floor. This is the detail
+        # that gives the row a ground plane instead of leaving the cards
+        # floating on a flat backdrop.
+        dy = top + CARD_H + 14
+        a(f'      <circle cx="{ccx:.1f}" cy="{dy}" r="7" fill="{accent}" fill-opacity=".22">')
+        a("        " + pulse_b("fill-opacity", 0.10, 0.42, begin))
+        a("      </circle>")
+        a(f'      <circle cx="{ccx:.1f}" cy="{dy}" r="3.1" fill="{accent}"/>')
+        for rx_, ry_, op in ((34, 7.5, 0.10), (23, 5, 0.16), (13, 3, 0.26)):
+            a(f'      <ellipse cx="{ccx:.1f}" cy="{dy + 17}" rx="{rx_}" ry="{ry_}" '
+              f'fill="none" stroke="{accent}" stroke-opacity="{op}" stroke-width="1.2"/>')
+        a(f'      <ellipse cx="{ccx:.1f}" cy="{dy + 17}" rx="9" ry="2.2" fill="{accent}" '
+          f'fill-opacity=".30">')
+        a("        " + pulse_b("fill-opacity", 0.14, 0.60, begin))
+        a("      </ellipse>")
         a("    </g>")
 
-    # ── the decision node ──
+    # ── the decision node ──────────────────────────────────────────────────
     d = DIAMOND_R
-    a(f'    <g>')
-    a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{d + 18}" fill="url(#gViolet)" '
-      f'opacity=".5">')
-    a(f'        <animate attributeName="opacity" values=".28;.72;.28" dur="2.8s" '
-      f'repeatCount="indefinite"/>')
+    a("    <g>")
+    a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{d + 34}" fill="url(#gViolet)" '
+      f'opacity=".45">')
+    a("        " + pulse_b("opacity", 0.28, 0.9, 5 * HOP))
     a("      </circle>")
-    # the rotating halo: one dashed ring, one animateTransform
-    ring_r = d + 11
-    circ = 2 * math.pi * ring_r
-    a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{ring_r}" fill="none" '
-      f'stroke="{VIOLET}" stroke-opacity=".5" stroke-width="1.4" '
-      f'stroke-dasharray="{circ * 0.055:.1f} {circ * 0.045:.1f}">')
-    a(f'        <animateTransform attributeName="transform" type="rotate" '
-      f'from="0 {DIAMOND_CX} {FLOW_Y}" to="360 {DIAMOND_CX} {FLOW_Y}" dur="14s" '
-      f'repeatCount="indefinite"/>')
-    a("      </circle>")
-    # the energy ring: expands and fades outward
+    # Three concentric halo rings, the outer two dashed and counter-rotating.
+    for rad, dash, dur, direction, op in ((d + 30, (7, 11), 22.0, 1, 0.20),
+                                          (d + 19, (4, 9), 15.0, -1, 0.30),
+                                          (d + 9, (0, 0), 0, 0, 0.22)):
+        if dash[0]:
+            frm, to = (0, 360) if direction > 0 else (360, 0)
+            a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{rad}" fill="none" '
+              f'stroke="{VIOLET}" stroke-opacity="{op}" stroke-width="1.2" '
+              f'stroke-dasharray="{dash[0]} {dash[1]}">')
+            a(f'        <animateTransform attributeName="transform" type="rotate" '
+              f'from="{frm} {DIAMOND_CX} {FLOW_Y}" to="{to} {DIAMOND_CX} {FLOW_Y}" '
+              f'dur="{dur}s" repeatCount="indefinite"/>')
+            a("      </circle>")
+        else:
+            a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{rad}" fill="none" '
+              f'stroke="{VIOLET}" stroke-opacity="{op}" stroke-width="1"/>')
+    # The ring that leaves the node when it fires.
     a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{d}" fill="none" '
-      f'stroke="{VIOLET}" stroke-width="1.6">')
-    a(f'        <animate attributeName="r" values="{d};{HALO_MAX};{d}" dur="2.8s" '
-      f'repeatCount="indefinite"/>')
+      f'stroke="{VIOLET}" stroke-width="1.6" opacity="0">')
+    a(f'        <animate attributeName="r" values="{d};{d + 40}" dur="{CYCLE:.2f}s" '
+      f'begin="{5 * HOP:.2f}s" repeatCount="indefinite" calcMode="spline" '
+      f'keyTimes="0;1" keySplines="0.2 0 0.3 1"/>')
     a("      </circle>")
     a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{d}" fill="none" '
-      f'stroke="{VIOLET}" stroke-width="1.4">')
-    a(f'        <animate attributeName="opacity" values=".7;0;.7" dur="2.8s" '
-      f'repeatCount="indefinite"/>')
+      f'stroke="{VIOLET}" stroke-width="1.6" opacity="0">')
+    a("        " + pulse_b("opacity", 0.0, 0.85, 5 * HOP))
     a("      </circle>")
-    a(f'      <path d="M{DIAMOND_CX} {FLOW_Y - d} L{DIAMOND_CX + d} {FLOW_Y} '
-      f'L{DIAMOND_CX} {FLOW_Y + d} L{DIAMOND_CX - d} {FLOW_Y}z" fill="#0d1424" '
-      f'fill-opacity=".92" stroke="{VIOLET}" stroke-opacity=".85" stroke-width="1.6"/>')
-    a(f'      <g transform="translate({DIAMOND_CX - 12} {FLOW_Y - 30}) scale(1.0)">')
+    dpath = (f'M{DIAMOND_CX} {FLOW_Y - d} L{DIAMOND_CX + d} {FLOW_Y} '
+             f'L{DIAMOND_CX} {FLOW_Y + d} L{DIAMOND_CX - d} {FLOW_Y}z')
+    a(f'      <path d="{dpath}" fill="#0b1120" fill-opacity=".95"/>')
+    a(f'      <path d="{dpath}" fill="{VIOLET}" fill-opacity=".07"/>')
+    a(f'      <path d="{dpath}" fill="none" stroke="{VIOLET}" stroke-opacity=".9" '
+      f'stroke-width="1.7"/>')
+    # Small markers inside the four vertices: instrument detail.
+    for vx, vy_, rot in ((DIAMOND_CX, FLOW_Y - d + 13, 90),
+                         (DIAMOND_CX + d - 13, FLOW_Y, 180),
+                         (DIAMOND_CX, FLOW_Y + d - 13, 270),
+                         (DIAMOND_CX - d + 13, FLOW_Y, 0)):
+        a(f'      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="{VIOLET}" '
+          f'fill-opacity=".75" transform="translate({vx} {vy_}) rotate({rot})"/>')
+    a(f'      <g transform="translate({DIAMOND_CX - 13} {FLOW_Y - 40}) scale(1.08)">')
     for p in glyph("candles", "#e9d5ff"):
         a("        " + p)
     a("      </g>")
-    a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 12}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="12" font-weight="600" fill="{INK}">New '
+    a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 8}" text-anchor="middle" '
+      f'font-family="{FONT}" font-size="12.6" font-weight="600" fill="{INK}">New '
       f'closed</text>')
-    a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 27}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="12" font-weight="600" fill="{INK}">bar?</text>')
+    a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 24}" text-anchor="middle" '
+      f'font-family="{FONT}" font-size="12.6" font-weight="600" fill="{INK}">bar?</text>')
     a("    </g>")
 
-    # ── yes / no branches ──
-    # Both branches leave the diamond's RIGHT vertex and share one short stub
-    # before splitting. The first cut started each branch inside the halo and cut
-    # diagonally across the node, which read as two stray lines over the diamond.
+    # ── the two branches ───────────────────────────────────────────────────
     bx = DIAMOND_CX + d
     for is_yes in (True, False):
         col = GREEN if is_yes else PINK
         mk = "arGreen" if is_yes else "arPink"
         cyb = YES_CY if is_yes else NO_CY
-        lbl = "yes" if is_yes else "no"
-        a(f'    <path d="M{bx + 3} {FLOW_Y} L{ELBOW_X} {FLOW_Y} L{ELBOW_X} {cyb} '
-          f'L{OUT_X - 9} {cyb}" fill="none" stroke="{col}" stroke-opacity=".62" '
+        lbl = "YES" if is_yes else "NO"
+        bpath = (f'M{bx + 4} {FLOW_Y} L{ELBOW_X} {FLOW_Y} L{ELBOW_X} {cyb} '
+                 f'L{OUT_X - 10} {cyb}')
+        a(f'    <path d="{bpath}" fill="none" stroke="{col}" stroke-opacity=".16" '
+          f'stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>')
+        a(f'    <path d="{bpath}" fill="none" stroke="{col}" stroke-opacity=".8" '
           f'stroke-width="1.8" stroke-linejoin="round" marker-end="url(#{mk})"/>')
-        # The chip sits on the final horizontal run, clear of both the elbow and
-        # the card it points at.
-        cw = 33 if is_yes else 27
+        cw = 40 if is_yes else 32
         chip_cx = (ELBOW_X + OUT_X) / 2
-        a(f'    <rect x="{chip_cx - cw / 2:.1f}" y="{cyb - 13}" width="{cw}" '
-          f'height="26" rx="8" fill="#0c1522" stroke="{col}" stroke-opacity=".75"/>')
+        a(f'    <rect x="{chip_cx - cw / 2 - 3:.1f}" y="{cyb - 16}" width="{cw + 6}" '
+          f'height="32" rx="9" fill="none" stroke="{col}" stroke-opacity=".18"/>')
+        a(f'    <rect x="{chip_cx - cw / 2:.1f}" y="{cyb - 13}" width="{cw}" height="26" '
+          f'rx="7" fill="#0a1220" stroke="{col}" stroke-opacity=".85"/>')
         a(f'    <text x="{chip_cx:.1f}" y="{cyb + 4.6}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="11.5" font-weight="700" '
+          f'font-family="{FONT}" font-size="11.4" font-weight="700" letter-spacing=".6" '
           f'fill="{col}">{lbl}</text>')
-        # A dot running the branch, so which way the flow went is visible.
-        a(f'    <circle cx="{bx + 3}" cy="{FLOW_Y}" r="2.6" fill="{col}">')
-        a(f'      <animate attributeName="cx" from="{bx + 3}" to="{OUT_X - 11}" '
-          f'dur="1.3s" begin="{5 * HOP + (0 if is_yes else 0.65):.2f}s" '
-          f'repeatCount="indefinite"/>')
-        a(f'      <animate attributeName="cy" from="{FLOW_Y}" to="{cyb}" dur="1.3s" '
-          f'begin="{5 * HOP + (0 if is_yes else 0.65):.2f}s" '
-          f'repeatCount="indefinite"/>')
+        a(f'    <circle cx="{bx + 4}" cy="{FLOW_Y}" r="2.9" fill="{col}">')
+        for attr, frm, to in (("cx", bx + 4, OUT_X - 12), ("cy", FLOW_Y, cyb)):
+            a(f'      <animate attributeName="{attr}" from="{frm}" to="{to}" dur="1.25s" '
+              f'begin="{5 * HOP + (0 if is_yes else 0.6):.2f}s" repeatCount="indefinite"/>')
         a("    </circle>")
 
-    # yes card: the tape advances
-    a(f'    <g>')
-    a(f'      <rect x="{OUT_X}" y="{YES_CY - OUT_H / 2:.0f}" width="{OUT_W}" '
-      f'height="{OUT_H}" rx="13" fill="url(#card)" stroke="{GREEN}" '
-      f'stroke-opacity=".5" stroke-width="1.3"/>')
-    a(f'      <g transform="translate({OUT_X + 20} {YES_CY - 21:.0f}) scale(1.05)">')
-    for p in glyph("bars", GREEN):
-        a("        " + p)
-    a("      </g>")
-    a(f'      <text x="{OUT_X + 56}" y="{YES_CY - 4:.0f}" font-family="{FONT}" '
-      f'font-size="14" font-weight="700" fill="{INK}">Tape advances</text>')
-    a(f'      <text x="{OUT_X + 56}" y="{YES_CY + 15:.0f}" font-family="{FONT}" '
-      f'font-size="11.5" fill="{DIM}">VWAP · bands · signals</text>')
-    a(f'      <circle cx="{OUT_X + OUT_W - 18}" cy="{YES_CY + OUT_H / 2 - 12:.0f}" '
-      f'r="4" fill="{GREEN}">')
-    a(f'        <animate attributeName="opacity" values=".35;1;.35" dur="1.9s" '
-      f'repeatCount="indefinite"/>')
-    a("      </circle>")
-    a("    </g>")
+    # ── outcome cards ──────────────────────────────────────────────────────
+    def outcome(cy_, col, gkey, title, sub, begin):
+        top_ = cy_ - OUT_H / 2
+        a("    <g>")
+        for grow, op in ((9, 0.05), (5, 0.09), (2, 0.12)):
+            a(f'      <rect x="{OUT_X - grow}" y="{top_ - grow}" '
+              f'width="{OUT_W + grow * 2}" height="{OUT_H + grow * 2}" rx="{15 + grow}" '
+              f'fill="none" stroke="{col}" stroke-opacity="{op}" stroke-width="2"/>')
+        a(f'      <rect x="{OUT_X}" y="{top_}" width="{OUT_W}" height="{OUT_H}" rx="15" '
+          f'fill="url(#cardSurf)"/>')
+        a(f'      <rect x="{OUT_X}" y="{top_}" width="{OUT_W}" height="{OUT_H}" rx="15" '
+          f'fill="{col}" fill-opacity=".05"/>')
+        a(f'      <rect x="{OUT_X + .7}" y="{top_ + .7}" width="{OUT_W - 1.4}" '
+          f'height="{OUT_H - 1.4}" rx="14.4" fill="none" stroke="{col}" '
+          f'stroke-opacity=".6" stroke-width="1.4">')
+        a("        " + pulse_b("stroke-opacity", 0.45, 1.0, begin))
+        a("      </rect>")
+        if gkey == "loading":
+            a(f'      <g transform="translate({OUT_X + 38} {cy_:.0f})">')
+            a("        <g>")
+            for k in range(8):
+                ang = k * math.pi / 4
+                a(f'          <circle cx="{15 * math.cos(ang):.1f}" '
+                  f'cy="{15 * math.sin(ang):.1f}" r="2.5" fill="{col}" '
+                  f'opacity="{0.25 + 0.09 * k:.2f}"/>')
+            a(f'          <animateTransform attributeName="transform" type="rotate" '
+              f'from="0 0 0" to="360 0 0" dur="3.2s" repeatCount="indefinite"/>')
+            a("        </g>")
+            a("      </g>")
+            tx0 = OUT_X + 68
+        else:
+            a(f'      <g transform="translate({OUT_X + 24} {cy_ - 15:.0f}) scale(1.25)">')
+            for p in glyph(gkey, col):
+                a("        " + p)
+            a("      </g>")
+            tx0 = OUT_X + 64
+        a(f'      <text x="{tx0}" y="{cy_ + (5 if not sub else -3):.0f}" '
+          f'font-family="{FONT}" font-size="14.5" font-weight="700" '
+          f'fill="{INK}">{esc(title)}</text>')
+        if sub:
+            a(f'      <text x="{tx0}" y="{cy_ + 16:.0f}" font-family="{FONT}" '
+              f'font-size="11.5" fill="{DIM}">{esc(sub)}</text>')
+        dcx = OUT_X + OUT_W / 2
+        dy = top_ + OUT_H + 13
+        a(f'      <circle cx="{dcx:.0f}" cy="{dy:.0f}" r="6.4" fill="{col}" '
+          f'fill-opacity=".22">')
+        a("        " + pulse_b("fill-opacity", 0.10, 0.42, begin))
+        a("      </circle>")
+        a(f'      <circle cx="{dcx:.0f}" cy="{dy:.0f}" r="3" fill="{col}"/>')
+        for rx_, ry_, op in ((30, 6.6, 0.10), (20, 4.4, 0.16), (11, 2.6, 0.26)):
+            a(f'      <ellipse cx="{dcx:.0f}" cy="{dy + 15:.0f}" rx="{rx_}" ry="{ry_}" '
+              f'fill="none" stroke="{col}" stroke-opacity="{op}" stroke-width="1.2"/>')
+        a("    </g>")
 
-    # no card: still forming
-    a(f'    <g>')
-    a(f'      <rect x="{OUT_X}" y="{NO_CY - OUT_H / 2:.0f}" width="{OUT_W}" '
-      f'height="{OUT_H}" rx="13" fill="url(#card)" stroke="{PINK}" '
-      f'stroke-opacity=".5" stroke-width="1.3"/>')
-    # a ring of dots, rotating: "nothing has closed yet"
-    a(f'      <g transform="translate({OUT_X + 32} {NO_CY:.0f})">')
-    a(f'        <g>')
-    for k in range(8):
-        ang = k * math.pi / 4
-        a(f'          <circle cx="{13 * math.cos(ang):.1f}" '
-          f'cy="{13 * math.sin(ang):.1f}" r="2.2" fill="{PINK}" '
-          f'opacity="{0.28 + 0.09 * k:.2f}"/>')
-    a(f'          <animateTransform attributeName="transform" type="rotate" '
-      f'from="0 0 0" to="360 0 0" dur="3.4s" repeatCount="indefinite"/>')
-    a("        </g>")
-    a("      </g>")
-    a(f'      <text x="{OUT_X + 60}" y="{NO_CY + 5:.0f}" font-family="{FONT}" '
-      f'font-size="14" font-weight="700" fill="{INK}">Still forming…</text>')
-    a("    </g>")
+    outcome(YES_CY, GREEN, "bars", "Tape advances", "VWAP · bands · signals",
+            5 * HOP + 0.3)
+    outcome(NO_CY, PINK, "loading", "Still forming…", None, 5 * HOP + 0.9)
 
-    # ── the return path: back to polling ──
-    ret_y = y + h - 26
+    # ── the return path ────────────────────────────────────────────────────
+    ret_y = NO_CY + OUT_H / 2 + 46
     poll_cx = card_x(4) + CARD_W / 2
-    a(f'    <path d="M{OUT_X + 20} {NO_CY + OUT_H / 2 + 6:.0f} '
-      f'L{OUT_X + 20} {ret_y} L{poll_cx} {ret_y} L{poll_cx} {FLOW_Y + CARD_H / 2 + 26:.0f}" '
-      f'fill="none" stroke="{PINK}" stroke-opacity=".5" stroke-width="1.6" '
-      f'stroke-dasharray="7 6" stroke-linejoin="round" marker-end="url(#arPink)">')
-    # marching ants, which is what makes the loop read as a loop
-    a(f'      <animate attributeName="stroke-dashoffset" from="26" to="0" dur="1.1s" '
+    path_d = (f"M{OUT_X + OUT_W / 2:.0f} {NO_CY + OUT_H / 2 + 30:.0f} "
+              f"L{OUT_X + OUT_W / 2:.0f} {ret_y:.0f} L{poll_cx:.0f} {ret_y:.0f} "
+              f"L{poll_cx:.0f} {FLOW_Y + CARD_H / 2 + 52:.0f}")
+    a(f'    <path d="{path_d}" fill="none" stroke="{VIOLET}" stroke-opacity=".14" '
+      f'stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>')
+    a(f'    <path d="{path_d}" fill="none" stroke="{VIOLET}" stroke-opacity=".7" '
+      f'stroke-width="1.7" stroke-linejoin="round" stroke-dasharray="8 6" '
+      f'marker-end="url(#arViolet)">')
+    # Marching ants: what makes the loop read as a loop rather than a bracket.
+    a(f'      <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.15s" '
       f'repeatCount="indefinite"/>')
     a("    </path>")
-    a(f'    <text x="{(OUT_X + 20 + poll_cx) / 2:.0f}" y="{ret_y - 8}" '
-      f'text-anchor="middle" font-family="{FONT}" font-size="11" fill="{PINK}" '
-      f'fill-opacity=".75">poll again — the tape does not move</text>')
+    # Arrowheads along the horizontal run, so the direction is unambiguous.
+    for k in range(3):
+        axp = OUT_X + OUT_W / 2 - (k + 1) * (OUT_X + OUT_W / 2 - poll_cx) / 4
+        a(f'    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="{VIOLET}" fill-opacity=".55" '
+          f'transform="translate({axp:.0f} {ret_y:.0f}) rotate(180)"/>')
+    a(f'    <text x="{(OUT_X + OUT_W / 2 + poll_cx) / 2:.0f}" y="{ret_y - 10:.0f}" '
+      f'text-anchor="middle" font-family="{FONT}" font-size="11" fill="{VIOLET}" '
+      f'fill-opacity=".8">poll again — the tape does not move</text>')
     a("  </g>")
 
     a("</svg>")
