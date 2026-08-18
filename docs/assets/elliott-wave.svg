@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="An Elliott Wave impulse drawing itself wave by wave, then the ABC correction, with each rule checked as it completes">
+  <defs>
+    <linearGradient id="ebg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#0b1626"/>
+      <stop offset="100%" stop-color="#050810"/>
+    </linearGradient>
+    <linearGradient id="impulse" gradientUnits="userSpaceOnUse" x1="90" y1="0" x2="820" y2="0">
+      <stop offset="0%"   stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="corr" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="1170" y2="0">
+      <stop offset="0%"   stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+    <filter id="eglow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="egrid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#111e2f" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#ebg)"/>
+  <rect width="1280" height="320" fill="url(#egrid)" opacity=".6"/>
+  <rect width="1280" height="320" fill="none" stroke="#1c2b40"/>
+
+  <!-- ── the impulse: five waves, each drawn in turn ───────────────────────── -->
+  <!-- pathLength normalises every leg to 100 so one dashoffset value works for
+       all of them regardless of their real length. -->
+  <g fill="none" stroke="url(#impulse)" stroke-width="3.5" stroke-linecap="round"
+     stroke-dasharray="100" stroke-dashoffset="100">
+
+    <path pathLength="100" d="M 90 268 L 250 168">
+      <animate attributeName="stroke-dashoffset" values="100;0;0;100"
+               keyTimes="0;0.09;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+
+    <path pathLength="100" d="M 250 168 L 340 216">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.10;0.17;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+
+    <path pathLength="100" d="M 340 216 L 560 96">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.18;0.30;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+
+    <path pathLength="100" d="M 560 96 L 660 150">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.31;0.38;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+
+    <path pathLength="100" d="M 660 150 L 820 62">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.39;0.49;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+  </g>
+
+  <!-- ── the ABC correction ────────────────────────────────────────────────── -->
+  <g fill="none" stroke="url(#corr)" stroke-width="3.5" stroke-linecap="round"
+     stroke-dasharray="100" stroke-dashoffset="100">
+    <path pathLength="100" d="M 820 62 L 950 158">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.53;0.63;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+    <path pathLength="100" d="M 950 158 L 1040 104">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.64;0.71;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+    <path pathLength="100" d="M 1040 104 L 1170 196">
+      <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
+               keyTimes="0;0.72;0.82;0.94;1" dur="12s" repeatCount="indefinite"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
+    </path>
+  </g>
+
+  <!-- ── pivot labels, each popping as its wave completes ──────────────────── -->
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14"
+     font-weight="700" text-anchor="middle">
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.07;.10;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="250" cy="168" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="250" y="150" fill="#2dd4bf">1</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.15;.18;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="340" cy="216" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="340" y="240" fill="#2dd4bf">2</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.28;.31;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="560" cy="96" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="560" y="78" fill="#2dd4bf">3</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.36;.39;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="660" cy="150" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="660" y="174" fill="#2dd4bf">4</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.47;.50;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="820" cy="62" r="8" fill="#0b1626" stroke="#22c55e" stroke-width="3"/>
+      <text x="820" y="42" fill="#22c55e">5</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.61;.64;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="950" cy="158" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="950" y="182" fill="#f43f5e">A</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.69;.72;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="1040" cy="104" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="1040" y="86" fill="#f43f5e">B</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.80;.83;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="1170" cy="196" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="1170" y="220" fill="#f43f5e">C</text></g>
+  </g>
+
+  <!-- the pen: a dot riding the front of whichever wave is being drawn -->
+  <g filter="url(#eglow)">
+    <circle r="6" fill="#ffffff" opacity="0">
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.03;.84;.88" dur="12s" repeatCount="indefinite"/>
+      <animateMotion dur="12s" repeatCount="indefinite" calcMode="spline"
+        keyPoints="0;.14;.14;.20;.20;.44;.44;.53;.53;.70;.70;.74;.74;.85;.85;.92;.92;1;1"
+        keyTimes="0;.09;.10;.17;.18;.30;.31;.38;.39;.49;.53;.63;.64;.71;.72;.82;.83;.94;1"
+        keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+        path="M 90 268 L 250 168 L 340 216 L 560 96 L 660 150 L 820 62 L 950 158 L 1040 104 L 1170 196"/>
+    </circle>
+  </g>
+
+  <!-- ── the rules, checked off as they are satisfied ──────────────────────── -->
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5">
+    <text x="60" y="40" fill="#7b93ad" font-size="13" font-weight="700" letter-spacing="2">
+      ELLIOTT WAVE · RULES CHECKED AS THE COUNT FORMS
+    </text>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.20;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="60" y="298" fill="#22c55e">✓</text>
+      <text x="80" y="298" fill="#8ba3bd">wave 2 never retraces beyond the start of wave 1</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;.001;1;1;0" keyTimes="0;.32;.34;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="470" y="298" fill="#22c55e">✓</text>
+      <text x="490" y="298" fill="#8ba3bd">wave 3 is never the shortest impulse</text></g>
+
+    <g opacity="0"><animate attributeName="opacity" values="0;.001;1;1;0" keyTimes="0;.40;.42;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="840" y="298" fill="#22c55e">✓</text>
+      <text x="860" y="298" fill="#8ba3bd">wave 4 never enters wave 1's territory</text></g>
+  </g>
+</svg>

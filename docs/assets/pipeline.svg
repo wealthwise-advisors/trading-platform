@@ -1,130 +1,205 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="230" viewBox="0 0 1280 230" role="img" aria-label="AutoTrader pipeline: market data flows through resampling, analysis, strategy and the paper broker to a scored result">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="260" viewBox="0 0 1280 260" role="img" aria-label="AutoTrader pipeline: market data flows through resampling, analysis, strategy and the paper broker to a scored result">
   <defs>
     <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#070c16"/>
-      <stop offset="55%"  stop-color="#0b1424"/>
-      <stop offset="100%" stop-color="#070c16"/>
+      <stop offset="0%"   stop-color="#050810"/>
+      <stop offset="50%"  stop-color="#0b1626"/>
+      <stop offset="100%" stop-color="#050810"/>
     </linearGradient>
-    <!-- userSpaceOnUse, not the default objectBoundingBox: a horizontal <line> has
-         a zero-height bounding box, which makes a bounding-box gradient degenerate
-         and the stroke invisible. Caught by rendering it. -->
+
+    <!-- userSpaceOnUse: a horizontal line has a zero-height bounding box, which
+         makes the default objectBoundingBox gradient degenerate and invisible. -->
     <linearGradient id="wire" gradientUnits="userSpaceOnUse" x1="118" y1="0" x2="1162" y2="0">
       <stop offset="0%"   stop-color="#38bdf8"/>
-      <stop offset="50%"  stop-color="#2dd4bf"/>
-      <stop offset="100%" stop-color="#a78bfa"/>
+      <stop offset="34%"  stop-color="#2dd4bf"/>
+      <stop offset="68%"  stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#22c55e"/>
     </linearGradient>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="4" result="b"/>
+
+    <!-- A light sweeping along the wire. The gradient itself is animated, which
+         reads as energy moving through rather than a dash marching. -->
+    <linearGradient id="sweep" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="240" y2="0">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#ffffff" stop-opacity=".75"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+      <animateTransform attributeName="gradientTransform" type="translate"
+                        values="-260 0; 1300 0" dur="3.4s" repeatCount="indefinite"
+                        calcMode="spline" keySplines="0.45 0 0.55 1"/>
+    </linearGradient>
+
+    <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <!-- The path the data travels. Referenced by every moving element. -->
-    <path id="flow" d="M 118 115 H 1162"/>
+    <filter id="hot" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <path id="flow" d="M 118 128 H 1162"/>
+
+    <!-- drifting grid, so the frame is never completely still -->
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse">
+      <path d="M 42 0 L 0 0 0 42" fill="none" stroke="#132033" stroke-width="1"/>
+    </pattern>
   </defs>
 
-  <rect width="1280" height="230" fill="url(#pbg)"/>
-  <rect width="1280" height="230" fill="none" stroke="#1e293b" stroke-width="1"/>
+  <rect width="1280" height="260" fill="url(#pbg)"/>
+  <g opacity=".55">
+    <rect width="1360" height="260" fill="url(#grid)">
+      <animateTransform attributeName="transform" type="translate"
+                        values="-42 0; 0 0" dur="6s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <rect width="1280" height="260" fill="none" stroke="#1c2b40"/>
 
-  <!-- the wire -->
-  <line x1="118" y1="115" x2="1162" y2="115" stroke="url(#wire)" stroke-width="2" opacity=".45"/>
-  <line x1="118" y1="115" x2="1162" y2="115" stroke="url(#wire)" stroke-width="2"
-        stroke-dasharray="10 14" opacity=".8">
-    <animate attributeName="stroke-dashoffset" from="24" to="0" dur="1.1s" repeatCount="indefinite"/>
-  </line>
+  <!-- ── the wire ──────────────────────────────────────────────────────────── -->
+  <line x1="118" y1="128" x2="1162" y2="128" stroke="url(#wire)" stroke-width="3" opacity=".35"/>
+  <line x1="118" y1="128" x2="1162" y2="128" stroke="url(#sweep)" stroke-width="3"/>
 
-  <!-- three packets travelling the wire, staggered -->
-  <g filter="url(#glow)">
-    <circle r="6" fill="#2dd4bf">
-      <animateMotion dur="4.2s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+  <!-- ── packets, eased rather than linear ─────────────────────────────────── -->
+  <g>
+    <g filter="url(#hot)">
+      <circle r="7" fill="#2dd4bf">
+        <animateMotion dur="3.4s" repeatCount="indefinite" calcMode="spline"
+                       keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
+          <mpath href="#flow"/>
+        </animateMotion>
+        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.05;.93;1"
+                 dur="3.4s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="5;8;5" dur=".9s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <!-- trail -->
+    <circle r="4" fill="#2dd4bf" opacity=".5" filter="url(#soft)">
+      <animateMotion dur="3.4s" begin="-0.08s" repeatCount="indefinite" calcMode="spline"
+                     keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
         <mpath href="#flow"/>
       </animateMotion>
-      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.94;1" dur="4.2s" repeatCount="indefinite"/>
     </circle>
-    <circle r="5" fill="#38bdf8">
-      <animateMotion dur="4.2s" begin="1.4s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+    <circle r="2.5" fill="#2dd4bf" opacity=".28" filter="url(#soft)">
+      <animateMotion dur="3.4s" begin="-0.16s" repeatCount="indefinite" calcMode="spline"
+                     keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
         <mpath href="#flow"/>
       </animateMotion>
-      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.94;1" dur="4.2s" begin="1.4s" repeatCount="indefinite"/>
     </circle>
-    <circle r="4" fill="#a78bfa">
-      <animateMotion dur="4.2s" begin="2.8s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
-        <mpath href="#flow"/>
-      </animateMotion>
-      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.06;.94;1" dur="4.2s" begin="2.8s" repeatCount="indefinite"/>
-    </circle>
+
+    <g filter="url(#soft)">
+      <circle r="5" fill="#38bdf8">
+        <animateMotion dur="3.4s" begin="1.7s" repeatCount="indefinite" calcMode="spline"
+                       keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
+          <mpath href="#flow"/>
+        </animateMotion>
+        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.05;.93;1"
+                 dur="3.4s" begin="1.7s" repeatCount="indefinite"/>
+      </circle>
+    </g>
   </g>
 
-  <!-- ── stages ───────────────────────────────────────────────────────────── -->
-  <!-- Each pulses as a packet reaches it: begin times are spaced across the 4.2s
-       cycle in the same proportion as the node's position along the wire. -->
+  <!-- ── stages ────────────────────────────────────────────────────────────── -->
+  <!-- Each ring expands and each node scales as the packet reaches it; begin
+       times follow the node's position along the wire. -->
   <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" text-anchor="middle">
 
     <g>
-      <circle cx="118" cy="115" r="30" fill="#0f1c2e" stroke="#38bdf8" stroke-width="2"/>
-      <circle cx="118" cy="115" r="30" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="30;44" dur="4.2s" begin="0s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".7;0" dur="4.2s" begin="0s" repeatCount="indefinite"/>
+      <circle cx="118" cy="128" r="32" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="32;52" dur="3.4s" begin="0s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="0s" repeatCount="indefinite"/>
       </circle>
-      <text x="118" y="121" font-size="20" fill="#38bdf8">⬇</text>
-      <text x="118" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Market Data</text>
-      <text x="118" y="194" font-size="11" fill="#64748b">Schwab · CSV</text>
+      <circle cx="118" cy="128" r="32" fill="#0d1c2f" stroke="#38bdf8" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="0s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <text x="118" y="135" font-size="21" fill="#38bdf8">⬇</text>
+      <text x="118" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Market Data</text>
+      <text x="118" y="209" font-size="11" fill="#5f7994">Schwab · CSV</text>
     </g>
 
     <g>
-      <circle cx="327" cy="115" r="26" fill="#0f1c2e" stroke="#2dd4bf" stroke-width="2"/>
-      <circle cx="327" cy="115" r="26" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="26;40" dur="4.2s" begin=".84s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".7;0" dur="4.2s" begin=".84s" repeatCount="indefinite"/>
+      <circle cx="327" cy="128" r="27" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="27;46" dur="3.4s" begin=".68s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin=".68s" repeatCount="indefinite"/>
       </circle>
-      <text x="327" y="121" font-size="17" fill="#2dd4bf">⧉</text>
-      <text x="327" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Resample</text>
-      <text x="327" y="194" font-size="11" fill="#64748b">one aggregator</text>
+      <circle cx="327" cy="128" r="27" fill="#0d1c2f" stroke="#2dd4bf" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin=".68s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <text x="327" y="135" font-size="18" fill="#2dd4bf">⧉</text>
+      <text x="327" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Resample</text>
+      <text x="327" y="209" font-size="11" fill="#5f7994">one aggregator</text>
     </g>
 
     <g>
-      <circle cx="536" cy="115" r="26" fill="#0f1c2e" stroke="#2dd4bf" stroke-width="2"/>
-      <circle cx="536" cy="115" r="26" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="26;40" dur="4.2s" begin="1.68s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".7;0" dur="4.2s" begin="1.68s" repeatCount="indefinite"/>
+      <circle cx="536" cy="128" r="27" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="27;46" dur="3.4s" begin="1.36s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="1.36s" repeatCount="indefinite"/>
       </circle>
-      <text x="536" y="122" font-size="17" fill="#2dd4bf">🌊</text>
-      <text x="536" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Analysis</text>
-      <text x="536" y="194" font-size="11" fill="#64748b">waves · VWAP</text>
+      <circle cx="536" cy="128" r="27" fill="#0d1c2f" stroke="#2dd4bf" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="1.36s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <text x="536" y="136" font-size="18">🌊</text>
+      <text x="536" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Analysis</text>
+      <text x="536" y="209" font-size="11" fill="#5f7994">waves · VWAP</text>
     </g>
 
     <g>
-      <circle cx="745" cy="115" r="26" fill="#0f1c2e" stroke="#a78bfa" stroke-width="2"/>
-      <circle cx="745" cy="115" r="26" fill="none" stroke="#a78bfa" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="26;40" dur="4.2s" begin="2.52s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".7;0" dur="4.2s" begin="2.52s" repeatCount="indefinite"/>
+      <circle cx="745" cy="128" r="27" fill="none" stroke="#a78bfa" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="27;46" dur="3.4s" begin="2.04s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="2.04s" repeatCount="indefinite"/>
       </circle>
-      <text x="745" y="121" font-size="17" fill="#a78bfa">⚡</text>
-      <text x="745" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Strategy</text>
-      <text x="745" y="194" font-size="11" fill="#64748b">signal</text>
+      <circle cx="745" cy="128" r="27" fill="#0d1c2f" stroke="#a78bfa" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="2.04s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <text x="745" y="135" font-size="18" fill="#a78bfa">⚡</text>
+      <text x="745" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Strategy</text>
+      <text x="745" y="209" font-size="11" fill="#5f7994">signal</text>
     </g>
 
     <g>
-      <circle cx="954" cy="115" r="26" fill="#0f1c2e" stroke="#f59e0b" stroke-width="2"/>
-      <circle cx="954" cy="115" r="26" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="26;40" dur="4.2s" begin="3.36s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".7;0" dur="4.2s" begin="3.36s" repeatCount="indefinite"/>
+      <circle cx="954" cy="128" r="27" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="27;46" dur="3.4s" begin="2.72s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="2.72s" repeatCount="indefinite"/>
       </circle>
-      <text x="954" y="121" font-size="17" fill="#f59e0b">💰</text>
-      <text x="954" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Paper Broker</text>
-      <text x="954" y="194" font-size="11" fill="#64748b">fills · costs</text>
+      <circle cx="954" cy="128" r="27" fill="#0d1c2f" stroke="#f59e0b" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="2.72s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <text x="954" y="136" font-size="17">💰</text>
+      <text x="954" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Paper Broker</text>
+      <text x="954" y="209" font-size="11" fill="#5f7994">fills · costs</text>
     </g>
 
     <g>
-      <circle cx="1162" cy="115" r="30" fill="#0f1c2e" stroke="#22c55e" stroke-width="2"/>
-      <circle cx="1162" cy="115" r="30" fill="none" stroke="#22c55e" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="30;46" dur="4.2s" begin="4.1s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values=".8;0" dur="4.2s" begin="4.1s" repeatCount="indefinite"/>
+      <circle cx="1162" cy="128" r="32" fill="none" stroke="#22c55e" stroke-width="2" opacity="0">
+        <animate attributeName="r" values="32;56" dur="3.4s" begin="3.3s" repeatCount="indefinite"
+                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
+        <animate attributeName="opacity" values=".9;0" dur="3.4s" begin="3.3s" repeatCount="indefinite"/>
       </circle>
-      <text x="1162" y="122" font-size="19" fill="#22c55e">✓</text>
-      <text x="1162" y="176" font-size="13" fill="#e2e8f0" font-weight="600">Scored Result</text>
-      <text x="1162" y="194" font-size="11" fill="#64748b">reproducible</text>
+      <circle cx="1162" cy="128" r="32" fill="#0d1c2f" stroke="#22c55e" stroke-width="2">
+        <animate attributeName="stroke-width" values="2;5;2" dur="3.4s" begin="3.3s" repeatCount="indefinite"
+                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
+      </circle>
+      <g filter="url(#soft)">
+        <text x="1162" y="136" font-size="21" fill="#22c55e" opacity=".9">✓
+          <animate attributeName="opacity" values=".55;1;.55" dur="3.4s" begin="3.3s" repeatCount="indefinite"/>
+        </text>
+      </g>
+      <text x="1162" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Scored Result</text>
+      <text x="1162" y="209" font-size="11" fill="#5f7994">reproducible</text>
     </g>
   </g>
 
-  <text x="640" y="42" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"
-        font-size="14" fill="#64748b" letter-spacing="2.5">BARS IN · A NUMBER YOU CAN DEFEND OUT</text>
+  <!-- title, letter-spacing easing in on load then settling -->
+  <text x="640" y="48" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"
+        font-size="14" fill="#7b93ad" letter-spacing="3" font-weight="600">
+    BARS IN · A NUMBER YOU CAN DEFEND OUT
+    <animate attributeName="opacity" values=".45;1;.45" dur="3.4s" repeatCount="indefinite"
+             calcMode="spline" keyTimes="0;.5;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+  </text>
 </svg>

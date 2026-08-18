@@ -378,6 +378,12 @@ flowchart LR
 
 ## 🔍 Market Intelligence
 
+<div align="center">
+<img src="docs/assets/elliott-wave.svg" alt="An Elliott Wave impulse drawing itself wave by wave, then the ABC correction, with each rule checked as it completes" width="100%">
+</div>
+
+<br>
+
 <table>
 <tr><td valign="top" width="50%">
 
