@@ -182,11 +182,15 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             {(symbols ?? []).map((s) => (
               <SelectItem key={s.symbol} value={s.symbol}>
                 <span className="flex items-center gap-2.5">
+                  {/* Badge and name, no separate ticker. The badge for an index or
+                      equity IS the ticker in a coloured disc, so printing it again
+                      beside the name rendered "ES  ES — E-mini S&P 500". The two
+                      references differ here: one shows a glyph badge with the ticker
+                      spelled out beside it, the panel view shows the lettered badge
+                      and the name. The badge is lettered, so the panel view is the
+                      one that stays consistent. */}
                   <SymbolMark symbol={s.symbol} />
-                  <span className="font-semibold">{s.symbol}</span>
-                  {s.name && s.name !== s.symbol && (
-                    <span className="text-muted-foreground">— {s.name}</span>
-                  )}
+                  <span>{s.name && s.name !== s.symbol ? s.name : s.symbol}</span>
                 </span>
               </SelectItem>
             ))}
