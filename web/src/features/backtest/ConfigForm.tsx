@@ -16,6 +16,7 @@ import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
+import { DateField } from "@/components/ui/date-field"
 import { SymbolMark } from "@/components/SymbolMark"
 import {
   Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
@@ -189,8 +190,13 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
                       spelled out beside it, the panel view shows the lettered badge
                       and the name. The badge is lettered, so the panel view is the
                       one that stays consistent. */}
+                  {/* Ticker and name, as the reference shows. The badge is a
+                      glyph rather than letters, so the ticker appears once. */}
                   <SymbolMark symbol={s.symbol} />
-                  <span>{s.name && s.name !== s.symbol ? s.name : s.symbol}</span>
+                  <span className="font-semibold">{s.symbol}</span>
+                  {s.name && s.name !== s.symbol && (
+                    <span className="text-muted-foreground">— {s.name}</span>
+                  )}
                 </span>
               </SelectItem>
             ))}
@@ -294,13 +300,13 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Start Date</Label>
-              <Input type="date" value={cfg.startDate}
-                     onChange={(e) => cfg.setField("startDate", e.target.value)} />
+              <DateField label="Start date" value={cfg.startDate}
+                         onChange={(v) => cfg.setField("startDate", v)} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">End Date</Label>
-              <Input type="date" value={cfg.endDate}
-                     onChange={(e) => cfg.setField("endDate", e.target.value)} />
+              <DateField label="End date" value={cfg.endDate}
+                         onChange={(v) => cfg.setField("endDate", v)} />
             </div>
           </div>
 

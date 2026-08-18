@@ -111,12 +111,26 @@ function glyph(symbol: string, fg: string) {
   if (s === "ETH")
     return <path d="M12 3 6.5 12.2 12 15.4l5.5-3.2zM6.5 13.5 12 21l5.5-7.5L12 16.7z" fill={fg} />
 
-  return null   // handled as a lettered badge by SymbolMark
+  // Equities: a single-name marker. No company mark is used -- see the note at
+  // the top of this file about trademarked artwork -- and the per-ticker hue does
+  // the distinguishing.
+  return (
+    <g fill={fg}>
+      <path d="M5 20V9.2l7-4.2 7 4.2V20h-4.6v-4.6h-4.8V20z" />
+    </g>
+  )
 }
 
-/** Families drawn as a filled circle carrying the ticker, rather than a glyph. */
+/**
+ * Every family is drawn as a glyph now, none lettered.
+ *
+ * The disc used to carry the ticker, which was fine while the row showed only the
+ * instrument name. The reference spells the ticker out beside the name -- "ES -
+ * E-mini S&P 500" -- and a lettered disc next to that rendered "ES  ES - E-mini
+ * S&P 500". A glyph says what KIND of instrument it is; the text says which one.
+ */
 function isLettered(cls: AssetClass): boolean {
-  return cls === "index" || cls === "micro" || cls === "equity" || cls === "other"
+  return cls === "other"
 }
 
 /** Ticker text scaled so four characters still fit inside the circle. */
