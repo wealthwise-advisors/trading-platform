@@ -53,11 +53,11 @@ import pandas as pd
 
 # Minutes per supported timeframe label, and the pandas resample alias.
 TF_MINUTES: dict[str, int] = {
-    "1m": 1, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
+    "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
     "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60,
 }
 TF_ALIAS: dict[str, str] = {
-    "1m": "1min", "5m": "5min", "10m": "10min", "15m": "15min",
+    "1m": "1min", "2m": "2min", "5m": "5min", "10m": "10min", "15m": "15min",
     "20m": "20min", "25m": "25min", "30m": "30min", "35m": "35min",
     "40m": "40min", "45m": "45min", "1h": "1h",
 }

@@ -27,11 +27,11 @@ import {
 export type Accent = "blue" | "green" | "violet" | "amber" | "cyan"
 
 const ACCENT: Record<Accent, string> = {
-  blue:   "text-sky-400",
+  blue:   "text-[#3b82f6]",
   green:  "text-emerald-400",
   violet: "text-violet-400",
-  amber:  "text-amber-400",
-  cyan:   "text-cyan-400",
+  amber:  "text-[#3b82f6]",
+  cyan:   "text-[#3b82f6]",
 }
 
 export const SECTION_ICON = {
@@ -80,7 +80,7 @@ export function Section({ icon, label, accent = "blue", children, aside }: Secti
 /** A bordered group, for sections holding several related fields. */
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-white/8 bg-white/[0.02] p-3 space-y-3 ${className}`}>
+    <div className={`rounded-xl border border-white/10 bg-white/[0.025] p-3.5 space-y-3.5 ${className}`}>
       {children}
     </div>
   )
@@ -133,7 +133,7 @@ export function FieldRow({
           {hint && <span className="text-[11px] text-muted-foreground truncate">{hint}</span>}
         </span>
       </span>
-      <div className="w-[104px] shrink-0">{children}</div>
+      <div className="w-[122px] shrink-0">{children}</div>
     </div>
   )
 }
@@ -184,9 +184,9 @@ export function SliderField({
             // sending NaN through to the request.
             if (Number.isFinite(v)) onChange(v)
           }}
-          className="w-[74px] shrink-0 rounded-lg border border-white/12 bg-white/[0.03]
-                     px-2 py-1 text-right text-sm tabular-nums
-                     focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+          className="w-[86px] shrink-0 rounded-lg border border-white/12 bg-white/[0.03]
+                     px-3 py-2 text-center text-sm tabular-nums
+                     focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
           aria-label={label}
         />
       </div>

@@ -1,5 +1,9 @@
 <div align="center">
 
+<img src="docs/assets/brand-banner.png" alt="AutoTrader — Automate · Analyze · Execute · Succeed" width="100%">
+
+<br>
+
 <img src="docs/assets/hero.svg" alt="AutoTrader — Algorithmic Trading Research & Execution Platform" width="100%">
 
 <br><br>

@@ -11,13 +11,33 @@ import pytest
 
 from src.backtesting.multi_replay import TF_MINUTES
 
-UI_TIMEFRAMES = ["1m", "5m", "10m", "15m", "20m", "25m",
-                 "30m", "35m", "40m", "45m", "1h"]
+#: What the selector offers, mirroring ALL_TIMEFRAMES in ReplayPage.tsx and the
+#: list in ConfigForm.tsx.
+UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m",
+                 "30m", "35m", "45m", "1h"]
 
 
-def test_the_ui_list_matches_the_engine_table():
-    assert set(UI_TIMEFRAMES) == set(TF_MINUTES), (
-        "the selectable timeframes and the engine's minute table have drifted"
+def test_every_selectable_timeframe_is_one_the_engine_knows():
+    """
+    Subset, not equality.
+
+    Equality was right while the two lists were the same list. They are not any
+    more: 40m was dropped from the selector but kept in the engine, because a saved
+    session or a stored config on 40m still has to load. The invariant that matters
+    is one-directional -- nothing may be offered that the engine cannot build.
+    """
+    missing = sorted(set(UI_TIMEFRAMES) - set(TF_MINUTES))
+    assert not missing, (
+        f"the selector offers {missing}, which the engine cannot build"
+    )
+
+
+def test_the_engine_may_know_more_than_the_selector_offers():
+    """The reverse direction is allowed, and is stated so it is not read as drift."""
+    retired = sorted(set(TF_MINUTES) - set(UI_TIMEFRAMES))
+    assert retired == ["40m"], (
+        f"unexpected engine-only timeframes {retired}; if one was retired from the "
+        f"selector deliberately, name it here so the next reader knows it was a choice"
     )
 
 

@@ -56,8 +56,8 @@ function equityHue(symbol: string): number {
 }
 
 const PALETTE: Record<AssetClass, { fg: string; bg: string; ring: string }> = {
-  index:  { fg: "#38bdf8", bg: "rgba(56,189,248,.12)",  ring: "rgba(56,189,248,.45)" },
-  micro:  { fg: "#22d3ee", bg: "rgba(34,211,238,.12)",  ring: "rgba(34,211,238,.42)" },
+  index:  { fg: "#8b5cf6", bg: "rgba(139,92,246,.12)",  ring: "rgba(139,92,246,.45)" },
+  micro:  { fg: "#10b981", bg: "rgba(16,185,129,.12)",  ring: "rgba(16,185,129,.42)" },
   energy: { fg: "#f59e0b", bg: "rgba(245,158,11,.12)",  ring: "rgba(245,158,11,.45)" },
   // Gold's amber. Silver and copper override it below -- three metals sharing one
   // colour made GC, SI and HG a single block in the list.
@@ -111,14 +111,19 @@ function glyph(symbol: string, fg: string) {
   if (s === "ETH")
     return <path d="M12 3 6.5 12.2 12 15.4l5.5-3.2zM6.5 13.5 12 21l5.5-7.5L12 16.7z" fill={fg} />
 
-  // Equities and anything unmatched: the first two letters of the ticker.
-  return (
-    <text x="12" y="16.4" textAnchor="middle" fill={fg}
-          fontSize="10.5" fontWeight="700"
-          fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif">
-      {s.slice(0, 2)}
-    </text>
-  )
+  return null   // handled as a lettered badge by SymbolMark
+}
+
+/** Families drawn as a filled circle carrying the ticker, rather than a glyph. */
+function isLettered(cls: AssetClass): boolean {
+  return cls === "index" || cls === "micro" || cls === "equity" || cls === "other"
+}
+
+/** Ticker text scaled so four characters still fit inside the circle. */
+function tickerSize(len: number): number {
+  if (len <= 2) return 9.5
+  if (len === 3) return 8
+  return 6.6
 }
 
 interface Props {
@@ -132,12 +137,20 @@ export function SymbolMark({ symbol, size = 22, className }: Props) {
   const s = symbol.toUpperCase()
   const cls = assetClassOf(symbol)
   let { fg, bg, ring } = PALETTE[cls]
+  const lettered = isLettered(cls)
   // Per-instrument overrides where one class colour is not enough.
   if (s === "SI") {          // silver, not gold
     fg = "#cbd5e1"; bg = "rgba(203,213,225,.12)"; ring = "rgba(203,213,225,.40)"
   } else if (s === "HG") {   // copper
     fg = "#fb923c"; bg = "rgba(251,146,60,.12)"; ring = "rgba(251,146,60,.42)"
   }
+  // The design gives each index its own disc colour rather than one blue for the
+  // family, so ES, NQ, YM and RTY are told apart before the ticker is read.
+  const DISC: Record<string, string> = {
+    ES: "#8b5cf6", NQ: "#3b82f6", YM: "#eab308", RTY: "#a855f7",
+    MES: "#10b981", MNQ: "#14b8a6",
+  }
+  if (DISC[s]) fg = DISC[s]
   if (cls === "equity") {
     const h = equityHue(s)
     fg = `hsl(${h} 78% 66%)`
@@ -152,17 +165,24 @@ export function SymbolMark({ symbol, size = 22, className }: Props) {
       aria-label={`${symbol} (${cls})`}
       style={{ flexShrink: 0 }}
     >
-      <rect x=".75" y=".75" width="22.5" height="22.5" rx="6.5"
-            fill={bg} stroke={ring} strokeWidth="1.5" />
-      {/* A micro carries its parent's glyph, shrunk toward the top-left, with a dot
-          in the corner. MES beside ES was otherwise the same picture in a slightly
-          different blue, which is not a difference anyone reads in a list. */}
-      {cls === "micro" ? (
+      {lettered ? (
         <>
-          <g transform="translate(2.2 1.4) scale(.78)">{glyph(s, fg)}</g>
-          <circle cx="18.4" cy="18.4" r="2.7" fill={fg} />
+          {/* Solid disc, ticker in white. An index future is known by its ticker;
+              a glyph would be an extra step between reading and recognising. */}
+          <circle cx="12" cy="12" r="11.25" fill={fg} />
+          <text x="12" y="12" textAnchor="middle" dominantBaseline="central"
+                fill="#0b0f17" fontSize={tickerSize(s.length)} fontWeight="800"
+                letterSpacing="-0.2"
+                fontFamily="ui-sans-serif, system-ui, -apple-system, sans-serif">
+            {s.slice(0, 4)}
+          </text>
         </>
-      ) : glyph(s, fg)}
+      ) : (
+        <>
+          <circle cx="12" cy="12" r="11.25" fill={bg} stroke={ring} strokeWidth="1.5" />
+          {glyph(s, fg)}
+        </>
+      )}
     </svg>
   )
 }
