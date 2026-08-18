@@ -43,6 +43,46 @@ contracts:
     point_value: 5.0
     margin_initial: 1200.0
     margin_maintenance: 1080.0
+  YM:
+    name: "E-mini Dow Jones"
+    exchange: "CBOT"
+    tick_size: 1.0
+    tick_value: 5.0
+    point_value: 5.0              # the Dow is quoted in index points, 1 tick = 1 point
+    margin_initial: 9500.0
+    margin_maintenance: 8600.0
+  RTY:
+    name: "E-mini Russell 2000"
+    exchange: "CME"
+    tick_size: 0.1
+    tick_value: 5.0
+    point_value: 50.0
+    margin_initial: 7000.0
+    margin_maintenance: 6400.0
+  MNQ:
+    name: "Micro E-mini NASDAQ 100"
+    exchange: "CME"
+    tick_size: 0.25
+    tick_value: 0.5               # one tenth of NQ, which is 5.0
+    point_value: 2.0
+    margin_initial: 1650.0
+    margin_maintenance: 1500.0
+  SI:
+    name: "Silver"
+    exchange: "COMEX"
+    tick_size: 0.005
+    tick_value: 25.0              # 5,000 troy oz per contract
+    point_value: 5000.0
+    margin_initial: 14000.0
+    margin_maintenance: 12700.0
+  NG:
+    name: "Natural Gas"
+    exchange: "NYMEX"
+    tick_size: 0.001
+    tick_value: 10.0              # 10,000 MMBtu per contract
+    point_value: 10000.0
+    margin_initial: 4300.0
+    margin_maintenance: 3900.0
   HG:
     name: "High Grade Copper"
     exchange: "COMEX"
@@ -64,15 +104,18 @@ contracts:
   # not as a futures contract: "contracts per trade" therefore means shares.
   # Without these, get_contract_spec() falls back to the E-mini default and
   # values a $1 move in NVDA at $50 instead of $1.
-  AAPL: &equity {name: "Equity (1 share)", exchange: "NASDAQ", tick_size: 0.01, tick_value: 0.01, point_value: 1.0, margin_initial: 0.0, margin_maintenance: 0.0}
-  AMD:  *equity
-  COIN: *equity
-  CRWV: *equity
-  META: *equity
-  NVDA: *equity
-  SMCI: *equity
-  TSLA: *equity
-  UPST: *equity
+  # US single names. Identical economics -- one share, penny tick -- so the first
+  # carries the anchor and the rest merge it and override only the name. They read
+  # as nine identical rows otherwise, which is no help in a list of twenty-one.
+  AAPL: &equity {name: "Apple", exchange: "NASDAQ", tick_size: 0.01, tick_value: 0.01, point_value: 1.0, margin_initial: 0.0, margin_maintenance: 0.0}
+  AMD:  {<<: *equity, name: "Advanced Micro Devices"}
+  COIN: {<<: *equity, name: "Coinbase Global"}
+  CRWV: {<<: *equity, name: "CoreWeave"}
+  META: {<<: *equity, name: "Meta Platforms"}
+  NVDA: {<<: *equity, name: "NVIDIA"}
+  SMCI: {<<: *equity, name: "Super Micro Computer"}
+  TSLA: {<<: *equity, name: "Tesla"}
+  UPST: {<<: *equity, name: "Upstart Holdings"}
   BTC:
     name: "Bitcoin (spot, 1 unit)"
     exchange: "CRYPTO"
