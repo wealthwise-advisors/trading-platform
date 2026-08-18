@@ -1,205 +1,244 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="260" viewBox="0 0 1280 260" role="img" aria-label="AutoTrader pipeline: market data flows through resampling, analysis, strategy and the paper broker to a scored result">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="270" viewBox="0 0 1280 270" role="img" aria-label="AutoTrader pipeline: market data is resampled, analysed, traded by the strategy, filled by the paper broker and scored">
   <defs>
-    <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%"   stop-color="#050810"/>
-      <stop offset="50%"  stop-color="#0b1626"/>
-      <stop offset="100%" stop-color="#050810"/>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1220"/>
+      <stop offset="100%" stop-color="#070c16"/>
     </linearGradient>
-
-    <!-- userSpaceOnUse: a horizontal line has a zero-height bounding box, which
-         makes the default objectBoundingBox gradient degenerate and invisible. -->
-    <linearGradient id="wire" gradientUnits="userSpaceOnUse" x1="118" y1="0" x2="1162" y2="0">
-      <stop offset="0%"   stop-color="#38bdf8"/>
-      <stop offset="34%"  stop-color="#2dd4bf"/>
-      <stop offset="68%"  stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#22c55e"/>
-    </linearGradient>
-
-    <!-- A light sweeping along the wire. The gradient itself is animated, which
-         reads as energy moving through rather than a dash marching. -->
-    <linearGradient id="sweep" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="240" y2="0">
-      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0"/>
-      <stop offset="50%"  stop-color="#ffffff" stop-opacity=".75"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-      <animateTransform attributeName="gradientTransform" type="translate"
-                        values="-260 0; 1300 0" dur="3.4s" repeatCount="indefinite"
-                        calcMode="spline" keySplines="0.45 0 0.55 1"/>
-    </linearGradient>
-
-    <filter id="soft" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="hot" x="-120%" y="-120%" width="340%" height="340%">
-      <feGaussianBlur stdDeviation="9" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-
-    <path id="flow" d="M 118 128 H 1162"/>
-
-    <!-- drifting grid, so the frame is never completely still -->
-    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse">
-      <path d="M 42 0 L 0 0 0 42" fill="none" stroke="#132033" stroke-width="1"/>
+    <radialGradient id="wash" cx="50%" cy="0%" r="78%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".085"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M34 0H0v34" fill="none" stroke="#ffffff" stroke-opacity=".028" stroke-width="1"/>
     </pattern>
+    <radialGradient id="glow0" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#38bdf8" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#2dd4bf" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#3b82f6" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#a855f7" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f97316" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#f97316" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity=".42"/>
+      <stop offset="62%" stop-color="#22c55e" stop-opacity=".10"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rail0" gradientUnits="userSpaceOnUse" x1="182.0" y1="104" x2="298.0" y2="104">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#2dd4bf" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="rail1" gradientUnits="userSpaceOnUse" x1="382.0" y1="104" x2="498.0" y2="104">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="rail2" gradientUnits="userSpaceOnUse" x1="582.0" y1="104" x2="698.0" y2="104">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="rail3" gradientUnits="userSpaceOnUse" x1="782.0" y1="104" x2="898.0" y2="104">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="rail4" gradientUnits="userSpaceOnUse" x1="982.0" y1="104" x2="1098.0" y2="104">
+      <stop offset="0%" stop-color="#f97316" stop-opacity=".62"/>
+      <stop offset="100%" stop-color="#22c55e" stop-opacity=".62"/>
+    </linearGradient>
   </defs>
-
-  <rect width="1280" height="260" fill="url(#pbg)"/>
-  <g opacity=".55">
-    <rect width="1360" height="260" fill="url(#grid)">
-      <animateTransform attributeName="transform" type="translate"
-                        values="-42 0; 0 0" dur="6s" repeatCount="indefinite"/>
-    </rect>
-  </g>
-  <rect width="1280" height="260" fill="none" stroke="#1c2b40"/>
-
-  <!-- ── the wire ──────────────────────────────────────────────────────────── -->
-  <line x1="118" y1="128" x2="1162" y2="128" stroke="url(#wire)" stroke-width="3" opacity=".35"/>
-  <line x1="118" y1="128" x2="1162" y2="128" stroke="url(#sweep)" stroke-width="3"/>
-
-  <!-- ── packets, eased rather than linear ─────────────────────────────────── -->
+  <rect x="1" y="1" width="1278" height="268" rx="20" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".07"/>
+  <rect x="1" y="1" width="1278" height="268" rx="20" fill="url(#grid)"/>
+  <rect x="1" y="1" width="1278" height="268" rx="20" fill="url(#wash)"/>
   <g>
-    <g filter="url(#hot)">
-      <circle r="7" fill="#2dd4bf">
-        <animateMotion dur="3.4s" repeatCount="indefinite" calcMode="spline"
-                       keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
-          <mpath href="#flow"/>
-        </animateMotion>
-        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.05;.93;1"
-                 dur="3.4s" repeatCount="indefinite"/>
-        <animate attributeName="r" values="5;8;5" dur=".9s" repeatCount="indefinite"/>
-      </circle>
-    </g>
-    <!-- trail -->
-    <circle r="4" fill="#2dd4bf" opacity=".5" filter="url(#soft)">
-      <animateMotion dur="3.4s" begin="-0.08s" repeatCount="indefinite" calcMode="spline"
-                     keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
-        <mpath href="#flow"/>
-      </animateMotion>
+    <line x1="182.0" y1="104" x2="298.0" y2="104" stroke="url(#rail0)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="182.0" cy="104" r="2.6" fill="#38bdf8"/>
+    <circle cx="298.0" cy="104" r="2.6" fill="#2dd4bf"/>
+    <circle cx="182.0" cy="104" r="3.4" fill="#e0f2fe" opacity=".95">
+      <animate attributeName="cx" from="182.0" to="298.0" dur="1.9s" begin="0.00s" repeatCount="indefinite" fill="freeze"/>
     </circle>
-    <circle r="2.5" fill="#2dd4bf" opacity=".28" filter="url(#soft)">
-      <animateMotion dur="3.4s" begin="-0.16s" repeatCount="indefinite" calcMode="spline"
-                     keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
-        <mpath href="#flow"/>
-      </animateMotion>
+  </g>
+  <g>
+    <line x1="382.0" y1="104" x2="498.0" y2="104" stroke="url(#rail1)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="382.0" cy="104" r="2.6" fill="#2dd4bf"/>
+    <circle cx="498.0" cy="104" r="2.6" fill="#3b82f6"/>
+    <circle cx="382.0" cy="104" r="3.4" fill="#e0f2fe" opacity=".95">
+      <animate attributeName="cx" from="382.0" to="498.0" dur="1.9s" begin="0.42s" repeatCount="indefinite" fill="freeze"/>
     </circle>
-
-    <g filter="url(#soft)">
-      <circle r="5" fill="#38bdf8">
-        <animateMotion dur="3.4s" begin="1.7s" repeatCount="indefinite" calcMode="spline"
-                       keyPoints="0;1" keyTimes="0;1" keySplines="0.45 0 0.55 1">
-          <mpath href="#flow"/>
-        </animateMotion>
-        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.05;.93;1"
-                 dur="3.4s" begin="1.7s" repeatCount="indefinite"/>
-      </circle>
-    </g>
   </g>
-
-  <!-- ── stages ────────────────────────────────────────────────────────────── -->
-  <!-- Each ring expands and each node scales as the packet reaches it; begin
-       times follow the node's position along the wire. -->
-  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" text-anchor="middle">
-
-    <g>
-      <circle cx="118" cy="128" r="32" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="32;52" dur="3.4s" begin="0s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="0s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="118" cy="128" r="32" fill="#0d1c2f" stroke="#38bdf8" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="0s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <text x="118" y="135" font-size="21" fill="#38bdf8">⬇</text>
-      <text x="118" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Market Data</text>
-      <text x="118" y="209" font-size="11" fill="#5f7994">Schwab · CSV</text>
-    </g>
-
-    <g>
-      <circle cx="327" cy="128" r="27" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="27;46" dur="3.4s" begin=".68s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin=".68s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="327" cy="128" r="27" fill="#0d1c2f" stroke="#2dd4bf" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin=".68s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <text x="327" y="135" font-size="18" fill="#2dd4bf">⧉</text>
-      <text x="327" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Resample</text>
-      <text x="327" y="209" font-size="11" fill="#5f7994">one aggregator</text>
-    </g>
-
-    <g>
-      <circle cx="536" cy="128" r="27" fill="none" stroke="#2dd4bf" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="27;46" dur="3.4s" begin="1.36s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="1.36s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="536" cy="128" r="27" fill="#0d1c2f" stroke="#2dd4bf" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="1.36s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <text x="536" y="136" font-size="18">🌊</text>
-      <text x="536" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Analysis</text>
-      <text x="536" y="209" font-size="11" fill="#5f7994">waves · VWAP</text>
-    </g>
-
-    <g>
-      <circle cx="745" cy="128" r="27" fill="none" stroke="#a78bfa" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="27;46" dur="3.4s" begin="2.04s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="2.04s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="745" cy="128" r="27" fill="#0d1c2f" stroke="#a78bfa" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="2.04s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <text x="745" y="135" font-size="18" fill="#a78bfa">⚡</text>
-      <text x="745" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Strategy</text>
-      <text x="745" y="209" font-size="11" fill="#5f7994">signal</text>
-    </g>
-
-    <g>
-      <circle cx="954" cy="128" r="27" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="27;46" dur="3.4s" begin="2.72s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".85;0" dur="3.4s" begin="2.72s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="954" cy="128" r="27" fill="#0d1c2f" stroke="#f59e0b" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;4;2" dur="3.4s" begin="2.72s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <text x="954" y="136" font-size="17">💰</text>
-      <text x="954" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Paper Broker</text>
-      <text x="954" y="209" font-size="11" fill="#5f7994">fills · costs</text>
-    </g>
-
-    <g>
-      <circle cx="1162" cy="128" r="32" fill="none" stroke="#22c55e" stroke-width="2" opacity="0">
-        <animate attributeName="r" values="32;56" dur="3.4s" begin="3.3s" repeatCount="indefinite"
-                 calcMode="spline" keySplines="0.1 0.7 0.3 1"/>
-        <animate attributeName="opacity" values=".9;0" dur="3.4s" begin="3.3s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="1162" cy="128" r="32" fill="#0d1c2f" stroke="#22c55e" stroke-width="2">
-        <animate attributeName="stroke-width" values="2;5;2" dur="3.4s" begin="3.3s" repeatCount="indefinite"
-                 calcMode="spline" keyTimes="0;.08;1" keySplines="0.2 0 0 1;0.4 0 0.6 1"/>
-      </circle>
-      <g filter="url(#soft)">
-        <text x="1162" y="136" font-size="21" fill="#22c55e" opacity=".9">✓
-          <animate attributeName="opacity" values=".55;1;.55" dur="3.4s" begin="3.3s" repeatCount="indefinite"/>
-        </text>
-      </g>
-      <text x="1162" y="190" font-size="13.5" fill="#e8eef7" font-weight="700">Scored Result</text>
-      <text x="1162" y="209" font-size="11" fill="#5f7994">reproducible</text>
-    </g>
+  <g>
+    <line x1="582.0" y1="104" x2="698.0" y2="104" stroke="url(#rail2)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="582.0" cy="104" r="2.6" fill="#3b82f6"/>
+    <circle cx="698.0" cy="104" r="2.6" fill="#a855f7"/>
+    <circle cx="582.0" cy="104" r="3.4" fill="#e0f2fe" opacity=".95">
+      <animate attributeName="cx" from="582.0" to="698.0" dur="1.9s" begin="0.84s" repeatCount="indefinite" fill="freeze"/>
+    </circle>
   </g>
-
-  <!-- title, letter-spacing easing in on load then settling -->
-  <text x="640" y="48" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif"
-        font-size="14" fill="#7b93ad" letter-spacing="3" font-weight="600">
-    BARS IN · A NUMBER YOU CAN DEFEND OUT
-    <animate attributeName="opacity" values=".45;1;.45" dur="3.4s" repeatCount="indefinite"
-             calcMode="spline" keyTimes="0;.5;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
-  </text>
+  <g>
+    <line x1="782.0" y1="104" x2="898.0" y2="104" stroke="url(#rail3)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="782.0" cy="104" r="2.6" fill="#a855f7"/>
+    <circle cx="898.0" cy="104" r="2.6" fill="#f97316"/>
+    <circle cx="782.0" cy="104" r="3.4" fill="#e0f2fe" opacity=".95">
+      <animate attributeName="cx" from="782.0" to="898.0" dur="1.9s" begin="1.26s" repeatCount="indefinite" fill="freeze"/>
+    </circle>
+  </g>
+  <g>
+    <line x1="982.0" y1="104" x2="1098.0" y2="104" stroke="url(#rail4)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="982.0" cy="104" r="2.6" fill="#f97316"/>
+    <circle cx="1098.0" cy="104" r="2.6" fill="#22c55e"/>
+    <circle cx="982.0" cy="104" r="3.4" fill="#e0f2fe" opacity=".95">
+      <animate attributeName="cx" from="982.0" to="1098.0" dur="1.9s" begin="1.68s" repeatCount="indefinite" fill="freeze"/>
+    </circle>
+  </g>
+  <g>
+    <text x="140.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#38bdf8">01</text>
+    <line x1="140.0" y1="48" x2="140.0" y2="60" stroke="#38bdf8" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="140.0" cy="104" r="52" fill="url(#glow0)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="0.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="140.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="140.0" cy="104" r="29.5" fill="#38bdf8" fill-opacity=".10"/>
+    <circle cx="140.0" cy="104" r="36" fill="none" stroke="#38bdf8" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="140.0" cy="104" r="36" fill="none" stroke="#38bdf8" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 140.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 140.0 104" to="270 140.0 104" dur="7s" begin="0.0s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(127.0 91.0) scale(1.0833)">
+      <path d="M12 3.2v9.1" stroke="#e8f4ff" stroke-width="2.1" stroke-linecap="round"/>
+      <path d="M8 9.4 12 13.4 16 9.4" fill="none" stroke="#e8f4ff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4.6 16v3.1a1.6 1.6 0 0 0 1.6 1.6h11.6a1.6 1.6 0 0 0 1.6-1.6V16" fill="none" stroke="#e8f4ff" stroke-width="2.1" stroke-linecap="round"/>
+    </g>
+    <text x="140.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Market Data</text>
+    <text x="140.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Raw bars from your</text>
+    <text x="140.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">chosen source</text>
+    <rect x="66.0" y="229" width="148.1" height="26" rx="13" fill="#38bdf8" fill-opacity=".12" stroke="#38bdf8" stroke-opacity=".42"/>
+    <text x="140.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#38bdf8">Schwab · Rithmic · CSV</text>
+  </g>
+  <g>
+    <text x="340.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#2dd4bf">02</text>
+    <line x1="340.0" y1="48" x2="340.0" y2="60" stroke="#2dd4bf" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="340.0" cy="104" r="52" fill="url(#glow1)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="0.42s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="340.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="340.0" cy="104" r="29.5" fill="#2dd4bf" fill-opacity=".10"/>
+    <circle cx="340.0" cy="104" r="36" fill="none" stroke="#2dd4bf" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="340.0" cy="104" r="36" fill="none" stroke="#2dd4bf" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 340.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 340.0 104" to="270 340.0 104" dur="7s" begin="-0.9s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(327.0 91.0) scale(1.0833)">
+      <ellipse cx="12" cy="6.3" rx="7.2" ry="2.9" fill="none" stroke="#e8f4ff" stroke-width="2"/>
+      <path d="M4.8 6.3v11.4c0 1.6 3.2 2.9 7.2 2.9s7.2-1.3 7.2-2.9V6.3" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"/>
+      <path d="M4.8 12c0 1.6 3.2 2.9 7.2 2.9s7.2-1.3 7.2-2.9" fill="none" stroke="#e8f4ff" stroke-width="2"/>
+    </g>
+    <text x="340.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Resample</text>
+    <text x="340.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Normalise &amp; align</text>
+    <text x="340.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">across timeframes</text>
+    <rect x="290.1" y="229" width="99.7" height="26" rx="13" fill="#2dd4bf" fill-opacity=".12" stroke="#2dd4bf" stroke-opacity=".42"/>
+    <text x="340.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#2dd4bf">One aggregator</text>
+  </g>
+  <g>
+    <text x="540.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#3b82f6">03</text>
+    <line x1="540.0" y1="48" x2="540.0" y2="60" stroke="#3b82f6" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="540.0" cy="104" r="52" fill="url(#glow2)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="0.84s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="540.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="540.0" cy="104" r="29.5" fill="#3b82f6" fill-opacity=".10"/>
+    <circle cx="540.0" cy="104" r="36" fill="none" stroke="#3b82f6" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="540.0" cy="104" r="36" fill="none" stroke="#3b82f6" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 540.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 540.0 104" to="270 540.0 104" dur="7s" begin="-1.8s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(527.0 91.0) scale(1.0833)">
+      <path d="M3.4 8.4c1.7-2 3.4-2 5.1 0s3.4 2 5.1 0 3.4-2 5.1 0" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"/>
+      <path d="M3.4 13.2c1.7-2 3.4-2 5.1 0s3.4 2 5.1 0 3.4-2 5.1 0" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"/>
+      <path d="M3.4 18c1.7-2 3.4-2 5.1 0s3.4 2 5.1 0 3.4-2 5.1 0" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <text x="540.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Analysis</text>
+    <text x="540.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Extract structure &amp;</text>
+    <text x="540.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">market context</text>
+    <rect x="496.2" y="229" width="87.6" height="26" rx="13" fill="#3b82f6" fill-opacity=".12" stroke="#3b82f6" stroke-opacity=".42"/>
+    <text x="540.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#3b82f6">Waves · VWAP</text>
+  </g>
+  <g>
+    <text x="740.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#a855f7">04</text>
+    <line x1="740.0" y1="48" x2="740.0" y2="60" stroke="#a855f7" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="740.0" cy="104" r="52" fill="url(#glow3)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="1.26s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="740.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="740.0" cy="104" r="29.5" fill="#a855f7" fill-opacity=".10"/>
+    <circle cx="740.0" cy="104" r="36" fill="none" stroke="#a855f7" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="740.0" cy="104" r="36" fill="none" stroke="#a855f7" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 740.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 740.0 104" to="270 740.0 104" dur="7s" begin="-2.7s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(727.0 91.0) scale(1.0833)">
+      <circle cx="12" cy="12" r="8.4" fill="none" stroke="#e8f4ff" stroke-width="1.9"/>
+      <circle cx="12" cy="12" r="4.6" fill="none" stroke="#e8f4ff" stroke-width="1.9"/>
+      <circle cx="12" cy="12" r="1.5" fill="#e8f4ff"/>
+    </g>
+    <text x="740.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Strategy</text>
+    <text x="740.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Apply rules &amp;</text>
+    <text x="740.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">generate signals</text>
+    <rect x="714.4" y="229" width="51.3" height="26" rx="13" fill="#a855f7" fill-opacity=".12" stroke="#a855f7" stroke-opacity=".42"/>
+    <text x="740.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#a855f7">Signal</text>
+  </g>
+  <g>
+    <text x="940.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#f97316">05</text>
+    <line x1="940.0" y1="48" x2="940.0" y2="60" stroke="#f97316" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="940.0" cy="104" r="52" fill="url(#glow4)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="1.68s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="940.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="940.0" cy="104" r="29.5" fill="#f97316" fill-opacity=".10"/>
+    <circle cx="940.0" cy="104" r="36" fill="none" stroke="#f97316" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="940.0" cy="104" r="36" fill="none" stroke="#f97316" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 940.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 940.0 104" to="270 940.0 104" dur="7s" begin="-3.6s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(927.0 91.0) scale(1.0833)">
+      <path d="M6 3.3h12v15.9l-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5z" fill="none" stroke="#e8f4ff" stroke-width="1.9" stroke-linejoin="round"/>
+      <path d="M9.2 8h5.6M9.2 11.6h5.6M9.2 15.2h3.4" stroke="#e8f4ff" stroke-width="1.7" stroke-linecap="round"/>
+    </g>
+    <text x="940.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Paper Broker</text>
+    <text x="940.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Simulate fills,</text>
+    <text x="940.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">slippage &amp; costs</text>
+    <rect x="893.2" y="229" width="93.6" height="26" rx="13" fill="#f97316" fill-opacity=".12" stroke="#f97316" stroke-opacity=".42"/>
+    <text x="940.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#f97316">Fills · Costs</text>
+  </g>
+  <g>
+    <text x="1140.0" y="40" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19" font-weight="700" letter-spacing="1.4" fill="#22c55e">06</text>
+    <line x1="1140.0" y1="48" x2="1140.0" y2="60" stroke="#22c55e" stroke-opacity=".5" stroke-width="1.4"/>
+    <circle cx="1140.0" cy="104" r="52" fill="url(#glow5)" opacity=".45">
+      <animate attributeName="opacity" values=".45;1;.45" dur="3.58s" begin="2.10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.22;1" keySplines="0.4 0 0.2 1;0.4 0 0.2 1"/>
+    </circle>
+    <circle cx="1140.0" cy="104" r="29.5" fill="#0b1424"/>
+    <circle cx="1140.0" cy="104" r="29.5" fill="#22c55e" fill-opacity=".10"/>
+    <circle cx="1140.0" cy="104" r="36" fill="none" stroke="#22c55e" stroke-opacity=".28" stroke-width="1.6"/>
+    <circle cx="1140.0" cy="104" r="36" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="54.3 226.2" transform="rotate(-90 1140.0 104)">
+      <animateTransform attributeName="transform" type="rotate" from="-90 1140.0 104" to="270 1140.0 104" dur="7s" begin="-4.5s" repeatCount="indefinite"/>
+    </circle>
+    <g transform="translate(1127.0 91.0) scale(1.0833)">
+      <path d="M3.6 17.4 9.4 11.6l3.6 3.6L20.4 8" fill="none" stroke="#e8f4ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M15.4 8h5v5" fill="none" stroke="#e8f4ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="1140.0" y="180" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#eaf2ff">Scored Result</text>
+    <text x="1140.0" y="201" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">Objective metrics</text>
+    <text x="1140.0" y="217" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">you can check</text>
+    <rect x="1081.1" y="229" width="117.8" height="26" rx="13" fill="#22c55e" fill-opacity=".12" stroke="#22c55e" stroke-opacity=".42"/>
+    <text x="1140.0" y="246.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.6" font-weight="600" fill="#22c55e">Sharpe · Drawdown</text>
+  </g>
 </svg>
