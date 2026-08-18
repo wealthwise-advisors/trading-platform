@@ -570,74 +570,136 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 ## 📂 Folder Structure
 
-> **Every name below is a link.** Click a folder to open it, or a file to read it.
-> Each directory also carries its own README explaining what it holds and why.
+> **Every name below is a link.** Click a folder to open it, or a file to read
+> it. Each directory also carries its own README explaining what it holds and why.
 
-▸ 🐍 **[`src/`](src)** — the engine — no HTTP, no React, no framework <sub>`61 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🔍 **[`analysis/`](src/analysis)** — reading the market <sub>`22 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`candlestick_patterns.py`](src/analysis/candlestick_patterns.py) · [`chart_patterns.py`](src/analysis/chart_patterns.py) · [`indicators.py`](src/analysis/indicators.py) · [`regime.py`](src/analysis/regime.py) · [`swing_identification.py`](src/analysis/swing_identification.py) · [`zigzag.py`](src/analysis/zigzag.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🌊 **[`elliott_wave/`](src/analysis/elliott_wave)** — wave detection, rules and hierarchy <sub>`14 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`combination.py`](src/analysis/elliott_wave/combination.py) · [`correction.py`](src/analysis/elliott_wave/correction.py) · [`diagonal.py`](src/analysis/elliott_wave/diagonal.py) · [`hierarchy.py`](src/analysis/elliott_wave/hierarchy.py) · [`impulse.py`](src/analysis/elliott_wave/impulse.py) · [`measurements.py`](src/analysis/elliott_wave/measurements.py) · [`models.py`](src/analysis/elliott_wave/models.py) · [`momentum.py`](src/analysis/elliott_wave/momentum.py) · <sub>+4 more</sub></sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🧠 **[`strategies/`](src/strategies)** — turning a reading into a decision <sub>`8 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`base_strategy.py`](src/strategies/base_strategy.py) · [`breakout.py`](src/strategies/breakout.py) · [`ma_crossover.py`](src/strategies/ma_crossover.py) · [`regime_adaptive.py`](src/strategies/regime_adaptive.py) · [`rsi_divergence.py`](src/strategies/rsi_divergence.py) · [`rsi_mean_reversion.py`](src/strategies/rsi_mean_reversion.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ ⏱ **[`backtesting/`](src/backtesting)** — replay engine and the shared market clock <sub>`8 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`engine.py`](src/backtesting/engine.py) · [`metrics.py`](src/backtesting/metrics.py) · [`multi_replay.py`](src/backtesting/multi_replay.py) · [`replay_engine.py`](src/backtesting/replay_engine.py) · [`results.py`](src/backtesting/results.py) · [`trade_quality.py`](src/backtesting/trade_quality.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 💰 **[`broker/`](src/broker)** — what a fill actually costs <sub>`5 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`base_broker.py`](src/broker/base_broker.py) · [`paper_broker.py`](src/broker/paper_broker.py) · [`rithmic_broker.py`](src/broker/rithmic_broker.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 📥 **[`data/`](src/data)** — providers, and one shared resampler <sub>`12 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`base_provider.py`](src/data/base_provider.py) · [`csv_provider.py`](src/data/csv_provider.py) · [`external_csv_provider.py`](src/data/external_csv_provider.py) · [`resample.py`](src/data/resample.py) · [`rithmic_provider.py`](src/data/rithmic_provider.py) · [`sample_data.py`](src/data/sample_data.py) · [`schwab_provider.py`](src/data/schwab_provider.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 📡 **[`live/`](src/live)** — live loop (experimental) <sub>`3 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`trader.py`](src/live/trader.py)</sub>  
-
-▸ 🔌 **[`api/`](api)** — the FastAPI service <sub>`32 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🛣 **[`routers/`](api/routers)** — REST endpoints and the replay socket <sub>`8 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`backtests.py`](api/routers/backtests.py) · [`data_export.py`](api/routers/data_export.py) · [`meta.py`](api/routers/meta.py) · [`optimize.py`](api/routers/optimize.py) · [`replay.py`](api/routers/replay.py) · [`schwab.py`](api/routers/schwab.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 📋 **[`schemas/`](api/schemas)** — request and response models <sub>`7 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`backtest.py`](api/schemas/backtest.py) · [`elliott_wave.py`](api/schemas/elliott_wave.py) · [`optimize.py`](api/schemas/optimize.py) · [`replay.py`](api/schemas/replay.py) · [`schwab.py`](api/schemas/schwab.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 📈 **[`report/`](api/report)** — charts rendered on the server <sub>`4 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`charts.py`](api/report/charts.py) · [`report.py`](api/report/report.py)</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 📤 **[`export/`](api/export)** — CSV · XLSX · PDF · DOCX <sub>`4 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`formats.py`](api/export/formats.py) · [`report_export.py`](api/export/report_export.py)</sub>  
-
-▸ 🖥 **[`web/`](web)** — the React dashboard <sub>`92 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🪟 **[`features/`](web/src/features)** — replay, backtest and export pages <sub>`5 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🎨 **[`components/`](web/src/components)** — shared UI <sub>`34 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🧩 **[`lib/`](web/src/lib)** — pure logic, unit-tested away from React <sub>`31 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`api.ts`](web/src/lib/api.ts) · [`bandAgreement.test.ts`](web/src/lib/bandAgreement.test.ts) · [`bandAgreement.ts`](web/src/lib/bandAgreement.ts) · [`chartAxis.test.ts`](web/src/lib/chartAxis.test.ts) · [`clock.test.ts`](web/src/lib/clock.test.ts) · [`clock.ts`](web/src/lib/clock.ts) · [`dayRange.test.ts`](web/src/lib/dayRange.test.ts) · <sub>+23 more</sub></sub>  
-
-▸ 🧪 **[`tests/`](tests)** — what every number on screen rests on <sub>`26 files`</sub>  
-&nbsp;&nbsp;&nbsp;<sub>[`test_api_provider_errors.py`](tests/test_api_provider_errors.py) · [`test_engine.py`](tests/test_engine.py) · [`test_follow_live_matrix.py`](tests/test_follow_live_matrix.py) · [`test_indicator_correctness.py`](tests/test_indicator_correctness.py) · [`test_multi_replay.py`](tests/test_multi_replay.py) · [`test_provider_timeframes.py`](tests/test_provider_timeframes.py) · <sub>+7 more</sub></sub>  
-
-▸ 📚 **[`docs/`](docs)** — architecture, rules and guides <sub>`19 files`</sub>  
-
-▸ ⚙️ **[`config/`](config)** — settings and credential templates <sub>`3 files`</sub>  
-&nbsp;&nbsp;&nbsp;<sub>[`credentials.yaml.example`](config/credentials.yaml.example) · [`settings.yaml`](config/settings.yaml)</sub>  
-
-▸ 📈 **[`data/`](data)** — bundled samples, and where downloads land <sub>`18 files`</sub>  
-
-▸ 🚀 **[`scripts/`](scripts)** — CLI entry points and the local launcher <sub>`5 files`</sub>  
-&nbsp;&nbsp;&nbsp;<sub>[`download_rithmic_data.py`](scripts/download_rithmic_data.py) · [`generate_data.py`](scripts/generate_data.py) · [`run-autotrader.cmd`](scripts/run-autotrader.cmd) · [`run_backtest.py`](scripts/run_backtest.py)</sub>  
-
-▸ 📄 **[`reports/`](reports)** — generated output <sub>`3 files`</sub>  
-
-▸ 📦 **[`legacy/`](legacy)** — archived predecessor repositories <sub>`451 files`</sub>  
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;➜ 🔧 **[`workflows/`](.github/workflows)** — CI and deploy <sub>`3 files`</sub>  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sub>[`ci.yml`](.github/workflows/ci.yml) · [`deploy.yml`](.github/workflows/deploy.yml) · [`probe-creds.yml`](.github/workflows/probe-creds.yml)</sub>
+<pre>
+<a href=".">trading-platform</a>
+|------------▶  <a href="src">src/</a>   <i>the engine — no HTTP, no React, no framework</i>  <b>61</b>
+|               |------------▶  <a href="src/analysis">analysis/</a>   <i>reading the market</i>  <b>22</b>
+|               |               |- - - ▶  <a href="src/analysis/candlestick_patterns.py">candlestick_patterns.py</a>
+|               |               |- - - ▶  <a href="src/analysis/chart_patterns.py">chart_patterns.py</a>
+|               |               |- - - ▶  <a href="src/analysis/indicators.py">indicators.py</a>
+|               |               |- - - ▶  <a href="src/analysis/regime.py">regime.py</a>
+|               |               |- - - ▶  <a href="src/analysis/swing_identification.py">swing_identification.py</a>
+|               |               └- - - ▶  <a href="src/analysis/zigzag.py">zigzag.py</a>
+|
+|               |               └------------▶  <a href="src/analysis/elliott_wave">elliott_wave/</a>   <i>wave detection, rules and hierarchy</i>  <b>14</b>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/combination.py">combination.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/correction.py">correction.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/diagonal.py">diagonal.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/hierarchy.py">hierarchy.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/impulse.py">impulse.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/measurements.py">measurements.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/models.py">models.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/momentum.py">momentum.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/pipeline.py">pipeline.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/pivots.py">pivots.py</a>
+|               |                               |- - - ▶  <a href="src/analysis/elliott_wave/triangle.py">triangle.py</a>
+|               |                               └- - - ▶  <a href="src/analysis/elliott_wave/validation.py">validation.py</a>
+|
+|               |------------▶  <a href="src/strategies">strategies/</a>   <i>turning a reading into a decision</i>  <b>8</b>
+|               |               |- - - ▶  <a href="src/strategies/base_strategy.py">base_strategy.py</a>
+|               |               |- - - ▶  <a href="src/strategies/breakout.py">breakout.py</a>
+|               |               |- - - ▶  <a href="src/strategies/ma_crossover.py">ma_crossover.py</a>
+|               |               |- - - ▶  <a href="src/strategies/regime_adaptive.py">regime_adaptive.py</a>
+|               |               |- - - ▶  <a href="src/strategies/rsi_divergence.py">rsi_divergence.py</a>
+|               |               └- - - ▶  <a href="src/strategies/rsi_mean_reversion.py">rsi_mean_reversion.py</a>
+|
+|               |------------▶  <a href="src/backtesting">backtesting/</a>   <i>replay engine and the shared market clock</i>  <b>8</b>
+|               |               |- - - ▶  <a href="src/backtesting/engine.py">engine.py</a>
+|               |               |- - - ▶  <a href="src/backtesting/metrics.py">metrics.py</a>
+|               |               |- - - ▶  <a href="src/backtesting/multi_replay.py">multi_replay.py</a>
+|               |               |- - - ▶  <a href="src/backtesting/replay_engine.py">replay_engine.py</a>
+|               |               |- - - ▶  <a href="src/backtesting/results.py">results.py</a>
+|               |               └- - - ▶  <a href="src/backtesting/trade_quality.py">trade_quality.py</a>
+|
+|               |------------▶  <a href="src/broker">broker/</a>   <i>what a fill actually costs</i>  <b>5</b>
+|               |               |- - - ▶  <a href="src/broker/base_broker.py">base_broker.py</a>
+|               |               |- - - ▶  <a href="src/broker/paper_broker.py">paper_broker.py</a>
+|               |               └- - - ▶  <a href="src/broker/rithmic_broker.py">rithmic_broker.py</a>
+|
+|               |------------▶  <a href="src/data">data/</a>   <i>providers, and one shared resampler</i>  <b>12</b>
+|               |               |- - - ▶  <a href="src/data/base_provider.py">base_provider.py</a>
+|               |               |- - - ▶  <a href="src/data/csv_provider.py">csv_provider.py</a>
+|               |               |- - - ▶  <a href="src/data/external_csv_provider.py">external_csv_provider.py</a>
+|               |               |- - - ▶  <a href="src/data/resample.py">resample.py</a>
+|               |               |- - - ▶  <a href="src/data/rithmic_provider.py">rithmic_provider.py</a>
+|               |               |- - - ▶  <a href="src/data/sample_data.py">sample_data.py</a>
+|               |               └- - - ▶  <a href="src/data/schwab_provider.py">schwab_provider.py</a>
+|
+|               └------------▶  <a href="src/live">live/</a>   <i>live loop (experimental)</i>  <b>3</b>
+|                               └- - - ▶  <a href="src/live/trader.py">trader.py</a>
+|------------▶  <a href="api">api/</a>   <i>the FastAPI service</i>  <b>32</b>
+|               |------------▶  <a href="api/routers">routers/</a>   <i>REST endpoints and the replay socket</i>  <b>8</b>
+|               |               |- - - ▶  <a href="api/routers/backtests.py">backtests.py</a>
+|               |               |- - - ▶  <a href="api/routers/data_export.py">data_export.py</a>
+|               |               |- - - ▶  <a href="api/routers/meta.py">meta.py</a>
+|               |               |- - - ▶  <a href="api/routers/optimize.py">optimize.py</a>
+|               |               |- - - ▶  <a href="api/routers/replay.py">replay.py</a>
+|               |               └- - - ▶  <a href="api/routers/schwab.py">schwab.py</a>
+|
+|               |------------▶  <a href="api/schemas">schemas/</a>   <i>request and response models</i>  <b>7</b>
+|               |               |- - - ▶  <a href="api/schemas/backtest.py">backtest.py</a>
+|               |               |- - - ▶  <a href="api/schemas/elliott_wave.py">elliott_wave.py</a>
+|               |               |- - - ▶  <a href="api/schemas/optimize.py">optimize.py</a>
+|               |               |- - - ▶  <a href="api/schemas/replay.py">replay.py</a>
+|               |               └- - - ▶  <a href="api/schemas/schwab.py">schwab.py</a>
+|
+|               |------------▶  <a href="api/report">report/</a>   <i>charts rendered on the server</i>  <b>4</b>
+|               |               |- - - ▶  <a href="api/report/charts.py">charts.py</a>
+|               |               └- - - ▶  <a href="api/report/report.py">report.py</a>
+|
+|               └------------▶  <a href="api/export">export/</a>   <i>CSV · XLSX · PDF · DOCX</i>  <b>4</b>
+|                               |- - - ▶  <a href="api/export/formats.py">formats.py</a>
+|                               └- - - ▶  <a href="api/export/report_export.py">report_export.py</a>
+|------------▶  <a href="web">web/</a>   <i>the React dashboard</i>  <b>92</b>
+|               |------------▶  <a href="web/src/features">features/</a>   <i>replay, backtest and export pages</i>  <b>5</b>
+|
+|               |------------▶  <a href="web/src/components">components/</a>   <i>shared UI</i>  <b>34</b>
+|
+|               └------------▶  <a href="web/src/lib">lib/</a>   <i>pure logic, unit-tested away from React</i>  <b>31</b>
+|                               |- - - ▶  <a href="web/src/lib/api.ts">api.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/bandAgreement.test.ts">bandAgreement.test.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/bandAgreement.ts">bandAgreement.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/chartAxis.test.ts">chartAxis.test.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/clock.test.ts">clock.test.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/clock.ts">clock.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/dayRange.test.ts">dayRange.test.ts</a>
+|                               |- - - ▶  <a href="web/src/lib/dayRange.ts">dayRange.ts</a>
+|                               └- - - ▶  <i>+22 more</i>
+|------------▶  <a href="tests">tests/</a>   <i>what every number on screen rests on</i>  <b>26</b>
+|               |- - - ▶  <a href="tests/test_api_provider_errors.py">test_api_provider_errors.py</a>
+|               |- - - ▶  <a href="tests/test_engine.py">test_engine.py</a>
+|               |- - - ▶  <a href="tests/test_follow_live_matrix.py">test_follow_live_matrix.py</a>
+|               |- - - ▶  <a href="tests/test_indicator_correctness.py">test_indicator_correctness.py</a>
+|               |- - - ▶  <a href="tests/test_multi_replay.py">test_multi_replay.py</a>
+|               |- - - ▶  <a href="tests/test_provider_timeframes.py">test_provider_timeframes.py</a>
+|               └- - - ▶  <i>+7 more</i>
+|------------▶  <a href="docs">docs/</a>   <i>architecture, rules and guides</i>  <b>22</b>
+|               |- - - ▶  <a href="docs/API_GUIDE.md">API_GUIDE.md</a>
+|               |- - - ▶  <a href="docs/ARCHITECTURE.md">ARCHITECTURE.md</a>
+|               |- - - ▶  <a href="docs/CONFIGURATION.md">CONFIGURATION.md</a>
+|               |- - - ▶  <a href="docs/DEVELOPER_GUIDE.md">DEVELOPER_GUIDE.md</a>
+|               |- - - ▶  <a href="docs/ELLIOTT_WAVE_ARCHITECTURE.md">ELLIOTT_WAVE_ARCHITECTURE.md</a>
+|               |- - - ▶  <a href="docs/ELLIOTT_WAVE_IMPLEMENTATION.md">ELLIOTT_WAVE_IMPLEMENTATION.md</a>
+|               └- - - ▶  <i>+10 more</i>
+|------------▶  <a href="config">config/</a>   <i>settings and credential templates</i>  <b>3</b>
+|               |- - - ▶  <a href="config/credentials.yaml.example">credentials.yaml.example</a>
+|               └- - - ▶  <a href="config/settings.yaml">settings.yaml</a>
+|------------▶  <a href="data">data/</a>   <i>bundled samples, and where downloads land</i>  <b>18</b>
+|------------▶  <a href="scripts">scripts/</a>   <i>CLI entry points and the local launcher</i>  <b>5</b>
+|               |- - - ▶  <a href="scripts/download_rithmic_data.py">download_rithmic_data.py</a>
+|               |- - - ▶  <a href="scripts/generate_data.py">generate_data.py</a>
+|               |- - - ▶  <a href="scripts/run-autotrader.cmd">run-autotrader.cmd</a>
+|               └- - - ▶  <a href="scripts/run_backtest.py">run_backtest.py</a>
+|------------▶  <a href="reports">reports/</a>   <i>generated output</i>  <b>3</b>
+└------------▶  <a href="legacy">legacy/</a>   <i>archived predecessor repositories</i>  <b>451</b>
+                └------------▶  <a href=".github/workflows">workflows/</a>   <i>CI and deploy</i>  <b>3</b>
+                                |- - - ▶  <a href=".github/workflows/ci.yml">ci.yml</a>
+                                |- - - ▶  <a href=".github/workflows/deploy.yml">deploy.yml</a>
+                                └- - - ▶  <a href=".github/workflows/probe-creds.yml">probe-creds.yml</a>
+</pre>
 
 <br>
 
