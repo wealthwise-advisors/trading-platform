@@ -16,7 +16,14 @@ CONTRACT_SPECS = {
     "CL": dict(tick_size=0.01, tick_value=10.00, point_value=1000.0),
     "HG": dict(tick_size=0.0005, tick_value=12.50, point_value=25000.0),
 }
-BASE_PRICES = {"ES": 4500.0, "NQ": 15000.0, "MES": 4500.0, "CL": 75.0, "HG": 6.3}
+# Starting level for SYNTHETIC series only -- real providers supply their own.
+# Roughly where each instrument trades, so a generated series is not absurd.
+BASE_PRICES = {
+    "ES": 4500.0, "NQ": 15000.0, "MES": 4500.0, "MNQ": 15000.0,
+    "YM": 38000.0, "RTY": 2000.0,
+    "CL": 75.0, "NG": 2.8,
+    "GC": 2000.0, "SI": 24.0, "HG": 6.3,
+}
 
 
 @lru_cache
