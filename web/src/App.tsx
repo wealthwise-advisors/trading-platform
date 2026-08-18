@@ -1,3 +1,5 @@
+import brandMark from "@/assets/brand-mark.png"
+import brandWordmark from "@/assets/brand-wordmark.png"
 import { ConfigForm } from "@/features/backtest/ConfigForm"
 import { ResultsPage } from "@/features/backtest/ResultsPage"
 import { ReplayPage } from "@/features/replay/ReplayPage"
@@ -57,7 +59,7 @@ function App() {
               wordmark carrying its alt text. */}
           <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/brand/mark.png"
+              src={brandMark}
               alt=""
               aria-hidden
               className="h-9 w-9 shrink-0 rounded-lg object-cover
@@ -65,7 +67,7 @@ function App() {
             />
             <h1 className="min-w-0">
               <img
-                src="/brand/wordmark.png"
+                src={brandWordmark}
                 alt="AutoTrader"
                 className="h-6 sm:h-7 w-auto object-contain"
               />
