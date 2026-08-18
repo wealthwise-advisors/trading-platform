@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { steppedEndDate } from "@/lib/dayRange"
+import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 import { SymbolMark } from "@/components/SymbolMark"
-import { Section, Panel, Choice, FieldRow, SliderField } from "./ConfigParts"
+import {
+  Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
+} from "./ConfigParts"
 import {
   Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock, Target,
   TrendingUp, Waves, ArrowUpRight, GitCompareArrows, Wallet, Layers, Percent, Play,
@@ -181,7 +183,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               <SelectItem key={s.symbol} value={s.symbol}>
                 <span className="flex items-center gap-2.5">
                   <SymbolMark symbol={s.symbol} />
-                  <span>{s.name && s.name !== s.symbol ? s.name : s.symbol}</span>
+                  <span className="font-semibold">{s.symbol}</span>
+                  {s.name && s.name !== s.symbol && (
+                    <span className="text-muted-foreground">— {s.name}</span>
+                  )}
                 </span>
               </SelectItem>
             ))}
@@ -298,6 +303,17 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           {/* After the dates, before Timeframe -- the same control and the same
               semantics as Live Replay. It writes the End date; the count itself
               is derived from the range, so the two cannot disagree. */}
+          {/* Shortcuts over the same two fields the pickers write -- the end date
+              stays where it is and the start moves back, which is what "last 5
+              days" means when the end is today. */}
+          <QuickPresets
+            onPick={(days) => {
+              const live = useConfigStore.getState()
+              const start = startDateForDays(live.endDate, days)
+              if (start) cfg.setField("startDate", start)
+            }}
+          />
+
           <DayCountStepper
             startDate={cfg.startDate}
             endDate={cfg.endDate}
@@ -332,14 +348,12 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
               of its bars and changes the backtest, not only the chart. */}
-          <label className="flex items-center gap-2 cursor-pointer text-xs">
-            <input
-              type="checkbox"
-              checked={cfg.session24h}
-              onChange={(e) => cfg.setField("session24h", e.target.checked)}
-            />
-            <span>24 hours <span className="text-muted-foreground">(keep every bar — crypto, pre/post-market)</span></span>
-          </label>
+          <ToggleSwitch
+            checked={cfg.session24h}
+            onChange={(v) => cfg.setField("session24h", v)}
+            label="24 hours"
+            hint="(keep every bar — crypto, pre/post-market)"
+          />
           <div className={`grid grid-cols-2 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
