@@ -39,11 +39,11 @@ import pathlib
 import sys
 
 W = 1280
-H = 700
+H = 740
 
 # ── panels ────────────────────────────────────────────────────────────────
 PA = (16, 16, W - 32, 340)          # chart panel: x, y, w, h
-PB = (16, 372, W - 32, 312)         # flowchart panel
+PB = (16, 372, W - 32, 352)         # flowchart panel
 
 # ── chart ─────────────────────────────────────────────────────────────────
 # The plot stops well short of the right edge so the axis labels and the
@@ -77,7 +77,7 @@ MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 CARD_W, CARD_H = 108, 112
 CARD_GAP = 26
 CARD_X0 = 40
-FLOW_Y = PB[1] + 128                # centre line the cards sit on
+FLOW_Y = PB[1] + 168                # centre line the cards sit on
 
 # The decision node's energy ring expands to DIAMOND_R + 20. At the first
 # attempt the node sat at 872 with R=62, so that ring reached back to x=776 and
@@ -508,6 +508,50 @@ def build() -> str:
           f'stroke="{CYAN}" stroke-opacity=".38" stroke-width="1.7"/>')
         a(f'    <path d="M{cx0 + sx * 42} {cy0} h{sx * 12}" stroke="{CYAN}" '
           f'stroke-opacity=".22" stroke-width="1.7"/>')
+
+    # ── decorative panel chrome ────────────────────────────────────────────
+    #
+    # THESE ARE ORNAMENT. They are not controls, they do nothing, and there is
+    # nothing behind them to wire up -- this is a static image in a README.
+    # Added at the maintainer's explicit request to match the reference artwork.
+    #
+    # Deliberately given no <title>, no aria-label and no cursor hint, so a
+    # screen reader announces nothing and nothing suggests they can be pressed.
+    # If a future change makes this figure interactive, delete them rather than
+    # trying to give them behaviour.
+    BTN = 34
+    BTN_GAP = 10
+    btn_y = y + 22
+    btn_right = x + w - 62          # clear of the corner bracket and its tick
+    for k, kind in enumerate(("resize", "frame", "layers")):
+        bx0 = btn_right - (3 - k) * BTN - (2 - k) * BTN_GAP
+        # Glass: a faint outer halo, a translucent face, a thin cyan edge.
+        a(f'    <rect x="{bx0 - 2}" y="{btn_y - 2}" width="{BTN + 4}" '
+          f'height="{BTN + 4}" rx="11" fill="none" stroke="{CYAN}" '
+          f'stroke-opacity=".08" stroke-width="2"/>')
+        a(f'    <rect x="{bx0}" y="{btn_y}" width="{BTN}" height="{BTN}" rx="9" '
+          f'fill="url(#cardSurf)"/>')
+        a(f'    <rect x="{bx0}" y="{btn_y}" width="{BTN}" height="{BTN}" rx="9" '
+          f'fill="none" stroke="{CYAN}" stroke-opacity=".30" stroke-width="1.1"/>')
+        gx0, gy0 = bx0 + 8, btn_y + 8
+        ink = CYAN
+        if kind == "resize":                       # a double-headed arrow
+            a(f'    <path d="M2 9h14M4.4 6.2 1.6 9l2.8 2.8M13.6 6.2 16.4 9l-2.8 2.8" '
+              f'fill="none" stroke="{ink}" stroke-opacity=".8" stroke-width="1.5" '
+              f'stroke-linecap="round" stroke-linejoin="round" '
+              f'transform="translate({gx0} {gy0})"/>')
+        elif kind == "frame":                      # four corner brackets
+            a(f'    <path d="M1.6 5.4V2.6a1 1 0 0 1 1-1h2.8M12.6 1.6h2.8a1 1 0 0 1 1 '
+              f'1v2.8M16.4 12.6v2.8a1 1 0 0 1-1 1h-2.8M5.4 16.4H2.6a1 1 0 0 1-1-1v-2.8" '
+              f'fill="none" stroke="{ink}" stroke-opacity=".8" stroke-width="1.5" '
+              f'stroke-linecap="round" transform="translate({gx0} {gy0})"/>')
+        else:                                      # two offset panes
+            a(f'    <rect x="1.6" y="1.6" width="10.4" height="10.4" rx="2" fill="none" '
+              f'stroke="{ink}" stroke-opacity=".55" stroke-width="1.5" '
+              f'transform="translate({gx0} {gy0})"/>')
+            a(f'    <rect x="6" y="6" width="10.4" height="10.4" rx="2" fill="none" '
+              f'stroke="{ink}" stroke-opacity=".85" stroke-width="1.5" '
+              f'transform="translate({gx0} {gy0})"/>')
 
     # ── connectors between the five cards ──────────────────────────────────
     for i in range(len(STAGES) - 1):
