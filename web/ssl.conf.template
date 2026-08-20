@@ -1,0 +1,77 @@
+# The TLS server. NOT loaded until a real certificate exists.
+#
+# This file lives outside conf.d on purpose. 40-enable-ssl.sh copies it into
+# conf.d only once Let's Encrypt has actually issued, so a certificate that
+# never arrives leaves nginx serving exactly the port-80 configuration it
+# serves today. There is no window in which the site presents a self-signed
+# certificate, which is worse than plain HTTP: a browser warning interstitial
+# stops people entirely, where http:// merely costs them the HTTPS probe.
+#
+# ${DOMAIN} is substituted by the entrypoint script.
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+    root /usr/share/nginx/html;
+    index index.html;
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    # Modern only. There is no legacy client for a trading dashboard that was
+    # deployed this year, and TLS 1.0/1.1 are long dead.
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # Deliberately NO HSTS.
+    #
+    # HSTS on an sslip.io name would be remembered by the browser for the whole
+    # sslip.io suffix's subdomain, and if the certificate ever lapses the site
+    # becomes unreachable rather than merely insecure -- with no way for a
+    # visitor to click through. Not worth it for a deployment whose hostname is
+    # derived from an elastic IP.
+
+    gzip on;
+    gzip_vary on;
+    gzip_comp_level 6;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_types
+        application/javascript
+        text/javascript
+        text/css
+        text/plain
+        text/xml
+        application/json
+        application/xml
+        image/svg+xml;
+
+    location /api/ {
+        proxy_pass http://api:8000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache, must-revalidate" always;
+    }
+
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

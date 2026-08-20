@@ -56,6 +56,16 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    environment:
+      # The hostname the certificate is for. sslip.io resolves any
+      # a-b-c-d.sslip.io to a.b.c.d with no DNS records to manage, which is
+      # what makes TLS possible here at all: a certificate authority cannot
+      # issue for a bare IP address, so http:// was the only option and every
+      # visitor paid a failed HTTPS probe before the page could start loading.
+      TLS_DOMAIN: "${TLS_DOMAIN:-}"
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
     ports:
       # Configurable rather than fixed, and deliberately NOT split across a
       # second compose file: compose CONCATENATES `ports` when merging files,
@@ -68,6 +78,40 @@ services:
       # up one directory the override was stranded, the deploy published 8080,
       # and the previous stack kept port 80 and kept answering every check.
       - "${WEB_PORT:-8080}:80"
+      - "${TLS_PORT:-8443}:443"
+
+  # Obtains and renews the TLS certificate.
+  #
+  # Runs as a loop rather than a one-shot because the certificate has to be
+  # requested AFTER nginx is answering on port 80 -- that is how control of the
+  # hostname is proven -- and because a 90-day certificate needs renewing.
+  #
+  # It writes into a volume the web container mounts read-only; the watcher in
+  # that container notices the files appear and reloads. Nothing here can stop
+  # the site serving: if certbot never succeeds, the volume stays empty, the
+  # TLS server is never installed, and port 80 carries on exactly as before.
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    depends_on:
+      - web
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    environment:
+      TLS_DOMAIN: "${TLS_DOMAIN:-}"
+    entrypoint: >
+      sh -c 'if [ -z "$${TLS_DOMAIN}" ]; then
+               echo "certbot: TLS_DOMAIN unset, nothing to do"; sleep infinity;
+             fi;
+             while :; do
+               certbot certonly --webroot -w /var/www/certbot
+                 -d "$${TLS_DOMAIN}"
+                 --non-interactive --agree-tos
+                 --register-unsafely-without-email
+                 --keep-until-expiring || echo "certbot: attempt failed, retrying later";
+               sleep 12h;
+             done'
 
 # Volume names are pinned explicitly.
 #
@@ -87,3 +131,10 @@ volumes:
     name: trading-platform_autotrader-data
   autotrader-logs:
     name: trading-platform_autotrader-logs
+  # The certificate and its ACME account key. Named, like the two above, so a
+  # change of compose project name cannot orphan them -- losing these would
+  # mean re-issuing and burning Let's Encrypt rate limit for no reason.
+  letsencrypt:
+    name: trading-platform_letsencrypt
+  certbot-webroot:
+    name: trading-platform_certbot_webroot

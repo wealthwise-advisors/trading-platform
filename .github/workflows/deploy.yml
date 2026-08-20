@@ -281,8 +281,27 @@ jobs:
             # api container each time -- which is what makes /api/version
             # trustworthy: a container that was not recreated by this run
             # cannot be reporting this run's commit.
+            # TLS_DOMAIN is DERIVED from the host rather than stored.
+            #
+            # A certificate authority cannot issue for a bare IP address, which
+            # is why this deployment had no HTTPS at all -- and why every first
+            # visit cost about 3.5 seconds, because Chrome tries https:// first
+            # on a bare IP and waits for that to fail before falling back.
+            #
+            # sslip.io resolves a-b-c-d.sslip.io to a.b.c.d with no DNS records
+            # to manage, so the certificate hostname follows the elastic IP by
+            # itself. If EC2_HOST is ever a real domain, the substitution does
+            # not match and it passes through unchanged.
+            TLS_DOMAIN=$(printf '%s' '${{ secrets.EC2_HOST }}' | tr '.' '-').sslip.io
+            case '${{ secrets.EC2_HOST }}' in
+              *[!0-9.]*) TLS_DOMAIN='${{ secrets.EC2_HOST }}' ;;   # already a hostname
+            esac
+            echo "TLS hostname: $TLS_DOMAIN"
+
             WEB_PORT=80 \
-            AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }}" \
+            TLS_PORT=443 \
+            TLS_DOMAIN="$TLS_DOMAIN" \
+            AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }},https://$TLS_DOMAIN" \
             AUTOTRADER_COMMIT="${{ github.sha }}" \
             docker compose up --build -d --remove-orphans
 
