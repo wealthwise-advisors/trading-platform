@@ -273,9 +273,6 @@ def create_replay(req: ReplayCreateRequest):
     # once per base_tf bar, so tick counts and playback speed are unaffected.
     source_tf = _source_timeframe(timeframes)
     df = _load_bars(req, source_tf, spec)
-    # Keep the pre-filter frame: if the session window empties it, the number of
-    # bars that WERE there is the most useful thing we can tell the caller.
-    before_session = df
     df = _apply_session(df, req.session_start, req.session_end)
     waiting = False
     if df.empty:
