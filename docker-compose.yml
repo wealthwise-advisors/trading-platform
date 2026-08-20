@@ -100,18 +100,20 @@ services:
       - certbot-webroot:/var/www/certbot
     environment:
       TLS_DOMAIN: "${TLS_DOMAIN:-}"
+    # ONE COMMAND PER LINE, ALL AT THE SAME INDENT -- this matters.
+    #
+    # A YAML folded scalar only folds newlines into spaces for lines at the
+    # BASE indent. Indent a continuation further, as a shell script naturally
+    # wants, and YAML preserves the newline instead. The first cut wrapped the
+    # certbot invocation that way, so the newline after "-w /var/www/certbot"
+    # terminated the command and certbot ran with no -d domain at all, then the
+    # orphaned "-d ..." line failed as an unknown command. It is syntactically
+    # valid shell, so `sh -n` passes it happily; it just does the wrong thing.
     entrypoint: >
-      sh -c 'if [ -z "$${TLS_DOMAIN}" ]; then
-               echo "certbot: TLS_DOMAIN unset, nothing to do"; sleep infinity;
-             fi;
-             while :; do
-               certbot certonly --webroot -w /var/www/certbot
-                 -d "$${TLS_DOMAIN}"
-                 --non-interactive --agree-tos
-                 --register-unsafely-without-email
-                 --keep-until-expiring || echo "certbot: attempt failed, retrying later";
-               sleep 12h;
-             done'
+      sh -c 'if [ -z "$${TLS_DOMAIN}" ]; then echo "certbot: TLS_DOMAIN unset, nothing to do"; sleep infinity; fi;
+      echo "certbot: requesting a certificate for $${TLS_DOMAIN}";
+      while :; do certbot certonly --webroot -w /var/www/certbot -d "$${TLS_DOMAIN}" --non-interactive --agree-tos --register-unsafely-without-email --keep-until-expiring || echo "certbot: attempt failed, will retry";
+      sleep 12h; done'
 
 # Volume names are pinned explicitly.
 #

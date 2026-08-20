@@ -309,6 +309,20 @@ jobs:
 
             echo "---- listening after deploy ----"
             docker ps --format '  {{.Names}}  {{.Status}}  {{.Ports}}'
+
+            # Certificate issuance is best-effort and must never fail a deploy:
+            # the site serves over HTTP either way. But without this the only
+            # symptom of a broken certbot is "https does not answer", with no
+            # way to see why short of getting on the box.
+            echo "---- certbot ----"
+            sleep 25
+            docker compose logs --tail 25 certbot 2>&1 | sed 's/^/  /' || true
+            if docker compose exec -T certbot test -f \
+                 "/etc/letsencrypt/live/$TLS_DOMAIN/fullchain.pem" 2>/dev/null; then
+              echo "  certificate present for $TLS_DOMAIN"
+            else
+              echo "  no certificate yet -- site stays on HTTP, certbot retries"
+            fi
           REMOTE
 
       - name: Wait for the API to report healthy
