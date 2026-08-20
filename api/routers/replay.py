@@ -273,6 +273,9 @@ def create_replay(req: ReplayCreateRequest):
     # once per base_tf bar, so tick counts and playback speed are unaffected.
     source_tf = _source_timeframe(timeframes)
     df = _load_bars(req, source_tf, spec)
+    # Keep the pre-filter frame: if the session window empties it, the number of
+    # bars that WERE there is the most useful thing we can tell the caller.
+    before_session = df
     df = _apply_session(df, req.session_start, req.session_end)
     if df.empty:
         # Naming the filter is accurate and unhelpful on its own: the commonest
@@ -288,9 +291,23 @@ def create_replay(req: ReplayCreateRequest):
         if not_open_yet:
             detail = (
                 f"The {req.session_start:%H:%M}-{req.session_end:%H:%M} session has "
-                f"not opened yet today - it is {now_et:%H:%M} ET. Wait for the open, "
-                f"or pick an earlier date."
+                f"not opened yet today - it is {now_et:%H:%M} ET."
             )
+            # Naming the control that would work right now, rather than only the
+            # two that mean giving up. A future trades nearly around the clock,
+            # so before the New York open there are usually hours of bars sitting
+            # in the frame we just filtered away -- and "wait for the open" reads
+            # like the data is missing when it is merely outside the window.
+            outside = len(before_session)
+            if outside:
+                detail += (
+                    f" {req.symbol} has traded {outside} bars outside those hours"
+                    f" today. Set Session Hours to 24 hours to follow them now,"
+                    f" or wait for the open."
+                )
+            else:
+                detail += " Wait for the open, or pick an earlier date."
+
         else:
             detail = (
                 f"No {req.symbol} bars in the {req.session_start}-{req.session_end} "
