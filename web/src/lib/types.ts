@@ -422,6 +422,9 @@ export type ReplayWsMessage =
   | ReplayExtendedMessage
   | { type: "reset" }
   | { type: "done" }
+  // Acknowledges a fast-forward after a session was rebuilt; see the seek
+  // action in api/routers/replay.py.
+  | { type: "seeked"; ticks_processed: number }
   | { type: "error"; message: string }
 
 export interface SchwabStatus {

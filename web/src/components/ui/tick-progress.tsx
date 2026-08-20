@@ -42,7 +42,7 @@ export function TickProgress({ processed, total, playing = false, detail }: Tick
           <span className="text-foreground/80 font-medium">
             {processed.toLocaleString()}
           </span>
-          <span className="opacity-60"> / {total.toLocaleString()} ticks</span>
+          <span className="opacity-60" data-testid="replay-ticks" data-processed={processed} data-total={total}> / {total.toLocaleString()} ticks</span>
           {detail && <span className="opacity-60"> · {detail}</span>}
         </span>
         <span className="tickbar-readout tabular-nums">

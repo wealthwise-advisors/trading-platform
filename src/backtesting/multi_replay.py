@@ -207,13 +207,23 @@ class MultiReplaySession:
         contracts_per_trade: int = 1,
         session_start=None,
         source_timeframe: Optional[str] = None,
+        allow_empty: bool = False,
     ):
+        # allow_empty exists for ONE caller: a session created before its chosen
+        # session hours have opened. Someone who sets up at 03:00 for a
+        # 09:30-16:00 window has picked a window that is legitimately empty right
+        # now, and refusing them means the app only works if they change a
+        # setting they deliberately chose. Such a session starts at 0/0, reports
+        # done immediately, and fills in through extend() as the open arrives.
+        #
+        # Defaulted off so an accidental empty frame is still an error
+        # everywhere else, which is what this guard was always for.
         if not timeframes:
             raise ValueError("At least one timeframe is required.")
         unknown = [t for t in timeframes if t not in TF_MINUTES]
         if unknown:
             raise ValueError(f"Unsupported timeframe(s): {unknown}")
-        if df.empty:
+        if df.empty and not allow_empty:
             raise ValueError("No market data supplied to the replay session.")
 
         # Defaults to the finest selected timeframe, which is what the caller
@@ -530,7 +540,15 @@ class MultiReplaySession:
             self._source_df = previous_source
             raise
 
-        if not rebuilt[self.base_timeframe].df.iloc[:self._clock_index].equals(already_issued):
+        # `self._clock_index` bars have been shown to the user; the rebuild must
+        # not disagree about any of them. When NOTHING has been shown -- a
+        # session that started empty and is receiving its first bars -- there is
+        # no prefix to violate and the comparison is vacuous. It also happened to
+        # be false: two empty frames with different dtypes are not `.equals`, so
+        # the very first extend on a waiting session was rejected as a revision.
+        if self._clock_index and not rebuilt[self.base_timeframe].df.iloc[
+            :self._clock_index
+        ].equals(already_issued):
             self._source_df = previous_source
             return self._extend_result(
                 0,

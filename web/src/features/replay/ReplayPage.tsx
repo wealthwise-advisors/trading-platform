@@ -284,6 +284,7 @@ export function ReplayPage() {
   const [error, setError] = useState<string | null>(null)
   const [strategyName, setStrategyName] = useState("")
   const [ticksProcessed, setTicksProcessed] = useState(0)
+  // Mirrors ticksProcessed for the socket handlers; see ticksRef above.
   const [totalTicks, setTotalTicks] = useState(0)
   // One accumulator per timeframe, keyed by label. Replaces the old flat
   // single-pane state; a one-timeframe session simply has one key.
@@ -406,6 +407,14 @@ export function ReplayPage() {
   // created it, so it cannot read `status` directly.
   const statusRef = useRef<Status>("idle")
   statusRef.current = status
+
+  // Where the tape had reached, and whether it was running, at the moment a
+  // socket died. Refs because the onclose handler closes over the render that
+  // created the socket and would otherwise recover to a stale position.
+  const ticksRef = useRef(0)
+  // One recovery per drop. Without this, a server that is down rather than
+  // restarting would be retried in a tight loop for as long as the tab is open.
+  const recoveringRef = useRef(false)
   // Same reason as statusRef: read by the socket's onmessage handler.
   const endDateRef = useRef(endDate)
   endDateRef.current = endDate
@@ -440,7 +449,21 @@ export function ReplayPage() {
     setTape([])
   }
 
-  async function handleLoad(override?: string[]) {
+  /**
+   * Re-create the session that just died and put the tape back where it was.
+   *
+   * Everything needed is already on screen -- symbol, dates, timeframes,
+   * strategy, capital -- so a lost session costs a refetch and a fast-forward,
+   * not the user's place in the tape.
+   */
+  async function recoverSession(seekTo: number, thenPlay: boolean) {
+    await handleLoad(undefined, { seekTo, thenPlay })
+  }
+
+  async function handleLoad(
+    override?: string[],
+    recover?: { seekTo: number; thenPlay: boolean },
+  ) {
     // `override` exists because a timeframe toggle may have to reload with a
     // selection React has not committed to state yet.
     const wanted = override ?? timeframes
@@ -473,6 +496,7 @@ export function ReplayPage() {
       ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data) as ReplayWsMessage
         if (msg.type === "frames") {
+          ticksRef.current = msg.ticks_processed ?? ticksRef.current
           // Apply every pane from this tick in ONE state update, so the grid
           // never renders with some panes advanced and others not.
           setPanes((prev) => {
@@ -595,6 +619,18 @@ export function ReplayPage() {
           if (shouldAutoFollow(endDateRef.current, nowEasternLabel(), dataSourceRef.current)) {
             setFollow((f) => (f.enabled ? f : { ...f, enabled: true }))
           }
+        } else if (msg.type === "seeked") {
+          // Position restored. Resume only if the tape was running when the
+          // session died -- a paused tape must come back paused.
+          ticksRef.current = msg.ticks_processed ?? ticksRef.current
+          recoveringRef.current = false
+          setError(null)
+          if (recover?.thenPlay) {
+            ws.send(JSON.stringify({ action: "play" }))
+            setStatus("playing")
+          } else {
+            setStatus("ready")
+          }
         } else if (msg.type === "error") {
           setError(msg.message); setStatus("idle")
         }
@@ -615,6 +651,7 @@ export function ReplayPage() {
       ws.onclose = () => {
         const deliberate = closingRef.current
         closingRef.current = false
+        const wasPlaying = statusRef.current === "playing" 
         // statusRef, not a setStatus updater. React may invoke an updater more
         // than once -- StrictMode does so deliberately -- and calling setError
         // from inside one is a side effect in the render phase.
@@ -624,17 +661,33 @@ export function ReplayPage() {
           status: statusRef.current,
         })
         if (!lost) return
-        setError(
-          "The connection to the replay session dropped — the server " +
-          "restarted, or the session expired. Press Load Data to start a " +
-          "new one. Nothing you configured has been lost.",
-        )
-        setStatus("idle")
+        if (recoveringRef.current) {
+          // A recovery attempt just died too -- the server is down, not
+          // restarting. Stop and say so rather than retrying forever.
+          recoveringRef.current = false
+          setError(
+            "The replay session was lost and could not be restored — the " +
+            "server looks unavailable. Press Load Data once it is back.",
+          )
+          setStatus("idle")
+          return
+        }
+        recoveringRef.current = true
+        setError(null)
+        setStatus("loading")
+        void recoverSession(ticksRef.current, wasPlaying)
       }
 
       closingRef.current = false
       wsRef.current = ws
       setStatus("ready")
+      if (recover && recover.seekTo > 0) {
+        // The socket is open but the server has not been asked for anything
+        // yet, so this cannot race a frame.
+        ws.send(JSON.stringify({ action: "seek", ticks: recover.seekTo }))
+      } else if (recover) {
+        recoveringRef.current = false
+      }
     } catch (e) {
       setError((e as Error).message)
       setStatus("idle")

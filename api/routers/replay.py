@@ -277,45 +277,39 @@ def create_replay(req: ReplayCreateRequest):
     # bars that WERE there is the most useful thing we can tell the caller.
     before_session = df
     df = _apply_session(df, req.session_start, req.session_end)
+    waiting = False
     if df.empty:
-        # Naming the filter is accurate and unhelpful on its own: the commonest
-        # cause by far is asking for TODAY before the session has opened, and
-        # "no bars after the session filter" reads like a fault rather than
-        # "wait eight minutes". Say which of the two it is.
         now_et = _market_now()
+        # Asking for TODAY before the chosen session has opened is not an error.
         not_open_yet = (
             req.end_date >= now_et.date()
             and req.session_start is not None
             and now_et.time() < req.session_start
         )
         if not_open_yet:
-            detail = (
-                f"The {req.session_start:%H:%M}-{req.session_end:%H:%M} session has "
-                f"not opened yet today - it is {now_et:%H:%M} ET."
-            )
-            # Naming the control that would work right now, rather than only the
-            # two that mean giving up. A future trades nearly around the clock,
-            # so before the New York open there are usually hours of bars sitting
-            # in the frame we just filtered away -- and "wait for the open" reads
-            # like the data is missing when it is merely outside the window.
-            outside = len(before_session)
-            if outside:
-                detail += (
-                    f" {req.symbol} has traded {outside} bars outside those hours"
-                    f" today. Set Session Hours to 24 hours to follow them now,"
-                    f" or wait for the open."
-                )
-            else:
-                detail += " Wait for the open, or pick an earlier date."
-
+            # WAIT, do not refuse.
+            #
+            # The window is legitimately empty right now, and it is the caller's
+            # window: 09:30-16:00, 18:00-17:00 or anything else is a deliberate
+            # choice about which session they trade, not a mistake to be
+            # corrected by telling them to switch to 24 hours. Refusing meant the
+            # app only worked if they abandoned the setting they had chosen.
+            #
+            # An empty session reports done immediately, which is exactly what
+            # makes the client turn Follow live on by itself. From there each
+            # poll calls extend(), and the first bar of their session reaches the
+            # tape the moment it closes.
+            waiting = True
         else:
-            detail = (
+            # Genuinely nothing in this range -- a weekend, a holiday, or a
+            # window this instrument never trades in. Naming the filter alone is
+            # accurate and unhelpful, so say which it is.
+            raise HTTPException(400, (
                 f"No {req.symbol} bars in the {req.session_start}-{req.session_end} "
                 f"session between {req.start_date} and {req.end_date}. Try another "
                 f"date range, or 24-hour session hours if this instrument trades "
                 f"outside regular hours."
-            )
-        raise HTTPException(400, detail)
+            ))
 
     # Synthetic data is generated, not observed, so nothing about it is "still
     # forming" -- and its bars can legitimately run past the wall clock. Every
@@ -326,7 +320,7 @@ def create_replay(req: ReplayCreateRequest):
         # reach the tape as a closed bar and then change on the next poll. See
         # trim_to_closed_bars.
         df = trim_to_closed_bars(df, source_tf, base_tf, req.symbol, _market_now())
-        if df.empty:
+        if df.empty and not waiting:
             raise HTTPException(
                 400,
                 f"No {req.symbol} bar has closed yet in the "
@@ -351,6 +345,7 @@ def create_replay(req: ReplayCreateRequest):
             tick_size=spec["tick_size"],
             tick_value=spec["tick_value"],
             point_value=spec["point_value"],
+            allow_empty=waiting,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc))
@@ -409,6 +404,40 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                     session.reset()
                     running = False
                     await websocket.send_json({"type": "reset"})
+                elif action == "seek":
+                    # Fast-forward without narrating every tick.
+                    #
+                    # Exists so a session rebuilt after the server went away can
+                    # be put back where the tape was. Sessions live in this
+                    # process's memory, so a deploy, a crash or an OOM kill takes
+                    # every running replay with it; the client re-creates the
+                    # session from the same configuration and seeks to the tick
+                    # it had reached.
+                    #
+                    # The per-tick frames are deliberately NOT sent -- thousands
+                    # of messages would be pure noise and would take longer to
+                    # render than the seek takes to run. One frame at the end
+                    # carries the state that matters.
+                    target = int(msg.get("ticks") or 0)
+                    running = False
+                    stepped = {}
+                    while session.progress()[0] < target and not session.is_done:
+                        stepped = session.tick()
+                    processed, total = session.progress()
+                    await websocket.send_json({
+                        "type": "frames",
+                        "market_time": (session.market_time.isoformat()
+                                        if session.market_time else None),
+                        "ticks_processed": processed,
+                        "total_ticks": total,
+                        "frames": {
+                            tf: serializers.frame_to_dict(frame)
+                            for tf, frame in stepped.items()
+                        },
+                    })
+                    await websocket.send_json({
+                        "type": "seeked", "ticks_processed": processed,
+                    })
                 elif action == "extend":
                     # Following the live market: pull anything that has printed
                     # since the snapshot was loaded and grow the session.
