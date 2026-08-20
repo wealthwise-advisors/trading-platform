@@ -1,0 +1,10 @@
+# Scripts that run inside Linux containers MUST keep LF endings.
+#
+# With core.autocrlf=true on Windows -- the default for many installs -- a .sh
+# file can be committed with CRLF, and then `#!/bin/sh\r` inside a container
+# fails with "bad interpreter: no such file or directory". The error names the
+# interpreter, not the line endings, so it is a genuinely unpleasant hour.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.conf          text eol=lf
+*.template      text eol=lf
