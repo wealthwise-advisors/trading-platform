@@ -108,7 +108,28 @@ server {
         default_type "text/plain";
     }
 
+    # ONE address, not two.
+    #
+    # Everything on port 80 moves to the certificate's hostname, so there is a
+    # single URL to remember and no way to end up on the slow path by accident.
+    #
+    # Guarded on the certificate FILE, tested per request, which makes it
+    # self-healing: if the certificate is ever missing -- first boot before
+    # issuance, a renewal that fails, a wiped volume -- the test is false and
+    # plain HTTP serves the app exactly as it does today. A redirect to a
+    # hostname that cannot answer would take the site off the air entirely,
+    # which is worse than the extra address this removes.
+    #
+    # `if` inside a location is worth avoiding in general; `return` is the one
+    # use that is documented as safe. try_files never runs inside it.
+    #
+    # The ACME challenge above is deliberately NOT redirected: it uses ^~, which
+    # outranks this prefix, and it has to stay answerable over plain HTTP or the
+    # certificate could never be renewed.
     location / {
+        if (-f /etc/letsencrypt/live/${TLS_DOMAIN}/fullchain.pem) {
+            return 301 https://${TLS_DOMAIN}$request_uri;
+        }
         try_files $uri $uri/ /index.html;
     }
 }

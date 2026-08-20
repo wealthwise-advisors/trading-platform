@@ -11,7 +11,15 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# A TEMPLATE, not a finished config. The nginx image runs envsubst over
+# everything in /etc/nginx/templates at startup and writes the result into
+# conf.d, which is how ${TLS_DOMAIN} reaches the config -- nginx cannot read
+# environment variables by itself.
+#
+# NGINX_ENVSUBST_FILTER (set in docker-compose.yml) restricts substitution to
+# that ONE variable. Without it envsubst would also eat $uri, $host and
+# $request_uri, and the config would be silently rewritten into nonsense.
+COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
 
 # The TLS server ships as a TEMPLATE outside conf.d. 40-enable-ssl.sh installs
 # it only once a certificate exists -- see that script for why it is a watcher

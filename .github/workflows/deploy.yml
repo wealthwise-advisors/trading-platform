@@ -368,7 +368,11 @@ jobs:
       - name: Smoke test the deployed app
         run: |
           set -e
-          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/" | grep -q '<title>AutoTrader</title>'
+          # -L because port 80 now redirects to the certificate's hostname once
+          # a certificate exists. Without it this check receives the 301, finds
+          # no <title> in an empty body, and fails a deploy that is perfectly
+          # healthy. Following the redirect also proves the HTTPS side serves.
+          curl -fsSL --max-time 30 "http://${{ secrets.EC2_HOST }}/" | grep -q '<title>AutoTrader</title>'
           echo "  dashboard served"
           curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/strategies" | grep -q 'rsi_divergence'
           echo "  API responding through the single origin"
