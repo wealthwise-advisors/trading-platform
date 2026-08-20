@@ -41,10 +41,18 @@ import { TickProgress } from "@/components/ui/tick-progress"
 import { TimeField } from "@/components/ui/time-field"
 import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
 import {
-  FOLLOW_POLL_MS, IDLE_FOLLOW, applyExtendReply, canReceiveNewBars,
-  followLabel, lagNote,
-  minutesBehind, shouldAutoFollow, shouldPoll, shouldResumeAfterExtend,
+  FOLLOW_POLL_MS,
+  IDLE_FOLLOW,
+  applyExtendReply,
+  canReceiveNewBars,
+  followLabel,
+  lagNote,
+  minutesBehind,
+  shouldAutoFollow,
+  shouldPoll,
+  shouldResumeAfterExtend,
   type FollowState,
+  isLostSession,
 } from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
 
@@ -404,7 +412,24 @@ export function ReplayPage() {
   const dataSourceRef = useRef(dataSource)
   dataSourceRef.current = dataSource
 
-  useEffect(() => () => wsRef.current?.close(), [])
+  /**
+   * Set immediately before WE close the socket, so onclose can tell a teardown
+   * we asked for from the server going away underneath us.
+   */
+  const closingRef = useRef(false)
+
+  const closeSocket = () => {
+    // Only arm the flag if there is something to close. StrictMode mounts,
+    // runs the unmount cleanup, and mounts again -- so this runs once at
+    // startup with wsRef empty. Arming unconditionally left the flag stuck
+    // true, and the first REAL close was then read as one we asked for and
+    // silently ignored, which is the whole bug this handler exists to fix.
+    if (!wsRef.current) return
+    closingRef.current = true
+    wsRef.current.close()
+  }
+
+  useEffect(() => () => closeSocket(), [])
 
   const currentStrategy = strategies?.find((s) => s.id === strategyId)
 
@@ -420,7 +445,7 @@ export function ReplayPage() {
     // selection React has not committed to state yet.
     const wanted = override ?? timeframes
     setStatus("loading"); setError(null)
-    wsRef.current?.close()
+    closeSocket()
     try {
       const resp = await api.createReplay({
         symbol,
@@ -575,6 +600,39 @@ export function ReplayPage() {
         }
       }
       ws.onerror = () => setError("WebSocket connection failed.")
+
+      /**
+       * The session lives in the API process's memory, so anything that
+       * replaces that process -- a deploy, a crash, an OOM kill -- takes every
+       * running replay with it.
+       *
+       * Without this handler the failure was silent and looked exactly like a
+       * bug in the tape: the socket closed, no message ever arrived again, and
+       * the UI carried on showing "Playing" over a frozen chart. A CLEAN
+       * server-side close fires onclose and NOT onerror, which is why having
+       * only the latter caught nothing.
+       */
+      ws.onclose = () => {
+        const deliberate = closingRef.current
+        closingRef.current = false
+        // statusRef, not a setStatus updater. React may invoke an updater more
+        // than once -- StrictMode does so deliberately -- and calling setError
+        // from inside one is a side effect in the render phase.
+        const lost = isLostSession({
+          deliberate,
+          current: wsRef.current === ws,
+          status: statusRef.current,
+        })
+        if (!lost) return
+        setError(
+          "The connection to the replay session dropped — the server " +
+          "restarted, or the session expired. Press Load Data to start a " +
+          "new one. Nothing you configured has been lost.",
+        )
+        setStatus("idle")
+      }
+
+      closingRef.current = false
       wsRef.current = ws
       setStatus("ready")
     } catch (e) {
@@ -584,7 +642,18 @@ export function ReplayPage() {
   }
 
   function send(action: string, extra?: Record<string, unknown>) {
-    wsRef.current?.send(JSON.stringify({ action, ...extra }))
+    // send() on a CLOSED socket throws InvalidStateError, so pressing Play
+    // after the server went away replaced a frozen tape with an unhandled
+    // exception. Check the state and say something useful instead.
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      setError(
+        "That session is no longer running — press Load Data to start a new one.",
+      )
+      setStatus("idle")
+      return
+    }
+    ws.send(JSON.stringify({ action, ...extra }))
   }
 
   const play = () => { send("play"); setStatus("playing") }
@@ -637,7 +706,7 @@ export function ReplayPage() {
    * form was a dead end. This is the missing door out.
    */
   function changeSetup() {
-    wsRef.current?.close()
+    closeSocket()
     wsRef.current = null
     setStatus("idle")
     setActiveTimeframes([])

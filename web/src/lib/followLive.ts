@@ -258,3 +258,31 @@ export function liveEdgeLabel(dataTime: string | null): string | null {
   const m = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/.exec(dataTime)
   return m ? `${m[1]} ${m[2]}` : null
 }
+
+/**
+ * Should a closed WebSocket be reported to the user as a lost session?
+ *
+ * Replay sessions live in a plain dict in the API process, so anything that
+ * replaces that process -- a deploy, a crash, an OOM kill -- silently takes
+ * every running replay with it. The socket then closes with no further
+ * messages, and with no handler the UI carried on showing "Playing" over a
+ * frozen chart. A person watching that has no way to tell it from a bug in the
+ * tape, which is exactly how it was reported.
+ *
+ * Three closes must stay quiet:
+ *   - one we asked for (loading a new session, changing setup, unmounting)
+ *   - one belonging to a socket a newer session already replaced
+ *   - one that arrives after the tape finished, which is just tidying up
+ */
+export function isLostSession(args: {
+  /** Did we initiate this close ourselves? */
+  deliberate: boolean
+  /** Is this still the socket the page is using? */
+  current: boolean
+  /** Playback status at the moment the socket closed. */
+  status: "idle" | "loading" | "ready" | "playing" | "paused" | "done"
+}): boolean {
+  if (args.deliberate) return false
+  if (!args.current) return false
+  return args.status !== "idle" && args.status !== "done"
+}

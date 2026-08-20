@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest"
-import {
-  FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll,
-  followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind,
-  lagNote, canReceiveNewBars, type FollowState,
-} from "./followLive"
+import { FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll, followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind, lagNote, canReceiveNewBars, type FollowState, isLostSession } from "./followLive"
 
 const reply = (over: Partial<Parameters<typeof applyExtendReply>[1]> = {}) => ({
   added: 0, reason: null, is_done: true, data_time: null, ...over,
@@ -371,5 +367,36 @@ describe("the lag note stays silent on a session that cannot go live", () => {
     const live = canReceiveNewBars("2025-01-07", NOW, "external_csv")
     expect(live).toBe(false)
     expect(lagNote(minutesBehind("2025-01-07T08:20:00", NOW), 5, live)).toBeNull()
+  })
+})
+
+describe("isLostSession", () => {
+  const base = { deliberate: false, current: true, status: "playing" as const }
+
+  it("reports a socket that closed on its own while the tape was running", () => {
+    // The case that prompted this: a deploy recreated the API container at
+    // 03:46 ET and every live session went with it.
+    expect(isLostSession(base)).toBe(true)
+    expect(isLostSession({ ...base, status: "paused" })).toBe(true)
+    expect(isLostSession({ ...base, status: "ready" })).toBe(true)
+    expect(isLostSession({ ...base, status: "loading" })).toBe(true)
+  })
+
+  it("stays quiet when we closed the socket ourselves", () => {
+    // Loading a new session, changing setup and unmounting all close the old
+    // socket. Reporting those would put an error on screen every single time
+    // somebody pressed Load Data.
+    expect(isLostSession({ ...base, deliberate: true })).toBe(false)
+  })
+
+  it("stays quiet for a socket a newer session already replaced", () => {
+    expect(isLostSession({ ...base, current: false })).toBe(false)
+  })
+
+  it("stays quiet once the tape has finished", () => {
+    // A close after "done" is tidying up, not a failure, and dressing it as one
+    // would tell people something broke at the exact moment it succeeded.
+    expect(isLostSession({ ...base, status: "done" })).toBe(false)
+    expect(isLostSession({ ...base, status: "idle" })).toBe(false)
   })
 })
