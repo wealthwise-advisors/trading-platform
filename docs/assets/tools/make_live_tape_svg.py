@@ -288,7 +288,7 @@ def build() -> str:
     a('      <path d="M32 0H0v32" fill="none" stroke="#ffffff" stroke-opacity=".026" '
       'stroke-width="1"/>')
     a("    </pattern>")
-    a(f'    <radialGradient id="wash" cx="50%" cy="0%" r="80%">')
+    a('    <radialGradient id="wash" cx="50%" cy="0%" r="80%">')
     a(f'      <stop offset="0%" stop-color="{CYAN}" stop-opacity=".07"/>')
     a(f'      <stop offset="100%" stop-color="{CYAN}" stop-opacity="0"/>')
     a("    </radialGradient>")
@@ -308,7 +308,7 @@ def build() -> str:
     a('      <path d="M16 0H0v16" fill="none" stroke="#8ec5ff" stroke-opacity=".028" '
       'stroke-width=".6"/>')
     a("    </pattern>")
-    a(f'    <radialGradient id="skyB" cx="50%" cy="0%" r="85%">')
+    a('    <radialGradient id="skyB" cx="50%" cy="0%" r="85%">')
     a(f'      <stop offset="0%" stop-color="{CYAN}" stop-opacity=".10"/>')
     a(f'      <stop offset="60%" stop-color="{BLUE}" stop-opacity=".03"/>')
     a(f'      <stop offset="100%" stop-color="{BLUE}" stop-opacity="0"/>')
@@ -321,27 +321,27 @@ def build() -> str:
     a('      <stop offset="0%" stop-color="#ffffff" stop-opacity=".075"/>')
     a('      <stop offset="100%" stop-color="#ffffff" stop-opacity=".016"/>')
     a("    </linearGradient>")
-    a(f'    <marker id="arViolet" viewBox="0 0 10 10" refX="8.4" refY="5" '
-      f'markerWidth="6.6" markerHeight="6.6" orient="auto-start-reverse">')
+    a('    <marker id="arViolet" viewBox="0 0 10 10" refX="8.4" refY="5" '
+      'markerWidth="6.6" markerHeight="6.6" orient="auto-start-reverse">')
     a(f'      <path d="M0 1 9 5 0 9z" fill="{VIOLET}"/>')
     a("    </marker>")
-    a(f'    <marker id="ar" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
-      f'markerHeight="6.6" orient="auto-start-reverse">')
+    a('    <marker id="ar" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
+      'markerHeight="6.6" orient="auto-start-reverse">')
     a(f'      <path d="M0 1 9 5 0 9z" fill="{SKY}"/>')
     a("    </marker>")
-    a(f'    <marker id="arPink" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
-      f'markerHeight="6.6" orient="auto-start-reverse">')
+    a('    <marker id="arPink" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
+      'markerHeight="6.6" orient="auto-start-reverse">')
     a(f'      <path d="M0 1 9 5 0 9z" fill="{PINK}"/>')
     a("    </marker>")
-    a(f'    <marker id="arGreen" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
-      f'markerHeight="6.6" orient="auto-start-reverse">')
+    a('    <marker id="arGreen" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.6" '
+      'markerHeight="6.6" orient="auto-start-reverse">')
     a(f'      <path d="M0 1 9 5 0 9z" fill="{GREEN}"/>')
     a("    </marker>")
     a("  </defs>")
 
     # ══ panel A: the tape ═════════════════════════════════════════════════
     x, y, w, h = PA
-    a(f'  <g>')
+    a('  <g>')
     a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#panel)" '
       f'stroke="#ffffff" stroke-opacity=".075"/>')
     a(f'    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#grid)"/>')
@@ -361,8 +361,8 @@ def build() -> str:
     # status: pulsing dot + wording
     sy = y + 90
     a(f'    <circle cx="{x + 34}" cy="{sy}" r="9" fill="url(#gGreen)">')
-    a(f'      <animate attributeName="opacity" values=".35;1;.35" dur="2.4s" '
-      f'repeatCount="indefinite"/>')
+    a('      <animate attributeName="opacity" values=".35;1;.35" dur="2.4s" '
+      'repeatCount="indefinite"/>')
     a("    </circle>")
     a(f'    <circle cx="{x + 34}" cy="{sy}" r="4.2" fill="{GREEN}"/>')
     a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="12.5" '
@@ -399,8 +399,8 @@ def build() -> str:
             # The forming bar: glowing, pulsing, and the only one that moves.
             a(f'      <circle cx="{cx:.1f}" cy="{(top + hgt / 2):.1f}" r="30" '
               f'fill="url(#gGreen)" opacity=".55">')
-            a(f'        <animate attributeName="opacity" values=".3;.8;.3" dur="1.8s" '
-              f'repeatCount="indefinite"/>')
+            a('        <animate attributeName="opacity" values=".3;.8;.3" dur="1.8s" '
+              'repeatCount="indefinite"/>')
             a("      </circle>")
         a(f'    <line x1="{cx:.1f}" y1="{hy:.1f}" x2="{cx:.1f}" y2="{ly:.1f}" '
           f'stroke="{col}" stroke-opacity="{0.95 if last else 0.8}" '
@@ -409,21 +409,21 @@ def build() -> str:
           f'height="{hgt:.1f}" rx="2" fill="{col}" '
           f'fill-opacity="{0.95 if last else 0.85}">')
         if last:
-            a(f'      <animate attributeName="fill-opacity" values=".62;1;.62" '
-              f'dur="1.8s" repeatCount="indefinite"/>')
+            a('      <animate attributeName="fill-opacity" values=".62;1;.62" '
+              'dur="1.8s" repeatCount="indefinite"/>')
         a("    </rect>")
         if last:
             # The ring beneath it: the "still forming" tell.
             fy = ly + 12
             a(f'    <ellipse cx="{cx:.1f}" cy="{fy:.1f}" rx="6" ry="2.4" fill="none" '
               f'stroke="{GREEN}" stroke-width="1.4" opacity=".9">')
-            a(f'      <animate attributeName="rx" values="6;21;6" dur="2.6s" '
-              f'repeatCount="indefinite"/>')
+            a('      <animate attributeName="rx" values="6;21;6" dur="2.6s" '
+              'repeatCount="indefinite"/>')
             a("    </ellipse>")
             a(f'    <ellipse cx="{cx:.1f}" cy="{fy:.1f}" rx="6" ry="2.4" fill="none" '
               f'stroke="{GREEN}" stroke-width="1.2">')
-            a(f'      <animate attributeName="opacity" values=".85;0;.85" dur="2.6s" '
-              f'repeatCount="indefinite"/>')
+            a('      <animate attributeName="opacity" values=".85;0;.85" dur="2.6s" '
+              'repeatCount="indefinite"/>')
             a("    </ellipse>")
 
     # ── right-hand axis ──
@@ -781,8 +781,8 @@ def build() -> str:
                 a(f'          <circle cx="{15 * math.cos(ang):.1f}" '
                   f'cy="{15 * math.sin(ang):.1f}" r="2.5" fill="{col}" '
                   f'opacity="{0.25 + 0.09 * k:.2f}"/>')
-            a(f'          <animateTransform attributeName="transform" type="rotate" '
-              f'from="0 0 0" to="360 0 0" dur="3.2s" repeatCount="indefinite"/>')
+            a('          <animateTransform attributeName="transform" type="rotate" '
+              'from="0 0 0" to="360 0 0" dur="3.2s" repeatCount="indefinite"/>')
             a("        </g>")
             a("      </g>")
             tx0 = OUT_X + 68
@@ -826,8 +826,8 @@ def build() -> str:
       f'stroke-width="1.7" stroke-linejoin="round" stroke-dasharray="8 6" '
       f'marker-end="url(#arViolet)">')
     # Marching ants: what makes the loop read as a loop rather than a bracket.
-    a(f'      <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.15s" '
-      f'repeatCount="indefinite"/>')
+    a('      <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.15s" '
+      'repeatCount="indefinite"/>')
     a("    </path>")
     # Arrowheads along the horizontal run, so the direction is unambiguous.
     for k in range(3):

@@ -1,23 +1,55 @@
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 import { api } from "@/lib/api"
 import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
 } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import { WinLossDonut } from "@/components/charts/WinLossDonut"
-import { CandlestickChart } from "@/components/charts/CandlestickChart"
-import { ElliottWaveChart } from "@/components/charts/ElliottWaveChart"
-import { EquityChart } from "@/components/charts/EquityChart"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
 import { CandlestickPatternsTable } from "@/components/tables/CandlestickPatternsTable"
 import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
-import { PnlDistributionChart } from "@/components/charts/PnlDistributionChart"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
+
+/**
+ * The four Plotly charts are split out of the main bundle.
+ *
+ * plotly.js is 96 MB installed and roughly 4.5 MB of the 5.19 MB production
+ * bundle -- by far the largest thing the app ships. Every visitor was
+ * downloading and PARSING all of it before anything appeared, and measured cold
+ * on the deployed site that cost 6.57s to first render: 1.9s of download and
+ * about 4.7s of script evaluation.
+ *
+ * Nothing here needs it up front. This page returns the "configure a backtest"
+ * sentence until a backtest id exists, Live Replay is a table, and Export has no
+ * chart at all -- so on first paint there is no Plotly figure on screen in any
+ * tab. Splitting it means the chart code is fetched the moment a result is
+ * actually rendered, and never for someone who only opens the app.
+ *
+ * These are the only four modules that import Plotly. WinLossDonut and
+ * MonthlyReturnsHeatmap draw with plain SVG and stay in the main chunk, so the
+ * summary view is unaffected.
+ *
+ * Named exports, hence the .then() mapping -- React.lazy resolves `default`.
+ */
+const CandlestickChart = lazy(() =>
+  import("@/components/charts/CandlestickChart").then((m) => ({ default: m.CandlestickChart })))
+const ElliottWaveChart = lazy(() =>
+  import("@/components/charts/ElliottWaveChart").then((m) => ({ default: m.ElliottWaveChart })))
+const EquityChart = lazy(() =>
+  import("@/components/charts/EquityChart").then((m) => ({ default: m.EquityChart })))
+const PnlDistributionChart = lazy(() =>
+  import("@/components/charts/PnlDistributionChart").then((m) => ({ default: m.PnlDistributionChart })))
+
+/** Shown while a chart chunk is in flight. */
+function ChartLoading() {
+  return <LoadingBlock label="Loading chart" hint="preparing the plot" />
+}
+
 
 export function ResultsPage() {
   const backtestId = useConfigStore((s) => s.backtestId)
@@ -163,21 +195,25 @@ export function ResultsPage() {
               <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
-                    <CandlestickChart
-                      symbol={s.symbol}
-                      strategyName={s.strategy_name}
-                      bars={priceDataQ.data.bars}
-                      indicators={priceDataQ.data.indicators}
-                      zigzag={zigzagQ.data}
-                      trades={tradesQ.data ?? []}
-                    />
+                    <Suspense fallback={<ChartLoading />}>
+                      <CandlestickChart
+                        symbol={s.symbol}
+                        strategyName={s.strategy_name}
+                        bars={priceDataQ.data.bars}
+                        indicators={priceDataQ.data.indicators}
+                        zigzag={zigzagQ.data}
+                        trades={tradesQ.data ?? []}
+                      />
+                    </Suspense>
                   </div>
                 )}
               </Card>
             </TabsContent>
             <TabsContent value="equity" className="mt-0">
               <Card className="p-2 border border-white/6 w-full">
-                <EquityChart points={equity} initialCapital={s.initial_capital} />
+                <Suspense fallback={<ChartLoading />}>
+                  <EquityChart points={equity} initialCapital={s.initial_capital} />
+                </Suspense>
               </Card>
             </TabsContent>
             <TabsContent value="trades" className="mt-0">
@@ -187,7 +223,9 @@ export function ResultsPage() {
             </TabsContent>
             <TabsContent value="pnl" className="mt-0">
               <Card className="p-4 border border-white/6 w-full">
-                <PnlDistributionChart trades={tradesQ.data ?? []} />
+                <Suspense fallback={<ChartLoading />}>
+                  <PnlDistributionChart trades={tradesQ.data ?? []} />
+                </Suspense>
               </Card>
             </TabsContent>
             <TabsContent value="monthly" className="mt-0">
@@ -214,16 +252,18 @@ export function ResultsPage() {
               <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && (
                   <div className="flex-1 min-h-0">
-                    <ElliottWaveChart
-                      symbol={s.symbol}
-                      strategyName={s.strategy_name}
-                      bars={priceDataQ.data.bars}
-                      data={elliottWaveQ.data}
-                      isLoading={elliottWaveQ.isLoading}
-                      error={elliottWaveQ.error}
-                      scaleFilter={ewScale}
-                      onScaleFilter={setEwScale}
-                    />
+                    <Suspense fallback={<ChartLoading />}>
+                      <ElliottWaveChart
+                        symbol={s.symbol}
+                        strategyName={s.strategy_name}
+                        bars={priceDataQ.data.bars}
+                        data={elliottWaveQ.data}
+                        isLoading={elliottWaveQ.isLoading}
+                        error={elliottWaveQ.error}
+                        scaleFilter={ewScale}
+                        onScaleFilter={setEwScale}
+                      />
+                    </Suspense>
                   </div>
                 )}
               </Card>

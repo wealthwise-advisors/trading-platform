@@ -457,7 +457,7 @@ if __name__ == "__main__":
     dest.write_text(svg, encoding="utf-8")
     print(f"wrote {dest}  ({len(svg):,} chars)")
     print(f"  stages            : {len(STAGES)}   links: {COLS - 1}")
-    print(f"  ring layers/node  : glow, ticks, hairline, 2 arcs, inner, disc, burst")
+    print("  ring layers/node  : glow, ticks, hairline, 2 arcs, inner, disc, burst")
     print(f"  <animate>         : {svg.count('<animate ')}")
     print(f"  <animateTransform>: {svg.count('<animateTransform')}")
     print(f"  pulse cycle       : {CYCLE:.2f}s")
