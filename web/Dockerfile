@@ -11,15 +11,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-# A TEMPLATE, not a finished config. The nginx image runs envsubst over
-# everything in /etc/nginx/templates at startup and writes the result into
-# conf.d, which is how ${TLS_DOMAIN} reaches the config -- nginx cannot read
-# environment variables by itself.
-#
-# NGINX_ENVSUBST_FILTER (set in docker-compose.yml) restricts substitution to
-# that ONE variable. Without it envsubst would also eat $uri, $host and
-# $request_uri, and the config would be silently rewritten into nonsense.
-COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # The TLS server ships as a TEMPLATE outside conf.d. 40-enable-ssl.sh installs
 # it only once a certificate exists -- see that script for why it is a watcher
@@ -27,7 +19,12 @@ COPY templates/default.conf.template /etc/nginx/templates/default.conf.template
 # /docker-entrypoint.d in order before starting the master process.
 COPY ssl.conf.template /etc/nginx/ssl.conf.template
 COPY 40-enable-ssl.sh /docker-entrypoint.d/40-enable-ssl.sh
-RUN chmod +x /docker-entrypoint.d/40-enable-ssl.sh
+
+# redirect.d must EXIST even while it is empty. `include` with a wildcard is
+# happy to match nothing, but nginx fails to start if the directory itself is
+# missing -- so a box that has never had a certificate would not boot at all.
+RUN chmod +x /docker-entrypoint.d/40-enable-ssl.sh \
+    && mkdir -p /etc/nginx/redirect.d
 
 EXPOSE 80 443
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

@@ -27,6 +27,11 @@ DOMAIN="${TLS_DOMAIN:-}"
 LIVE="/etc/letsencrypt/live/${DOMAIN}"
 TEMPLATE="/etc/nginx/ssl.conf.template"
 TARGET="/etc/nginx/conf.d/ssl.conf"
+# Included from `location /` in the port-80 server. Written here, as root,
+# rather than tested from the config: nginx evaluates `if (-f ...)` in a worker
+# running as `nginx`, and certbot keeps the real files under archive/ at 0700
+# root, so such a test is always false however valid the certificate is.
+REDIRECT="/etc/nginx/redirect.d/301.conf"
 
 if [ -z "$DOMAIN" ]; then
     echo "40-enable-ssl: TLS_DOMAIN unset, serving HTTP only"
@@ -46,8 +51,16 @@ watch_for_cert() {
                     # reload can fail simply because nginx has not finished
                     # starting yet. Without it the watcher would exit on the
                     # first attempt and TLS would never come up.
-                    nginx -s reload || true
-                    echo "40-enable-ssl: certificate found, TLS enabled for ${DOMAIN}"
+                    printf 'return 301 https://%s$request_uri;
+' "$DOMAIN"                         > "$REDIRECT"
+                    if nginx -t 2>/dev/null; then
+                        nginx -s reload || true
+                        echo "40-enable-ssl: TLS enabled for ${DOMAIN}, port 80 redirects"
+                    else
+                        rm -f "$REDIRECT"
+                        nginx -s reload || true
+                        echo "40-enable-ssl: redirect rejected by nginx -t, serving HTTP on 80"
+                    fi
                 else
                     # Do not leave a broken file where the next reload would
                     # pick it up.
@@ -59,6 +72,13 @@ watch_for_cert() {
                 # renewed certificate is picked up without a restart.
                 nginx -t 2>/dev/null && nginx -s reload || true
             fi
+        elif [ -f "$TARGET" ] || [ -f "$REDIRECT" ]; then
+            # The certificate has gone -- a wiped volume, a failed renewal that
+            # removed it. Take the TLS server and the redirect down together, or
+            # port 80 would be sending people to a hostname nothing answers on.
+            rm -f "$TARGET" "$REDIRECT"
+            nginx -t 2>/dev/null && nginx -s reload || true
+            echo "40-enable-ssl: certificate gone, back to HTTP on 80"
         fi
         i=$((i + 1))
         if [ "$i" -lt 12 ]; then sleep 5; else sleep 600; fi

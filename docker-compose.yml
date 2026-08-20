@@ -3,7 +3,7 @@
 #   docker compose up --build
 #
 # Frontend (web, port 8080) reverse-proxies /api/* to the api service, so
-# the browser only ever talks to one origin -- see web/templates/default.conf.template. The api
+# the browser only ever talks to one origin -- see web/nginx.conf. The api
 # service is not published to the host by default (only reachable from the
 # web container's proxy and other compose services); uncomment its `ports:`
 # below if you need to hit it directly (e.g. from Postman) during a
@@ -63,10 +63,6 @@ services:
       # issue for a bare IP address, so http:// was the only option and every
       # visitor paid a failed HTTPS probe before the page could start loading.
       TLS_DOMAIN: "${TLS_DOMAIN:-}"
-      # Substitute ONLY TLS_DOMAIN in the nginx template. envsubst is otherwise
-      # greedy and would replace $uri, $host and $request_uri with empty
-      # strings, quietly turning the proxy and the SPA fallback into nonsense.
-      NGINX_ENVSUBST_FILTER: "TLS_DOMAIN"
     volumes:
       - letsencrypt:/etc/letsencrypt:ro
       - certbot-webroot:/var/www/certbot:ro
