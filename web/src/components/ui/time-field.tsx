@@ -23,10 +23,16 @@ interface TimeFieldProps {
   label?: string
   title?: string
   className?: string
+  /** Render AM and PM as two visible buttons instead of one toggle.
+   *  A toggle is fine where space is tight, but it only shows the CURRENT
+   *  period -- you have to know that clicking it means "switch". Segmented
+   *  shows both states at once, so setting a time is one deliberate click on
+   *  the half you want rather than a guess about what the button does. */
+  segmented?: boolean
 }
 
 export function TimeField({
-  value, onChange, disabled = false, label, title, className = "",
+  value, onChange, disabled = false, label, title, className = "", segmented = false,
 }: TimeFieldProps) {
   const uid = useId()
   const { h, m } = parse(value)
@@ -64,20 +70,38 @@ export function TimeField({
                onUp={() => onChange(stepMinute(value, 1))}
                onDown={() => onChange(stepMinute(value, -1))} />
 
-      {/* One click, two states, always spelled out -- never inferred from a
-          24-hour number. */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange(togglePeriod(value))}
-        aria-label={`${label ?? "time"} AM or PM, currently ${period}`}
-        title="Switch between AM and PM"
-        className="ml-1 rounded px-1.5 py-0.5 text-xs font-semibold tracking-wide
-                   border border-primary/40 text-primary hover:bg-primary/10
-                   disabled:opacity-40 disabled:hover:bg-transparent"
-      >
-        {period}
-      </button>
+      {/* Always spelled out -- never inferred from a 24-hour number. */}
+      {segmented ? (
+        <span className="ml-1.5 flex gap-1" role="group"
+              aria-label={`${label ?? "time"} AM or PM`}>
+          {(["AM", "PM"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              disabled={disabled}
+              aria-pressed={period === p}
+              onClick={() => { if (period !== p) onChange(togglePeriod(value)) }}
+              title={`Set ${label ?? "time"} to ${p}`}
+              className={`ampm-seg${period === p ? " ampm-seg-on" : ""}`}
+            >
+              {p}
+            </button>
+          ))}
+        </span>
+      ) : (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(togglePeriod(value))}
+          aria-label={`${label ?? "time"} AM or PM, currently ${period}`}
+          title="Switch between AM and PM"
+          className="ml-1 rounded px-1.5 py-0.5 text-xs font-semibold tracking-wide
+                     border border-primary/40 text-primary hover:bg-primary/10
+                     disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          {period}
+        </button>
+      )}
 
       {/* Keeps the real 24-hour value in the DOM: existing tests and any
           form-serialisation keep finding a time input with the same value. */}

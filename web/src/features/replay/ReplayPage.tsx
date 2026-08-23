@@ -14,7 +14,19 @@ import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
-import { SymbolRow } from "@/components/SymbolMark"
+import { SymbolOption } from "@/components/SymbolOption"
+import { InstrumentPicker } from "@/components/InstrumentPicker"
+import { ChevronsUpDown } from "lucide-react"
+import { SourceMark } from "@/components/SourceMark"
+import { StrategyMark } from "@/components/StrategyMark"
+import { CountUp, motion, useReducedMotion, SPRING } from "@/components/motion/primitives"
+import { AnimatePresence } from "framer-motion"
+import { Clock, Info, Globe, Landmark, CalendarRange, BarChart3, Check,
+         Activity, TrendingDown, Ruler } from "lucide-react"
+import { SummaryPanel, makeSummaryRows, ParamCard } from "./SetupPanels"
+import { IconField, TfGlyph } from "./SetupFields"
+import { DateField } from "@/components/ui/date-field"
+import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-react"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
@@ -26,9 +38,7 @@ import type { ReplayBar, ReplayTrade, ReplaySignal, ReplayWsMessage, ReplayFrame
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -38,6 +48,11 @@ import { GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import { computeVolumeProfile } from "@/lib/volumeProfile"
 import { Loader, LoadingBlock } from "@/components/ui/loader"
 import { TickProgress } from "@/components/ui/tick-progress"
+import { StatTile } from "@/components/cards/StatTile"
+import { SectionHeader } from "@/components/SectionHeader"
+import { Layers } from "lucide-react"
+import { StepSection } from "./StepSection"
+import { SummaryChips, SetupFooterHint } from "./SetupChrome"
 import { TimeField } from "@/components/ui/time-field"
 import { addMinutesNaive, barCloseLabel, barOpenLabel, nowEasternLabel } from "@/lib/clock"
 import {
@@ -236,15 +251,6 @@ const SPEED_OPTIONS = [
   { label: "0.05s", value: 0.05 }, { label: "0.1s", value: 0.1 }, { label: "0.2s", value: 0.2 },
   { label: "0.5s", value: 0.5 }, { label: "1s", value: 1.0 },
 ]
-
-function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="bg-[#0e1424] border border-white/6 rounded-lg px-3 py-2">
-      <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="text-lg font-bold" style={{ color: color ?? NEUTRAL }}>{value}</div>
-    </div>
-  )
-}
 
 export function ReplayPage() {
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: api.strategies })
@@ -1170,6 +1176,86 @@ export function ReplayPage() {
     upperPalette: devPalettes.upper,
     lowerPalette: devPalettes.lower,
   })
+  // ── setup readiness ────────────────────────────────────────────────
+  // Each step is "done" when it holds a value the session can actually be
+  // built from -- which is what turns its badge from a number into a tick.
+  // Icon per strategy parameter. Keyed on the registry name so a strategy
+  // that ships a new param still renders -- it just falls back to the ruler.
+  const PARAM_ICON: Record<string, typeof Activity> = {
+    rsi_overbought: Activity,
+    rsi_oversold: TrendingDown,
+    swing_lookback: BarChart3,
+  }
+  /** Put every setup field back to the value it had on a fresh page.
+   *
+   *  Distinct from the transport's Reset, which rewinds the loaded session and
+   *  leaves the form alone. This one touches only the form and never the
+   *  session -- so it is refused while one is loaded rather than silently
+   *  desyncing the fields from the bars on screen. */
+  function resetAllFields() {
+    const d = defaultDateRange()
+    setSymbol("ES")
+    setDataSource("synthetic")
+    setTimeframes(["5m"])
+    setStrategyId("rsi_divergence")
+    setParams({ rsi_overbought: 94, rsi_oversold: 2, swing_lookback: 5 })
+    setInitialCapital(100_000)
+    setContractsPerTrade(1)
+    setCommission(2.5)
+    setSession24h(false)
+    setSessionStart("09:30")
+    setSessionEnd("16:00")
+    setStartDate(d.start)
+    setEndDate(d.end)
+    setSpeed(0.1)
+  }
+
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const currentSymbol = (symbols ?? []).find((x) => x.symbol === symbol)
+  const reducedMotion = useReducedMotion()
+  const step1Done = !!symbol && !!dataSource && !!strategyId
+  const step2Done = timeframes.length > 0 && !!startDate && !!endDate
+  const step3Done = initialCapital > 0 && contractsPerTrade > 0
+
+  // Session length, in the same units the field is typed in. Wraps past
+  // midnight (Globex runs 18:00 -> 17:00 the next day), which a plain
+  // subtraction gets wrong by 23 hours.
+  const sessionMinutes = (() => {
+    if (session24h) return 24 * 60
+    const [h1, m1] = sessionStart.split(":").map(Number)
+    const [h2, m2] = sessionEnd.split(":").map(Number)
+    if ([h1, m1, h2, m2].some((n) => Number.isNaN(n))) return 0
+    const d = (h2 * 60 + m2) - (h1 * 60 + m1)
+    return d > 0 ? d : d + 24 * 60
+  })()
+  const sessionLabel = session24h
+    ? "24h"
+    : `${Math.floor(sessionMinutes / 60)}h ${String(sessionMinutes % 60).padStart(2, "0")}m`
+
+  const dayCount = (() => {
+    const a = Date.parse(startDate), b = Date.parse(endDate)
+    if (Number.isNaN(a) || Number.isNaN(b)) return 0
+    return Math.max(0, Math.round((b - a) / 86_400_000) + 1)
+  })()
+
+  // Weekdays in the range. Not the same as calendar days -- a Fri-Mon
+  // selection is four days but only two sessions, and the difference is what
+  // decides whether a backtest has the sample it looks like it has.
+  const tradingDays = (() => {
+    const a = Date.parse(startDate), b = Date.parse(endDate)
+    if (Number.isNaN(a) || Number.isNaN(b) || b < a) return 0
+    let n = 0
+    for (let t = a; t <= b; t += 86_400_000) {
+      const d = new Date(t).getUTCDay()
+      if (d !== 0 && d !== 6) n++
+    }
+    return n
+  })()
+
+  const sourceLabel =
+    dataSources?.find((d) => d.id === dataSource)?.label ?? dataSource
+  const sourceIsLive = /schwab|rithmic/i.test(dataSource)
+
   const { completedTrades, position, portfolioValue, lastSignal } = shown
 
   const pnls = completedTrades.map((t) => t.pnl)
@@ -1179,6 +1265,25 @@ export function ReplayPage() {
   const winRate = completedTrades.length ? (wins.length / completedTrades.length) * 100 : 0
   const avgWin = wins.length ? wins.reduce((a, b) => a + b, 0) / wins.length : 0
   const avgLoss = losses.length ? losses.reduce((a, b) => a + b, 0) / losses.length : 0
+
+  // Series behind the tile sparklines. Each is derived from the same completed
+  // trades as the number beside it, so a spark can never disagree with its own
+  // figure. Cumulative/running values rather than raw ones -- a spark of
+  // individual trade P&Ls is noise; the running curve is the thing reported.
+  const cumPnl = pnls.reduce<number[]>((acc, p) => {
+    acc.push((acc[acc.length - 1] ?? 0) + p)
+    return acc
+  }, [])
+  const equitySeries = cumPnl.map((v) => initialCapital + v)
+  const runningMean = (xs: number[]) => xs.reduce<number[]>((acc, v, i) => {
+    acc.push((acc[i - 1] ?? 0) * (i / (i + 1)) + v / (i + 1))
+    return acc
+  }, [])
+  const winSeries = runningMean(wins)
+  const lossSeries = runningMean(losses)
+  const roiPct = initialCapital > 0
+    ? ((portfolioValue - initialCapital) / initialCapital) * 100
+    : 0
 
   return (
     <div className="space-y-4 p-4 w-full max-w-none">
@@ -1191,14 +1296,16 @@ export function ReplayPage() {
           Locked controls now have pointer-events:none (see .setup-locked in
           index.css), so the click lands on their wrapper and reaches this
           handler, which answers the question the click was asking. */}
-      <Card
-        className={`p-4 border border-white/6 w-full ${ready ? "setup-locked" : ""}`}
+      <div
+        className={`w-full space-y-4 ${ready ? "setup-locked" : ""}`}
         onClickCapture={(e) => {
           if (!ready) return
           const el = e.target as HTMLElement
           if (el.querySelector?.("[disabled], [data-disabled]")) setLockPrompt(true)
         }}
       >
+        <StepSection n={1} title="Instrument & strategy" done={step1Done} delay={0.04}
+                     hint={ready ? "locked for this session" : undefined}>
         {/* THREE ROWS, NOT ONE GRID
             Symbol / Data Source / Strategy, then the dates, then the day count.
 
@@ -1214,28 +1321,48 @@ export function ReplayPage() {
 
             The day count then gets its own row rather than trailing the dates,
             which is what left three columns of dead space on that line. */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-          <div className="space-y-1" title={lockTitle("symbol")}>
-            <Label className="text-xs">Symbol</Label>
-            <Select value={symbol} onValueChange={setSymbol} disabled={ready}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(symbols ?? [{ symbol: "ES", name: "E-mini S&P 500", has_spec: true }]).map((s) => (
-                  <SelectItem key={s.symbol} value={s.symbol}>
-                    <SymbolRow symbol={s.symbol} name={s.name} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="cfg-col grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+          <div className="space-y-1.5" title={lockTitle("symbol")}>
+            <Label className="cfg-h">Symbol</Label>
+            {/* Same dialog the Backtest form uses. Twenty-one instruments over
+                five asset classes is a list you search, not one you scroll --
+                and scrolling was the whole of what the dropdown offered. */}
+            <button
+              type="button"
+              disabled={ready}
+              onClick={() => setPickerOpen(true)}
+              className="instr-trigger"
+              aria-haspopup="dialog"
+              title={lockTitle("symbol") ?? "Choose the instrument to run against"}
+            >
+              {currentSymbol
+                ? <SymbolOption s={currentSymbol} />
+                : <span className="text-muted-foreground">{symbol || "Choose an instrument…"}</span>}
+              <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-slate-500" />
+            </button>
+            <InstrumentPicker
+              open={pickerOpen}
+              onOpenChange={setPickerOpen}
+              symbols={symbols ?? []}
+              value={symbol}
+              onSelect={setSymbol}
+              sourceLabel={sourceLabel}
+            />
           </div>
           <div className="space-y-1" title={lockTitle("data")}>
             <Label className="text-xs">Data Source</Label>
             <Select value={dataSource} onValueChange={setDataSource} disabled={ready}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(dataSources ?? [{ id: "synthetic", label: "Synthetic Data", available: true }]).map((d) => (
                   <SelectItem key={d.id} value={d.id} disabled={!d.available}>
-                    {d.label}{d.available ? "" : " (unavailable)"}
+                    <span className="flex items-center gap-2.5">
+                      <SourceMark id={d.id} />
+                      <span>{d.label}</span>
+                      {!d.available && (
+                        <span className="text-muted-foreground text-xs">(unavailable)</span>
+                      )}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1257,24 +1384,53 @@ export function ReplayPage() {
                 if (s) setParams(Object.fromEntries(s.params.map((p) => [p.name, p.default])))
               }}
             >
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{(strategies ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(strategies ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <span className="flex items-center gap-2.5">
+                      <StrategyMark id={s.id} />
+                      <span>{s.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
         </div>
 
+        </StepSection>
+
+        <StepSection n={2} title="Period & timeframe" done={step2Done} delay={0.08}
+                     Icon={CalendarRange}
+                     hint={
+                       <>
+                         <CalendarRange size={13} className="text-sky-400" />
+                         <CountUp value={dayCount} />{dayCount === 1 ? " Day" : " Days"}
+                         <span className="opacity-40">·</span>
+                         <CountUp value={timeframes.length} />
+                         {timeframes.length === 1 ? " Timeframe" : " Timeframes"}
+                         <span className="opacity-40">·</span>
+                         {sessionLabel}
+                       </>
+                     }>
         {/* Dates on their own row, side by side. Held to the same column width as
             the row above so the fields line up in a single vertical rhythm rather
             than stretching across the whole card. */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end mt-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Start</Label>
-            <Input type="date" value={startDate} title={lockTitle("data")} disabled={ready} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">End</Label>
-            <Input type="date" value={endDate} title={lockTitle("data")} disabled={ready} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4 items-start">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
+          <DateField label="Start date" value={startDate} onChange={setStartDate} disabled={ready} />
+          <DateField label="End date" value={endDate} onChange={setEndDate} disabled={ready} />
+        </div>
+
+        <SummaryPanel rows={makeSummaryRows({
+          days: dayCount,
+          sessions: tradingDays,
+          timeframe: timeframes.length
+            ? [...timeframes].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])[0]
+            : "—",
+          duration: sessionLabel,
+        })} />
         </div>
 
         {/* Its own row, below the dates it derives from. Writes the End date
@@ -1321,26 +1477,31 @@ export function ReplayPage() {
           </p>
         )}
 
-        <div className="mt-3 space-y-1">
-          <Label className="text-xs">
-            Timeframes — {timeframes.length} selected
-            {timeframes.length > 1 && (
-              <span className="text-muted-foreground">
-                {" "}· base {[...timeframes].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])[0]} drives the shared clock
-              </span>
-            )}
+        <div className="mt-4 space-y-2">
+          <Label className="cfg-h">
+            Timeframes
+            <span className="cfg-h-note">
+              {timeframes.length} selected
+              {timeframes.length > 1 && (
+                <>{" · base "}{[...timeframes].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])[0]}{" drives the shared clock"}</>
+              )}
+            </span>
           </Label>
-          <div className="flex flex-wrap gap-2">
+          {/* A grid, not a wrap: eleven pills of differing text width reflowed
+              into ragged rows that moved every time a label changed. Fixed
+              columns keep each timeframe in the same place every render, which
+              is what makes them findable by muscle memory. */}
+          <div className="tf-row grid gap-1.5">
             {ALL_TIMEFRAMES.map((tf) => {
               const on = timeframes.includes(tf)
               // Selectable at any point in the session; only the reason differs.
               const live = ready && activeTimeframes.includes(tf)
               const needsRefetch = ready && !!dataTimeframe && !isBuildableFrom(tf, dataTimeframe)
               return (
-                <Button
-                  key={tf} type="button" size="sm"
-                  variant={on ? "default" : "secondary"}
+                <button
+                  key={tf} type="button"
                   aria-pressed={on}
+                  className={`tf-pill${on ? " tf-pill-on" : ""}`}
                   title={
                     !ready ? undefined
                       : needsRefetch ? `${tf} cannot be built from the loaded ${dataTimeframe} bars — selecting it refetches from the start`
@@ -1350,9 +1511,11 @@ export function ReplayPage() {
                   }
                   onClick={() => handleTimeframeToggle(tf)}
                 >
-                  {on ? "✓ " : ""}{tf}
-                  {needsRefetch && <span className="ml-1 opacity-60">↻</span>}
-                </Button>
+                  <TfGlyph />
+                  {tf}
+                  {on && <Check size={12} strokeWidth={3.2} className="ml-0.5" />}
+                  {needsRefetch && <span className="ml-0.5 opacity-60">↻</span>}
+                </button>
               )
             })}
           </div>
@@ -1377,12 +1540,6 @@ export function ReplayPage() {
               · also anchors each pane&apos;s VWAP reset
             </span>
           </Label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={session24h} title={lockTitle("data")} disabled={ready} aria-label="24 hours"
-                   onChange={(e) => setSession24h(e.target.checked)} />
-            <span>24 hours <span className="text-muted-foreground">(keep every bar)</span></span>
-          </label>
-
           {/* PRESETS.
               These two fields decide where VWAP starts accumulating, so an
               arbitrary value here puts every VWAP and band off against any other
@@ -1395,103 +1552,188 @@ export function ReplayPage() {
               Typing the right pair from memory is the step that failed, so the
               two that matter are one click, and the one that matches a broker
               platform's DAY says so. */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground mr-1">presets</span>
+          <Label className="cfg-h mt-1">Presets</Label>
+          {/* Two cards rather than two buttons: the label carries a name AND a
+              window, and a single-line button forced those into one string that
+              was read as one thing. Split, the window is scannable -- which
+              matters, because picking the wrong window is exactly the mistake
+              this control exists to prevent. */}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start">
+          <div className="grid grid-cols-2 gap-3">
             {SESSION_PRESETS.map((p) => {
               const on = !session24h && sessionStart === p.from && sessionEnd === p.to
+              const [name, ...rest] = p.label.split(" ")
               return (
-                <Button
-                  key={p.label} type="button" size="sm"
-                  variant={on ? "default" : "secondary"}
+                <button
+                  key={p.label} type="button"
                   aria-pressed={on}
                   aria-label={`session preset ${p.label}`}
                   title={p.why}
                   disabled={ready}
+                  className={`preset-card relative${on ? " preset-card-on" : ""}`}
                   onClick={() => { setSession24h(false); setSessionStart(p.from); setSessionEnd(p.to) }}
                 >
-                  {on ? "✓ " : ""}{p.label}
-                </Button>
+                  {/* ONE element shared by both cards. Framer measures it in its
+                      old and new positions and tweens between them, so the
+                      selection appears to slide across rather than blink off
+                      here and on over there -- which is what makes the two read
+                      as one control with two settings. */}
+                  {on && !reducedMotion && (
+                    <motion.span
+                      layoutId="preset-pick"
+                      aria-hidden
+                      className="absolute inset-0 rounded-[11px] ring-1 ring-emerald-400/55
+                                 bg-emerald-500/[0.09] pointer-events-none"
+                      transition={SPRING}
+                    />
+                  )}
+                  <span aria-hidden className="preset-icon">
+                    {name === "Globex"
+                      ? <Globe size={20} strokeWidth={1.9} />
+                      : <Landmark size={20} strokeWidth={1.9} />}
+                  </span>
+                  <span className="preset-text relative">
+                    <span className="preset-name">{name}</span>
+                    <span className="preset-range">{rest.join(" ")}</span>
+                  </span>
+                  <span aria-hidden className={`preset-radio${on ? " preset-radio-on" : ""}`}>
+                    {on && <Check size={12} strokeWidth={3.4} />}
+                  </span>
+                </button>
               )
             })}
           </div>
-          {!session24h && (() => {
-            const hit = SESSION_PRESETS.find((p) => sessionStart === p.from && sessionEnd === p.to)
-            return (
-              <p className="text-xs text-muted-foreground">
-                {hit
-                  ? hit.why
-                  : <>A custom window. VWAP will accumulate from{" "}
-                      <span className="font-mono text-foreground/70">{sessionStart}</span> ET, so it
-                      will not agree with a platform anchored anywhere else — pick
-                      <span className="text-foreground/70"> Globex</span> to match a broker&apos;s DAY VWAP.</>}
-              </p>
-            )
-          })()}
-          <div className={`grid grid-cols-2 gap-3 max-w-md ${session24h ? "opacity-40" : ""}`}>
-            <div className="space-y-1">
-              <Label className="text-xs">From</Label>
+          {/* The switch and the fields it governs, in one box. Off means the
+              session is the whole 24 hours and these two are not consulted at
+              all -- which is why they dim rather than vanish: the window you
+              had is still there when you switch back on. */}
+          <div className="custom-session cfg-col" data-on={session24h ? "false" : "true"}>
+            <div className="custom-session-head">
+              <Clock size={14} strokeWidth={2.2} className="text-violet-300" />
+              <span className="custom-session-title">Custom session</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!session24h}
+                aria-label="Use a custom session window"
+                disabled={ready}
+                title={lockTitle("data") ?? (session24h
+                  ? "Off — every bar is kept, all 24 hours"
+                  : "On — only bars inside the window below are kept")}
+                onClick={() => setSession24h((v) => !v)}
+                className="ml-auto session-switch"
+              >
+                <span className="session-switch-knob" />
+              </button>
+            </div>
+
+            <div className="custom-session-row">
+              <span className="custom-session-label">From</span>
               <TimeField value={sessionStart} onChange={setSessionStart}
-                         label="Session start"
-                         title={lockTitle("data") ?? (session24h ? "Not used while 24 hours is selected — every bar is kept." : undefined)}
+                         label="Session start" segmented
+                         title={lockTitle("data")}
                          disabled={ready || session24h} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">To</Label>
+            <div className="custom-session-row">
+              <span className="custom-session-label">To</span>
               <TimeField value={sessionEnd} onChange={setSessionEnd}
-                         label="Session end"
-                         title={lockTitle("data") ?? (session24h ? "Not used while 24 hours is selected — every bar is kept." : undefined)}
+                         label="Session end" segmented
+                         title={lockTitle("data")}
                          disabled={ready || session24h} />
             </div>
+
+            {/* The real length, computed from the two fields above -- not a
+                fixed cap. RTH is 6h 30m and Globex is 23h, so any hardcoded
+                limit here would be wrong for one of them. */}
+            <div className="custom-session-foot">
+              <Info size={12} strokeWidth={2.2} />
+              {session24h
+                ? <span>Off — every bar kept, all 24 hours</span>
+                : <span>Session length: <b className="text-slate-200">{sessionLabel}</b></span>}
+            </div>
+          </div>
           </div>
         </div>
 
+        </StepSection>
+
+        <StepSection n={3} title="Parameters & capital" done={step3Done} delay={0.12}
+                     Icon={BarChart3}>
         {currentStrategy && currentStrategy.params.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             {currentStrategy.params.map((p) => (
-              <div key={p.name} className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span>{p.label}</span>
-                  <span className="font-mono text-muted-foreground">{params[p.name] ?? p.default}</span>
-                </div>
-                <Slider min={p.min} max={p.max} step={p.step} title={lockTitle("strategy")} disabled={ready}
-                        value={[params[p.name] ?? p.default]}
-                        onValueChange={([v]) => setParams((prev) => ({ ...prev, [p.name]: v }))} />
-              </div>
+              <ParamCard
+                key={p.name}
+                name={p.name}
+                label={p.label}
+                value={params[p.name] ?? p.default}
+                min={p.min} max={p.max} step={p.step}
+                disabled={ready}
+                title={lockTitle("strategy")}
+                Icon={PARAM_ICON[p.name] ?? Ruler}
+                onChange={(v) => setParams((prev) => ({ ...prev, [p.name]: v }))}
+              />
             ))}
           </div>
         )}
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Initial Capital ($)</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-4">
+          <IconField label="Initial capital ($)" Icon={DollarSign}>
             <Input type="number" step={10000} value={initialCapital} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setInitialCapital(Number(e.target.value))} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Contracts / Trade</Label>
+          </IconField>
+          <IconField label="Contracts / trade" Icon={Boxes}>
             <Input type="number" min={1} max={10} value={contractsPerTrade} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setContractsPerTrade(Number(e.target.value))} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Commission / Contract ($)</Label>
+          </IconField>
+          <IconField label="Commission / contract ($)" Icon={Link2}>
             <Input type="number" step={0.5} value={commission} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setCommission(Number(e.target.value))} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Speed</Label>
+          </IconField>
+          <IconField label="Speed" Icon={GaugeIcon}>
             <Select value={String(speed)} onValueChange={(v) => changeSpeed(Number(v))}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{SPEED_OPTIONS.map((o) => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
             </Select>
-          </div>
+          </IconField>
         </div>
 
-        <Separator className="my-3" />
+        </StepSection>
+      </div>
+
+      <Card className="p-4 border border-white/6 w-full space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
+          {/* Left of the transport, because it undoes the FORM rather than the
+              run. Disabled while a session is loaded: the fields are locked
+              then, and a reset that silently disagreed with the bars on screen
+              is worse than no reset at all. */}
+          <Button
+            variant="secondary" onClick={resetAllFields} disabled={ready}
+            title={ready
+              ? "Fields are fixed while a session is loaded — press ✎ Change Setup first"
+              : "Put every setup field back to its default"}
+            className="mr-1"
+          >
+            <RotateCcw size={15} strokeWidth={2} /> Reset all
+          </Button>
           <Button onClick={() => handleLoad()} disabled={status === "loading"} variant={ready ? "secondary" : "default"}>
-            {status === "loading"
-              ? <span className="flex items-center gap-2"><Loader size={16} tone="current" label="Loading data" />Loading…</span>
-              : "⬇ Load Data"}
+            {/* The label swaps between three states on one button. Crossfading
+                them keeps it reading as the SAME control changing, where an
+                instant swap reads as the button being replaced -- and a
+                replaced button is one you check before pressing again. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={status === "loading" ? "loading" : ready ? "reload" : "load"}
+                className="flex items-center gap-2"
+                initial={reducedMotion ? false : { opacity: 0, y: 4, filter: "blur(3px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={reducedMotion ? undefined : { opacity: 0, y: -3, filter: "blur(3px)" }}
+                transition={reducedMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {status === "loading"
+                  ? <><Loader size={16} tone="current" label="Loading data" />Loading…</>
+                  : ready ? "↻ Reload data" : "⬇ Load Data"}
+              </motion.span>
+            </AnimatePresence>
           </Button>
           <Button onClick={play} disabled={!ready || status === "playing" || done}>▶ Play</Button>
           <Button onClick={pause} disabled={!ready || status !== "playing"} variant="secondary">⏸ Pause</Button>
@@ -1546,6 +1788,15 @@ export function ReplayPage() {
             </span>
           )}
         </div>
+        {/* Last look before Load Data locks these for the session. */}
+        <SummaryChips
+          source={sourceLabel}
+          sourceLive={sourceIsLive}
+          strategy={strategyName || (strategies?.find((x) => x.id === strategyId)?.label ?? strategyId)}
+          dataType={`Candles${showVwap ? " + VWAP" : ""}${showVp ? " + Volume Profile" : ""}`}
+          mode="Market Grid"
+        />
+
         {ready && follow.enabled && (
           /* Directly under the checkbox it belongs to. It first went in the
              timeframes block, which put the answer half a screen away from the
@@ -1592,22 +1843,6 @@ export function ReplayPage() {
               detail={marketTime ? barCloseLabel(marketTime, TF_MINUTES[baseTimeframe] ?? 1) : undefined}
             />
           </div>
-        )}
-        {ready && (
-          /* Stated once, in the open. The per-field tooltips explain each
-             control, but nobody hovers a field that looks broken -- so the split
-             between what is live and what needs a reload is spelled out where it
-             cannot be missed. */
-          <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-            <span className="text-foreground/75 font-medium">Live while loaded:</span>{" "}
-            timeframes, speed, summary focus, VWAP &amp; Volume Profile settings.
-            {" · "}
-            <span className="text-foreground/75 font-medium">Needs a new session:</span>{" "}
-            symbol, data source, dates, session hours, strategy &amp; parameters, capital,
-            contracts, commission — each of those changes the bars or the fills this session
-            was built from. Press <span className="text-foreground/75">✎ Change Setup</span> to
-            edit them; ↺ Reset only rewinds this session. Hover a greyed field for its reason.
-          </p>
         )}
         {lockPrompt && ready && (
           /* Answers the click where the click happened, instead of leaving the
@@ -1668,16 +1903,49 @@ export function ReplayPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            <Metric label="Portfolio" value={`$${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    color={portfolioValue >= initialCapital ? GOOD : CRITICAL} />
-            <Metric label="Total P&L" value={`${totalPnl >= 0 ? "+" : ""}$${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    color={totalPnl >= 0 ? GOOD : CRITICAL} />
-            <Metric label="Trades" value={String(completedTrades.length)} />
-            <Metric label="Win Rate" value={`${winRate.toFixed(0)}%`} />
-            <Metric label="Avg Win" value={`$${avgWin.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} color={GOOD} />
-            <Metric label="Avg Loss" value={`$${avgLoss.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} color={CRITICAL} />
-            <Metric label="Position" value={position === 0 ? "FLAT" : position > 0 ? `LONG +${position}` : `SHORT ${position}`}
-                    color={position === 0 ? NEUTRAL : position > 0 ? GOOD : CRITICAL} />
+            <StatTile
+              label="Portfolio (ROI)"
+              value={`$${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+              delta={`${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(2)}%`}
+              deltaTone={roiPct >= 0 ? "good" : "bad"}
+              tone={portfolioValue >= initialCapital ? "good" : "bad"}
+              spark={equitySeries}
+            />
+            <StatTile
+              label="Total P&L"
+              value={`${totalPnl >= 0 ? "+" : ""}$${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+              delta={initialCapital > 0
+                ? `${totalPnl >= 0 ? "+" : ""}${((totalPnl / initialCapital) * 100).toFixed(2)}%`
+                : undefined}
+              deltaTone={totalPnl >= 0 ? "good" : "bad"}
+              tone={totalPnl >= 0 ? "good" : "bad"}
+              spark={cumPnl}
+            />
+            <StatTile label="Trades" value={String(completedTrades.length)} bars={pnls} />
+            <StatTile
+              label="Win Rate"
+              value={`${winRate.toFixed(completedTrades.length ? 1 : 0)}%`}
+              tone={winRate >= 50 ? "good" : "bad"}
+              donut={winRate}
+            />
+            <StatTile
+              label="Avg Win"
+              value={`$${avgWin.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+              tone="good"
+              spark={winSeries}
+            />
+            <StatTile
+              label="Avg Loss"
+              value={`$${avgLoss.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+              tone="bad"
+              spark={lossSeries}
+            />
+            <StatTile
+              label="Position"
+              value={position === 0 ? "FLAT" : position > 0 ? `LONG +${position}` : `SHORT ${position}`}
+              tone={position === 0 ? "neutral" : position > 0 ? "good" : "bad"}
+              icon={<Layers size={26} strokeWidth={1.5} />}
+            />
           </div>
 
           {lastSignal && (
@@ -1806,17 +2074,50 @@ export function ReplayPage() {
               browser from each pane's accumulated bars. Both therefore react
               to the settings panel instantly. */}
           <Card className="p-0 border border-white/6 overflow-hidden">
-              <div className="px-3 py-2 text-sm font-semibold border-b border-white/6">
-                Live state &mdash; all timeframes
-                {marketTime && (
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
+              <SectionHeader
+                title="Live state — all timeframes"
+                live={status === "playing"}
+                meta={marketTime ? (
+                  <span className="font-mono">
                   {/* market_time is the base bar-s OPEN; the clock the panes
                       were emitted against is one base bar later, which is also
                       what the Bar close column now shows. Same convention in
                       both places so they cannot read a minute apart. */}
                     market {closeInTz(marketTime, TF_MINUTES[baseTimeframe] ?? 1)} {TZ_LABEL}
                   </span>
-                )}
+                ) : undefined}
+                right={
+                  /* Set this to the clock of the platform you compare against.
+                     Matching a label like "12:45" across two screens on
+                     different clocks compares bars an hour apart, and the
+                     numbers really do differ -- which is indistinguishable
+                     from an OHLC bug.
+
+                     It governs the time columns of all three tables below, so
+                     it sits on the first of them rather than inside the tape
+                     it used to be buried in. */
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                      Times in
+                    </span>
+                    <div className="flex gap-1">
+                      {TZ_CHOICES.map((z) => (
+                        <button
+                          key={z.short} type="button"
+                          aria-pressed={tzOffset === z.offset}
+                          aria-label={`times in ${z.short}`}
+                          title={z.label}
+                          className={`tz-pill${tzOffset === z.offset ? " tz-pill-on" : ""}`}
+                          onClick={() => setTzOffset(z.offset)}
+                        >
+                          {z.short}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                }
+              />
+              <div className="px-4 py-2 text-sm border-b border-white/8 empty:hidden">
                 {/* THE DATA IS A SNAPSHOT, AND NOTHING USED TO SAY SO.
                     Bars are fetched once, at Load Data. On a live date the feed
                     keeps producing bars afterwards, and playback can only replay
@@ -1838,8 +2139,8 @@ export function ReplayPage() {
                 )}
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#0e1424] text-muted-foreground">
+                <table className="w-full text-sm grid-table">
+                  <thead className="grid-thead">
                     <tr>
                       <th className="text-left p-2 font-medium">TF</th>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
@@ -1952,8 +2253,11 @@ export function ReplayPage() {
             </Card>
 
             <Card className="p-0 border border-white/6 overflow-hidden">
-              <div className="px-3 py-2 text-sm font-semibold border-b border-white/6 flex justify-between">
-                <span>Consolidated tape &mdash; newest first</span>
+              <SectionHeader
+                title="Consolidated tape — newest first"
+                live={status === "playing"}
+              />
+              <div className="px-4 py-2 text-sm border-b border-white/8 flex justify-end">
                 <span className="text-xs text-muted-foreground font-normal">
                   {jumpedRows
                     ? (jumpedRows.length === 1
@@ -2041,29 +2345,6 @@ export function ReplayPage() {
                     "where is it?" rounds: Jump can only reach bars that have
                     actually been replayed, so an empty tape has nothing to
                     match. */}
-                {/* Set this to the clock of the platform you compare against.
-                    Matching a label like "12:45" across two screens on different
-                    clocks compares bars an hour apart, and the numbers really do
-                    differ -- which is indistinguishable from an OHLC bug. */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Times shown in</Label>
-                  <div className="flex gap-1">
-                    {TZ_CHOICES.map((z) => (
-                      <Button
-                        key={z.short} type="button" size="sm"
-                        className="h-7 px-2 text-xs"
-                        variant={tzOffset === z.offset ? "default" : "secondary"}
-                        aria-pressed={tzOffset === z.offset}
-                        aria-label={`times in ${z.short}`}
-                        title={z.label}
-                        onClick={() => setTzOffset(z.offset)}
-                      >
-                        {z.short}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
                 <Button size="sm" onClick={jumpToTime} disabled={shownTape.length === 0}
                         title={shownTape.length === 0
                           ? "No bars yet. Press ▶ Play and let the replay run past the time you want, then Jump."
@@ -2090,8 +2371,8 @@ export function ReplayPage() {
                   rows and 13 columns, losing the column names a screen down was
                   the main thing making this table hard to read. */}
               <div className="overflow-auto" style={{ maxHeight: 460 }}>
-                <table className="w-full text-sm table-sticky">
-                  <thead className="bg-[#0e1424] text-muted-foreground sticky top-0">
+                <table className="w-full text-sm table-sticky grid-table">
+                  <thead className="grid-thead sticky top-0">
                     <tr>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">Opened ({TZ_LABEL})</th>
@@ -2208,11 +2489,15 @@ export function ReplayPage() {
               </div>
             </Card>
           {completedTrades.length > 0 && (
-            <Card className="p-4 border border-white/6 w-full">
-              <p className="text-sm font-semibold mb-2">Recent Trades — {focusedTimeframe} pane</p>
-              <div className="overflow-x-auto rounded-lg border border-white/6">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#0e1424] text-muted-foreground">
+            <Card className="p-0 border border-white/6 w-full overflow-hidden">
+              <SectionHeader
+                title={`Recent trades — ${focusedTimeframe} pane`}
+                live={status === "playing"}
+                meta={`${completedTrades.length} closed · newest first`}
+              />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm grid-table">
+                  <thead className="grid-thead">
                     <tr>
                       <th className="text-left p-2 font-medium">Entry</th>
                       <th className="text-left p-2 font-medium">Exit</th>
@@ -2244,9 +2529,11 @@ export function ReplayPage() {
       )}
 
       {!ready && !error && (
-        <p className="text-muted-foreground p-8 text-center">
-          Configure your strategy above, then click <b>⬇ Load Data</b> to begin.
-        </p>
+        <SetupFooterHint active={status === "loading"}>
+          {status === "loading"
+            ? <>Fetching {symbol} bars from {sourceLabel}…</>
+            : <>Press <b className="text-sky-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
+        </SetupFooterHint>
       )}
     </div>
   )

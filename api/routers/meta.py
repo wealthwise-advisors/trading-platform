@@ -6,6 +6,7 @@ from functools import lru_cache
 from fastapi import APIRouter
 
 from api.deps import BASE_PRICES, CONTRACT_SPECS, get_config
+from src.data.rithmic_provider import EXCHANGE_MAP
 from api.strategy_registry import STRATEGIES
 
 router = APIRouter(tags=["meta"])
@@ -157,6 +158,10 @@ def list_symbols(data_source: str = "synthetic"):
             "symbol": sym,
             "name": (spec or {}).get("name", sym) if isinstance(spec, dict) else sym,
             "has_spec": spec is not None,
+            # Which venue the contract trades on. Read from the download
+            # provider's own map rather than a second copy here, so the picker
+            # and a Rithmic request can never disagree about where ES lives.
+            "exchange": EXCHANGE_MAP.get(sym.upper()),
         }
 
     if data_source == "external_csv":

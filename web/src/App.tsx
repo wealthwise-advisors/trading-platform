@@ -84,13 +84,15 @@ function App() {
             <Button size="sm" variant={page === "backtest" ? "default" : "secondary"} onClick={() => setPage("backtest")}>
               📊 Backtest
             </Button>
-            {/* Live Replay: single visible button (a second one used to live in
+            {/* Market Grid: single visible button (a second one used to live in
                 ResultsPage's toolbar, calling this exact same setPage("replay") --
                 hidden there, not removed in function, since this one already
                 covers every case that one did). Same gap-2 as every other header
-                button now, for a balanced/uniform look. */}
+                button now, for a balanced/uniform look. Renamed from "Live Replay" --
+                the page serves live data and replay both, so "Replay" alone
+                undersold it. Route id, folder and API path stay "replay". */}
             <Button size="sm" variant={page === "replay" ? "default" : "secondary"} onClick={() => setPage("replay")}>
-              ⚡ Live Replay
+              ⚡ Market Grid
             </Button>
             <Button size="sm" variant={page === "export" ? "default" : "secondary"} onClick={() => setPage("export")}>
               📤 Export Data
@@ -116,7 +118,13 @@ function App() {
             </Button>
           </div>
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* key={page} remounts this on every switch, which replays the
+            entrance. The class goes HERE rather than on a wrapper inside:
+            ResultsPage's root is h-full, so it needs a parent with a real
+            resolved height. An extra div in between has auto height, h-full
+            collapses to content, and the chart loses its flex-1 chain -- which
+            is exactly the empty space that appeared under it. */}
+        <div key={page} className="flex-1 min-h-0 overflow-y-auto page-swap">
           {page === "backtest" && <ResultsPage />}
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}

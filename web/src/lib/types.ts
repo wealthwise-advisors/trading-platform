@@ -35,6 +35,10 @@ export interface SymbolMeta {
   /** False means no contract economics are configured, so the engine falls
    *  back to the E-mini default and the resulting P&L is not meaningful. */
   has_spec: boolean
+  /** Venue the contract trades on — CME / CBOT / NYMEX / COMEX. Served from
+   *  the download provider's own EXCHANGE_MAP, so the picker and a Rithmic
+   *  request cannot disagree. Null for anything not in that map. */
+  exchange?: string | null
   /** Date windows this symbol actually has data for, oldest first. Present
    *  only for file-backed sources. Several windows rather than one span
    *  because coverage is often not continuous — the bundled ES sample is

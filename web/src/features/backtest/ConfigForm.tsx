@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import {
@@ -17,14 +17,16 @@ import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 import { DateField } from "@/components/ui/date-field"
-import { SymbolRow } from "@/components/SymbolMark"
+import { SymbolOption } from "@/components/SymbolOption"
+import { InstrumentPicker } from "@/components/InstrumentPicker"
+import { SourceMark } from "@/components/SourceMark"
+import { StrategyMark } from "@/components/StrategyMark"
 import {
   Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
 } from "./ConfigParts"
 import {
-  Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock, Target,
-  TrendingUp, Waves, ArrowUpRight, GitCompareArrows, Wallet, Layers, Percent, Play,
-  ChevronsLeft,
+  Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock,
+  Wallet, Layers, Percent, Play, ChevronsLeft, ChevronsUpDown,
 } from "lucide-react"
 
 /** Icon and one-line description per data source, keyed on the API's id. */
@@ -35,14 +37,6 @@ const SOURCE_META: Record<string, { Icon: typeof Database; note: string }> = {
   rithmic:      { Icon: Radio,            note: "Real-time streaming" },
 }
 
-/** Icon per strategy, keyed on the registry's id. Falls back to the section icon. */
-const STRATEGY_ICON: Record<string, typeof Target> = {
-  ma_crossover:       TrendingUp,
-  rsi_mean_reversion: Waves,
-  breakout:           ArrowUpRight,
-  rsi_divergence:     GitCompareArrows,
-  regime_adaptive:    Settings2,
-}
 
 /** `onCollapse` is display-only: it hides the panel, and changes nothing about
  *  the configuration or the request. Omitted, the chevron is not rendered. */
@@ -58,6 +52,9 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
     queryKey: ["symbols", cfg.dataSource],
     queryFn: () => api.symbols(cfg.dataSource),
   })
+
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const current = (symbols ?? []).find((s) => s.symbol === cfg.symbol)
 
   // Switching source can strand the form on a symbol the new source cannot
   // serve -- e.g. NVDA selected under CSV, then switching to synthetic. Snap
@@ -162,7 +159,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               return (
                 <SelectItem key={ds.id} value={ds.id} disabled={!ds.available}>
                   <Choice
-                    icon={<d.Icon className="h-4 w-4 text-sky-400" />}
+                    icon={<SourceMark id={ds.id} size={18} />}
                     title={ds.label + (ds.available ? "" : " (unavailable)")}
                     description={d.note}
                   />
@@ -177,16 +174,29 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── symbol ───────────────────────────────────────────────────────── */}
       <Section icon="symbol" label="Symbol" accent="green">
-        <Select value={cfg.symbol} onValueChange={(v) => cfg.setField("symbol", v)}>
-          <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {(symbols ?? []).map((s) => (
-              <SelectItem key={s.symbol} value={s.symbol}>
-                <SymbolRow symbol={s.symbol} name={s.name} />
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* A dropdown was fine at five symbols. Schwab offers twenty-one across
+            five asset classes, which is a list you hunt rather than scan --
+            hence a searchable dialog with the same row markup inside. */}
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="instr-trigger"
+          aria-haspopup="dialog"
+          title="Choose the instrument to run against"
+        >
+          {current
+            ? <SymbolOption s={current} />
+            : <span className="text-muted-foreground">Choose an instrument…</span>}
+          <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-slate-500" />
+        </button>
+        <InstrumentPicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          symbols={symbols ?? []}
+          value={cfg.symbol}
+          onSelect={(v) => cfg.setField("symbol", v)}
+          sourceLabel={(dataSources ?? []).find((d) => d.id === cfg.dataSource)?.label}
+        />
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
@@ -223,11 +233,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             {(strategies ?? []).map((s) => {
-              const Icon = STRATEGY_ICON[s.id] ?? Target
               return (
                 <SelectItem key={s.id} value={s.id}>
                   <span className="flex items-center gap-2.5">
-                    <Icon className="h-4 w-4 text-violet-300" aria-hidden />
+                    <StrategyMark id={s.id} size={18} />
                     {s.label}
                   </span>
                 </SelectItem>

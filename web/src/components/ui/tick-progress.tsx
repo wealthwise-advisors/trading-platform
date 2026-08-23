@@ -59,7 +59,7 @@ export function TickProgress({ processed, total, playing = false, detail }: Tick
         aria-valuemin={0}
         aria-valuemax={total || 100}
         aria-valuenow={processed}
-        aria-label="Replay progress"
+        aria-label="Playback progress"
       >
         <div className="tickbar-fill" style={{ width: `${pct}%` }} />
       </div>

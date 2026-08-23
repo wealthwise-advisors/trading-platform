@@ -678,3 +678,662 @@ input:focus-visible {
 .setup-locked [data-disabled] {
   pointer-events: none;
 }
+
+/* =========================================================================
+   Market Grid — setup form
+   Section headings, timeframe pills and session preset cards. Defined once
+   here rather than at each call site: these three ARE the panel's visual
+   rhythm, and styling them inline is how they drifted apart before.
+
+   Transitions are transform/opacity/colour only — no layout properties — so
+   pressing a pill cannot cause a reflow of the eleven beside it.
+   ========================================================================= */
+
+.cfg-h {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+.cfg-h-note {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+/* ── timeframe pills ───────────────────────────────────────────────────── */
+.tf-pill {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #101827;
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 180ms var(--ease-out), color 180ms var(--ease-out),
+              border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out),
+              transform 90ms var(--ease-out);
+}
+.tf-pill:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.tf-pill:active { transform: scale(0.94); }
+.tf-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.tf-pill-on {
+  background: linear-gradient(180deg, #2f80ff, #1d5fd8);
+  border-color: rgba(120, 170, 255, 0.55);
+  color: #ffffff;
+  box-shadow: 0 2px 12px -2px rgba(47, 128, 255, 0.7);
+}
+.tf-pill-on:hover { background: linear-gradient(180deg, #3d8bff, #2467e0); color: #ffffff; }
+
+/* ── session preset cards ──────────────────────────────────────────────── */
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #101827;
+  cursor: pointer;
+  transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out),
+              transform 90ms var(--ease-out);
+}
+.preset-card:hover:not(:disabled) { background: #16213a; border-color: rgba(255, 255, 255, 0.18); }
+.preset-card:active:not(:disabled) { transform: scale(0.985); }
+.preset-card:disabled { opacity: 0.55; cursor: not-allowed; }
+.preset-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.preset-name { font-size: 13px; font-weight: 700; color: #e2e8f0; line-height: 1.15; }
+.preset-range { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.preset-card-on { background: rgba(34, 197, 94, 0.10); border-color: rgba(34, 197, 94, 0.45); }
+.preset-card-on .preset-name { color: #4ade80; }
+.preset-card-on .preset-range { color: #86efac; }
+
+/* ── reduced motion ────────────────────────────────────────────────────────
+   The framer-motion components each check useReducedMotion() and render a
+   still version, so this is the belt to that braces: it catches the CSS
+   transitions above, which those hooks cannot reach. Final states are kept,
+   so nothing disappears — it just arrives instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   Market Grid — data tables
+   Live state, Consolidated tape and Recent trades are three views of one
+   session, so they share one skin. Twenty-one columns of numbers is a lot to
+   scan: the zebra gives the eye a rail to follow across a wide row, and the
+   header stays put so a column never has to be re-identified after scrolling.
+
+   No entry animation on rows anywhere: these repaint on every bar, and motion
+   on a surface that updates continuously reads as flicker, not polish.
+   ========================================================================= */
+
+.grid-thead {
+  background: #0d1526;
+  color: #8b93b8;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+}
+.grid-thead th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.grid-table tbody tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  transition: background 130ms var(--ease-out);
+}
+.grid-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.016); }
+.grid-table tbody tr:hover { background: rgba(47, 128, 255, 0.09); }
+.grid-table td { font-variant-numeric: tabular-nums; }
+
+/* The timeframe cell is the row's identity — pin it while the rest scrolls
+   sideways, so a value is never orphaned from the row it belongs to. */
+.grid-table tbody td:first-child,
+.grid-thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #0b1120;
+}
+.grid-thead th:first-child { background: #0d1526; z-index: 2; }
+.grid-table tbody tr:hover td:first-child { background: #12203a; }
+
+/* =========================================================================
+   Motion — pickers
+   Opening a dropdown is a RARE interaction, so it earns real motion. The rows
+   cascade rather than appearing as a block: the eye gets a direction to read
+   in, which matters most in the symbol list where eleven near-identical rows
+   arrive at once.
+
+   Capped at eight steps. Beyond that the last row waits noticeably for its
+   turn, and a list you must wait to read is worse than one that just appears.
+   ========================================================================= */
+
+@keyframes pick-row-in {
+  from { opacity: 0; transform: translateY(-4px); filter: blur(3px); }
+  to   { opacity: 1; transform: none;             filter: blur(0);   }
+}
+
+[data-radix-select-content][data-state="open"] [role="option"] {
+  animation: pick-row-in 260ms var(--ease-out) both;
+}
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(1) { animation-delay: 10ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(2) { animation-delay: 28ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(3) { animation-delay: 46ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(4) { animation-delay: 64ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(5) { animation-delay: 82ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(6) { animation-delay: 100ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(7) { animation-delay: 118ms; }
+[data-radix-select-content][data-state="open"] [role="option"]:nth-child(n+8) { animation-delay: 136ms; }
+
+/* The mark leads its row in — a beat ahead, so the icon reads as arriving
+   with the text rather than being pasted on after it. */
+[data-radix-select-content][data-state="open"] [role="option"] svg {
+  animation: pick-mark-in 300ms var(--ease-out) both;
+  animation-delay: inherit;
+}
+@keyframes pick-mark-in {
+  from { opacity: 0; transform: scale(0.72) rotate(-8deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Hover on a row: the whole row lifts a hair. Transform only — a padding or
+   margin change here would reflow the ten rows below it on every mouse move. */
+[data-radix-select-content] [role="option"] {
+  transition: background 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+[data-radix-select-content] [role="option"][data-highlighted] {
+  transform: translateX(2px);
+}
+
+/* =========================================================================
+   Motion — timeframe pills
+   Selecting one blooms its glow outward once and settles. A one-shot on a
+   real state change, not a loop: it confirms the tap landed, then stops.
+   ========================================================================= */
+@keyframes tf-bloom {
+  0%   { box-shadow: 0 2px 12px -2px rgba(47, 128, 255, 0.7), 0 0 0 0 rgba(47, 128, 255, 0.45); }
+  70%  { box-shadow: 0 2px 12px -2px rgba(47, 128, 255, 0.7), 0 0 0 7px rgba(47, 128, 255, 0); }
+  100% { box-shadow: 0 2px 12px -2px rgba(47, 128, 255, 0.7), 0 0 0 0 rgba(47, 128, 255, 0); }
+}
+.tf-pill-on { animation: tf-bloom 520ms var(--ease-out); }
+
+/* =========================================================================
+   Motion — page transitions
+   Switching Backtest / Market Grid / Export is occasional, so it gets a short
+   crossfade with a small rise. Long enough to show continuity, short enough
+   that nobody waits on it.
+   ========================================================================= */
+/* Opacity only. This element is the page's scroll container, and a transform
+   on a scroll container creates a containing block -- which would break every
+   position:sticky table header inside it for the duration of the animation. */
+@keyframes page-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-swap { animation: page-in 240ms var(--ease-out) both; }
+
+/* =========================================================================
+   Motion — press feedback
+   Every button in the app dips slightly on press. This is the one animation
+   here that fires constantly, so it is also the shortest: 70ms, transform
+   only. Its job is confirming the tap landed, nothing else — anything longer
+   would be felt as lag on a control pressed a hundred times a session.
+   ========================================================================= */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.975);
+}
+button, [role="button"] {
+  transition: transform 70ms var(--ease-out);
+}
+/* Anything that positions itself is excluded — a transform here would fight
+   the one doing the positioning. */
+[data-radix-select-content] button,
+[data-radix-popper-content-wrapper] button {
+  transition: none;
+}
+
+/* ── timezone pills (Live state header) ────────────────────────────────────
+   Small, quiet, and sized to sit in a header without competing with the title
+   beside them. Same selected treatment as the timeframe pills so "chosen"
+   looks the same everywhere on the page. */
+.tz-pill {
+  min-width: 34px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #101827;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
+              border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
+}
+.tz-pill:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.tz-pill:active { transform: scale(0.93); }
+.tz-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.tz-pill-on {
+  background: linear-gradient(180deg, #2f80ff, #1d5fd8);
+  border-color: rgba(120, 170, 255, 0.55);
+  color: #ffffff;
+  box-shadow: 0 1px 8px -1px rgba(47, 128, 255, 0.6);
+}
+
+/* =========================================================================
+   Market Grid — custom session card
+   The switch and the two fields it governs, in one box. Violet rather than
+   the page's blue, because this is the only control here that changes which
+   BARS exist rather than how they are displayed — worth looking different.
+   ========================================================================= */
+
+.custom-session {
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.07), rgba(11, 19, 37, 0.6));
+  border-radius: 14px;
+  padding: 12px 13px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transition: border-color 220ms var(--ease-out), background 220ms var(--ease-out);
+}
+/* Off: the whole card recedes, so "these fields are not in play" is legible
+   from the card rather than from each field's own dimming. */
+.custom-session[data-on="false"] {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.012);
+}
+.custom-session[data-on="false"] .custom-session-row { opacity: 0.42; }
+
+.custom-session-head { display: flex; align-items: center; gap: 7px; }
+.custom-session-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.custom-session[data-on="false"] .custom-session-title { color: #7b8299; }
+.custom-session[data-on="false"] .custom-session-head svg { color: #7b8299; }
+
+/* ── the switch ─────────────────────────────────────────────────────────── */
+.session-switch {
+  position: relative;
+  width: 42px;
+  height: 23px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: #1b2233;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 220ms var(--ease-out), border-color 220ms var(--ease-out);
+}
+.session-switch[aria-checked="true"] {
+  background: linear-gradient(180deg, #a855f7, #7c3aed);
+  border-color: rgba(196, 181, 253, 0.5);
+  box-shadow: 0 0 12px -2px rgba(168, 85, 247, 0.65);
+}
+.session-switch:disabled { opacity: 0.45; cursor: not-allowed; }
+.session-switch:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.session-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #e8ecf7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  /* transform, not `left` — animating left would lay out the knob on every
+     frame of the slide. */
+  transition: transform 240ms cubic-bezier(0.34, 1.3, 0.5, 1);
+}
+.session-switch[aria-checked="true"] .session-switch-knob { transform: translateX(19px); }
+
+/* ── rows ───────────────────────────────────────────────────────────────── */
+.custom-session-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  transition: opacity 220ms var(--ease-out);
+}
+.custom-session-label {
+  width: 42px;
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.custom-session-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+
+/* ── AM / PM segmented ──────────────────────────────────────────────────── */
+.ampm-seg {
+  min-width: 34px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #131a2b;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
+              border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
+}
+.ampm-seg:hover:not(:disabled) { background: #1c2540; color: #e2e8f0; }
+.ampm-seg:active:not(:disabled) { transform: scale(0.93); }
+.ampm-seg:disabled { opacity: 0.5; cursor: not-allowed; }
+.ampm-seg:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ampm-seg-on {
+  background: linear-gradient(180deg, #a855f7, #7c3aed);
+  border-color: rgba(196, 181, 253, 0.55);
+  color: #ffffff;
+  box-shadow: 0 1px 9px -1px rgba(168, 85, 247, 0.6);
+}
+
+/* =========================================================================
+   Market Grid — the setup column
+   Every control row in the form shares this width. Without it each grid
+   stretched to the viewport, which on a wide monitor rendered a timeframe
+   pill 450px across and put the preset cards half a screen apart — and left
+   the custom-session card, which did have a max-width, disagreeing with the
+   presets directly above it by about 1300px.
+
+   One column, so the left edges line up down the whole form and no row can
+   grow past the one above it.
+   ========================================================================= */
+.cfg-col {
+  max-width: 62rem;
+}
+
+/* The two rows of six pills read as one block, so they get the tighter cap —
+   a pill wider than its own label is just a target, not a control. */
+.cfg-col.grid-cols-6 {
+  max-width: 34rem;
+}
+
+/* Presets and the custom-session card sit under those pills and are measured
+   against them rather than against the page. */
+.custom-session.cfg-col,
+.cfg-col.grid-cols-2:has(.preset-card) {
+  max-width: 34rem;
+}
+
+/* =========================================================================
+   Market Grid — setup form, refined
+   ========================================================================= */
+
+/* ── timeframes on one row ─────────────────────────────────────────────────
+   Eleven equal columns. auto-fit would reflow to a second row at some widths
+   and back at others, which moves a pill out from under the cursor mid-click;
+   a fixed count keeps every timeframe in the same place at every size. */
+.tf-row {
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+}
+@media (max-width: 1100px) { .tf-row { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 640px)  { .tf-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ── preset cards with an icon and a radio ─────────────────────────────────
+   Laid out as icon | text | state so the three read in that order, and the
+   state indicator lands in the same spot on both cards. */
+.preset-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 15px;
+}
+.preset-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.10);
+  color: #94a3b8;
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+.preset-card-on .preset-icon { background: rgba(34, 197, 94, 0.16); color: #4ade80; }
+.preset-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.preset-name { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; }
+.preset-range { font-size: 12px; }
+
+.preset-radio {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  border: 1.6px solid rgba(255, 255, 255, 0.22);
+  color: #04140a;
+  transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out);
+}
+.preset-radio-on { background: #22c55e; border-color: #22c55e; }
+
+/* ── parameter slider: takes its card's colour ────────────────────────────
+   The track is the same hue as the value badge above it, so a glance at the
+   card tells you which line on the chart this moves. */
+.param-slider [data-slot="slider-range"] {
+  background: var(--param-bar);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--param-bar) 55%, transparent);
+}
+.param-slider [data-slot="slider-thumb"] {
+  border-color: var(--param-bar);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--param-bar) 65%, transparent);
+}
+.param-slider [data-slot="slider-track"] { height: 6px; }
+
+/* ── date field with an inline icon ────────────────────────────────────────
+   The icon is decoration over the native control, so it must never eat the
+   click that opens the picker. */
+.field-with-icon { position: relative; }
+.field-with-icon .field-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #38bdf8;
+  pointer-events: none;
+}
+.field-with-icon input[type="date"] {
+  padding-left: 34px;
+  font-weight: 600;
+}
+/* Chrome draws its own picker button; keep it but tone it down so it does not
+   fight the icon on the other side of the field. */
+.field-with-icon input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+  filter: invert(1);
+}
+.field-with-icon input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 0.85; }
+
+/* ── timeframe pill, now carrying a glyph ─────────────────────────────────── */
+.tf-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 6px;
+}
+.tf-pill svg { opacity: 0.55; }
+.tf-pill-on svg { opacity: 1; }
+
+/* =========================================================================
+   Instrument picker
+   ========================================================================= */
+
+.dlg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(4, 7, 15, 0.72);
+  backdrop-filter: blur(4px);
+}
+.dlg-overlay[data-state="open"]   { animation: dlg-fade-in 200ms var(--ease-out); }
+.dlg-overlay[data-state="closed"] { animation: dlg-fade-out 140ms var(--ease-out); }
+
+.dlg-panel {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  top: 50%;
+  width: min(64rem, calc(100vw - 2rem));
+  max-height: min(46rem, calc(100dvh - 3rem));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  background: #0a1120;
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.85);
+}
+/* translate for the centring AND the motion, in one transform — two separate
+   ones would fight and the panel would drift off-centre mid-animation. */
+.dlg-panel[data-state="open"]   { animation: dlg-in 240ms var(--ease-out); }
+.dlg-panel[data-state="closed"] { animation: dlg-out 150ms var(--ease-out); }
+
+@keyframes dlg-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes dlg-fade-out { from { opacity: 1 } to { opacity: 0 } }
+@keyframes dlg-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.97); filter: blur(4px); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1);    filter: blur(0);   }
+}
+@keyframes dlg-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+  to   { opacity: 0; transform: translate(-50%, -50%) scale(0.985); }
+}
+.dlg-panel { transform: translate(-50%, -50%); }
+
+/* ── category chips ───────────────────────────────────────────────────── */
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #101827;
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
+              border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
+}
+.cat-chip:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.cat-chip:active { transform: scale(0.95); }
+.cat-chip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.cat-chip-on {
+  background: rgba(47, 128, 255, 0.14);
+  border-color: rgba(120, 170, 255, 0.55);
+  color: #bfdbfe;
+}
+
+/* ── rows ─────────────────────────────────────────────────────────────── */
+.instr-row {
+  cursor: pointer;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  transition: background 130ms var(--ease-out);
+}
+.instr-row:hover { background: rgba(255, 255, 255, 0.028); }
+.instr-row-on {
+  background: rgba(47, 128, 255, 0.11);
+  box-shadow: inset 2px 0 0 #2f80ff;
+}
+.instr-row-on:hover { background: rgba(47, 128, 255, 0.15); }
+
+.exch-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.exch-tag-on { background: rgba(47, 128, 255, 0.22); color: #bfdbfe; }
+
+.fav-btn {
+  display: inline-grid;
+  place-items: center;
+  height: 30px;
+  width: 30px;
+  border-radius: 8px;
+  color: #4b5568;
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), background 160ms var(--ease-out),
+              transform 70ms var(--ease-out);
+}
+.fav-btn:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
+.fav-btn:active { transform: scale(0.88); }
+.fav-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.fav-btn-on { color: #38bdf8; }
+.fav-btn-on:hover { color: #7dd3fc; }
+
+/* ── the trigger that opens it ────────────────────────────────────────── */
+.instr-trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--input);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+.instr-trigger:hover { border-color: rgba(47, 128, 255, 0.4); background: rgba(255, 255, 255, 0.02); }
+.instr-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* The trigger is disabled while a session is loaded, like every other field
+   that decides which bars exist. Dimmed rather than hidden, so the instrument
+   you are actually running stays readable. */
+.instr-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.instr-trigger:disabled:hover {
+  border-color: var(--input);
+  background: transparent;
+}

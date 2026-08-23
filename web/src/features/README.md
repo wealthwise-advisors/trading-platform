@@ -4,7 +4,7 @@
 
 | Feature | What it is |
 |---|---|
-| [`replay/`](replay) | **Live Replay** — the multi-timeframe grid, consolidated tape and playback controls |
+| [`replay/`](replay) | **Market Grid** — the multi-timeframe grid, consolidated tape and playback controls |
 | [`backtest/`](backtest) | Configure, run and read a scored backtest |
 | [`export/`](export) | Pull bars out for use elsewhere |
 

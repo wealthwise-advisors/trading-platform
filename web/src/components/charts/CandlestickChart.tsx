@@ -1089,9 +1089,16 @@ export function CandlestickChart({
     // own between the modebar and the title, so that row's worth of reserved
     // space is returned to the plotting area -- which is where the indicator
     // rows get back most of the height the larger PRICE_WEIGHT took from them.
+    // t trimmed again 74 -> 62 (and 23 -> 21 per stacked header row): that
+    // strip is reserved space above the plot, so every pixel taken off it is
+    // a pixel the candles get. Kept a modest step on purpose -- the title and
+    // the swing headers are positioned as PAPER fractions, so a taller paper
+    // shrinks the gap between them in real pixels, and cutting too hard here
+    // is what re-creates the title-collides-with-header bug this block has
+    // already been through twice.
     margin: hasSwingHeaders
-      ? { l: 50, r: 20, t: 74 + extraHeaderRows * 23, b: 24 }
-      : { l: 50, r: 20, t: 45, b: 24 },
+      ? { l: 50, r: 20, t: 62 + extraHeaderRows * 21, b: 22 }
+      : { l: 50, r: 20, t: 38, b: 22 },
     // No fixed height here on purpose -- the wrapping container stretches to
     // fill the available vertical space (matching the taller right-panel
     // column), and autosize + the Plot's own height:100% style pick that up.
