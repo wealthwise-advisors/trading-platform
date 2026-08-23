@@ -839,29 +839,15 @@ running. A test that passes either way defends nothing.
 
 ## 📦 Deployment
 
-```mermaid
-flowchart LR
-    PR["🔀 Pull Request"] ==> CI["🧪 CI<br/><i>6 checks</i>"]
-    CI ==> MG["🎯 Merge to master"]
-    MG ==> DP["🚀 Deploy workflow"]
-    DP ==> EC["☁️ AWS EC2<br/><i>Docker Compose</i>"]
-    EC ==> AS{"Served commit<br/>== github.sha ?"}
-    AS ==>|yes| OK["✅ Deployment confirmed"]
-    AS ==>|no| FA["❌ Fail the run"]
-
-    classDef n fill:#0b1220,stroke:#334155,stroke-width:1px,color:#94a3b8
-    classDef g fill:#0b1220,stroke:#22c55e,stroke-width:2px,color:#e2e8f0
-    classDef r fill:#0b1220,stroke:#ef4444,stroke-width:2px,color:#e2e8f0
-    class PR,CI,MG,DP,EC,AS n
-    class OK g
-    class FA r
-```
+<div align="center">
+<img src="docs/assets/deploy.svg" alt="Pull request, CI, merge to master, deploy workflow and AWS EC2; the run then checks whether the served commit equals github.sha, confirming the deployment only if it does and failing otherwise" width="100%">
+</div>
 
 Every deploy asks the running server which commit it is serving and **fails the run
 unless it matches**. A deploy that quietly leaves the old build running is the exact
 failure this exists to catch.
 
-| | |
+| Item | Details |
 |---|---|
 | 🔐 **Auth** | GitHub App installation token, minted per run and revoked when the job ends |
 | 🛡️ **Firewall** | The SSH rule is opened for the run and **always** revoked, even if the run fails |
