@@ -874,17 +874,9 @@ failure this exists to catch.
 
 ## 🗂 Repository Ecosystem
 
-```mermaid
-flowchart LR
-    HUB(["<b>trading-platform</b><br/>the platform · legacy archive"])
-    DATA(["<b>data</b><br/>market history · Git LFS"])
-    HUB ==>|reads full history from| DATA
-
-    classDef hub  fill:#0b1220,stroke:#2dd4bf,stroke-width:3px,color:#e2e8f0
-    classDef node fill:#0b1220,stroke:#334155,stroke-width:2px,color:#94a3b8
-    class HUB hub
-    class DATA node
-```
+<div align="center">
+<img src="docs/assets/ecosystem.svg" alt="Five retired repositories converge through a redaction step into legacy/ inside trading-platform, which reads full market history from the data repository" width="100%">
+</div>
 
 | Repository | Purpose | |
 |---|---|---|
