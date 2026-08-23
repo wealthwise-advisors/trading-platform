@@ -122,10 +122,13 @@ def build() -> str:
             f'<text x="{COL_X+14}" y="{cy+4.5}" font-family="{MONO}" font-size="12" '
             f'fill="{DIM}">{name}</text></g>'
         )
-        # converging feeder into the gate
+        # Converging feeder into the gate. An elbow, not a bezier: a curved
+        # flowing line reads as decoration, and this is a technical diagram --
+        # the connection has to be obvious, not pretty.
+        elbow = GATE_X - 34
         o.append(
-            f'<path d="M {COL_X+CARD_W+6} {cy:.1f} C {GATE_X-40} {cy:.1f}, '
-            f'{GATE_X-40} {COL_MID_Y:.1f}, {GATE_X-6} {COL_MID_Y:.1f}" '
+            f'<path d="M {COL_X+CARD_W+6} {cy:.1f} H {elbow} V {COL_MID_Y:.1f} '
+            f'H {GATE_X-6}" '
             f'fill="none" stroke="{RETIRE}" stroke-width="1.6" stroke-opacity="0">'
             f'<animate attributeName="stroke-opacity" values="0;0;0.75;0.35;0.35" '
             f'keyTimes="0;{t/CYCLE:.4f};{(t+0.35)/CYCLE:.4f};{(t+0.9)/CYCLE:.4f};1" '
