@@ -1,86 +1,78 @@
 """
 Generate docs/assets/pipeline.svg -- the six-stage pipeline in the README.
 
-WHAT THIS IS TRYING TO BE
--------------------------
-A live processing module per stage, not a circle with a picture in it. Each node
-is five concentric layers -- atmospheric glow, an outer hairline, two
-counter-rotating arcs, an illuminated inner ring and a seated disc -- with
-technical ticks around the rim. The first version was one ring and one arc, and
-it read as a flat infographic because that is what one ring is.
+WHAT THIS IS
+------------
+Six stages, left to right, each a card carrying its own name, what it does and
+what it produces. Straight connectors between them, and one small dot per
+connector that travels once when that hand-off happens.
 
-The connector matters as much as the nodes: a wide low-opacity bed for glow, a
-bright core over it, a faint secondary rail below, illuminated pips at each end,
-two particles per gap and a run of chevrons that light in sequence. The point is
-that data should look like it is MOVING, which a static line between two dots
-cannot do however well it is coloured.
+WHY IT LOOKS LIKE THIS NOW
+--------------------------
+The previous version drew each stage as five concentric layers -- atmospheric
+glow, an outer hairline, two counter-rotating arcs, an illuminated inner ring
+and a seated disc -- with technical ticks around the rim, particles in every
+gap and a run of chevrons lighting in sequence. Twenty-four rotate transforms
+and seventy-nine animations.
 
-WHY GENERATED
--------------
-Six nodes, five links and ninety-odd animations whose begin times all have to
-agree. Typed by hand that is how you get an arc spinning against its own pulse.
-Everything derives from one block of constants, so the sequence is right by
-construction and stays right when a column moves.
+It was well made and it was the wrong thing. A README diagram's job is to be
+read, and rings that spin regardless of what the data is doing compete with
+the labels for attention while telling you nothing. The standard this now
+follows is explicit: simple boxes, simple arrows, motion only where it
+communicates flow, and no decorative rotation, particles or glow.
 
-WHAT IS DELIBERATELY ABSENT
----------------------------
-The hero title, the subtitle, the "6 STEPS" chip, the row of adjectives and the
-closing slogan. Those were framing for a poster. This is a diagram in a README,
-and it does not need to assert that its own results are trustworthy.
+WHAT WAS KEPT, EXACTLY
+----------------------
+Every stage name, both description lines, every badge, every accent colour and
+all six icon glyphs are unchanged -- they are the content. Only the drawing of
+a node changed. STAGES and icon() below were spliced from the previous file
+rather than retyped, so none of it could drift in the rewrite.
 
-SMIL NOTES, LEARNED THE HARD WAY
---------------------------------
+WHAT THE MOTION DOES NOW
+------------------------
+One dot per connector, travelling once per cycle in stage order, and the
+receiving card's border brightening as it lands. That is the hand-off, and it
+is the only thing moving. Nothing loops for decoration.
+
+A NOTE ON REDUCED MOTION
+------------------------
+SMIL cannot be gated by prefers-reduced-motion: CSS loses to SMIL in the
+cascade, and this loads through an <img>. So the answer is to keep the motion
+quiet enough that gating is not needed -- one small dot, no rotation, no
+pulsing -- rather than to claim a switch that does not exist.
+
+SMIL NOTES, LEARNED THE HARD WAY (kept from the previous version)
+------------------------------------------------------------------
 * Two <animate> on the SAME attribute of the SAME element: the later silently
   wins from t=0. One animation per attribute, always.
 * An animated attribute must ALSO be set, or it renders at its default before
-  its begin time arrives -- cx defaults to 0, which parks dots at the far edge.
-* `pathLength` is not inherited, so it does nothing on a <g>. Dash maths is done
-  here against the real circumference.
+  its begin time arrives.
 * GitHub proxies this image: SMIL survives, CSS animation and script do not.
 """
-import math
 import pathlib
 import sys
 
 W = 1280
-H = 344
-
-PAD = 34
+PAD = 26
+GAP = 24
 COLS = 6
-COL_W = (W - 2 * PAD) / COLS
-
-# ── node geometry, outside in ─────────────────────────────────────────────
-R_GLOW = 68          # atmospheric halo
-R_TICK = 60          # the ring the technical ticks sit on
-R_OUT = 52           # outer hairline + first arc
-R_MID = 43           # second arc, counter-rotating
-R_INNER = 34         # illuminated inner ring
-R_DISC = 31          # the seat the icon sits on
-ICON = 32
-
-CY = 146             # node centre
-Y_NUM = 42
-Y_STEM = (52, 68)
-Y_TITLE = 238
-Y_DESC1 = 259
-Y_DESC2 = 275
-Y_BADGE = 288
-BADGE_H = 26
-
-# ── timing ───────────────────────────────────────────────────────────────
-# One pass of the pulse from 01 to 06. Each stage lights STAGGER after the one
-# before, and a link's particle takes LINK_DUR to cross, so the arrival and the
-# activation coincide instead of drifting apart.
-STAGGER = 0.62
-LINK_DUR = 0.62
-CYCLE = STAGGER * COLS          # 3.72s
+CARD_W = (W - 2 * PAD - GAP * (COLS - 1)) // COLS
+CARD_H = 156
+CARD_Y = 34
+H = CARD_Y + CARD_H + 34
 
 FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
-        "Helvetica,Arial,sans-serif")
+        "Roboto,Helvetica,Arial,sans-serif")
 MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 
 INK = "#eaf3ff"
 DIM = "#8ba1bc"
+
+# One hand-off per stage, in order. Long enough that the eye can follow a
+# single dot rather than watch six things at once.
+STEP = 1.15
+CYCLE = COLS * STEP
+
 
 STAGES = [
     # title, desc line 1, desc line 2, badge, accent, icon key
@@ -91,35 +83,6 @@ STAGES = [
     ("Paper Broker",  "Simulate fills,",     "slippage & costs",  "Fills · Costs",          "#f97316", "order"),
     ("Scored Result", "Objective metrics",   "you can check",     "Sharpe · Drawdown",      "#22c55e", "score"),
 ]
-
-
-# ── the activation envelope ───────────────────────────────────────────────
-# Every layer of a node brightens off THIS, so they cannot disagree about when
-# the stage fires. They used to: the halo carried keyTimes putting its peak at
-# 0.16 of the cycle while the inner ring carried none, so its values peaked at
-# the middle -- 1.27s later. The node lit twice per cycle, in two places, and the
-# result read as ambient shimmer rather than a stage activating.
-#
-# Fast attack, slower decay, then dark for the rest of the cycle: that is what a
-# thing switching on looks like, as opposed to a thing breathing.
-PULSE_KEYTIMES = "0;0.10;0.38;1"
-PULSE_SPLINES = "0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"
-
-
-def pulse(attr: str, lo: float, hi: float, begin: float) -> str:
-    """One <animate> for one attribute, on the shared activation envelope."""
-    return (f'<animate attributeName="{attr}" '
-            f'values="{lo};{hi};{lo};{lo}" dur="{CYCLE:.2f}s" '
-            f'begin="{begin:.2f}s" repeatCount="indefinite" calcMode="spline" '
-            f'keyTimes="{PULSE_KEYTIMES}" keySplines="{PULSE_SPLINES}"/>')
-
-
-def esc(s: str) -> str:
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def centre(i: int) -> float:
-    return PAD + COL_W * (i + 0.5)
 
 
 def icon(key: str, ink: str) -> list[str]:
@@ -186,278 +149,109 @@ def icon(key: str, ink: str) -> list[str]:
     return g[key]
 
 
-def build() -> str:
-    out: list[str] = []
-    a = out.append
+def esc(s: str) -> str:
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
+
+def card_x(i: int) -> int:
+    return PAD + i * (CARD_W + GAP)
+
+
+def build() -> str:
+    o: list[str] = []
     label = ("AutoTrader pipeline: market data is resampled, analysed, traded by "
              "the strategy, filled by the paper broker and scored")
-    a(f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
-      f'viewBox="0 0 {W} {H}" role="img" aria-label="{label}">')
+    o.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
+             f'viewBox="0 0 {W} {H}" role="img" aria-label="{label}">')
 
-    # ══ defs ══════════════════════════════════════════════════════════════
-    a("  <defs>")
-    a('    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">')
-    a('      <stop offset="0%" stop-color="#070d18"/>')
-    a('      <stop offset="55%" stop-color="#0a1424"/>')
-    a('      <stop offset="100%" stop-color="#05090f"/>')
-    a("    </linearGradient>")
-    # Two grid scales: a fine mesh and a heavier one over it, which is what makes
-    # a technical background read as depth rather than graph paper.
-    a('    <pattern id="fine" width="16" height="16" patternUnits="userSpaceOnUse">')
-    a('      <path d="M16 0H0v16" fill="none" stroke="#8ec5ff" stroke-opacity=".030" '
-      'stroke-width=".6"/>')
-    a("    </pattern>")
-    a('    <pattern id="coarse" width="80" height="80" patternUnits="userSpaceOnUse">')
-    a('      <path d="M80 0H0v80" fill="none" stroke="#8ec5ff" stroke-opacity=".045" '
-      'stroke-width="1"/>')
-    a("    </pattern>")
-    # Atmosphere: a wash from above, and a vignette that darkens the corners so
-    # the middle of the band sits forward.
-    a('    <radialGradient id="sky" cx="50%" cy="-8%" r="88%">')
-    a('      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".13"/>')
-    a('      <stop offset="60%" stop-color="#3b82f6" stop-opacity=".035"/>')
-    a('      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>')
-    a("    </radialGradient>")
-    a('    <radialGradient id="vig" cx="50%" cy="50%" r="72%">')
-    a('      <stop offset="55%" stop-color="#000000" stop-opacity="0"/>')
-    a('      <stop offset="100%" stop-color="#000000" stop-opacity=".55"/>')
-    a("    </radialGradient>")
+    o.append('<defs>'
+             '<linearGradient id="pbg" x1="0" y1="0" x2="0" y2="1">'
+             '<stop offset="0%" stop-color="#0d1424"/>'
+             '<stop offset="100%" stop-color="#0a0f1c"/></linearGradient>'
+             f'<marker id="pah" markerWidth="8" markerHeight="8" refX="6.4" refY="4" '
+             f'orient="auto"><path d="M0 1 L7 4 L0 7 z" fill="{DIM}"/></marker>'
+             '</defs>')
+    o.append(f'<rect width="{W}" height="{H}" rx="16" fill="url(#pbg)"/>')
+    o.append(f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="16" '
+             f'fill="none" stroke="#1e2a44"/>')
 
-    for i, s in enumerate(STAGES):
-        accent = s[4]
-        # The node's halo.
-        a(f'    <radialGradient id="halo{i}" cx="50%" cy="50%" r="50%">')
-        a(f'      <stop offset="0%" stop-color="{accent}" stop-opacity=".40"/>')
-        a(f'      <stop offset="45%" stop-color="{accent}" stop-opacity=".13"/>')
-        a(f'      <stop offset="100%" stop-color="{accent}" stop-opacity="0"/>')
-        a("    </radialGradient>")
-        # The disc under the icon: lit from the top, so the module looks solid.
-        a(f'    <linearGradient id="disc{i}" x1="0" y1="0" x2="0" y2="1">')
-        a(f'      <stop offset="0%" stop-color="{accent}" stop-opacity=".20"/>')
-        a(f'      <stop offset="100%" stop-color="{accent}" stop-opacity=".045"/>')
-        a("    </linearGradient>")
+    mid = CARD_Y + 62          # the line the connectors run along
 
-    # Each link fades from the stage it leaves to the stage it enters.
+    # ── connectors, drawn under the cards ─────────────────────────────────
     for i in range(COLS - 1):
-        x1 = centre(i) + R_OUT + 8
-        x2 = centre(i + 1) - R_OUT - 8
-        a(f'    <linearGradient id="rail{i}" gradientUnits="userSpaceOnUse" '
-          f'x1="{x1:.1f}" y1="{CY}" x2="{x2:.1f}" y2="{CY}">')
-        a(f'      <stop offset="0%" stop-color="{STAGES[i][4]}" stop-opacity=".85"/>')
-        a(f'      <stop offset="100%" stop-color="{STAGES[i + 1][4]}" stop-opacity=".85"/>')
-        a("    </linearGradient>")
-    a("  </defs>")
+        x1 = card_x(i) + CARD_W
+        x2 = card_x(i + 1)
+        o.append(f'<line x1="{x1+3}" y1="{mid}" x2="{x2-5}" y2="{mid}" '
+                 f'stroke="{DIM}" stroke-opacity="0.32" stroke-width="1.6" '
+                 f'marker-end="url(#pah)"/>')
+        o.append(f'<circle cx="{x1+3}" cy="{mid}" r="2.4" fill="{DIM}" '
+                 f'fill-opacity="0.45"/>')
+        # the hand-off: one dot, once, in stage order
+        begin = i * STEP
+        o.append(f'<circle cx="{x1+3}" cy="{mid}" r="3.2" '
+                 f'fill="{STAGES[i][4]}" opacity="0">'
+                 f'<animate attributeName="cx" values="{x1+3};{x2-6}" '
+                 f'begin="{begin:.2f}s" dur="0.72s" calcMode="linear" '
+                 f'repeatCount="indefinite" />'
+                 f'<animate attributeName="opacity" values="0;1;1;0" '
+                 f'keyTimes="0;0.12;0.8;1" begin="{begin:.2f}s" dur="0.72s" '
+                 f'repeatCount="indefinite"/></circle>')
 
-    # ══ ground ════════════════════════════════════════════════════════════
-    a(f'  <rect width="{W}" height="{H}" rx="22" fill="url(#bg)"/>')
-    a(f'  <rect width="{W}" height="{H}" rx="22" fill="url(#fine)"/>')
-    a(f'  <rect width="{W}" height="{H}" rx="22" fill="url(#coarse)"/>')
-    a(f'  <rect width="{W}" height="{H}" rx="22" fill="url(#sky)"/>')
+    # ── the six stages ────────────────────────────────────────────────────
+    for i, (title, d1, d2, badge, accent, key) in enumerate(STAGES):
+        x = card_x(i)
+        cx = x + CARD_W / 2
+        arrive = max(0.0, i * STEP - 0.12)
 
-    # Motes in the air: static, faint, unevenly placed. They cost nothing and
-    # they stop the large empty areas reading as flat paint.
-    seed = 71624
-    for _ in range(46):
-        seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-        px = 20 + (seed >> 9) % (W - 40)
-        seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-        py = 16 + (seed >> 9) % (H - 32)
-        seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-        rr = 0.7 + ((seed >> 11) % 100) / 110.0
-        op = 0.05 + ((seed >> 5) % 100) / 620.0
-        a(f'  <circle cx="{px}" cy="{py}" r="{rr:.2f}" fill="#bfe3ff" '
-          f'opacity="{op:.3f}"/>')
+        o.append(f'<rect x="{x}" y="{CARD_Y}" width="{CARD_W}" height="{CARD_H}" '
+                 f'rx="12" fill="#101a2c" stroke="{accent}" stroke-opacity="0.26"/>')
+        # brightens as its dot lands -- the only state change on a card
+        o.append(f'<rect x="{x}" y="{CARD_Y}" width="{CARD_W}" height="{CARD_H}" '
+                 f'rx="12" fill="none" stroke="{accent}" stroke-width="1.6" '
+                 f'stroke-opacity="0">'
+                 f'<animate attributeName="stroke-opacity" '
+                 f'values="0;0;0.85;0.28;0.28" '
+                 f'keyTimes="0;{arrive/CYCLE:.4f};{(arrive+0.22)/CYCLE:.4f};'
+                 f'{(arrive+0.9)/CYCLE:.4f};1" begin="0s" dur="{CYCLE}s" '
+                 f'repeatCount="indefinite"/></rect>')
 
-    a(f'  <rect width="{W}" height="{H}" rx="22" fill="url(#vig)"/>')
-    a(f'  <rect x=".5" y=".5" width="{W - 1}" height="{H - 1}" rx="22" fill="none" '
-      f'stroke="#7dd3fc" stroke-opacity=".13"/>')
+        # The step index. It was above each node in the previous version and is
+        # kept, because six stages in a row only read as a SEQUENCE if they are
+        # numbered -- the arrows say direction, the numbers say position.
+        o.append(f'<text x="{x+12}" y="{CARD_Y+21}" font-family="{MONO}" '
+                 f'font-size="10" font-weight="700" letter-spacing="0.5" '
+                 f'fill="{accent}" fill-opacity="0.75">{i+1:02d}</text>')
 
-    # Corner brackets: instrument-panel detail, not lettering.
-    for cx0, cy0, sx, sy in ((16, 16, 1, 1), (W - 16, 16, -1, 1),
-                             (16, H - 16, 1, -1), (W - 16, H - 16, -1, -1)):
-        a(f'  <path d="M{cx0} {cy0 + sy * 26} V{cy0 + sy * 8} '
-          f'Q{cx0} {cy0} {cx0 + sx * 8} {cy0} H{cx0 + sx * 26}" fill="none" '
-          f'stroke="#7dd3fc" stroke-opacity=".34" stroke-width="1.6"/>')
+        # a flat seat for the glyph -- no rings, no ticks
+        o.append(f'<rect x="{cx-19:.1f}" y="{CARD_Y+16}" width="38" height="38" '
+                 f'rx="10" fill="{accent}" fill-opacity="0.11"/>')
+        o.append(f'<g transform="translate({cx-12:.1f},{CARD_Y+23}) scale(1)">'
+                 + "".join(icon(key, accent)) + '</g>')
 
-    # ══ links ═════════════════════════════════════════════════════════════
-    for i in range(COLS - 1):
-        x1 = centre(i) + R_OUT + 8
-        x2 = centre(i + 1) - R_OUT - 8
-        begin = i * STAGGER
-        a("  <g>")
-        # A wide, very faint stroke under the core reads as glow. Doing it this
-        # way rather than with a blur filter keeps it predictable through
-        # GitHub's proxy, which is not consistent about filters.
-        a(f'    <line x1="{x1:.1f}" y1="{CY}" x2="{x2:.1f}" y2="{CY}" '
-          f'stroke="url(#rail{i})" stroke-opacity=".16" stroke-width="9" '
-          f'stroke-linecap="round"/>')
-        a(f'    <line x1="{x1:.1f}" y1="{CY}" x2="{x2:.1f}" y2="{CY}" '
-          f'stroke="url(#rail{i})" stroke-width="2.1" stroke-linecap="round"/>')
-        # The secondary rail: a hairline below the core, dashed, which is the
-        # detail that stops the connector looking like a drawn line.
-        a(f'    <line x1="{x1 + 6:.1f}" y1="{CY + 6}" x2="{x2 - 6:.1f}" y2="{CY + 6}" '
-          f'stroke="url(#rail{i})" stroke-opacity=".30" stroke-width="1" '
-          f'stroke-dasharray="3 5"/>')
-        # Illuminated pips where the link meets each ring.
-        for px, col in ((x1, STAGES[i][4]), (x2, STAGES[i + 1][4])):
-            a(f'    <circle cx="{px:.1f}" cy="{CY}" r="4.6" fill="{col}" '
-              f'fill-opacity=".28"/>')
-            a(f'    <circle cx="{px:.1f}" cy="{CY}" r="2.3" fill="{col}"/>')
-        # Two particles per gap, the second half a beat behind, so the flow
-        # reads as a stream rather than a single ball.
-        for k, (rr, op) in enumerate(((3.3, 1.0), (2.1, 0.6))):
-            a(f'    <circle cx="{x1:.1f}" cy="{CY}" r="{rr}" fill="#f0faff" '
-              f'opacity="{op}">')
-            a(f'      <animate attributeName="cx" from="{x1:.1f}" to="{x2:.1f}" '
-              f'dur="{LINK_DUR}s" begin="{begin + k * 0.16:.2f}s" '
-              f'repeatCount="indefinite"/>')
-            a("    </circle>")
-        # Chevrons below the rail, lighting left to right.
-        cxm = (x1 + x2) / 2
-        for k in range(3):
-            chx = cxm + (k - 1) * 9
-            a(f'      <path d="M{chx:.1f} {CY + 20} l4.4 4.4 -4.4 4.4" fill="none" '
-              f'stroke="{STAGES[i + 1][4]}" stroke-width="1.8" stroke-linecap="round" '
-              f'stroke-linejoin="round" opacity=".22">')
-            a(f'        <animate attributeName="opacity" values=".22;.95;.22" '
-              f'dur="{CYCLE:.2f}s" begin="{begin + k * 0.13:.2f}s" '
-              f'repeatCount="indefinite"/>')
-            a("      </path>")
-        a("  </g>")
+        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+76}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="13" font-weight="700" '
+                 f'fill="{INK}">{esc(title)}</text>')
+        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+94}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="10.5" fill="{DIM}">{esc(d1)}</text>')
+        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+108}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="10.5" fill="{DIM}">{esc(d2)}</text>')
 
-    # ══ nodes ═════════════════════════════════════════════════════════════
-    for i, (title, d1, d2, badge, accent, ikey) in enumerate(STAGES):
-        cx = centre(i)
-        begin = i * STAGGER
-        a("  <g>")
+        bw = CARD_W - 26
+        o.append(f'<rect x="{x+13}" y="{CARD_Y+120}" width="{bw}" height="21" rx="6" '
+                 f'fill="{accent}" fill-opacity="0.10"/>')
+        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+134.5}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="9" letter-spacing="0.2" '
+                 f'fill="{accent}">{esc(badge)}</text>')
 
-        # 1. atmosphere
-        # Trough at .30 rather than .50: the pulse was 1.78x peak-to-trough,
-        # measured, which is not enough to read as an event. It is 3.3x now.
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_GLOW}" fill="url(#halo{i})" '
-          f'opacity=".30">')
-        a("      " + pulse("opacity", 0.30, 1.0, begin))
-        a("    </circle>")
-
-        # 2. technical ticks on the rim -- top and bottom arcs only.
-        #
-        # A full ring of them put ticks at 0 and 180 degrees, which is exactly
-        # where the connector attaches, so the link's illuminated pip landed on
-        # top of a tick. Skipping everything within 30 degrees of horizontal
-        # reads as deliberate instrumentation rather than a gap.
-        HORIZONTAL = {2, 3, 4, 8, 9, 10}
-        for k in range(12):
-            if k in HORIZONTAL:
-                continue
-            ang = math.radians(k * 30 - 90)
-            ln = 8 if k % 3 == 0 else 5
-            xa = cx + R_TICK * math.cos(ang)
-            ya = CY + R_TICK * math.sin(ang)
-            xb = cx + (R_TICK + ln) * math.cos(ang)
-            yb = CY + (R_TICK + ln) * math.sin(ang)
-            a(f'    <line x1="{xa:.1f}" y1="{ya:.1f}" x2="{xb:.1f}" y2="{yb:.1f}" '
-              f'stroke="{accent}" stroke-opacity="{0.62 if k % 3 == 0 else 0.32}" '
-              f'stroke-width="1.5" stroke-linecap="round"/>')
-
-        # 3. two hairlines: one at the arc radius, one out at the tick radius.
-        #    Two concentric hairlines is what gives the module its depth; one
-        #    ring, however bright, reads flat.
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_TICK}" fill="none" '
-          f'stroke="{accent}" stroke-opacity=".13" stroke-width="1"/>')
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_OUT}" fill="none" '
-          f'stroke="{accent}" stroke-opacity=".30" stroke-width="1.3"/>')
-
-        # 4. two arcs, counter-rotating. Opposed directions is most of why the
-        #    node reads as a mechanism rather than a spinning ring.
-        for rad, frac, sw, dur, direction in ((R_OUT, 0.30, 3.8, 8.0, 1),
-                                              (R_MID, 0.19, 2.5, 6.0, -1)):
-            circ = 2 * math.pi * rad
-            frm = 0 if direction > 0 else 360
-            to = 360 if direction > 0 else 0
-            a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{rad}" fill="none" '
-              f'stroke="{accent}" stroke-width="{sw}" stroke-linecap="round" '
-              f'stroke-dasharray="{circ * frac:.1f} {circ:.1f}" '
-              f'stroke-opacity=".62" '
-              f'transform="rotate({-90 + i * 47} {cx:.1f} {CY})">')
-            a(f'      <animateTransform attributeName="transform" type="rotate" '
-              f'from="{frm} {cx:.1f} {CY}" to="{to} {cx:.1f} {CY}" dur="{dur}s" '
-              f'begin="{-i * 1.1:.1f}s" repeatCount="indefinite"/>')
-            a("      " + pulse("stroke-opacity", 0.62, 1.0, begin))
-            a("    </circle>")
-
-        # 5. illuminated inner ring, brightening as the pulse lands
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
-          f'stroke="{accent}" stroke-width="1.7" stroke-opacity=".34">')
-        a("      " + pulse("stroke-opacity", 0.34, 1.0, begin))
-        a("    </circle>")
-
-        # 6. the seat, plus a wash over it that lifts on activation. Without
-        #    this the icon stayed at one brightness while everything around it
-        #    moved, which is what made the node look like a decal.
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="#070e1a"/>')
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="url(#disc{i})"/>')
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_DISC}" fill="{accent}" '
-          f'fill-opacity="0">')
-        a("      " + pulse("fill-opacity", 0.0, 0.24, begin))
-        a("    </circle>")
-
-        # 7. a ring that expands out of the node on activation
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
-          f'stroke="{accent}" stroke-width="1.6" opacity="0">')
-        a(f'      <animate attributeName="r" values="{R_INNER};{R_GLOW - 4}" '
-          f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
-          f'keyTimes="0;1" calcMode="spline" keySplines="0.2 0 0.3 1"/>')
-        a("    </circle>")
-        a(f'    <circle cx="{cx:.1f}" cy="{CY}" r="{R_INNER}" fill="none" '
-          f'stroke="{accent}" stroke-width="1.6" opacity="0">')
-        a(f'      <animate attributeName="opacity" values="0;.9;0;0" '
-          f'dur="{CYCLE:.2f}s" begin="{begin:.2f}s" repeatCount="indefinite" '
-          f'calcMode="spline" keyTimes="{PULSE_KEYTIMES}" '
-          f'keySplines="{PULSE_SPLINES}"/>')
-        a("    </circle>")
-
-        # 8. the icon
-        s = ICON / 24
-        a(f'    <g transform="translate({cx - ICON / 2:.1f} {CY - ICON / 2:.1f}) '
-          f'scale({s:.4f})">')
-        for p in icon(ikey, "#f2f9ff"):
-            a("      " + p)
-        a("    </g>")
-
-        # ── number, stem, labels ──
-        a(f'    <text x="{cx:.1f}" y="{Y_NUM}" text-anchor="middle" '
-          f'font-family="{MONO}" font-size="20" font-weight="700" '
-          f'letter-spacing="1.6" fill="{accent}">{i + 1:02d}</text>')
-        a(f'    <line x1="{cx:.1f}" y1="{Y_STEM[0]}" x2="{cx:.1f}" y2="{Y_STEM[1]}" '
-          f'stroke="{accent}" stroke-opacity=".45" stroke-width="1.2" '
-          f'stroke-dasharray="2 3"/>')
-        a(f'    <text x="{cx:.1f}" y="{Y_TITLE}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="15.5" font-weight="700" '
-          f'letter-spacing=".1" fill="{INK}">{esc(title)}</text>')
-        for yy, line in ((Y_DESC1, d1), (Y_DESC2, d2)):
-            a(f'    <text x="{cx:.1f}" y="{yy}" text-anchor="middle" '
-              f'font-family="{FONT}" font-size="11.5" fill="{DIM}">{esc(line)}</text>')
-        bw = 15 + len(badge) * 6.05
-        a(f'    <rect x="{cx - bw / 2:.1f}" y="{Y_BADGE}" width="{bw:.1f}" '
-          f'height="{BADGE_H}" rx="{BADGE_H / 2:.0f}" fill="{accent}" '
-          f'fill-opacity=".11" stroke="{accent}" stroke-opacity=".40"/>')
-        a(f'    <text x="{cx:.1f}" y="{Y_BADGE + 17.4:.1f}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="10.6" font-weight="600" '
-          f'fill="{accent}">{esc(badge)}</text>')
-        a("  </g>")
-
-    a("</svg>")
-    return "\n".join(out) + "\n"
+    o.append("</svg>")
+    return "".join(o)
 
 
 if __name__ == "__main__":
-    dest = pathlib.Path(sys.argv[1])
+    out = pathlib.Path(__file__).resolve().parents[1] / "pipeline.svg"
     svg = build()
-    dest.write_text(svg, encoding="utf-8")
-    print(f"wrote {dest}  ({len(svg):,} chars)")
-    print(f"  stages            : {len(STAGES)}   links: {COLS - 1}")
-    print("  ring layers/node  : glow, ticks, hairline, 2 arcs, inner, disc, burst")
-    print(f"  <animate>         : {svg.count('<animate ')}")
-    print(f"  <animateTransform>: {svg.count('<animateTransform')}")
-    print(f"  pulse cycle       : {CYCLE:.2f}s")
+    out.write_text(svg, encoding="utf-8")
+    assert "animateTransform" not in svg, "no rotation in an architecture diagram"
+    assert "feGaussianBlur" not in svg, "no glow in an architecture diagram"
+    print(f"wrote {out}  ({len(svg):,} bytes, {svg.count('<animate')} animations, "
+          f"{CYCLE:.1f}s loop)", file=sys.stderr)
