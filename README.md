@@ -488,6 +488,12 @@ base bar; every other timeframe steps only when its next bar has *closed*. See
 
 <br>
 
+<div align="center">
+<img src="docs/assets/one-clock.svg" alt="One playhead crosses sixty minutes of market time; the 1m lane closes sixty bars, 5m closes twelve, 15m closes four and 1h closes once — and every lane reaches the right edge together" width="100%">
+</div>
+
+<br>
+
 ---
 
 ## 📊 Dashboard
@@ -536,31 +542,43 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 <tr><td valign="top" width="33%">
 
 ### ⚙️ Backend
-- **Python 3.12**
-- FastAPI · Uvicorn
-- pandas · numpy
-- pandas-ta
-- Pydantic
-- pytest · ruff · mypy · bandit
+
+<img src="https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.12">
+<img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
+<img src="https://img.shields.io/badge/Uvicorn-499848?style=flat-square" alt="Uvicorn">
+<img src="https://img.shields.io/badge/pandas-150458?style=flat-square&logo=pandas&logoColor=white" alt="pandas">
+<img src="https://img.shields.io/badge/NumPy-013243?style=flat-square&logo=numpy&logoColor=white" alt="NumPy">
+<img src="https://img.shields.io/badge/pandas--ta-1f6feb?style=flat-square" alt="pandas-ta">
+<img src="https://img.shields.io/badge/Pydantic-E92063?style=flat-square&logo=pydantic&logoColor=white" alt="Pydantic">
+<img src="https://img.shields.io/badge/pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white" alt="pytest">
+<img src="https://img.shields.io/badge/Ruff-D7FF64?style=flat-square&logo=ruff&logoColor=black" alt="Ruff">
+<img src="https://img.shields.io/badge/mypy-2A6DB2?style=flat-square" alt="mypy">
+<img src="https://img.shields.io/badge/bandit-FFCC00?style=flat-square" alt="bandit">
 
 </td><td valign="top" width="33%">
 
 ### 🖥 Frontend
-- **React 19** · TypeScript
-- Vite
-- Tailwind CSS
-- shadcn/ui · Radix
-- Recharts
-- Vitest · oxlint
+
+<img src="https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19">
+<img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+<img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite">
+<img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind_CSS">
+<img src="https://img.shields.io/badge/shadcn/ui-000000?style=flat-square&logo=shadcnui&logoColor=white" alt="shadcn/ui">
+<img src="https://img.shields.io/badge/Radix_UI-161618?style=flat-square&logo=radixui&logoColor=white" alt="Radix_UI">
+<img src="https://img.shields.io/badge/Recharts-22b5bf?style=flat-square" alt="Recharts">
+<img src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest">
+<img src="https://img.shields.io/badge/oxlint-6D28D9?style=flat-square" alt="oxlint">
 
 </td><td valign="top" width="33%">
 
 ### ☁️ Infrastructure
-- Docker · Compose
-- GitHub Actions
-- AWS EC2
-- GitHub App auth
-- Nginx
+
+<img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+<img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker_Compose">
+<img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" alt="GitHub_Actions">
+<img src="https://img.shields.io/badge/AWS_EC2-FF9900?style=flat-square&logo=amazonec2&logoColor=white" alt="AWS_EC2">
+<img src="https://img.shields.io/badge/GitHub_App_auth-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub_App_auth">
+<img src="https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white" alt="Nginx">
 
 </td></tr>
 </table>
