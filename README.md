@@ -841,6 +841,18 @@ running. A test that passes either way defends nothing.
 
 <div align="center">
 <img src="docs/assets/deploy.svg" alt="Pull request, CI, merge to master, deploy workflow and AWS EC2; the run then checks whether the served commit equals github.sha, confirming the deployment only if it does and failing otherwise" width="100%">
+
+<br>
+
+<!-- The real marks, served by shields rather than redrawn and committed -- the
+     diagram above uses drawn glyphs for the same reason SymbolMark.tsx does not
+     fetch logos. -->
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wealthwise-advisors/trading-platform)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
+[![AWS EC2](https://img.shields.io/badge/AWS_EC2-FF9900?style=flat-square&logo=amazonec2&logoColor=white)](.github/workflows/deploy.yml)
+[![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white)](web/nginx.conf)
+
 </div>
 
 Every deploy asks the running server which commit it is serving and **fails the run
