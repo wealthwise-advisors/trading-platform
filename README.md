@@ -445,6 +445,12 @@ run without the engine knowing which it holds.
 | 🚀 | [**`breakout`**](src/strategies/breakout.py) | Range resolution on expanding volume |
 | 🎛️ | [**`regime_adaptive`**](src/strategies/regime_adaptive.py) | Switches behaviour on the [regime classifier's](src/analysis/regime.py) reading |
 
+<div align="center">
+<img src="docs/assets/divergence.svg" alt="Price prints a lower low while RSI prints a higher low; the divergence arms the setup, and a later close above the divergence bar's high is the entry" width="100%">
+</div>
+
+<br>
+
 > **Each timeframe gets its own strategy instance and its own paper broker.**
 > Strategies are stateful — RSI divergence arms a setup on one bar and confirms it
 > several bars later — so sharing one instance would let an hourly bar corrupt the
