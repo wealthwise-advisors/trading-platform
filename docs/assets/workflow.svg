@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 248" width="1280" height="248" role="img" aria-label="A change travels from idea through research, implementation, verification, backtest, pull request and merge to a deploy whose commit is asserted"><rect width="100%" height="100%" fill="#060b14"/>
+<rect x="26" y="30" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="171" y="72" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Idea</text>
+<path d="M 316 67 H 332" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 332 63 L 338 67 L 332 71 Z" fill="#3a4a63"/>
+<rect x="338" y="30" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="484" y="59" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Research</text>
+<text x="484" y="78" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">measure it</text>
+<path d="M 629 67 H 644" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 644 63 L 651 67 L 644 71 Z" fill="#3a4a63"/>
+<rect x="651" y="30" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="796" y="59" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Implement</text>
+<text x="796" y="78" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">+ tests that can fail</text>
+<path d="M 942 67 H 956" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 956 63 L 964 67 L 956 71 Z" fill="#3a4a63"/>
+<rect x="964" y="30" width="290" height="74" rx="10" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="3.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="1109" y="59" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Verify</text>
+<text x="1109" y="78" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">1,853 tests · ruff · tsc</text>
+<path d="M 1109 104 V 124 H 171 V 144" stroke="#3a4a63" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+<rect x="26" y="144" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="4.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="171" y="173" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Backtest &amp; Replay</text>
+<text x="171" y="192" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">against real bars</text>
+<path d="M 316 181 H 332" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 332 177 L 338 181 L 332 185 Z" fill="#3a4a63"/>
+<rect x="338" y="144" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="5.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="484" y="173" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Pull Request</text>
+<text x="484" y="192" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">6 CI checks</text>
+<path d="M 629 181 H 644" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 644 177 L 651 181 L 644 185 Z" fill="#3a4a63"/>
+<rect x="651" y="144" width="290" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="6.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="796" y="186" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Merge</text>
+<path d="M 942 181 H 956" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 956 177 L 964 181 L 956 185 Z" fill="#3a4a63"/>
+<rect x="964" y="144" width="290" height="74" rx="10" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="7.00s" dur="8.00s" repeatCount="indefinite"/>
+</rect>
+<text x="1109" y="173" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Deploy</text>
+<text x="1109" y="192" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">SHA asserted</text>
+<circle r="3.4" fill="#2dd4bf" opacity="0">
+<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.04;0.90;1" begin="0.00s" dur="8.00s" repeatCount="indefinite"/>
+<animate attributeName="cx" values="171;484;796;1109;171;484;796;1109" keyTimes="0.000;0.143;0.286;0.429;0.571;0.714;0.857;1.000" begin="0.00s" dur="8.00s" repeatCount="indefinite"/>
+<animate attributeName="cy" values="67;67;67;67;181;181;181;181" keyTimes="0.000;0.143;0.286;0.429;0.571;0.714;0.857;1.000" begin="0.00s" dur="8.00s" repeatCount="indefinite"/>
+</circle>
+</svg>

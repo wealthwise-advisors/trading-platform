@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 134" width="1280" height="134" role="img" aria-label="Bars produce a strategy signal, the paper broker fills it with slippage and commission, and the position becomes P&amp;L and metrics"><rect width="100%" height="100%" fill="#060b14"/>
+<rect x="26" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="119" y="72" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Bars</text>
+<path d="M 212 67 H 227" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 227 63 L 234 67 L 227 71 Z" fill="#3a4a63"/>
+<rect x="234" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="328" y="59" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Strategy</text>
+<text x="328" y="78" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">signal</text>
+<path d="M 421 67 H 436" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 436 63 L 443 67 L 436 71 Z" fill="#3a4a63"/>
+<rect x="443" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#f59e0b" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="2.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="536" y="72" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Paper Broker</text>
+<path d="M 629 67 H 644" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 644 63 L 651 67 L 644 71 Z" fill="#3a4a63"/>
+<rect x="651" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#f59e0b" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="3.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="744" y="59" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Fill</text>
+<text x="744" y="78" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">+ slippage, + commission</text>
+<path d="M 837 67 H 852" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 852 63 L 859 67 L 852 71 Z" fill="#3a4a63"/>
+<rect x="859" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="4.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="952" y="72" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Position &amp; P&amp;L</text>
+<path d="M 1046 67 H 1061" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
+<path d="M 1061 63 L 1068 67 L 1061 71 Z" fill="#3a4a63"/>
+<rect x="1068" y="30" width="186" height="74" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="5.00s" dur="6.00s" repeatCount="indefinite"/>
+</rect>
+<text x="1161" y="72" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Metrics</text>
+<circle r="3.4" fill="#2dd4bf" opacity="0">
+<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.04;0.90;1" begin="0.00s" dur="6.00s" repeatCount="indefinite"/>
+<animate attributeName="cx" values="119;328;536;744;952;1161" keyTimes="0.000;0.200;0.400;0.600;0.800;1.000" begin="0.00s" dur="6.00s" repeatCount="indefinite"/>
+<animate attributeName="cy" values="67;67;67;67;67;67" keyTimes="0.000;0.200;0.400;0.600;0.800;1.000" begin="0.00s" dur="6.00s" repeatCount="indefinite"/>
+</circle>
+</svg>

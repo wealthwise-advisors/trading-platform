@@ -342,24 +342,6 @@ dashboard drew.
 The flagship surface. A session loads history, plays it bar by bar, and then **keeps
 going** — following the live market instead of stopping at the snapshot it loaded.
 
-```mermaid
-flowchart LR
-    L["⬇ Load Data"] ==> P["▶ Play"]
-    P ==> E["Live edge<br/>reached"]
-    E ==> F["⟳ Follow live<br/><i>starts by itself</i>"]
-    F ==> Q["Poll every 15s"]
-    Q ==> C{"New closed<br/>bar?"}
-    C ==>|yes| U["Tape advances<br/>VWAP · bands · signals"]
-    C ==>|no| W["“still forming”"]
-    U ==> Q
-    W ==> Q
-
-    classDef a fill:#0b1220,stroke:#2dd4bf,stroke-width:2px,color:#e2e8f0
-    classDef b fill:#0b1220,stroke:#334155,stroke-width:1px,color:#94a3b8
-    class L,P,F,U a
-    class E,Q,C,W b
-```
-
 **What makes it trustworthy rather than merely live**
 
 | Rule | Why |
@@ -381,45 +363,9 @@ flowchart LR
 
 ## 🏗 Architecture
 
-```mermaid
-flowchart TB
-    subgraph SRC["📥 Data Sources"]
-        SCH["Schwab API<br/><i>live · ~180 days</i>"]
-        CSV["CSV archive<br/><i>18 years</i>"]
-        SYN["Synthetic<br/><i>deterministic</i>"]
-    end
-
-    subgraph CORE["⚙️ Core Engine · src/"]
-        RS["Resampler<br/><i>one shared aggregator</i>"]
-        AN["Analysis<br/><i>waves · patterns · VWAP</i>"]
-        ST["Strategies<br/><i>five, one interface</i>"]
-        BR["Paper Broker<br/><i>commission · slippage</i>"]
-        RE["Replay Engine<br/><i>shared market clock</i>"]
-    end
-
-    subgraph IF["🖥 Interfaces"]
-        API["FastAPI<br/><i>REST + WebSocket</i>"]
-        WEB["React Dashboard"]
-        EXP["Export<br/><i>CSV · XLSX · PDF · DOCX</i>"]
-    end
-
-    SCH ==> RS
-    CSV ==> RS
-    SYN ==> RS
-    RS ==> AN ==> ST ==> BR
-    RS ==> RE
-    RE ==> API
-    BR ==> API
-    API <==> WEB
-    API ==> EXP
-
-    classDef src  fill:#0b1220,stroke:#38bdf8,stroke-width:2px,color:#e2e8f0
-    classDef core fill:#0b1220,stroke:#a78bfa,stroke-width:2px,color:#e2e8f0
-    classDef ifc  fill:#0b1220,stroke:#2dd4bf,stroke-width:2px,color:#e2e8f0
-    class SCH,CSV,SYN src
-    class RS,AN,ST,BR,RE core
-    class API,WEB,EXP ifc
-```
+<div align="center">
+<img src="docs/assets/architecture.svg" alt="Data sources feed one core engine, which the interfaces read; the engine imports nothing from them" width="100%">
+</div>
 
 **The engine knows nothing about how it is called.** No HTTP, no React, no framework
 inside [`src/`](src) — which is what lets the same analysis run from a test, from the
@@ -433,22 +379,9 @@ API and from a script and give the same answer each time.
 
 How a change actually travels from an idea to the live URL.
 
-```mermaid
-flowchart LR
-    ID["💡 Idea"] ==> RE["🔬 Research<br/><i>measure it</i>"]
-    RE ==> IM["⌨️ Implement<br/><i>+ tests that can fail</i>"]
-    IM ==> VA["✅ Verify<br/><i>1,853 tests · ruff · tsc</i>"]
-    VA ==> BR["📉 Backtest & Replay<br/><i>against real bars</i>"]
-    BR ==> PR["🔀 Pull Request<br/><i>6 CI checks</i>"]
-    PR ==> MG["🎯 Merge"]
-    MG ==> DP["🚀 Deploy<br/><i>SHA asserted</i>"]
-    DP ==> LV["🌐 Live"]
-
-    classDef n fill:#0b1220,stroke:#334155,stroke-width:1px,color:#94a3b8
-    classDef k fill:#0b1220,stroke:#2dd4bf,stroke-width:2px,color:#e2e8f0
-    class ID,RE,IM,BR,PR,MG n
-    class VA,DP,LV k
-```
+<div align="center">
+<img src="docs/assets/workflow.svg" alt="A change travels from idea through research, implementation, verification, backtest, pull request and merge to a deploy whose commit is asserted" width="100%">
+</div>
 
 <table>
 <tr><th width="18%">Stage</th><th>What has to be true to move on</th></tr>
@@ -549,19 +482,9 @@ run without the engine knowing which it holds.
 
 ## ⚙️ Backtesting & Execution
 
-```mermaid
-flowchart LR
-    D["📊 Bars"] ==> S["🧠 Strategy<br/>signal"]
-    S ==> B["💰 Paper Broker"]
-    B ==> F["🎯 Fill<br/><i>+ slippage<br/>+ commission</i>"]
-    F ==> PL["📈 Position & P&L"]
-    PL ==> M["📋 Metrics"]
-
-    classDef n fill:#0b1220,stroke:#334155,stroke-width:1px,color:#94a3b8
-    classDef h fill:#0b1220,stroke:#f59e0b,stroke-width:2px,color:#e2e8f0
-    class D,S,PL,M n
-    class B,F h
-```
+<div align="center">
+<img src="docs/assets/execution.svg" alt="Bars produce a strategy signal, the paper broker fills it with slippage and commission, and the position becomes P&L and metrics" width="100%">
+</div>
 
 - ➜ **Fills are charged, not assumed** — commission per contract, slippage in ticks, prices rounded to the instrument's real increment
 - ➜ **Contract specifications per instrument** — tick size, tick value and point value for ES, NQ, MES, CL and others, so P&L lands in real currency
