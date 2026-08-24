@@ -569,7 +569,7 @@ flowchart LR
 - ➜ **Session-aware** — RTH, Globex (18:00–17:00) or 24-hour, with VWAP anchored to the session open rather than to midnight
 - ➜ **Deterministic** — the same inputs produce the same output every time, which is what makes a rebuilt result comparable to the one it replaced
 
-### One clock, eleven timeframes
+### ◆ One clock, eleven timeframes
 
 The obvious implementation — keep N engines and step them all once per tick — does
 **not** produce a synchronised view. `step()` advances one *bar*, and a bar is a
@@ -909,6 +909,8 @@ py -3.12 -m pytest              # 1,557 Python tests
 cd web && npm test              #   296 web tests
 cd web && npm run build         # tsc -b — the real typecheck
 py -3.12 -m ruff check .        # lint
+
+py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 ```
 
 <div align="center">
@@ -918,8 +920,15 @@ py -3.12 -m ruff check .        # lint
 | 🐍 **Python** | **1,557** | engine, analysis, API, providers, replay |
 | ⚛️ **Web** | **296** | pure logic in [`web/src/lib`](web/src/lib) |
 | **Total** | **1,853** | |
+| 📊 **Coverage** | **77%** | `src/` and `api/`, measured on every push |
 
 </div>
+
+Coverage runs inside the same CI step as the tests and is gated at **70%** — set
+below the current figure on purpose, because a threshold pinned to today's number
+fails on any change that lands a few uncovered lines, and the usual answer to that
+is lowering the threshold. The vendored Schwab client and `legacy/` are excluded,
+the same way [`ruff`](pyproject.toml) and `mypy` already exclude them.
 
 ### ◆ Three kinds of test, three meanings of red
 
@@ -1061,6 +1070,8 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 >
 > Nothing here should be traded with real money without independent validation and your
 > own understanding of the risk.
+
+<br>
 
 ---
 
