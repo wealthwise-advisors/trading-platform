@@ -15,7 +15,7 @@ tape while it does. Built at **WealthWise Advisors**.
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
 [![Tests](https://img.shields.io/badge/tests-1853%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
-[![Coverage](https://img.shields.io/badge/coverage-71%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
+[![Coverage](https://img.shields.io/badge/coverage-77%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](api)
@@ -59,7 +59,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **1,853** | **71%** | **3.12** | **5** |
+| **1,853** | **77%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 [![Commit activity](https://img.shields.io/github/commit-activity/m/wealthwise-advisors/trading-platform?style=flat-square&label=commits%2Fmonth&color=8b5cf6)](../../commits/master)

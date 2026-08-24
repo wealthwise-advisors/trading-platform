@@ -61,10 +61,24 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install -e ".[dev]"
-      # Full suite: engine smoke tests + 29 swing/zigzag regression tests
+      # Full suite: engine smoke tests + the swing/zigzag regression baseline
       # + the Elliott Wave suite, including every TR-2 blocked-rule guard.
       # See docs/ELLIOTT_WAVE_SRS.md TR-11 (D-05).
-      - run: pytest tests/ -v
+      #
+      # Coverage runs here rather than in a job of its own: it needs the same
+      # install and the same full suite, so a second job would pay for both
+      # again to print one number. Reported to the log only -- no file is kept
+      # and nothing is uploaded, so the figure can be read off a run without
+      # this repo depending on a third-party service. What counts as covered
+      # is configured in pyproject.toml's [tool.coverage.run].
+      #
+      # The gate is 70, not the 77.5 the suite currently reaches. A threshold
+      # set at the current number fails on any change that lands a few
+      # uncovered lines, including good ones, and the predictable response to
+      # that is lowering the threshold -- which is worse than not having one.
+      # Seven points of headroom absorbs normal movement and still catches a
+      # real slide.
+      - run: pytest tests/ -v --cov=src --cov=api --cov-report=term --cov-fail-under=70
 
   build:
     name: Package build

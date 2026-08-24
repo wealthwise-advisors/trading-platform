@@ -115,3 +115,27 @@ ignore = ["E741", "E731"]
 python_version = "3.12"
 ignore_missing_imports = true
 exclude = ["src/data/schwabdev"]
+
+[tool.coverage.run]
+# Same exclusion ruff and mypy already make, for the same reason: schwabdev is
+# a vendored third-party client kept as close to upstream as possible, and this
+# project does not test code it has pledged not to modify. It is 340 statements
+# with none exercised, so leaving it in reported 71% where the code this team
+# actually writes sits at 77% -- a number that measured the wrong thing.
+# legacy/ is an archive of retired repositories, never built or deployed.
+omit = [
+    "src/data/schwabdev/*",
+    "legacy/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+# Lines that exist to be unreachable should not count against the total.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]
+skip_covered = false
+precision = 1
