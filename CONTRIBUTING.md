@@ -19,6 +19,14 @@ touches `src/analysis/`, `src/strategies/`, or `src/backtesting/`.
    ruff check .
    mypy src/analysis --ignore-missing-imports   # informational, see docs/RELEASE_AUDIT.md
    ```
+   The `ruff check .` line is also enforced by a pre-commit hook, so it
+   runs whether or not you remember to. Enable it once per clone:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   It runs the same command CI runs, against the same `[tool.ruff]` config
+   in `pyproject.toml`, so the two cannot disagree. `git commit --no-verify`
+   skips it when you need to.
 4. Open a PR with a description of *why*, not just *what* — same
    convention as existing commit messages in this repo.
 

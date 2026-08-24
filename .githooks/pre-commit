@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#
+# Run the same lint CI runs, before the commit exists.
+#
+# CI's "Lint (ruff)" job runs exactly `ruff check .`
+# (.github/workflows/ci.yml). This hook runs the identical command, and the
+# config it obeys -- line-length, ignore list, excludes -- lives in one place,
+# pyproject.toml's [tool.ruff]. So the local check and the CI check cannot
+# drift apart: there is only ever one ruleset.
+#
+# This exists because runs #85-#92 and #100 on master were all ruff failures
+# that a two-second local check would have caught. CONTRIBUTING.md already
+# asked for `ruff check .` by hand; asking was not enough.
+#
+# Enable, once per clone:   git config core.hooksPath .githooks
+# Bypass for one commit:    git commit --no-verify
+#
+set -uo pipefail
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+# Find a ruff. Windows dev boxes here drive Python through the py launcher
+# pinned at 3.12 (3.14 breaks pandas_ta); Linux and macOS normally have ruff
+# straight on PATH.
+if   command -v ruff              >/dev/null 2>&1; then RUFF=(ruff)
+elif py -3.12 -m ruff --version   >/dev/null 2>&1; then RUFF=(py -3.12 -m ruff)
+elif python  -m ruff --version    >/dev/null 2>&1; then RUFF=(python -m ruff)
+elif python3 -m ruff --version    >/dev/null 2>&1; then RUFF=(python3 -m ruff)
+else
+  # Warn but let the commit through. A missing optional tool should not brick
+  # a clone, and CI still runs the check -- so this is never worse than the
+  # status quo, it just stops being better.
+  echo "pre-commit: ruff not found, skipping the local lint check." >&2
+  echo "            install it with:  pip install -e \".[dev]\"" >&2
+  exit 0
+fi
+
+if ! "${RUFF[@]}" check .; then
+  echo "" >&2
+  echo "pre-commit: ruff check . failed, so the commit was aborted." >&2
+  echo "            fix the findings above, or autofix:  ${RUFF[*]} check . --fix" >&2
+  echo "            to commit regardless:                git commit --no-verify" >&2
+  exit 1
+fi

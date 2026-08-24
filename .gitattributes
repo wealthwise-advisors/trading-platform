@@ -8,3 +8,8 @@
 Dockerfile      text eol=lf
 *.conf          text eol=lf
 *.template      text eol=lf
+
+# Git hooks are shell scripts without a .sh extension, so the rule above does
+# not reach them. Same failure, one step earlier: Git Bash would refuse the
+# hook with "bad interpreter: /usr/bin/env bash^M" on any Windows clone.
+.githooks/*     text eol=lf
