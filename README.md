@@ -14,7 +14,7 @@ tape while it does. Built at **WealthWise Advisors**.
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/tests-1771%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Tests](https://img.shields.io/badge/tests-1853%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](api)
@@ -118,7 +118,7 @@ prices rounded to the real increment — a plausible fill, not a closing price.
 ### 🔬
 **Trust the number**
 
-1,771 tests, deterministic runs, one shared bar aggregator, and a deploy that
+1,853 tests, deterministic runs, one shared bar aggregator, and a deploy that
 refuses to succeed unless the server is actually running the commit it claims.
 
 </td>
@@ -352,7 +352,7 @@ How a change actually travels from an idea to the live URL.
 flowchart LR
     ID["💡 Idea"] ==> RE["🔬 Research<br/><i>measure it</i>"]
     RE ==> IM["⌨️ Implement<br/><i>+ tests that can fail</i>"]
-    IM ==> VA["✅ Verify<br/><i>1,771 tests · ruff · tsc</i>"]
+    IM ==> VA["✅ Verify<br/><i>1,853 tests · ruff · tsc</i>"]
     VA ==> BR["📉 Backtest & Replay<br/><i>against real bars</i>"]
     BR ==> PR["🔀 Pull Request<br/><i>6 CI checks</i>"]
     PR ==> MG["🎯 Merge"]
@@ -369,7 +369,7 @@ flowchart LR
 <tr><th width="18%">Stage</th><th>What has to be true to move on</th></tr>
 <tr><td><b>Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
 <tr><td><b>Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
-<tr><td><b>Verify</b></td><td>1,771 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
+<tr><td><b>Verify</b></td><td>1,853 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
 <tr><td><b>Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
 </table>
 
@@ -516,7 +516,7 @@ A React 19 single-page application over the FastAPI backend.
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused
-- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 279 tests run without a browser
+- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 270 tests run without a browser
 
 <br>
 
@@ -806,8 +806,8 @@ frees the ports first and pins the right Python.
 ## 🧪 Testing & Quality
 
 ```bash
-py -3.12 -m pytest              # 1,492 Python tests
-cd web && npm test              #   279 web tests
+py -3.12 -m pytest              # 1,557 Python tests
+cd web && npm test              #   296 web tests
 cd web && npm run build         # tsc -b — the real typecheck
 py -3.12 -m ruff check .        # lint
 ```
@@ -816,9 +816,9 @@ py -3.12 -m ruff check .        # lint
 
 | Suite | Count | Covers |
 |:---|---:|:---|
-| 🐍 **Python** | **1,492** | engine, analysis, API, providers, replay |
-| ⚛️ **Web** | **279** | pure logic in [`web/src/lib`](web/src/lib) |
-| **Total** | **1,771** | |
+| 🐍 **Python** | **1,557** | engine, analysis, API, providers, replay |
+| ⚛️ **Web** | **296** | pure logic in [`web/src/lib`](web/src/lib) |
+| **Total** | **1,853** | |
 
 </div>
 

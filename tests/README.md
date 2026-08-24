@@ -1,6 +1,6 @@
 # 🧪 `tests`
 
-**1,492 tests. What the numbers on screen rest on.**
+**1,557 tests. What the numbers on screen rest on.**
 
 ### What is defended here
 

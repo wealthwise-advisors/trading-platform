@@ -3,7 +3,7 @@
 **Pure logic, unit-tested away from React.**
 
 The decisions live here rather than inside components, so they can be tested without
-a browser, a socket or a timer. Each module has a `.test.ts` beside it — **279 tests**
+a browser, a socket or a timer. Each module has a `.test.ts` beside it — **270 tests**
 across this directory.
 
 ### Why the split matters
