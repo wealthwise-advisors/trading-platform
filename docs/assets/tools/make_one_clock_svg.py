@@ -78,16 +78,36 @@ H = LANE_Y0 + LANE_H * len(LANES) + 54
 # Fast attack, slower decay, dark for the rest -- a bar CLOSING, not breathing.
 # Same envelope the pipeline nodes use, so the two drawings agree about what an
 # event looks like.
-KT = "0;0.06;0.34;1"
-KS = "0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"
+KT = "0;.06;.34;1"
+KS = ".15 0 .1 1;.35 0 .45 1;0 0 1 1"
+
+
+def _n(v) -> str:
+    """Shortest exact spelling of a number for an SVG attribute.
+
+    "0.14" -> ".14", "12.0" -> "12". SVG treats these as identical values, and
+    at 154 animations the leading zeros alone are real bytes. Purely a spelling
+    change: nothing here alters a timing or an opacity.
+    """
+    s = f"{float(v):g}"
+    return s[1:] if s.startswith("0.") else ("-" + s[2:] if s.startswith("-0.") else s)
 
 
 def close_anim(attr: str, lo, hi, begin: float) -> str:
-    """One <animate> for one attribute, on the shared close envelope."""
+    """One <animate> for one attribute, on the shared close envelope.
+
+    Every field except `begin` is identical across all 154 of these, which is
+    ~187 of the ~200 bytes. SMIL offers no way to share them: animation
+    attributes are not inherited, <use> clones share one timeline rather than
+    staggering, and the CSS @keyframes approach that WOULD collapse them is
+    ruled out by the proxy note above. So the count is irreducible and only the
+    spelling can be tightened.
+    """
     return (
-        f'<animate attributeName="{attr}" values="{lo};{hi};{lo};{lo}" '
+        f'<animate attributeName="{attr}" '
+        f'values="{_n(lo)};{_n(hi)};{_n(lo)};{_n(lo)}" '
         f'keyTimes="{KT}" calcMode="spline" keySplines="{KS}" '
-        f'begin="{begin:.2f}s" dur="{CYCLE}s" repeatCount="indefinite"/>'
+        f'begin="{_n(round(begin, 2))}s" dur="{_n(CYCLE)}s" repeatCount="indefinite"/>'
     )
 
 

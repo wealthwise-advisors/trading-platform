@@ -240,7 +240,11 @@ def build() -> str:
         o.append(f'<rect x="{x+13}" y="{CARD_Y+120}" width="{bw}" height="21" rx="6" '
                  f'fill="{accent}" fill-opacity="0.10"/>')
         o.append(f'<text x="{cx:.1f}" y="{CARD_Y+134.5}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="9" letter-spacing="0.2" '
+                 # 10px, not 9. Nine was the smallest text in docs/assets and the
+                 # only value under the 10px floor the other six diagrams keep.
+                 # The longest badge, "Schwab · Rithmic · CSV", measures ~136px
+                 # at 10px inside a 158px chip, so every badge still fits.
+                 f'font-family="{MONO}" font-size="10" letter-spacing="0.2" '
                  f'fill="{accent}">{esc(badge)}</text>')
 
     o.append("</svg>")
