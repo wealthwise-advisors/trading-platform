@@ -62,8 +62,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 | **1,853** | **77%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
-[![Commit activity](https://img.shields.io/github/commit-activity/m/wealthwise-advisors/trading-platform?style=flat-square&label=commits%2Fmonth&color=8b5cf6)](../../commits/master)
-[![Last commit](https://img.shields.io/github/last-commit/wealthwise-advisors/trading-platform?style=flat-square&color=64748b)](../../commits/master)
+<sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
 
 </div>
 
