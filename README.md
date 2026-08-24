@@ -928,16 +928,15 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 ## ⚠️ Disclaimer
 
-**For research and education. Not investment advice.**
-
-Futures trading carries substantial risk of loss and is not suitable for every
-investor. Backtested results are hypothetical: they benefit from hindsight, cannot
-account for every market condition, and **do not predict future performance**.
-
-Nothing here should be traded with real money without independent validation and your
-own understanding of the risk.
-
-<br>
+> [!WARNING]
+> **For research and education. Not investment advice.**
+>
+> Futures trading carries substantial risk of loss and is not suitable for every
+> investor. Backtested results are hypothetical: they benefit from hindsight, cannot
+> account for every market condition, and **do not predict future performance**.
+>
+> Nothing here should be traded with real money without independent validation and your
+> own understanding of the risk.
 
 ---
 
@@ -945,7 +944,7 @@ own understanding of the risk.
 
 Proprietary — © **WealthWise Advisors**. All rights reserved. See [LICENSE](LICENSE).
 
-<br>
+---
 
 <div align="center">
 
@@ -953,7 +952,7 @@ Proprietary — © **WealthWise Advisors**. All rights reserved. See [LICENSE](L
 
 <sub>If a number is on the screen, something in <a href="tests">tests/</a> defends it.</sub>
 
-<br><br>
+<br>
 
 <sub><a href="#-table-of-contents">↑ Back to top</a></sub>
 
