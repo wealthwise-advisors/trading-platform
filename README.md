@@ -15,6 +15,7 @@ tape while it does. Built at **WealthWise Advisors**.
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
 [![Tests](https://img.shields.io/badge/tests-1853%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Coverage](https://img.shields.io/badge/coverage-71%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](api)
@@ -42,14 +43,45 @@ tape while it does. Built at **WealthWise Advisors**.
 
 ---
 
+## 👀 Quick Look
+
+The analysis engine on real ES data — price with swing structure and EMAs, then
+RSI(2), Stochastic and RSI(13) beneath it, all on one shared time axis. Entries,
+exits and every labelled swing are drawn by the same code the backtest scored.
+
+<div align="center">
+<img src="docs/assets/analysis-engine.png" alt="The AutoTrader dashboard: an ES price chart with labelled ZigZag swings, EMA9 and EMA21, long and short entry markers, above RSI(2), Stochastic and RSI(13) panels sharing one time axis" width="100%">
+</div>
+
+<br>
+
+<div align="center">
+
+| | | | |
+|:---:|:---:|:---:|:---:|
+| **1,853** | **71%** | **3.12** | **5** |
+| tests passing | coverage | Python | strategies |
+
+[![Commit activity](https://img.shields.io/github/commit-activity/m/wealthwise-advisors/trading-platform?style=flat-square&label=commits%2Fmonth&color=8b5cf6)](../../commits/master)
+[![Last commit](https://img.shields.io/github/last-commit/wealthwise-advisors/trading-platform?style=flat-square&color=64748b)](../../commits/master)
+
+</div>
+
+<br>
+
+---
+
 ## 📑 Table of Contents
 
 <table>
 <tr><td valign="top" width="33%">
 
 **◆ Understanding it**
+- [Quick Look](#-quick-look)
 - [About the Platform](#-about-the-platform)
+- [Who This Is For](#-who-this-is-for)
 - [Why It Exists](#-why-it-exists)
+- [What Makes It Different](#-what-makes-it-different)
 - [Highlights](#-highlights)
 - [Live Replay](#-live-replay)
 
@@ -134,6 +166,38 @@ refuses to succeed unless the server is actually running the commit it claims.
 
 ---
 
+## 🧭 Who This Is For
+
+<table>
+<tr><td width="50%" valign="top">
+
+**◆ If you trade and want to check an idea**
+
+Start with the [Quickstart](docs/QUICKSTART.md), point it at synthetic data, and
+run a strategy end to end without an account anywhere. Then read
+[Backtesting & Execution](#-backtesting--execution) for what the fills actually cost you.
+
+</td><td width="50%" valign="top">
+
+**◆ If you build software and want to read the engine**
+
+[`src/`](src) is the whole engine and imports nothing from `api/` or `web/` — it
+runs from a test, a script or a server unchanged. [Architecture](docs/ARCHITECTURE.md)
+explains the seams; [`src/analysis/`](src/analysis) is where the market reading lives.
+
+</td></tr>
+</table>
+
+**Three ways in, depending on how much time you have.** Five minutes:
+[Quick Look](#-quick-look) and [Why It Exists](#-why-it-exists) — the four bugs
+that shaped it. An hour: [Quickstart](docs/QUICKSTART.md) and a real backtest. A day:
+[`docs/`](docs) carries the [product requirements](docs/PRD.md), the
+[requirements spec](docs/SRS.md) and the [Elliott Wave rule inventory](docs/ELLIOTT_WAVE_RULES.md).
+
+<br>
+
+---
+
 ## 💡 Why It Exists
 
 A backtest is easy to write and very easy to fool yourself with. Four specific ways —
@@ -184,6 +248,28 @@ which commit it is serving and fails the run unless it matches.*
 
 </td></tr>
 </table>
+
+<br>
+
+---
+
+## 🔀 What Makes It Different
+
+Four claims a research tool can make, and what each one costs to actually mean.
+Every row points at the code that enforces it, because a claim you cannot check
+is a slogan.
+
+| Claim | What it takes to mean it | Enforced in |
+|:---|:---|:---|
+| **A fill you can defend** | Orders fill at the *next* bar's open, plus slippage in ticks, rounded to the instrument's real increment — never the signal bar's close | [`src/broker/paper_broker.py`](src/broker/paper_broker.py) |
+| **One definition of a bar** | A single aggregator, session-anchored, shared by the historical and the live path — so a 5m bar cannot mean two things | [`src/data/resample.py`](src/data/resample.py) |
+| **A number that stays put** | A session grown bar by bar must come out byte-identical to one handed all the data at once | [`tests/`](tests) |
+| **A deploy that cannot lie** | The pipeline asks the running server which commit it is serving and fails unless it matches | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) |
+
+> [!NOTE]
+> None of these are hard to *say*. They are all annoying to *do*, which is why
+> the four bugs above exist — every one of them is a case where the easy version
+> was already shipped and quietly wrong.
 
 <br>
 
@@ -526,6 +612,10 @@ A React 19 single-page application over the FastAPI backend.
 
 FastAPI, with interactive documentation at **`/docs`** while running.
 
+<details>
+<summary><b>Every endpoint</b> — area, method, path and what it is for</summary>
+<br>
+
 | Area | Method | Endpoint | Purpose |
 |---|---|---|---|
 | Replay | `POST` | `/api/replay` | Create a session |
@@ -538,6 +628,8 @@ FastAPI, with interactive documentation at **`/docs`** while running.
 | Export | `GET` | `/api/export/...` | CSV · XLSX · PDF · DOCX |
 | Meta | `GET` | `/api/version` | Build commit — used by the deploy assertion |
 
+</details>
+
 See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 <br>
@@ -545,6 +637,10 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 ---
 
 ## 🛠 Technology Stack
+
+<details>
+<summary><b>Backend, frontend and infrastructure</b> — every dependency that shows on screen</summary>
+<br>
 
 <table>
 <tr><td valign="top" width="33%">
@@ -590,6 +686,9 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 </td></tr>
 </table>
+
+</details>
+
 <br>
 
 ---
@@ -821,6 +920,17 @@ py -3.12 -m ruff check .        # lint
 | **Total** | **1,853** | |
 
 </div>
+
+### ◆ Three kinds of test, three meanings of red
+
+<div align="center">
+<img src="docs/assets/test-topology.svg" alt="The suite splits into three kinds: unit tests where a failure means a mechanism broke, behavioural matrices where a failure means a rule about what you are shown broke, and confirmed baselines where a failure means something already verified has changed" width="100%">
+</div>
+
+The third kind is the one to be careful with. Those expected values were confirmed
+against real backtests and a reference trading platform, so a failure there asks
+*did I mean to change this* — never *update the numbers to match*. Re-baselining
+silently throws away the verification that made them worth keeping.
 
 ### ◆ What the tests defend
 
