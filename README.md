@@ -516,7 +516,7 @@ A React 19 single-page application over the FastAPI backend.
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused
-- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 270 tests run without a browser
+- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 270 of the suite's 296 tests run without a browser
 
 <br>
 
