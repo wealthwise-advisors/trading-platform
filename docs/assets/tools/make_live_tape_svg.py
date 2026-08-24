@@ -677,19 +677,17 @@ def build() -> str:
       f'opacity=".45">')
     a("        " + pulse_b("opacity", 0.28, 0.9, 5 * HOP))
     a("      </circle>")
-    # Three concentric halo rings, the outer two dashed and counter-rotating.
-    for rad, dash, dur, direction, op in ((d + 30, (7, 11), 22.0, 1, 0.20),
-                                          (d + 19, (4, 9), 15.0, -1, 0.30),
-                                          (d + 9, (0, 0), 0, 0, 0.22)):
+    # Three concentric halo rings, the outer two dashed. They used to counter-
+    # rotate at 22s and 15s. The spin was decoration -- it encoded nothing about
+    # the tape -- and rotation is a transform no other diagram in docs/assets
+    # uses. The rings themselves stay; they just no longer turn.
+    for rad, dash, op in ((d + 30, (7, 11), 0.20),
+                          (d + 19, (4, 9), 0.30),
+                          (d + 9, (0, 0), 0.22)):
         if dash[0]:
-            frm, to = (0, 360) if direction > 0 else (360, 0)
             a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{rad}" fill="none" '
               f'stroke="{VIOLET}" stroke-opacity="{op}" stroke-width="1.2" '
-              f'stroke-dasharray="{dash[0]} {dash[1]}">')
-            a(f'        <animateTransform attributeName="transform" type="rotate" '
-              f'from="{frm} {DIAMOND_CX} {FLOW_Y}" to="{to} {DIAMOND_CX} {FLOW_Y}" '
-              f'dur="{dur}s" repeatCount="indefinite"/>')
-            a("      </circle>")
+              f'stroke-dasharray="{dash[0]} {dash[1]}"/>')
         else:
             a(f'      <circle cx="{DIAMOND_CX}" cy="{FLOW_Y}" r="{rad}" fill="none" '
               f'stroke="{VIOLET}" stroke-opacity="{op}" stroke-width="1"/>')
@@ -776,13 +774,15 @@ def build() -> str:
         if gkey == "loading":
             a(f'      <g transform="translate({OUT_X + 38} {cy_:.0f})">')
             a("        <g>")
+            # The eight dots carry a graded opacity that used to read as a
+            # comet trail behind a 3.2s spin. The spin is gone -- it was the
+            # fastest motion in docs/assets and said nothing about the tape --
+            # so the gradient now reads as a fixed light source instead.
             for k in range(8):
                 ang = k * math.pi / 4
                 a(f'          <circle cx="{15 * math.cos(ang):.1f}" '
                   f'cy="{15 * math.sin(ang):.1f}" r="2.5" fill="{col}" '
                   f'opacity="{0.25 + 0.09 * k:.2f}"/>')
-            a('          <animateTransform attributeName="transform" type="rotate" '
-              'from="0 0 0" to="360 0 0" dur="3.2s" repeatCount="indefinite"/>')
             a("        </g>")
             a("      </g>")
             tx0 = OUT_X + 68
