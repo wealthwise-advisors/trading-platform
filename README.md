@@ -914,11 +914,16 @@ every Docker image.
 - ❓ [FAQ](docs/FAQ.md)
 - 🔧 [Troubleshooting](docs/TROUBLESHOOTING.md)
 
+### ◆ What it is meant to do
+- 🎯 [Product Requirements](docs/PRD.md)
+- 📐 [Software Requirements](docs/SRS.md)
+
 </td><td valign="top" width="50%">
 
 ### ◆ Going deeper
 - 🏛 [Architecture](docs/ARCHITECTURE.md)
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
+- 🎨 [UI / UX](docs/UI_UX.md)
 - 🔌 [API Guide](docs/API_GUIDE.md)
 - 🌊 Elliott Wave — [rules](docs/ELLIOTT_WAVE_RULES.md) · [architecture](docs/ELLIOTT_WAVE_ARCHITECTURE.md) · [implementation](docs/ELLIOTT_WAVE_IMPLEMENTATION.md) · [SRS](docs/ELLIOTT_WAVE_SRS.md)
 - 🔒 [Security Audit](docs/SECURITY_AUDIT.md)
