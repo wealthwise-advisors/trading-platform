@@ -772,18 +772,17 @@ def build() -> str:
         a("        " + pulse_b("stroke-opacity", 0.45, 1.0, begin))
         a("      </rect>")
         if gkey == "loading":
+            # Eight dots in a ring. They used to carry a graded 0.25-0.88
+            # opacity, which was a comet trail chasing a 3.2s spin; with the
+            # spin gone the gradient just made one arbitrary dot brightest, so
+            # they are now uniform. The inner <g> went with it -- it existed
+            # only to be the rotation target.
             a(f'      <g transform="translate({OUT_X + 38} {cy_:.0f})">')
-            a("        <g>")
-            # The eight dots carry a graded opacity that used to read as a
-            # comet trail behind a 3.2s spin. The spin is gone -- it was the
-            # fastest motion in docs/assets and said nothing about the tape --
-            # so the gradient now reads as a fixed light source instead.
             for k in range(8):
                 ang = k * math.pi / 4
-                a(f'          <circle cx="{15 * math.cos(ang):.1f}" '
+                a(f'        <circle cx="{15 * math.cos(ang):.1f}" '
                   f'cy="{15 * math.sin(ang):.1f}" r="2.5" fill="{col}" '
-                  f'opacity="{0.25 + 0.09 * k:.2f}"/>')
-            a("        </g>")
+                  f'opacity=".55"/>')
             a("      </g>")
             tx0 = OUT_X + 68
         else:
