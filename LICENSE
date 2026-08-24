@@ -23,8 +23,10 @@ Third-party components used by this project remain under their own
 licenses:
 
 - `src/data/schwabdev/` — Schwab API client library by Tyler Bowers
-  (https://github.com/tylerebowers/Schwab-API-Python), vendored with
-  attribution; see that file's own header for the original source.
+  (https://github.com/tylerebowers/Schwab-API-Python), vendored under the
+  MIT License. The upstream copyright notice and permission text are
+  reproduced verbatim in `src/data/schwabdev/LICENSE.txt` and in the header
+  of each vendored file, as that licence requires.
 - All PyPI dependencies listed in `pyproject.toml` / `requirements.txt`
   remain under their respective upstream licenses (not redistributed as
   part of this Software's source).

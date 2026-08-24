@@ -944,6 +944,8 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 Proprietary — © **WealthWise Advisors**. All rights reserved. See [LICENSE](LICENSE).
 
+<sub>Third-party components keep their own terms — the vendored Schwab client is MIT; see [`src/data/schwabdev/LICENSE.txt`](src/data/schwabdev/LICENSE.txt).</sub>
+
 ---
 
 <div align="center">
