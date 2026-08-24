@@ -12,10 +12,6 @@
       <stop offset="0%"   stop-color="#f43f5e"/>
       <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
-    <filter id="eglow" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
     <pattern id="egrid" width="48" height="48" patternUnits="userSpaceOnUse">
       <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#111e2f" stroke-width="1"/>
     </pattern>
@@ -119,16 +115,23 @@
       <text x="1170" y="220" fill="#f43f5e">C</text></g>
   </g>
 
-  <!-- the pen: a dot riding the front of whichever wave is being drawn -->
-  <g filter="url(#eglow)">
-    <circle r="6" fill="#ffffff" opacity="0">
-      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.03;.84;.88" dur="12s" repeatCount="indefinite"/>
-      <animateMotion dur="12s" repeatCount="indefinite" calcMode="spline"
-        keyPoints="0;.14;.14;.20;.20;.44;.44;.53;.53;.70;.70;.74;.74;.85;.85;.92;.92;1;1"
-        keyTimes="0;.09;.10;.17;.18;.30;.31;.38;.39;.49;.53;.63;.64;.71;.72;.82;.83;.94;1"
-        keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
-        path="M 90 268 L 250 168 L 340 216 L 560 96 L 660 150 L 820 62 L 950 158 L 1040 104 L 1170 196"/>
-    </circle>
+  <!-- The pen: a dot riding the front of whichever wave is being drawn.
+       Its halo is two wider, fainter circles rather than a Gaussian blur.
+       Same emphasis, but no filter region to rasterise, and consistent with
+       the other six diagrams in docs/assets, none of which filter anything.
+       The fade and the motion sit on this <g> so all three circles share one
+       path. Duplicating that keySplines list per circle is how they drift
+       out of sync later. -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.03;.84;.88" dur="12s" repeatCount="indefinite"/>
+    <animateMotion dur="12s" repeatCount="indefinite" calcMode="spline"
+      keyPoints="0;.14;.14;.20;.20;.44;.44;.53;.53;.70;.70;.74;.74;.85;.85;.92;.92;1;1"
+      keyTimes="0;.09;.10;.17;.18;.30;.31;.38;.39;.49;.53;.63;.64;.71;.72;.82;.83;.94;1"
+      keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+      path="M 90 268 L 250 168 L 340 216 L 560 96 L 660 150 L 820 62 L 950 158 L 1040 104 L 1170 196"/>
+    <circle r="14" fill="#ffffff" opacity=".13"/>
+    <circle r="9"  fill="#ffffff" opacity=".22"/>
+    <circle r="6"  fill="#ffffff"/>
   </g>
 
   <!-- ── the rules, checked off as they are satisfied ──────────────────────── -->
