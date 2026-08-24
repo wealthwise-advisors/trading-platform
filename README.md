@@ -27,6 +27,7 @@ tape while it does. Built at **WealthWise Advisors**.
 [![AWS](https://img.shields.io/badge/AWS_EC2-232F3E?style=flat-square&logo=amazonec2&logoColor=white)](.github/workflows/deploy.yml)
 [![Schwab](https://img.shields.io/badge/Schwab-live_data-00a0df?style=flat-square)](src/data/schwab_provider.py)
 [![Ruff](https://img.shields.io/badge/ruff-clean-D7FF64?style=flat-square&logo=ruff&logoColor=black)](pyproject.toml)
+
 [![License](https://img.shields.io/badge/license-proprietary-64748b?style=flat-square)](LICENSE)
 
 </div>
@@ -276,7 +277,7 @@ flowchart LR
 
 **What makes it trustworthy rather than merely live**
 
-| | |
+| Rule | Why |
 |---|---|
 | **Only closed bars** | A bar polled mid-minute is still moving. Showing it puts a number on screen that changes afterwards — so it waits for the close |
 | **Never silent** | The status line always states what is happening: `1 new bar, now at 15:56` · `the newest bar is still forming` · `could not reach the data source`. A quiet screen during an outage looks exactly like a calm market |
@@ -412,6 +413,7 @@ flowchart LR
 </td></tr>
 </table>
 
+> [!IMPORTANT]
 > **`validation` is the module that matters most.** Without it, a pattern search finds
 > a "wave count" in any random walk you hand it.
 
@@ -594,8 +596,13 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 ## 📂 Folder Structure
 
+> [!TIP]
 > **Every name below is a link.** Click a folder to open it, or a file to read
 > it. Each directory also carries its own README explaining what it holds and why.
+
+<details>
+<summary><b>Full directory tree</b> — every file and folder, each name a link</summary>
+<br>
 
 <pre>
 <a href=".">trading-platform</a>
@@ -725,6 +732,8 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
                                 └- - - ▶  <a href=".github/workflows/probe-creds.yml">probe-creds.yml</a>
 </pre>
 
+</details>
+
 <br>
 
 ---
@@ -733,7 +742,7 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 ### ◆ Prerequisites
 
-| | |
+| Requirement | Notes |
 |---|---|
 | 🐍 **Python 3.12** | **Not 3.14** — `pandas_ta` breaks on it and produces a test failure that looks real but is not |
 | 🟢 **Node.js 20+** | For the dashboard |
