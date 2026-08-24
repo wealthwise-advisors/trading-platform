@@ -125,7 +125,7 @@ def build() -> str:
     o.append(f'<rect width="{W}" height="{H}" rx="16" fill="url(#pbg)"/>')
     o.append(f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="16" '
              f'fill="none" stroke="#1e2a44"/>')
-    o.append(f'<text x="{PAD}" y="34" font-family="{MONO}" font-size="10.5" '
+    o.append(f'<text x="{PAD}" y="34" font-family="{MONO}" font-size="14" '
              f'letter-spacing="1.4" fill="{DIM}">EVERY DEPLOY PROVES WHAT IT SERVED</text>')
 
     # ── the five stages ───────────────────────────────────────────────────
@@ -144,11 +144,11 @@ def build() -> str:
                  f'fill="{colour}" fill-opacity="0.12"/>')
         o.append(glyph(key, x + 31, ROW_Y + 37, colour))
         ty = cy + (0 if not l2 else -5)
-        o.append(f'<text x="{x+60}" y="{ty:.1f}" font-family="{FONT}" font-size="12.5" '
+        o.append(f'<text x="{x+60}" y="{ty:.1f}" font-family="{FONT}" font-size="14" '
                  f'font-weight="600" fill="{INK}">{l1}</text>')
         if l2:
             o.append(f'<text x="{x+60}" y="{ty+15:.1f}" font-family="{FONT}" '
-                     f'font-size="11" fill="{DIM}">{l2}</text>')
+                     f'font-size="13" fill="{DIM}">{l2}</text>')
         if i < len(STAGES) - 1:
             ax = x + BOX_W + 4
             o.append(f'<path d="M {ax} {cy:.1f} L {ax+GAP-11} {cy:.1f}" stroke="{DIM}" '
@@ -171,7 +171,7 @@ def build() -> str:
              f'{lit(T_DEC, 0, 0.9, "stroke-opacity")}</path>')
     for k, line in enumerate(("Served commit", "==", "github.sha ?")):
         o.append(f'<text x="{DIA_CX}" y="{dcy-14+k*15:.1f}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="10.5" fill="{INK}">{line}</text>')
+                 f'font-family="{MONO}" font-size="14" fill="{INK}">{line}</text>')
 
     # ── the two exits ─────────────────────────────────────────────────────
     oy_ok = ROW_Y - 12
@@ -186,16 +186,16 @@ def build() -> str:
                  f'stroke="{colour}" stroke-width="1.8" marker-end="url(#{marker})" '
                  f'opacity="0">{lit(t, 0, 0.9)}</path>')
         o.append(f'<text x="{OUT_X-40}" y="{(dcy+mid)/2-6:.1f}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="10" fill="{colour}" opacity="0">'
+                 f'font-family="{MONO}" font-size="12" fill="{colour}" opacity="0">'
                  f'{edge}{lit(t, 0, 1)}</text>')
         o.append(f'<rect x="{OUT_X}" y="{oy}" width="{OUT_W}" height="{OUT_H}" rx="11" '
                  f'fill="{colour}" fill-opacity="0.07" stroke="{colour}" '
                  f'stroke-opacity="0" stroke-width="1.8">{lit(t, 0, 0.85, "stroke-opacity")}</rect>')
         o.append(f'<text x="{OUT_X+18}" y="{mid+4.5:.1f}" font-family="{FONT}" '
-                 f'font-size="12.5" font-weight="600" fill="{colour}" opacity="0.45">'
+                 f'font-size="14" font-weight="600" fill="{colour}" opacity="0.45">'
                  f'{label}{lit(t, 0.45, 1)}</text>')
 
-    o.append(f'<text x="{PAD}" y="{H-16}" font-family="{FONT}" font-size="11.5" '
+    o.append(f'<text x="{PAD}" y="{H-16}" font-family="{FONT}" font-size="13" '
              f'fill="{DIM}">A deploy that quietly leaves the old build running is the '
              f'exact failure the last step exists to catch.</text>')
     o.append("</svg>")

@@ -149,17 +149,17 @@ def build() -> str:
 
     # ── header ────────────────────────────────────────────────────────────
     o.append(
-        f'<text x="{PAD}" y="{HEAD_Y-14}" font-family="{FONT}" font-size="13" '
+        f'<text x="{PAD}" y="{HEAD_Y-14}" font-family="{FONT}" font-size="14.5" '
         f'font-weight="700" letter-spacing="1.6" fill="{INK}">ONE MARKET CLOCK</text>'
     )
     o.append(
-        f'<text x="{PAD}" y="{HEAD_Y+6}" font-family="{FONT}" font-size="12.5" '
+        f'<text x="{PAD}" y="{HEAD_Y+6}" font-family="{FONT}" font-size="14" '
         f'fill="{DIM}">One tick advances market time by a single base bar. '
         f'A pane steps only when its own bar has closed.</text>'
     )
     o.append(
         f'<text x="{W-PAD}" y="{HEAD_Y-14}" text-anchor="end" font-family="{MONO}" '
-        f'font-size="12" letter-spacing="1.2" fill="{DIM}">60 MIN OF MARKET TIME</text>'
+        f'font-size="13.5" letter-spacing="1.2" fill="{DIM}">60 MIN OF MARKET TIME</text>'
     )
 
     # ── lanes ─────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ def build() -> str:
             f'fill="{colour}" fill-opacity="0.10" stroke="{colour}" stroke-opacity="0.34"/>'
         )
         o.append(
-            f'<text x="{PAD+14}" y="{cy+4.5}" font-family="{MONO}" font-size="13" '
+            f'<text x="{PAD+14}" y="{cy+4.5}" font-family="{MONO}" font-size="14.5" '
             f'font-weight="700" fill="{colour}">{label}</text>'
         )
 
@@ -214,7 +214,7 @@ def build() -> str:
         # only chance to read it.
         o.append(
             f'<text x="{W-PAD}" y="{cy+4.5}" text-anchor="end" font-family="{MONO}" '
-            f'font-size="12" font-weight="700" fill="{colour}" opacity="0.42">'
+            f'font-size="13.5" font-weight="700" fill="{colour}" opacity="0.42">'
             f'{closes}×'
             f'<animate attributeName="opacity" values="0.42;0.42;1;0.42" '
             f'keyTimes="0;0.86;0.94;1" begin="0s" dur="{CYCLE}s" '
@@ -240,7 +240,7 @@ def build() -> str:
 
     # ── footnote ──────────────────────────────────────────────────────────
     o.append(
-        f'<text x="{PAD}" y="{H-20}" font-family="{FONT}" font-size="12" fill="{DIM}">'
+        f'<text x="{PAD}" y="{H-20}" font-family="{FONT}" font-size="13.5" fill="{DIM}">'
         f'Every lane reaches the right edge together — that is what "synchronised" '
         f'means here, and it is what stepping each engine once per tick does not give you.'
         f'</text>'

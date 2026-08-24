@@ -114,18 +114,18 @@ def build() -> str:
              f'fill="none" stroke="#1e2a44"/>')
 
     # ── titles ────────────────────────────────────────────────────────────
-    o.append(f'<text x="{PAD}" y="34" font-family="{FONT}" font-size="13" '
+    o.append(f'<text x="{PAD}" y="34" font-family="{FONT}" font-size="14.5" '
              f'font-weight="700" letter-spacing="1.6" fill="{INK}">'
              f'RSI DIVERGENCE — THE SETUP</text>')
     o.append(f'<text x="{W-PAD}" y="34" text-anchor="end" font-family="{MONO}" '
-             f'font-size="11" letter-spacing="1.1" fill="{DIM}">SCHEMATIC</text>')
+             f'font-size="14.5" letter-spacing="1.1" fill="{DIM}">SCHEMATIC</text>')
 
     # ── panel frames ──────────────────────────────────────────────────────
     for y, h, label in ((PRICE_Y, PRICE_H, "PRICE"), (RSI_Y, RSI_H, "RSI(2)")):
         o.append(f'<rect x="{PLOT_X-8}" y="{y-8}" width="{PLOT_W+16}" '
                  f'height="{h+16}" rx="10" fill="#0f1729" stroke="{GRID}"/>')
         o.append(f'<text x="{PLOT_X-2}" y="{y+12}" font-family="{MONO}" '
-                 f'font-size="10.5" letter-spacing="1" fill="{DIM}">{label}</text>')
+                 f'font-size="12.5" letter-spacing="1" fill="{DIM}">{label}</text>')
 
     # RSI oversold guide -- the level the second low does NOT reach
     o.append(f'<line x1="{PLOT_X}" y1="{ry(20):.1f}" x2="{PLOT_X+PLOT_W}" '
@@ -146,7 +146,7 @@ def build() -> str:
                      f'stroke="{DOWN if series is PRICE else ARM}" '
                      f'stroke-width="2.2" opacity="0">{fade(t)}</circle>')
         o.append(f'<text x="{px(bar):.1f}" y="{py(PRICE[bar])+26:.1f}" '
-                 f'text-anchor="middle" font-family="{MONO}" font-size="10.5" '
+                 f'text-anchor="middle" font-family="{MONO}" font-size="12.5" '
                  f'fill="{DIM}" opacity="0">low {idx+1}{fade(t)}</text>')
 
     # ── step 2 · the divergence, two lines opening against each other ─────
@@ -163,11 +163,11 @@ def build() -> str:
     p_mid = (py(PRICE[LOW_1]) + py(PRICE[LOW_2])) / 2
     r_mid = (ry(RSI[LOW_1]) + ry(RSI[LOW_2])) / 2
     o.append(f'<text x="{px(mid):.1f}" y="{p_mid+15:.1f}" '
-             f'text-anchor="middle" font-family="{FONT}" font-size="11.5" '
+             f'text-anchor="middle" font-family="{FONT}" font-size="14.5" '
              f'font-weight="600" fill="{DOWN}" opacity="0">'
              f'price: lower low{fade(T_DIV)}</text>')
     o.append(f'<text x="{px(mid):.1f}" y="{r_mid-9:.1f}" '
-             f'text-anchor="middle" font-family="{FONT}" font-size="11.5" '
+             f'text-anchor="middle" font-family="{FONT}" font-size="14.5" '
              f'font-weight="600" fill="{UP}" opacity="0">'
              f'RSI: higher low{fade(T_DIV)}</text>')
 
@@ -180,7 +180,7 @@ def build() -> str:
              f'rx="5" fill="{ARM}" fill-opacity="0.16" stroke="{ARM}" '
              f'stroke-opacity="0.5" opacity="0">{fade(T_ARM)}</rect>')
     o.append(f'<text x="{px(LOW_2):.1f}" y="{PRICE_Y-10}" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="10" font-weight="700" fill="{ARM}" '
+             f'font-family="{MONO}" font-size="12" font-weight="700" fill="{ARM}" '
              f'opacity="0">ARMED{fade(T_ARM)}</text>')
 
     o.append(f'<line x1="{px(LOW_2):.1f}" y1="{trig_y:.1f}" '
@@ -189,7 +189,7 @@ def build() -> str:
     # Anchored at the LEFT end of the line and inside the panel; anchored right
     # it ran past the plot edge and into the rule list.
     o.append(f'<text x="{px(LOW_2)+8:.1f}" y="{trig_y-7:.1f}" '
-             f'font-family="{MONO}" font-size="10" fill="{TRIG}" opacity="0">'
+             f'font-family="{MONO}" font-size="12" fill="{TRIG}" opacity="0">'
              f'trigger — high of the divergence bar{fade(T_ARM)}</text>')
 
     # ── step 4 · the entry ────────────────────────────────────────────────
@@ -199,7 +199,7 @@ def build() -> str:
     o.append(f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="7" fill="none" stroke="{UP}" '
              f'stroke-width="2.4" opacity="0">{fade(T_ENTRY)}</circle>')
     o.append(f'<text x="{ex:.1f}" y="{ey-14:.1f}" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="11" font-weight="700" fill="{UP}" '
+             f'font-family="{MONO}" font-size="14.5" font-weight="700" fill="{UP}" '
              f'opacity="0">BUY{fade(T_ENTRY)}</text>')
 
     # ── the rule, in order, down the right edge ───────────────────────────
@@ -216,11 +216,11 @@ def build() -> str:
                  f'<circle cx="{lx+9}" cy="{y-4}" r="9" fill="{colour}" '
                  f'fill-opacity="0.16" stroke="{colour}" stroke-opacity="0.55"/>'
                  f'<text x="{lx+9}" y="{y}" text-anchor="middle" font-family="{MONO}" '
-                 f'font-size="10" font-weight="700" fill="{colour}">{num}</text>'
-                 f'<text x="{lx+26}" y="{y}" font-family="{FONT}" font-size="11.5" '
+                 f'font-size="12" font-weight="700" fill="{colour}">{num}</text>'
+                 f'<text x="{lx+26}" y="{y}" font-family="{FONT}" font-size="14.5" '
                  f'fill="{INK}">{text}</text></g>')
 
-    o.append(f'<text x="{PAD}" y="{H-14}" font-family="{FONT}" font-size="11.5" '
+    o.append(f'<text x="{PAD}" y="{H-14}" font-family="{FONT}" font-size="14.5" '
              f'fill="{DIM}">The divergence only ARMS the setup. Several bars can pass '
              f'before the trigger is taken — which is why every timeframe needs its '
              f'own strategy instance.</text>')

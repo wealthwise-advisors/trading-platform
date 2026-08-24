@@ -353,7 +353,7 @@ def build() -> str:
     for p in glyph("dish", CYAN):
         a("      " + p)
     a("    </g>")
-    a(f'    <text x="{x + 72}" y="{y + 46}" font-family="{FONT}" font-size="21" '
+    a(f'    <text x="{x + 72}" y="{y + 46}" font-family="{FONT}" font-size="23" '
       f'font-weight="700" fill="{INK}">Live Replay</text>')
     a(f'    <line x1="{x + 22}" y1="{y + 68}" x2="{x + w - 22}" y2="{y + 68}" '
       f'stroke="#ffffff" stroke-opacity=".08" stroke-width="1"/>')
@@ -365,9 +365,9 @@ def build() -> str:
       'repeatCount="indefinite"/>')
     a("    </circle>")
     a(f'    <circle cx="{x + 34}" cy="{sy}" r="4.2" fill="{GREEN}"/>')
-    a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="12.5" '
+    a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="14" '
       f'font-weight="700" letter-spacing="1.1" fill="{GREEN}">FOLLOWING LIVE</text>')
-    a(f'    <text x="{x + 186}" y="{sy + 4.6}" font-family="{FONT}" font-size="12.5" '
+    a(f'    <text x="{x + 186}" y="{sy + 4.6}" font-family="{FONT}" font-size="14" '
       f'fill="{DIM}">new bars arrive on their own — no reload, no clicking</text>')
 
     # ── deviation bands (dashed) and VWAP ──
@@ -441,7 +441,7 @@ def build() -> str:
     lastx = cs[-1][0]
     lasty = min(cs[-1][1], cs[-1][2]) - 16
     a(f'    <text x="{lastx:.1f}" y="{lasty:.1f}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="10.5" font-weight="600" letter-spacing=".4" '
+      f'font-family="{FONT}" font-size="14" font-weight="600" letter-spacing=".4" '
       f'fill="{GREEN}">forming</text>')
     a(f'    <line x1="{PLOT_L - 6}" y1="{PLOT_B + 16}" x2="{PLOT_R + 6}" '
       f'y2="{PLOT_B + 16}" stroke="#ffffff" stroke-opacity=".10" stroke-width="1"/>')
@@ -456,7 +456,7 @@ def build() -> str:
     for p in glyph("pulse", CYAN):
         a("      " + p)
     a("    </g>")
-    a(f'    <text x="{x + 62}" y="{cy_pill + 4.4}" font-family="{FONT}" font-size="12.5" '
+    a(f'    <text x="{x + 62}" y="{cy_pill + 4.4}" font-family="{FONT}" font-size="14" '
       f'fill="{INK}" fill-opacity=".92">the newest bar is still forming '
       f'(1 withheld)</text>')
     a("  </g>")
@@ -646,11 +646,11 @@ def build() -> str:
 
         ty = top + 82
         a(f'      <text x="{ccx:.1f}" y="{ty}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="12.8" font-weight="600" '
+          f'font-family="{FONT}" font-size="16" font-weight="600" '
           f'fill="{INK}">{esc(t1)}</text>')
         if t2:
             a(f'      <text x="{ccx:.1f}" y="{ty + 16}" text-anchor="middle" '
-              f'font-family="{FONT}" font-size="11" font-style="italic" '
+              f'font-family="{FONT}" font-size="13" font-style="italic" '
               f'fill="{accent}">{esc(t2)}</text>')
 
         # Status light and the pool it throws on the floor. This is the detail
@@ -720,10 +720,10 @@ def build() -> str:
         a("        " + p)
     a("      </g>")
     a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 8}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="12.6" font-weight="600" fill="{INK}">New '
+      f'font-family="{FONT}" font-size="14" font-weight="600" fill="{INK}">New '
       f'closed</text>')
     a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 24}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="12.6" font-weight="600" fill="{INK}">bar?</text>')
+      f'font-family="{FONT}" font-size="14" font-weight="600" fill="{INK}">bar?</text>')
     a("    </g>")
 
     # ── the two branches ───────────────────────────────────────────────────
@@ -746,7 +746,7 @@ def build() -> str:
         a(f'    <rect x="{chip_cx - cw / 2:.1f}" y="{cyb - 13}" width="{cw}" height="26" '
           f'rx="7" fill="#0a1220" stroke="{col}" stroke-opacity=".85"/>')
         a(f'    <text x="{chip_cx:.1f}" y="{cyb + 4.6}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="11.4" font-weight="700" letter-spacing=".6" '
+          f'font-family="{FONT}" font-size="13" font-weight="700" letter-spacing=".6" '
           f'fill="{col}">{lbl}</text>')
         a(f'    <circle cx="{bx + 4}" cy="{FLOW_Y}" r="2.9" fill="{col}">')
         for attr, frm, to in (("cx", bx + 4, OUT_X - 12), ("cy", FLOW_Y, cyb)):
@@ -792,11 +792,11 @@ def build() -> str:
             a("      </g>")
             tx0 = OUT_X + 64
         a(f'      <text x="{tx0}" y="{cy_ + (5 if not sub else -3):.0f}" '
-          f'font-family="{FONT}" font-size="14.5" font-weight="700" '
+          f'font-family="{FONT}" font-size="16" font-weight="700" '
           f'fill="{INK}">{esc(title)}</text>')
         if sub:
             a(f'      <text x="{tx0}" y="{cy_ + 16:.0f}" font-family="{FONT}" '
-              f'font-size="11.5" fill="{DIM}">{esc(sub)}</text>')
+              f'font-size="13" fill="{DIM}">{esc(sub)}</text>')
         dcx = OUT_X + OUT_W / 2
         dy = top_ + OUT_H + 13
         a(f'      <circle cx="{dcx:.0f}" cy="{dy:.0f}" r="6.4" fill="{col}" '
@@ -834,7 +834,7 @@ def build() -> str:
         a(f'    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="{VIOLET}" fill-opacity=".55" '
           f'transform="translate({axp:.0f} {ret_y:.0f}) rotate(180)"/>')
     a(f'    <text x="{(OUT_X + OUT_W / 2 + poll_cx) / 2:.0f}" y="{ret_y - 10:.0f}" '
-      f'text-anchor="middle" font-family="{FONT}" font-size="11" fill="{VIOLET}" '
+      f'text-anchor="middle" font-family="{FONT}" font-size="13" fill="{VIOLET}" '
       f'fill-opacity=".8">poll again — the tape does not move</text>')
     a("  </g>")
 

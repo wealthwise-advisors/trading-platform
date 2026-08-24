@@ -113,13 +113,13 @@ def build() -> str:
     o.append(f'<rect x="{PAD}" y="{BAR_Y}" width="{bar_w}" height="{BAR_H}" '
              f'rx="10" fill="#0b1220" stroke="{LINE}"/>')
     o.append(f'<text x="{PAD + 18}" y="{BAR_Y + 29}" font-family="{FONT}" '
-             f'font-size="13.5" font-weight="700" fill="{INK}">'
+             f'font-size="15" font-weight="700" fill="{INK}">'
              f'The suite</text>')
     o.append(f'<text x="{PAD + 96}" y="{BAR_Y + 29}" font-family="{MONO}" '
-             f'font-size="12" fill="{DIM}">'
+             f'font-size="13.5" fill="{DIM}">'
              f'1,853 passing &#183; 1,557 Python &#183; 296 web</text>')
     o.append(f'<text x="{W - PAD - 18}" y="{BAR_Y + 29}" text-anchor="end" '
-             f'font-family="{MONO}" font-size="11" letter-spacing="0.6" '
+             f'font-family="{MONO}" font-size="13" letter-spacing="0.6" '
              f'fill="#4d6280">THREE KINDS</text>')
 
     # ── cards ─────────────────────────────────────────────────────────────
@@ -159,9 +159,9 @@ def build() -> str:
 
         ty = CARD_Y + 32
         o.append(f'<text x="{x + 18}" y="{ty}" font-family="{FONT}" '
-                 f'font-size="14" font-weight="700" fill="{INK}">{esc(title)}</text>')
+                 f'font-size="15.5" font-weight="700" fill="{INK}">{esc(title)}</text>')
         o.append(f'<text x="{x + 18}" y="{ty + 19}" font-family="{FONT}" '
-                 f'font-size="11.5" fill="{DIM}">{esc(sub)}</text>')
+                 f'font-size="13" fill="{DIM}">{esc(sub)}</text>')
 
         # representative files, each with its real collected count
         fy = ty + 46
@@ -169,9 +169,9 @@ def build() -> str:
             o.append(f'<rect x="{x + 18}" y="{fy - 11}" width="{CARD_W - 36}" '
                      f'height="20" rx="5" fill="{accent}" fill-opacity="0.07"/>')
             o.append(f'<text x="{x + 25}" y="{fy + 3.5}" font-family="{MONO}" '
-                     f'font-size="10.5" fill="{accent}">{esc(fname)}</text>')
+                     f'font-size="12.5" fill="{accent}">{esc(fname)}</text>')
             o.append(f'<text x="{x + CARD_W - 25}" y="{fy + 3.5}" text-anchor="end" '
-                     f'font-family="{MONO}" font-size="10.5" fill="{DIM}">{count}</text>')
+                     f'font-family="{MONO}" font-size="12.5" fill="{DIM}">{count}</text>')
             fy += 25
 
         # what a failure here means
@@ -179,10 +179,10 @@ def build() -> str:
         o.append(f'<line x1="{x + 18}" y1="{my - 20}" x2="{x + CARD_W - 18}" '
                  f'y2="{my - 20}" stroke="{LINE}"/>')
         o.append(f'<text x="{x + 18}" y="{my - 4}" font-family="{MONO}" '
-                 f'font-size="9.5" letter-spacing="0.5" fill="#4d6280">'
+                 f'font-size="11.5" letter-spacing="0.5" fill="#4d6280">'
                  f'A FAILURE MEANS</text>')
         o.append(f'<text x="{x + 18}" y="{my + 13}" font-family="{FONT}" '
-                 f'font-size="11.5" fill="{INK}">{esc(meaning)}</text>')
+                 f'font-size="13" fill="{INK}">{esc(meaning)}</text>')
 
     o.append("</svg>")
     return "\n".join(o) + "\n"

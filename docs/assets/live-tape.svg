@@ -69,14 +69,14 @@
       <path d="M7.3 7.3a6.6 6.6 0 0 0 0 9.4M16.7 7.3a6.6 6.6 0 0 1 0 9.4" fill="none" stroke="#22d3ee" stroke-width="1.9" stroke-linecap="round" opacity=".85"/>
       <path d="M4 4a11.3 11.3 0 0 0 0 16M20 4a11.3 11.3 0 0 1 0 16" fill="none" stroke="#22d3ee" stroke-width="1.9" stroke-linecap="round" opacity=".5"/>
     </g>
-    <text x="88" y="62" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="21" font-weight="700" fill="#e8f2ff">Live Replay</text>
+    <text x="88" y="62" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#e8f2ff">Live Replay</text>
     <line x1="38" y1="84" x2="1242" y2="84" stroke="#ffffff" stroke-opacity=".08" stroke-width="1"/>
     <circle cx="50" cy="106" r="9" fill="url(#gGreen)">
       <animate attributeName="opacity" values=".35;1;.35" dur="2.4s" repeatCount="indefinite"/>
     </circle>
     <circle cx="50" cy="106" r="4.2" fill="#22c55e"/>
-    <text x="66" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" font-weight="700" letter-spacing="1.1" fill="#22c55e">FOLLOWING LIVE</text>
-    <text x="202" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#8ea3bd">new bars arrive on their own — no reload, no clicking</text>
+    <text x="66" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#22c55e">FOLLOWING LIVE</text>
+    <text x="202" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="#8ea3bd">new bars arrive on their own — no reload, no clicking</text>
     <polyline points="97.2,200.5 139.8,199.2 182.2,199.3 224.8,198.2 267.2,197.1 309.8,195.1 352.2,192.4 394.8,188.7 437.2,184.5 479.8,180.4 522.2,177.7 564.8,175.0 607.2,172.3 649.8,170.0 692.2,166.3 734.8,162.7 777.2,158.3 819.8,155.7 862.2,151.3 904.8,148.7 947.2,147.2 989.8,144.7 1032.2,142.2 1074.8,137.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,292.5 139.8,291.2 182.2,291.3 224.8,290.2 267.2,289.1 309.8,287.1 352.2,284.4 394.8,280.7 437.2,276.5 479.8,272.4 522.2,269.7 564.8,267.0 607.2,264.3 649.8,262.0 692.2,258.3 734.8,254.7 777.2,250.3 819.8,247.7 862.2,243.3 904.8,240.7 947.2,239.2 989.8,236.7 1032.2,234.2 1074.8,229.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,246.5 139.8,245.2 182.2,245.3 224.8,244.2 267.2,243.1 309.8,241.1 352.2,238.4 394.8,234.7 437.2,230.5 479.8,226.4 522.2,223.7 564.8,221.0 607.2,218.3 649.8,216.0 692.2,212.3 734.8,208.7 777.2,204.3 819.8,201.7 862.2,197.3 904.8,194.7 947.2,193.2 989.8,190.7 1032.2,188.2 1074.8,183.7" fill="none" stroke="#c084fc" stroke-opacity=".16" stroke-width="7" stroke-linecap="round"/>
@@ -166,14 +166,14 @@
     <text x="1112" y="141.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" fill="#c084fc">+2σ</text>
     <text x="1112" y="187.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" font-weight="700" fill="#c084fc">VWAP</text>
     <text x="1112" y="233.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" fill="#c084fc">−2σ</text>
-    <text x="1074.8" y="147.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10.5" font-weight="600" letter-spacing=".4" fill="#22c55e">forming</text>
+    <text x="1074.8" y="147.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" letter-spacing=".4" fill="#22c55e">forming</text>
     <line x1="70" y1="306" x2="1102" y2="306" stroke="#ffffff" stroke-opacity=".10" stroke-width="1"/>
     <rect x="38" y="307" width="322" height="34" rx="17" fill="url(#card)" stroke="#22d3ee" stroke-opacity=".34"/>
     <circle cx="59" cy="324" r="11" fill="#22d3ee" fill-opacity=".14"/>
     <g transform="translate(49 314) scale(.83)">
       <path d="M2.8 12h4l2.4-6 3.4 12 2.6-6h5.8" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.5" fill="#e8f2ff" fill-opacity=".92">the newest bar is still forming (1 withheld)</text>
+    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="#e8f2ff" fill-opacity=".92">the newest bar is still forming (1 withheld)</text>
   </g>
   <g>
     <rect x="16" y="372" width="1248" height="352" rx="18" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".075"/>
@@ -370,7 +370,7 @@
         <path d="M8.1 9.5 12 13.4 15.9 9.5" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M4.8 16.2v2.9a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.9" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round"/>
       </g>
-      <text x="94.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.8" font-weight="600" fill="#e8f2ff">Load Data</text>
+      <text x="94.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Load Data</text>
       <circle cx="94.0" cy="610.0" r="7" fill="#22d3ee" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -395,7 +395,7 @@
       <g transform="translate(211.0 504.0) scale(1.4167)">
         <path d="M8.4 5.2 19 12 8.4 18.8z" fill="#3b82f6"/>
       </g>
-      <text x="228.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.8" font-weight="600" fill="#e8f2ff">Play</text>
+      <text x="228.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Play</text>
       <circle cx="228.0" cy="610.0" r="7" fill="#3b82f6" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.40s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -423,8 +423,8 @@
         <circle cx="10.6" cy="11.6" r="1.5" fill="#38bdf8"/>
         <circle cx="19" cy="7.4" r="1.8" fill="#38bdf8"/>
       </g>
-      <text x="362.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.8" font-weight="600" fill="#e8f2ff">Live edge</text>
-      <text x="362.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" font-style="italic" fill="#38bdf8">reached</text>
+      <text x="362.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Live edge</text>
+      <text x="362.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-style="italic" fill="#38bdf8">reached</text>
       <circle cx="362.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.80s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -450,8 +450,8 @@
         <path d="M20 12a8 8 0 1 1-2.4-5.7" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round"/>
         <path d="M20 3.6V8h-4.4" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="496.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.8" font-weight="600" fill="#e8f2ff">Follow live</text>
-      <text x="496.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" font-style="italic" fill="#22c55e">starts by itself</text>
+      <text x="496.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Follow live</text>
+      <text x="496.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-style="italic" fill="#22c55e">starts by itself</text>
       <circle cx="496.0" cy="610.0" r="7" fill="#22c55e" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="1.20s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -477,7 +477,7 @@
         <circle cx="12" cy="12" r="8.6" fill="none" stroke="#38bdf8" stroke-width="2"/>
         <path d="M12 7.2V12l3.4 2.1" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="630.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.8" font-weight="600" fill="#e8f2ff">Poll every 15s</text>
+      <text x="630.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Poll every 15s</text>
       <circle cx="630.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="1.60s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -514,14 +514,14 @@
         <rect x="6.6" y="6.6" width="4.8" height="10.8" rx="1.1" fill="none" stroke="#e9d5ff" stroke-width="1.8"/>
         <rect x="13" y="8.6" width="4.8" height="10.4" rx="1.1" fill="none" stroke="#e9d5ff" stroke-width="1.8"/>
       </g>
-      <text x="800" y="548" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.6" font-weight="600" fill="#e8f2ff">New closed</text>
-      <text x="800" y="564" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12.6" font-weight="600" fill="#e8f2ff">bar?</text>
+      <text x="800" y="548" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" fill="#e8f2ff">New closed</text>
+      <text x="800" y="564" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" fill="#e8f2ff">bar?</text>
     </g>
     <path d="M870 540 L890 540 L890 478 L952 478" fill="none" stroke="#22c55e" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
     <path d="M870 540 L890 540 L890 478 L952 478" fill="none" stroke="#22c55e" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arGreen)"/>
     <rect x="903.0" y="462" width="46" height="32" rx="9" fill="none" stroke="#22c55e" stroke-opacity=".18"/>
     <rect x="906.0" y="465" width="40" height="26" rx="7" fill="#0a1220" stroke="#22c55e" stroke-opacity=".85"/>
-    <text x="926.0" y="482.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.4" font-weight="700" letter-spacing=".6" fill="#22c55e">YES</text>
+    <text x="926.0" y="482.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".6" fill="#22c55e">YES</text>
     <circle cx="870" cy="540" r="2.9" fill="#22c55e">
       <animate attributeName="cx" from="870" to="950" dur="1.25s" begin="2.00s" repeatCount="indefinite"/>
       <animate attributeName="cy" from="540" to="478" dur="1.25s" begin="2.00s" repeatCount="indefinite"/>
@@ -530,7 +530,7 @@
     <path d="M870 540 L890 540 L890 606 L952 606" fill="none" stroke="#ec4899" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arPink)"/>
     <rect x="907.0" y="590" width="38" height="32" rx="9" fill="none" stroke="#ec4899" stroke-opacity=".18"/>
     <rect x="910.0" y="593" width="32" height="26" rx="7" fill="#0a1220" stroke="#ec4899" stroke-opacity=".85"/>
-    <text x="926.0" y="610.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.4" font-weight="700" letter-spacing=".6" fill="#ec4899">NO</text>
+    <text x="926.0" y="610.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".6" fill="#ec4899">NO</text>
     <circle cx="870" cy="540" r="2.9" fill="#ec4899">
       <animate attributeName="cx" from="870" to="950" dur="1.25s" begin="2.60s" repeatCount="indefinite"/>
       <animate attributeName="cy" from="540" to="606" dur="1.25s" begin="2.60s" repeatCount="indefinite"/>
@@ -549,8 +549,8 @@
         <rect x="10.15" y="9.4" width="3.7" height="10.4" rx="1.1" fill="#22c55e"/>
         <rect x="15.9" y="5" width="3.7" height="14.8" rx="1.1" fill="#22c55e"/>
       </g>
-      <text x="1026" y="475" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#e8f2ff">Tape advances</text>
-      <text x="1026" y="494" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#8ea3bd">VWAP · bands · signals</text>
+      <text x="1026" y="475" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#e8f2ff">Tape advances</text>
+      <text x="1026" y="494" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#8ea3bd">VWAP · bands · signals</text>
       <circle cx="1101" cy="530" r="6.4" fill="#22c55e" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="2.30s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -578,7 +578,7 @@
         <circle cx="-0.0" cy="-15.0" r="2.5" fill="#ec4899" opacity=".55"/>
         <circle cx="10.6" cy="-10.6" r="2.5" fill="#ec4899" opacity=".55"/>
       </g>
-      <text x="1030" y="611" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#e8f2ff">Still forming…</text>
+      <text x="1030" y="611" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#e8f2ff">Still forming…</text>
       <circle cx="1101" cy="658" r="6.4" fill="#ec4899" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="2.90s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
@@ -594,6 +594,6 @@
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(983 691) rotate(180)"/>
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(866 691) rotate(180)"/>
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(748 691) rotate(180)"/>
-    <text x="866" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#a855f7" fill-opacity=".8">poll again — the tape does not move</text>
+    <text x="866" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#a855f7" fill-opacity=".8">poll again — the tape does not move</text>
   </g>
 </svg>
