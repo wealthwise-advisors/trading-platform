@@ -258,12 +258,48 @@ Four claims a research tool can make, and what each one costs to actually mean.
 Every row points at the code that enforces it, because a claim you cannot check
 is a slogan.
 
-| Claim | What it takes to mean it | Enforced in |
-|:---|:---|:---|
-| **A fill you can defend** | Orders fill at the *next* bar's open, plus slippage in ticks, rounded to the instrument's real increment — never the signal bar's close | [`src/broker/paper_broker.py`](src/broker/paper_broker.py) |
-| **One definition of a bar** | A single aggregator, session-anchored, shared by the historical and the live path — so a 5m bar cannot mean two things | [`src/data/resample.py`](src/data/resample.py) |
-| **A number that stays put** | A session grown bar by bar must come out byte-identical to one handed all the data at once | [`tests/`](tests) |
-| **A deploy that cannot lie** | The pipeline asks the running server which commit it is serving and fails unless it matches | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) |
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🧾 A fill you can defend
+Orders fill at the *next* bar's open, plus slippage in ticks, rounded to the
+instrument's real increment — never the signal bar's close
+
+[![Enforced in src/broker/paper_broker.py](https://img.shields.io/badge/enforced_in-src%2Fbroker%2Fpaper__broker.py-f97316?style=flat-square&labelColor=1e293b)](src/broker/paper_broker.py)
+
+</td>
+<td width="50%" valign="top">
+
+### 📐 One definition of a bar
+A single aggregator, session-anchored, shared by the historical and the live
+path — so a 5m bar cannot mean two things
+
+[![Enforced in src/data/resample.py](https://img.shields.io/badge/enforced_in-src%2Fdata%2Fresample.py-2dd4bf?style=flat-square&labelColor=1e293b)](src/data/resample.py)
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### ♻️ A number that stays put
+A session grown bar by bar must come out byte-identical to one handed all the
+data at once
+
+[![Enforced in tests](https://img.shields.io/badge/enforced_in-tests%2F-22c55e?style=flat-square&labelColor=1e293b)](tests)
+
+</td>
+<td width="50%" valign="top">
+
+### 🚀 A deploy that cannot lie
+The pipeline asks the running server which commit it is serving and fails unless
+it matches
+
+[![Enforced in .github/workflows/deploy.yml](https://img.shields.io/badge/enforced_in-.github%2Fworkflows%2Fdeploy.yml-3b82f6?style=flat-square&labelColor=1e293b)](.github/workflows/deploy.yml)
+
+</td>
+</tr>
+</table>
 
 > [!NOTE]
 > None of these are hard to *say*. They are all annoying to *do*, which is why
