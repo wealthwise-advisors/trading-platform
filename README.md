@@ -1073,6 +1073,8 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 > investor. Backtested results are hypothetical: they benefit from hindsight, cannot
 > account for every market condition, and **do not predict future performance**.
 >
+> **Live data is production-ready; live execution is deliberately experimental and unwired.**
+>
 > Nothing here should be traded with real money without independent validation and your
 > own understanding of the risk.
 
