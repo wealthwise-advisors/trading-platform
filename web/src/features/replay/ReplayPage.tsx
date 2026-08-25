@@ -2328,21 +2328,25 @@ export function ReplayPage() {
             </Card>
 
             <Card className="p-0 border border-white/6 overflow-hidden">
+              {/* The count moved into the header's right slot. It had a row of
+                  its own holding one short phrase, which cost a full band of
+                  vertical space on every screen to say something that belongs
+                  beside the title anyway. */}
               <SectionHeader
                 title="Consolidated tape — newest first"
                 live={status === "playing"}
+                right={
+                  <span className="text-xs text-muted-foreground font-normal tabular-nums">
+                    {jumpedRows
+                      ? (jumpedRows.length === 1
+                          ? "one bar"
+                          : `${jumpedRows.length} timeframes at one moment`)
+                      : shownTape.length === 0
+                        ? "no bars yet"
+                        : `newest ${Math.min(TAPE_WINDOW, shownTape.length)} of ${shownTape.length.toLocaleString()} bars`}
+                  </span>
+                }
               />
-              <div className="px-4 py-2 text-sm border-b border-white/8 flex justify-end">
-                <span className="text-xs text-muted-foreground font-normal">
-                  {jumpedRows
-                    ? (jumpedRows.length === 1
-                        ? "one bar"
-                        : `${jumpedRows.length} timeframes at one moment`)
-                    : shownTape.length === 0
-                      ? "no bars yet"
-                      : `newest ${Math.min(TAPE_WINDOW, shownTape.length)} of ${shownTape.length.toLocaleString()} bars`}
-                </span>
-              </div>
 
               {/* Reaching an earlier bar used to mean pausing playback on exactly
                   the right tick, which at 0.1s per tick nobody can do. Jump goes
@@ -2352,9 +2356,9 @@ export function ReplayPage() {
                   deliberately no paging here: three navigation buttons for a
                   table mostly read at its newest end were more to understand
                   than they were worth. */}
-              <div className="flex flex-wrap items-end gap-2 px-3 py-2 border-b border-white/6">
+              <div className="tape-bar">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Jump to date</Label>
+                  <span className="tape-bar-lbl">Jump to date</span>
                   {/* min/max: a bare date input accepts any year the spec allows,
                       so a stray keystroke turned 2026 into 82026 and the jump
                       dutifully looked for a bar eighty thousand years out. The
@@ -2371,9 +2375,7 @@ export function ReplayPage() {
                 <div className="space-y-1">
                   {/* Says which end of the bar it means. "Time" alone was read as
                       the close by the code and as the open by everyone using it. */}
-                  <Label className="text-xs text-muted-foreground">
-                    Bar opened at
-                  </Label>
+                  <span className="tape-bar-lbl">Bar opened at</span>
                   <TimeField value={jumpTime} onChange={setJumpTime} label="Jump time" />
                 </div>
 
@@ -2385,20 +2387,32 @@ export function ReplayPage() {
                     same toggles and the same handler, put where the question is
                     asked. Ticking one that is not loaded adds it and backfills
                     it, exactly as it does above. */}
+                <Button size="sm" onClick={jumpToTime} disabled={shownTape.length === 0}
+                        className="tape-jump"
+                        title={shownTape.length === 0
+                          ? "No bars yet. Press ▶ Play and let the replay run past the time you want, then Jump."
+                          : `Show the bar at that moment on each of the ${shownTimeframes.length} selected timeframe(s)`}>
+                  Jump
+                </Button>
+
+                {/* Primary above, filter below. The date, the time and Jump are
+                    one decision; the pills narrow which timeframes it answers
+                    for, which is a different kind of choice. */}
+                <span className="tape-bar-sep" aria-hidden />
+
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
+                  <span className="tape-bar-lbl">
                     Timeframes &mdash; {shownTimeframes.length} shown
-                  </Label>
+                  </span>
                   <div className="flex flex-wrap gap-1">
                     {ALL_TIMEFRAMES.map((tf) => {
                       const on = timeframes.includes(tf)
                       const needsRefetch =
                         ready && !!dataTimeframe && !isBuildableFrom(tf, dataTimeframe)
                       return (
-                        <Button
-                          key={tf} type="button" size="sm"
-                          className="h-7 px-2 text-xs"
-                          variant={on ? "default" : "secondary"}
+                        <button
+                          key={tf} type="button"
+                          className={`tape-pill${on ? " tape-pill-on" : ""}`}
                           aria-pressed={on}
                           aria-label={`jump timeframe ${tf}`}
                           title={
@@ -2408,9 +2422,9 @@ export function ReplayPage() {
                           }
                           onClick={() => handleTimeframeToggle(tf)}
                         >
-                          {on ? "✓ " : ""}{tf}
+                          {tf}
                           {needsRefetch && <span className="ml-0.5 opacity-60">↻</span>}
-                        </Button>
+                        </button>
                       )
                     })}
                   </div>
@@ -2420,12 +2434,6 @@ export function ReplayPage() {
                     "where is it?" rounds: Jump can only reach bars that have
                     actually been replayed, so an empty tape has nothing to
                     match. */}
-                <Button size="sm" onClick={jumpToTime} disabled={shownTape.length === 0}
-                        title={shownTape.length === 0
-                          ? "No bars yet. Press ▶ Play and let the replay run past the time you want, then Jump."
-                          : `Show the bar at that moment on each of the ${shownTimeframes.length} selected timeframe(s)`}>
-                  Jump
-                </Button>
                 {shownTape.length === 0 && (
                   <span className="text-xs text-muted-foreground">
                     Press <span className="text-foreground/70">&#9654; Play</span> first &mdash;
@@ -2446,19 +2454,19 @@ export function ReplayPage() {
                   rows and 13 columns, losing the column names a screen down was
                   the main thing making this table hard to read. */}
               <div className="overflow-auto" style={{ maxHeight: 460 }}>
-                <table className="w-full text-sm table-sticky grid-table">
+                <table className="w-full text-sm table-sticky grid-table tape-table">
                   <thead className="grid-thead sticky top-0">
                     <tr>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">Opened ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">TF</th>
-                      <th className="text-right p-2 font-medium">Open</th>
+                      <th className="text-right p-2 font-medium tape-g">Open</th>
                       <th className="text-right p-2 font-medium">High</th>
                       <th className="text-right p-2 font-medium">Low</th>
                       <th className="text-right p-2 font-medium">Close</th>
                       <th className="text-right p-2 font-medium">Change</th>
-                      <th className="text-right p-2 font-medium">Volume</th>
-                      {showVwap && <th className="text-right p-2 font-medium">VWAP</th>}
+                      <th className="text-right p-2 font-medium tape-g">Volume</th>
+                      {showVwap && <th className="text-right p-2 font-medium tape-g">VWAP</th>}
                         {/* Same columns and labels as Live state above. These were
                             previously visible only for the newest tick, so reading a
                             band or the profile at an earlier bar meant pausing at
@@ -2467,11 +2475,11 @@ export function ReplayPage() {
                           <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                           <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                         ])}
-                        {showVp && <th className="text-right p-2 font-medium">POC</th>}
+                        {showVp && <th className="text-right p-2 font-medium tape-g">POC</th>}
                         {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
                         {showVp && <th className="text-right p-2 font-medium">VALow</th>}
-                      <th className="text-left p-2 font-medium">Position</th>
-                      <th className="text-left p-2 font-medium">Signal</th>
+                      <th className="text-left p-2 font-medium tape-g">Position</th>
+                      <th className="text-left p-2 font-medium tape-g">Signal</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2483,9 +2491,9 @@ export function ReplayPage() {
                           <td className="p-2 font-mono text-xs">{closeInTz(r.t, TF_MINUTES[r.tf])}</td>
                           <td className="p-2 font-mono text-xs text-muted-foreground">{inTz(r.t)}</td>
                           <td className="p-2">
-                            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-white/8">{r.tf}</span>
+                            <span className="tape-tf">{r.tf}</span>
                           </td>
-                          <td className="p-2 text-right font-mono">{price(r.o)}</td>
+                          <td className="p-2 text-right font-mono tape-g">{price(r.o)}</td>
                           <td className="p-2 text-right font-mono">{price(r.h)}</td>
                           <td className="p-2 text-right font-mono">{price(r.l)}</td>
                           <td className="p-2 text-right font-mono font-semibold">{price(r.c)}</td>
@@ -2493,11 +2501,11 @@ export function ReplayPage() {
                               style={{ color: d === 0 ? NEUTRAL : d > 0 ? GOOD : CRITICAL }}>
                             {signed(d)}
                           </td>
-                          <td className="p-2 text-right font-mono text-muted-foreground">
+                          <td className="p-2 text-right font-mono text-muted-foreground tape-g">
                             {r.v != null ? r.v.toLocaleString() : "\u2014"}
                           </td>
                           {showVwap && (
-                            <td className="p-2 text-right font-mono" style={{ color: "#ce93d8" }}>
+                            <td className="p-2 text-right font-mono tape-g" style={{ color: "#c79ae0" }}>
                               {price(r.vwap)}
                             </td>
                           )}
@@ -2515,18 +2523,18 @@ export function ReplayPage() {
                               return [
                                 <td key={`u${d}`} className="p-2 text-right font-mono"
                                     title={upColor ? `Upper group ${Math.trunc(up as number)}` : undefined}
-                                    style={{ color: upColor ?? "#e3b341" }}>
+                                    style={{ color: upColor ?? "#d9ae4e" }}>
                                   {tapeNum(up)}
                                 </td>,
                                 <td key={`l${d}`} className="p-2 text-right font-mono"
                                     title={loColor ? `Lower group ${Math.trunc(lo as number)}` : undefined}
-                                    style={{ color: loColor ?? "#f06292" }}>
+                                    style={{ color: loColor ?? "#e07396" }}>
                                   {tapeNum(lo)}
                                 </td>,
                               ]
                             })}
                             {showVp && (
-                              <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>
+                              <td className="p-2 text-right font-mono tape-g" style={{ color: "#38bdf8" }}>
                                 {tapeNum(vp?.poc)}
                               </td>
                             )}
@@ -2540,11 +2548,11 @@ export function ReplayPage() {
                                 {tapeNum(vp?.val)}
                               </td>
                             )}
-                          <td className="p-2 font-mono text-xs"
+                          <td className="p-2 font-mono text-xs tape-g"
                               style={{ color: r.position === 0 ? NEUTRAL : r.position > 0 ? GOOD : CRITICAL }}>
                             {r.position === 0 ? "FLAT" : r.position > 0 ? `+${r.position}` : String(r.position)}
                           </td>
-                          <td className="p-2 text-xs">
+                          <td className="p-2 text-xs tape-g">
                             {r.signalType ? (
                               <span style={{ color: r.signalType === "BUY" ? GOOD : r.signalType === "SELL" ? CRITICAL : "#e3b341" }}>
                                 <b>{r.signalType}</b>

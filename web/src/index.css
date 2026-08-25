@@ -1501,3 +1501,154 @@ button, [role="button"] {
    which ended the row around 60% of a wide card. 78rem keeps the three fields
    a sane width while letting the row read as filling the space it is given. */
 .instr-row { max-width: 78rem; }
+
+/* =========================================================================
+   Consolidated tape — a market-data record, not a spreadsheet
+   -------------------------------------------------------------------------
+   Thirteen to twenty-one columns of numbers, read by scanning rather than by
+   reading cell by cell. What that needs is not more decoration but grouping:
+   the eye should land on "price" or "VWAP" as a block, and only then on a
+   figure inside it.
+
+   The grouping is done with a hairline and a little extra padding at each
+   boundary, NOT with a second header row -- an extra row costs vertical space
+   on every screen forever, to label something the spacing can say on its own.
+   ========================================================================= */
+
+/* Start of a conceptual group: TIME | PRICE | ACTIVITY | VWAP | PROFILE |
+   POSITION | SIGNAL. One hairline, slightly more air, nothing else. */
+.tape-table th.tape-g,
+.tape-table td.tape-g {
+  border-left: 1px solid rgba(148, 178, 255, 0.10);
+  padding-left: 13px;
+}
+
+.tape-table thead th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7e91ad;
+  padding-top: 9px;
+  padding-bottom: 9px;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #101a2c, #0c1424);
+  box-shadow: inset 0 -1px 0 rgba(148, 178, 255, 0.14);
+}
+
+/* Rows: a little taller than the default so the numbers have room to breathe,
+   and no taller -- the table is meant to be scanned many rows at a time. */
+.tape-table tbody td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid rgba(255, 255, 255, 0.035);
+}
+.tape-table tbody tr { transition: background-color 120ms var(--ease-out); }
+.tape-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.014); }
+.tape-table tbody tr:hover { background: rgba(56, 132, 255, 0.10); }
+
+/* The newest bar. The tape is newest-first, so row one is the live edge and
+   worth marking -- quietly. A left rule and a breath of warmth, no animation:
+   this row is replaced every tick, and anything that animated on arrival would
+   be a strobe at 0.1s per bar. */
+.tape-table tbody tr:first-child > td {
+  background: linear-gradient(90deg, rgba(56, 132, 255, 0.075), rgba(56, 132, 255, 0));
+}
+.tape-table tbody tr:first-child > td:first-child {
+  box-shadow: inset 2px 0 0 rgba(96, 165, 250, 0.75);
+}
+
+/* Identity columns stay put while the rest scrolls sideways. Losing "which bar
+   am I on" while reading the far-right profile columns is the single thing
+   that made this table hard to use at width. */
+.tape-table thead th:nth-child(-n + 3),
+.tape-table tbody td:nth-child(-n + 3) {
+  position: sticky;
+  background: #0b1322;
+}
+.tape-table thead th:nth-child(1),
+.tape-table tbody td:nth-child(1) { left: 0; z-index: 2; }
+.tape-table thead th:nth-child(2),
+.tape-table tbody td:nth-child(2) { left: 116px; z-index: 2; }
+.tape-table thead th:nth-child(3),
+.tape-table tbody td:nth-child(3) { left: 224px; z-index: 2; }
+.tape-table thead th:nth-child(-n + 3) { z-index: 4; }
+/* The edge where the pinned columns end, so they read as pinned rather than as
+   columns that happen to be there. */
+.tape-table thead th:nth-child(3),
+.tape-table tbody td:nth-child(3) {
+  box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.85);
+}
+.tape-table tbody tr:hover td:nth-child(-n + 3) { background: #132139; }
+.tape-table tbody tr:first-child > td:nth-child(-n + 3) { background: #0e1a30; }
+
+/* The timeframe badge inside a row. Small on purpose -- it identifies the row,
+   it is not a heading. */
+.tape-tf {
+  display: inline-block;
+  min-width: 30px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #a5c4ff;
+  background: rgba(56, 132, 255, 0.13);
+  border: 1px solid rgba(96, 165, 250, 0.24);
+}
+
+/* ── the control strip ──────────────────────────────────────────────────── */
+.tape-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0));
+  border-bottom: 1px solid rgba(148, 178, 255, 0.10);
+}
+.tape-bar-lbl {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+/* Primary and secondary, separated by a rule rather than by being different
+   sizes -- the date, the time and Jump are one decision; the pills are a
+   filter on it. */
+.tape-bar-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 2px;
+  background: rgba(148, 178, 255, 0.12);
+}
+.tape-pill {
+  height: 26px;
+  min-width: 38px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8ea3bd;
+  background: #111c30;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out),
+              color 140ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.tape-pill:hover:not(:disabled) { background: #17263f; color: #cbd5e1; }
+.tape-pill-on {
+  color: #ffffff;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  border-color: rgba(147, 197, 253, 0.55);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25), 0 2px 12px -3px rgba(59, 130, 246, 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tape-table tbody tr,
+  .tape-pill { transition: none; }
+}
