@@ -525,10 +525,10 @@ How a change actually travels from an idea to the live URL.
 
 <table>
 <tr><th width="20%" align="left">Stage</th><th align="left">What has to be true to move on</th></tr>
-<tr><td><b>02 &middot; Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
-<tr><td><b>03 &middot; Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
-<tr><td><b>04 &middot; Verify</b></td><td>1,864 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
-<tr><td><b>08 &middot; Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
+<tr><td><b>Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
+<tr><td><b>Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
+<tr><td><b>Verify</b></td><td>1,864 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
+<tr><td><b>Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
 </table>
 
 <br>
