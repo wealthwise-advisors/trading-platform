@@ -14,6 +14,14 @@
 pandas>=2.0.0
 numpy>=1.24.0
 
+# pyarrow is pandas' parquet engine, and api/store.py writes saved backtest
+# results as parquet. pandas only pulls it in under its [parquet] extra, which
+# a bare `pandas>=2.0.0` does not install -- so this must be declared here or
+# a clean environment silently loses persistence: to_parquet raises, store.py
+# catches it by design, and results are never written. It was present during
+# development only as a leftover of streamlit, which was removed on 2026-07-15.
+pyarrow>=13.0.0   # >=13 matches pandas' own floor for the parquet extra
+
 # Technical indicators
 pandas_ta>=0.4.71b0
 
