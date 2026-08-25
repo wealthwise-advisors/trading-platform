@@ -14,7 +14,7 @@ tape while it does. Built at **WealthWise Advisors**.
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/tests-1853%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Tests](https://img.shields.io/badge/tests-1862%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
 [![Coverage](https://img.shields.io/badge/coverage-77%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
@@ -59,7 +59,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **1,853** | **77%** | **3.12** | **5** |
+| **1,862** | **77%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -167,7 +167,7 @@ price**
 
 <img src="docs/assets/rule-03.svg" alt="" width="100%" height="2">
 
-**➜ 1,853 tests**
+**➜ 1,862 tests**
 
 **➜ Deterministic runs**
 
@@ -501,7 +501,7 @@ How a change actually travels from an idea to the live URL.
 <tr><th width="20%" align="left">Stage</th><th align="left">What has to be true to move on</th></tr>
 <tr><td><b>02 &middot; Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
 <tr><td><b>03 &middot; Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
-<tr><td><b>04 &middot; Verify</b></td><td>1,853 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
+<tr><td><b>04 &middot; Verify</b></td><td>1,862 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
 <tr><td><b>08 &middot; Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
 </table>
 
@@ -941,7 +941,7 @@ frees the ports first and pins the right Python.
 ## 🧪 Testing & Quality
 
 ```bash
-py -3.12 -m pytest              # 1,557 Python tests
+py -3.12 -m pytest              # 1,566 Python tests
 cd web && npm test              #   296 web tests
 cd web && npm run build         # tsc -b — the real typecheck
 py -3.12 -m ruff check .        # lint
@@ -953,9 +953,9 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 
 | Suite | Count | Covers |
 |:---|---:|:---|
-| 🐍 **Python** | **1,557** | engine, analysis, API, providers, replay |
+| 🐍 **Python** | **1,566** | engine, analysis, API, providers, replay |
 | ⚛️ **Web** | **296** | pure logic in [`web/src/lib`](web/src/lib) |
-| **Total** | **1,853** | |
+| **Total** | **1,862** | |
 | 📊 **Coverage** | **77%** | `src/` and `api/`, measured on every push |
 
 </div>
