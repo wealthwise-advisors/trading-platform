@@ -34,7 +34,11 @@ export function TickProgress({ processed, total, playing = false, detail }: Tick
           the way a car gauge is read. The bar beside it keeps the fine-grained
           position that a 270-degree arc cannot resolve at a few hundred ticks.
           Both are driven by the same number, so they cannot disagree. */}
-      <Gauge value={pct} size={104} sub="complete" />
+      {/* 184, not 104: the face carries a numbered 0-100 scale now, and at
+          the smaller size those numbers rendered around 5px and could not be
+          read, which makes a numbered dial pointless. Nothing is written on
+          the face except the value itself. */}
+      <Gauge value={pct} size={184} />
 
       <div className="flex-1 space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
