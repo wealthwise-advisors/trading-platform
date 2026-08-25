@@ -63,6 +63,7 @@ TEAL = "#2dd4bf"
 SKY = "#38bdf8"
 VIOLET = "#a78bfa"
 AMBER = "#f59e0b"
+EMERALD = "#22c55e"
 
 
 def esc(s: str) -> str:
@@ -200,6 +201,18 @@ def about_header(num, key, accent):
             f'<text x="23" y="30" text-anchor="middle" font-family="{MONO}" '
             f'font-size="19" font-weight="700" fill="{accent}">{num}</text>'
             + icon(key, accent, 60, 2, 1.75) +
+            '</svg>\n')
+
+
+def why_number(num, accent):
+    """A ringed number for the Why It Exists rows."""
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" '
+            'width="56" height="56" role="img" '
+            f'aria-label="{num}">'
+            f'<circle cx="28" cy="28" r="24" fill="{accent}" fill-opacity=".08" '
+            f'stroke="{accent}" stroke-opacity=".75" stroke-width="2"/>'
+            f'<text x="28" y="37" text-anchor="middle" font-family="{MONO}" '
+            f'font-size="26" font-weight="700" fill="{accent}">{num}</text>'
             '</svg>\n')
 
 
@@ -466,6 +479,10 @@ DIAGRAMS = {
     ], rows=1, label="Bars produce a strategy signal, the paper broker fills it with "
                      "slippage and commission, and the position becomes P&L and metrics"),
     "architecture.svg": architecture,
+    "why-1.svg": lambda: why_number("1", SKY),
+    "why-2.svg": lambda: why_number("2", AMBER),
+    "why-3.svg": lambda: why_number("3", VIOLET),
+    "why-4.svg": lambda: why_number("4", EMERALD),
     "about-01.svg": lambda: about_header("01", "book", SKY),
     "rule-01.svg": lambda: about_rule(SKY),
     "about-02.svg": lambda: about_header("02", "scales", AMBER),

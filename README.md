@@ -218,51 +218,60 @@ that shaped it. An hour: [Quickstart](docs/QUICKSTART.md) and a real backtest. A
 
 ## 💡 Why It Exists
 
-A backtest is easy to write and very easy to fool yourself with. Four specific ways —
-each one a real bug this codebase has hit and fixed — shape how the platform is built:
+**➜** A backtest is easy to write and very easy to fool yourself with. Four
+specific ways, each one a real bug this codebase has hit and fixed, shape how the
+platform is built:
 
 <table>
-<tr><td width="6%" align="center">
+<tr><td width="7%" align="center" valign="top">
 
-**❶**
+<img src="docs/assets/why-1.svg" alt="1" height="42">
 
-</td><td>
+</td><td valign="top">
 
-**A bar that changes after you have seen it.** A bar polled mid-minute has a high and
-a low that are still moving. Show it, and every number derived from it is provisional
-without saying so. → *Only closed bars ever reach the tape.*
+**➜** **A bar that changes after you have seen it.** A bar polled mid-minute has a
+high and a low that are still moving. Show it, and every number derived from it
+is provisional without saying so.
 
-</td></tr>
-<tr><td align="center">
-
-**❷**
-
-</td><td>
-
-**Two code paths that disagree about a bar.** Aggregation was once duplicated across
-three providers; the copy that forgot to anchor to the session kept reintroducing
-shifted bars. → *One aggregator, in [`src/data/resample.py`](src/data/resample.py).*
+**➜** Only closed bars ever reach the tape.
 
 </td></tr>
-<tr><td align="center">
+<tr><td align="center" valign="top">
 
-**❸**
+<img src="docs/assets/why-2.svg" alt="2" height="42">
 
-</td><td>
+</td><td valign="top">
 
-**A number that moves when you touch a checkbox.** The same 30-minute bar reported
-two different VWAPs depending on which other timeframes were selected. → *Each bar
-carries its own volume-weighted price, built from the minutes inside it.*
+**➜** **Two code paths that disagree about a bar.** Aggregation was once duplicated
+across three providers; the copy that forgot to anchor to the session kept
+reintroducing shifted bars.
+
+**➜** One aggregator, in [`src/data/resample.py`](src/data/resample.py).
 
 </td></tr>
-<tr><td align="center">
+<tr><td align="center" valign="top">
 
-**❹**
+<img src="docs/assets/why-3.svg" alt="3" height="42">
 
-</td><td>
+</td><td valign="top">
 
-**A deploy that quietly changes nothing.** → *The pipeline asks the running server
-which commit it is serving and fails the run unless it matches.*
+**➜** **A number that moves when you touch a checkbox.** The same 30-minute bar
+reported two different VWAPs depending on which other timeframes were selected.
+
+**➜** Each bar carries its own volume-weighted price, built from the minutes inside
+it.
+
+</td></tr>
+<tr><td align="center" valign="top">
+
+<img src="docs/assets/why-4.svg" alt="4" height="42">
+
+</td><td valign="top">
+
+**➜** **A deploy that quietly changes nothing.**
+
+**➜** The pipeline asks the running server which commit it is serving and fails the
+run unless it matches.
 
 </td></tr>
 </table>
