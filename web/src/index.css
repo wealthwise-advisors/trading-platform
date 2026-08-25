@@ -1496,3 +1496,8 @@ button, [role="button"] {
 }
 .preset-card-on .preset-why { color: #7f9c88; }
 .preset-card:hover:not(:disabled) .preset-why { color: #7b8ca3; }
+
+/* Instrument & strategy row. Its own measure rather than .cfg-col's 62rem,
+   which ended the row around 60% of a wide card. 78rem keeps the three fields
+   a sane width while letting the row read as filling the space it is given. */
+.instr-row { max-width: 78rem; }

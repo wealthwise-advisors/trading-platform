@@ -1344,7 +1344,15 @@ export function ReplayPage() {
 
             The day count then gets its own row rather than trailing the dates,
             which is what left three columns of dead space on that line. */}
-        <div className="cfg-col grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+        {/* Not .cfg-col: that caps at 62rem, which on a wide screen ended the
+            row at about 60% of the card and read as unfinished rather than as
+            a deliberate measure. This has its own cap, wide enough to look
+            intentional and still narrow enough that a select holding the words
+            "Synthetic Data" is not six hundred pixels of empty box.
+
+            Uneven columns because the fields are uneven: Symbol carries a
+            ticker, a name and an exchange, the other two carry one phrase. */}
+        <div className="instr-row grid grid-cols-1 sm:grid-cols-[1.25fr_1fr_1fr] gap-3 items-start">
           <div className="space-y-1.5" title={lockTitle("symbol")}>
             <Label className="cfg-h">Symbol</Label>
             {/* Same dialog the Backtest form uses. Twenty-one instruments over
@@ -1373,7 +1381,7 @@ export function ReplayPage() {
             />
           </div>
           <div className="space-y-1" title={lockTitle("data")}>
-            <Label className="text-xs">Data Source</Label>
+            <Label className="cfg-h">Data Source</Label>
             <Select value={dataSource} onValueChange={setDataSource} disabled={ready}>
               <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -1398,7 +1406,7 @@ export function ReplayPage() {
             {dataSource === "schwab" && <SchwabAuthWidget />}
           </div>
           <div className="space-y-1" title={lockTitle("strategy")}>
-            <Label className="text-xs">Strategy</Label>
+            <Label className="cfg-h">Strategy</Label>
             <Select
               value={strategyId} disabled={ready}
               onValueChange={(v) => {
