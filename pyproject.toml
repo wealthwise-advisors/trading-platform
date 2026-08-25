@@ -71,8 +71,17 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["src*", "api*"]
+# db* was missing here and the deploy failed on ModuleNotFoundError: api/store.py
+# imports it, and the correctness gate runs against the INSTALLED package rather
+# than the repo root, where a bare directory happens to be importable.
+include = ["src*", "api*", "db*"]
 exclude = ["*.__pycache__", "*.__pycache__.*"]
+
+[tool.setuptools.package-data]
+# schema.sql is read at runtime by db/connection.py. Being a non-Python file it
+# is not installed by default, so the package would import and then fail on the
+# first connect() -- a later and more confusing failure than a missing module.
+db = ["*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
