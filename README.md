@@ -608,14 +608,15 @@ run without the engine knowing which it holds.
 
 ### ◆ One clock, eleven timeframes
 
-The obvious implementation — keep N engines and step them all once per tick — does
-**not** produce a synchronised view. `step()` advances one *bar*, and a bar is a
-different amount of time on each timeframe: after 100 ticks a 1m pane has moved 100
-minutes while a 1h pane has moved 100 hours.
+**➜** `step()` advances one **bar** — and a bar is a different span on every timeframe
 
-So the clock is measured in **market time**. One tick advances time by exactly one
-base bar; every other timeframe steps only when its next bar has *closed*. See
-[`multi_replay.py`](src/backtesting/multi_replay.py).
+**➜** Stepping N engines per tick desynchronises them: after 100 ticks a 1m pane has moved 100 minutes, a 1h pane 100 hours
+
+**➜** So the clock runs in **market time** — one tick advances exactly one base bar
+
+**➜** Every other timeframe steps only when its own bar has **closed**
+
+**➜** [`multi_replay.py`](src/backtesting/multi_replay.py)
 
 <br>
 
@@ -1018,11 +1019,11 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 
 </div>
 
-Coverage runs inside the same CI step as the tests and is gated at **70%** — set
-below the current figure on purpose, because a threshold pinned to today's number
-fails on any change that lands a few uncovered lines, and the usual answer to that
-is lowering the threshold. The vendored Schwab client and `legacy/` are excluded,
-the same way [`ruff`](pyproject.toml) and `mypy` already exclude them.
+**➜** Gated at **70%**, deliberately below the current 77% — a threshold pinned to today's number gets lowered the first time it fails
+
+**➜** Excludes the vendored Schwab client and `legacy/`, as [`ruff`](pyproject.toml) and `mypy` already do
+
+**➜** Runs in the same CI step as the tests
 
 ### ◆ Three kinds of test, three meanings of red
 
@@ -1030,10 +1031,16 @@ the same way [`ruff`](pyproject.toml) and `mypy` already exclude them.
 <img src="docs/assets/test-topology.svg" alt="The suite splits into three kinds: unit tests where a failure means a mechanism broke, behavioural matrices where a failure means a rule about what you are shown broke, and confirmed baselines where a failure means something already verified has changed" width="100%">
 </div>
 
-The third kind is the one to be careful with. Those expected values were confirmed
-against real backtests and a reference trading platform, so a failure there asks
-*did I mean to change this* — never *update the numbers to match*. Re-baselining
-silently throws away the verification that made them worth keeping.
+| Kind | A failure means |
+|:---|:---|
+| **Unit** | a mechanism broke |
+| **Behavioural matrix** | a rule about what you are shown broke |
+| **Confirmed baseline** | something already verified has changed |
+
+> [!IMPORTANT]
+> Baseline values were confirmed against real backtests and a reference trading
+> platform. A failure asks **did I mean to change this** — never *update the
+> numbers to match*.
 
 ### ◆ What the tests defend
 
@@ -1045,10 +1052,11 @@ silently throws away the verification that made them worth keeping.
 
 ### ◆ A test earns its place by being able to fail
 
-The [follow-live matrix](tests/test_follow_live_matrix.py) was written after a bug
-that only appeared on timeframes coarser than 1m. **67 of its 107 cases fail against
-the commit that shipped that bug** — which is the property that makes it worth
-running. A test that passes either way defends nothing.
+**➜** [Follow-live matrix](tests/test_follow_live_matrix.py) — written after a bug that only appeared above 1m
+
+**➜** **67 of its 107 cases fail** against the commit that shipped that bug
+
+**➜** A test that passes either way defends nothing
 
 > [!WARNING]
 > `npx tsc --noEmit` reports **success on broken JSX**, because the root tsconfig is a
