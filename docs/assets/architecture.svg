@@ -1,75 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 446" width="1280" height="446" role="img" aria-label="Data sources feed one core engine, which the interfaces read; the engine imports nothing from them"><rect width="100%" height="100%" fill="#060b14"/>
-<text x="26" y="37" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" letter-spacing="1" fill="#38bdf8" fill-opacity=".85">DATA SOURCES</text>
-<rect x="26" y="50" width="396" height="70" rx="10" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.55" stroke-width="2">
-<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 514" width="1280" height="514" role="img" aria-label="Three data sources feed one core engine, which the interfaces read; the replay engine feeds back to the resampler and the engine imports nothing from either side"><rect width="100%" height="100%" fill="#060b14"/>
+<text x="28" y="35" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" font-weight="700" letter-spacing="1.4" fill="#38bdf8" fill-opacity=".9">DATA SOURCES</text>
+<rect x="28" y="52" width="395" height="84" rx="11" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;0.95;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="224" y="77" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Schwab API</text>
-<text x="224" y="96" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">live · ~180 days</text>
-<rect x="442" y="50" width="396" height="70" rx="10" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(46.0 79.0) scale(1.250)" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.4 18.4h9.2a4.1 4.1 0 0 0 .6-8.15 5.7 5.7 0 0 0-11 1.5 3.4 3.4 0 0 0 1.2 6.65z"/></g>
+<text x="82" y="89" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Schwab API</text>
+<text x="82" y="109" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">live · ~180 days</text>
+<rect x="443" y="52" width="395" height="84" rx="11" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="640" y="77" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">CSV archive</text>
-<text x="640" y="96" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">18 years</text>
-<rect x="858" y="50" width="396" height="70" rx="10" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(460.7 79.0) scale(1.250)" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.6h7.6L18.4 8v12.4H6.6z"/><path d="M14 3.8V8.2h4.2"/><path d="M9.4 12.4h6M9.4 15.6h6"/></g>
+<text x="497" y="89" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">CSV archive</text>
+<text x="497" y="109" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">18 years</text>
+<rect x="857" y="52" width="395" height="84" rx="11" fill="#0b1220" stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="1056" y="77" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Synthetic</text>
-<text x="1056" y="96" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">deterministic</text>
-<text x="26" y="187" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" letter-spacing="1" fill="#a78bfa" fill-opacity=".85">CORE ENGINE · SRC/</text>
-<rect x="26" y="200" width="230" height="70" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.55" stroke-width="2">
-<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="1.10s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(875.3 79.0) scale(1.250)" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6.2" rx="6.4" ry="2.6"/><path d="M5.6 6.2v11.6c0 1.44 2.87 2.6 6.4 2.6s6.4-1.16 6.4-2.6V6.2"/><path d="M5.6 12c0 1.44 2.87 2.6 6.4 2.6s6.4-1.16 6.4-2.6"/></g>
+<text x="911" y="89" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Synthetic</text>
+<text x="911" y="109" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">deterministic</text>
+<text x="28" y="211" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" font-weight="700" letter-spacing="1.4" fill="#a78bfa" fill-opacity=".9">CORE ENGINE · SRC/</text>
+<rect x="28" y="228" width="229" height="84" rx="11" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;0.95;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="1.15s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="141" y="227" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Resampler</text>
-<text x="141" y="246" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">one shared aggregator</text>
-<path d="M 256 235 H 269" stroke="#2a3a52" stroke-width="1.5" fill="none"/>
-<path d="M 269 231 L 276 235 L 269 239 Z" fill="#2a3a52"/>
-<rect x="276" y="200" width="230" height="70" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.10s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(46.0 255.0) scale(1.250)" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 8.4 4.6 12l4 3.6"/><path d="M15.4 8.4 19.4 12l-4 3.6"/><path d="M13.4 5.6 10.6 18.4"/></g>
+<text x="82" y="265" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Resampler</text>
+<text x="82" y="285" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">one shared aggregator</text>
+<path d="M 257 270 H 270" stroke="#4c3a72" stroke-width="1.5" fill="none"/>
+<path d="M 270 266 L 277 270 L 270 274 Z" fill="#4c3a72"/>
+<rect x="277" y="228" width="229" height="84" rx="11" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.15s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="390" y="227" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Analysis</text>
-<text x="390" y="246" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">waves · patterns · VWAP</text>
-<path d="M 505 235 H 518" stroke="#2a3a52" stroke-width="1.5" fill="none"/>
-<path d="M 518 231 L 525 235 L 518 239 Z" fill="#2a3a52"/>
-<rect x="525" y="200" width="230" height="70" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.10s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(294.8 255.0) scale(1.250)" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19.4V13M10.4 19.4V7.6M15.6 19.4v-8M20.4 19.4V4.6"/></g>
+<text x="331" y="265" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Analysis</text>
+<text x="331" y="285" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">waves · patterns · VWAP</text>
+<path d="M 506 270 H 519" stroke="#4c3a72" stroke-width="1.5" fill="none"/>
+<path d="M 519 266 L 526 270 L 519 274 Z" fill="#4c3a72"/>
+<rect x="526" y="228" width="229" height="84" rx="11" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.15s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="640" y="227" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Strategies</text>
-<text x="640" y="246" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">five, one interface</text>
-<path d="M 755 235 H 768" stroke="#2a3a52" stroke-width="1.5" fill="none"/>
-<path d="M 768 231 L 775 235 L 768 239 Z" fill="#2a3a52"/>
-<rect x="775" y="200" width="230" height="70" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.10s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(543.6 255.0) scale(1.250)" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.4"/><circle cx="12" cy="12" r="3.2"/><path d="M12 1.8v2.6M12 19.6v2.6M1.8 12h2.6M19.6 12h2.6"/></g>
+<text x="580" y="265" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Strategies</text>
+<text x="580" y="285" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">five, one interface</text>
+<path d="M 754 270 H 767" stroke="#4c3a72" stroke-width="1.5" fill="none"/>
+<path d="M 767 266 L 774 270 L 767 274 Z" fill="#4c3a72"/>
+<rect x="774" y="228" width="229" height="84" rx="11" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.15s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="890" y="227" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Paper Broker</text>
-<text x="890" y="246" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">commission · slippage</text>
-<rect x="1024" y="200" width="230" height="70" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.10s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(792.4 255.0) scale(1.250)" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 3.6h11.2v16.8l-2.24-1.5-1.86 1.5-1.86-1.5-1.86 1.5-1.86-1.5-1.52 1.5z"/><path d="M9.4 8.4h5.2M9.4 11.6h5.2M9.4 14.8h2.8"/></g>
+<text x="828" y="265" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Paper Broker</text>
+<text x="828" y="285" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">commission · slippage</text>
+<rect x="1023" y="228" width="229" height="84" rx="11" fill="#0b1220" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.15s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="1139" y="227" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Replay Engine</text>
-<text x="1139" y="246" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">shared market clock</text>
-<path d="M 141 270 V 286 H 1139 V 270" fill="none" stroke="#2a3a52" stroke-width="1.4" stroke-dasharray="4 4"/>
-<text x="26" y="337" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" letter-spacing="1" fill="#2dd4bf" fill-opacity=".85">INTERFACES</text>
-<rect x="26" y="350" width="396" height="70" rx="10" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="2">
-<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="2.20s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(1041.2 255.0) scale(1.250)" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7v5.2l3.4 2"/><path d="M4.2 5.2 6.4 7.4M19.8 5.2l-2.2 2.2"/></g>
+<text x="1077" y="265" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Replay Engine</text>
+<text x="1077" y="285" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">shared market clock</text>
+<text x="28" y="387" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" font-weight="700" letter-spacing="1.4" fill="#2dd4bf" fill-opacity=".9">INTERFACES</text>
+<rect x="28" y="404" width="395" height="84" rx="11" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.55" stroke-width="2">
+<animate attributeName="stroke-opacity" values="0.55;0.95;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="2.30s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="224" y="377" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">FastAPI</text>
-<text x="224" y="396" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">REST + WebSocket</text>
-<rect x="442" y="350" width="396" height="70" rx="10" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.20s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(46.0 431.0) scale(1.250)" fill="none" stroke="#2dd4bf" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.2"/><path d="M7 9.6l2.6 2.4L7 14.4"/><path d="M12.6 14.8h4.4"/></g>
+<text x="82" y="441" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">FastAPI</text>
+<text x="82" y="461" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">REST + WebSocket</text>
+<rect x="443" y="404" width="395" height="84" rx="11" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.30s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="640" y="390" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">React Dashboard</text>
-<rect x="858" y="350" width="396" height="70" rx="10" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.30" stroke-width="1.2">
-<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.20s" dur="3.30s" repeatCount="indefinite"/>
+<g transform="translate(460.7 431.0) scale(1.250)" fill="none" stroke="#2dd4bf" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.2"/><path d="M7.2 14.8 10.4 11l2.6 2.2 3.8-4.8"/></g>
+<text x="497" y="451" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">React Dashboard</text>
+<rect x="857" y="404" width="395" height="84" rx="11" fill="#0b1220" stroke="#2dd4bf" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;0.95;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.30s" dur="3.45s" repeatCount="indefinite"/>
 </rect>
-<text x="1056" y="377" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Export</text>
-<text x="1056" y="396" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-style="italic" fill="#94a3b8">CSV · XLSX · PDF · DOCX</text>
-<path d="M 640 120 V 193" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
-<path d="M 636 193 L 640 200 L 644 193 Z" fill="#3a4a63"/>
-<path d="M 640 270 V 343" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
-<path d="M 636 343 L 640 350 L 644 343 Z" fill="#3a4a63"/>
+<g transform="translate(875.3 431.0) scale(1.250)" fill="none" stroke="#2dd4bf" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.8v10"/><path d="M8 10l4 4 4-4"/><path d="M4.8 16.6v2.6a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.6"/></g>
+<text x="911" y="441" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#e2e8f0">Export</text>
+<text x="911" y="461" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="12.5" fill="#94a3b8">CSV · XLSX · PDF · DOCX</text>
+<path d="M 640 136 V 221" stroke="#5b6a86" stroke-width="1.5" fill="none"/>
+<path d="M 636 221 L 640 228 L 644 221 Z" fill="#5b6a86"/>
+<path d="M 640 312 V 397" stroke="#5b6a86" stroke-width="1.5" fill="none"/>
+<path d="M 636 397 L 640 404 L 644 397 Z" fill="#5b6a86"/>
+<path d="M 1138 312 V 338 H 640 V 312" fill="none" stroke="#a78bfa" stroke-opacity=".45" stroke-width="1.4" stroke-dasharray="5 5"/>
+<path d="M 636 319 L 640 312 L 644 319 Z" fill="#a78bfa" fill-opacity=".55"/>
 <circle r="3.4" fill="#2dd4bf" opacity="0">
-<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.04;0.90;1" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
-<animate attributeName="cx" values="640;640;640;640" keyTimes="0.000;0.333;0.667;1.000" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
-<animate attributeName="cy" values="120;200;270;350" keyTimes="0.000;0.333;0.667;1.000" begin="0.00s" dur="3.30s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.04;0.90;1" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
+<animate attributeName="cx" values="640;640;640;640" keyTimes="0.000;0.333;0.667;1.000" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
+<animate attributeName="cy" values="136;228;312;404" keyTimes="0.000;0.333;0.667;1.000" begin="0.00s" dur="3.45s" repeatCount="indefinite"/>
 </circle>
 </svg>

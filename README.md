@@ -371,6 +371,34 @@ going** — following the live market instead of stopping at the snapshot it loa
 inside [`src/`](src) — which is what lets the same analysis run from a test, from the
 API and from a script and give the same answer each time.
 
+<table>
+<tr><td valign="top" width="33%">
+
+**Key points**
+
+- Engine is file/transport agnostic
+- Single analysis path for all sources
+- Deterministic replay with shared clock
+
+</td><td valign="top" width="33%">
+
+**Data flow**
+
+- Sources → Core Engine → Interfaces
+- Replay Engine feeds back into Strategies
+- Same answer every time
+
+</td><td valign="top" width="33%">
+
+**Design principles**
+
+- One shared aggregator (Resampler)
+- Event-driven, modular components
+- No HTTP, no React, no framework inside `src/`
+
+</td></tr>
+</table>
+
 <br>
 
 ---

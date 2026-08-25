@@ -170,70 +170,129 @@ def chain(nodes, rows, label, accent_default=SLATE):
     return "\n".join(o) + "\n"
 
 
-# ══ architecture: three bands ═════════════════════════════════════════════
+# ══ architecture: three bands, top to bottom ══════════════════════════════
+# Icons on a 24x24 grid, outlined at one weight so they read as one family
+# rather than as clip art collected from three places.
+ICONS = {
+    "cloud": ['<path d="M7.4 18.4h9.2a4.1 4.1 0 0 0 .6-8.15 5.7 5.7 0 0 0-11 1.5 3.4 3.4 0 0 0 1.2 6.65z"/>'],
+    "doc": ['<path d="M6.6 3.6h7.6L18.4 8v12.4H6.6z"/>', '<path d="M14 3.8V8.2h4.2"/>',
+            '<path d="M9.4 12.4h6M9.4 15.6h6"/>'],
+    "db": ['<ellipse cx="12" cy="6.2" rx="6.4" ry="2.6"/>',
+           '<path d="M5.6 6.2v11.6c0 1.44 2.87 2.6 6.4 2.6s6.4-1.16 6.4-2.6V6.2"/>',
+           '<path d="M5.6 12c0 1.44 2.87 2.6 6.4 2.6s6.4-1.16 6.4-2.6"/>'],
+    "code": ['<path d="M8.6 8.4 4.6 12l4 3.6"/>', '<path d="M15.4 8.4 19.4 12l-4 3.6"/>',
+             '<path d="M13.4 5.6 10.6 18.4"/>'],
+    "bars": ['<path d="M5 19.4V13M10.4 19.4V7.6M15.6 19.4v-8M20.4 19.4V4.6"/>'],
+    "target": ['<circle cx="12" cy="12" r="7.4"/>', '<circle cx="12" cy="12" r="3.2"/>',
+               '<path d="M12 1.8v2.6M12 19.6v2.6M1.8 12h2.6M19.6 12h2.6"/>'],
+    "receipt": ['<path d="M6.4 3.6h11.2v16.8l-2.24-1.5-1.86 1.5-1.86-1.5-1.86 1.5-1.86-1.5-1.52 1.5z"/>',
+                '<path d="M9.4 8.4h5.2M9.4 11.6h5.2M9.4 14.8h2.8"/>'],
+    "clock": ['<circle cx="12" cy="12" r="8.4"/>', '<path d="M12 7v5.2l3.4 2"/>',
+              '<path d="M4.2 5.2 6.4 7.4M19.8 5.2l-2.2 2.2"/>'],
+    "server": ['<rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.2"/>',
+               '<path d="M7 9.6l2.6 2.4L7 14.4"/>', '<path d="M12.6 14.8h4.4"/>'],
+    "chart": ['<rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.2"/>',
+              '<path d="M7.2 14.8 10.4 11l2.6 2.2 3.8-4.8"/>'],
+    "down": ['<path d="M12 3.8v10"/>', '<path d="M8 10l4 4 4-4"/>',
+             '<path d="M4.8 16.6v2.6a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.6"/>'],
+}
+
+
+def icon(key, ink, x, y, s=1.0):
+    """Draw an icon's 24x24 grid at (x, y)."""
+    body = "".join(ICONS[key])
+    return (f'<g transform="translate({x:.1f} {y:.1f}) scale({s:.3f})" fill="none" '
+            f'stroke="{ink}" stroke-width="1.6" stroke-linecap="round" '
+            f'stroke-linejoin="round">{body}</g>')
+
+
 def architecture():
-    PAD, GAP, CH = 26, 20, 70
-    BAND_LBL = 26
-    # The third field says how many LEADING boxes form a left-to-right chain.
-    # This matters and is easy to get wrong: the three data sources are
-    # alternatives, not a pipeline -- in the mermaid original all three fed the
-    # resampler independently, and drawing Schwab -> CSV -> Synthetic would
-    # claim a sequence that does not exist. Same for the interfaces. Only the
-    # core has a real chain, and only for its first four: the replay engine
-    # branches off the resampler rather than following the paper broker.
+    PAD, GAP, CH = 28, 20, 84
+    LBL = 30          # room for the band caption above its row
+    BAND_GAP = 62     # room for the arrow between bands
+
     bands = [
         ("Data Sources", SKY, 0, [
-            ("Schwab API", "live · ~180 days"),
-            ("CSV archive", "18 years"),
-            ("Synthetic", "deterministic"),
+            ("Schwab API", "live \u00b7 ~180 days", "cloud"),
+            ("CSV archive", "18 years", "doc"),
+            ("Synthetic", "deterministic", "db"),
         ]),
-        ("Core Engine · src/", VIOLET, 4, [
-            ("Resampler", "one shared aggregator"),
-            ("Analysis", "waves · patterns · VWAP"),
-            ("Strategies", "five, one interface"),
-            ("Paper Broker", "commission · slippage"),
-            ("Replay Engine", "shared market clock"),
+        ("Core Engine \u00b7 src/", VIOLET, 4, [
+            ("Resampler", "one shared aggregator", "code"),
+            ("Analysis", "waves \u00b7 patterns \u00b7 VWAP", "bars"),
+            ("Strategies", "five, one interface", "target"),
+            ("Paper Broker", "commission \u00b7 slippage", "receipt"),
+            ("Replay Engine", "shared market clock", "clock"),
         ]),
         ("Interfaces", TEAL, 0, [
-            ("FastAPI", "REST + WebSocket"),
-            ("React Dashboard", None),
-            ("Export", "CSV · XLSX · PDF · DOCX"),
+            ("FastAPI", "REST + WebSocket", "server"),
+            ("React Dashboard", None, "chart"),
+            ("Export", "CSV \u00b7 XLSX \u00b7 PDF \u00b7 DOCX", "down"),
         ]),
     ]
-    BAND_GAP = 54
-    H = 24 + sum(BAND_LBL + CH for _ in bands) + BAND_GAP * (len(bands) - 1) + 26
+    H = 22 + sum(LBL + CH for _ in bands) + BAND_GAP * (len(bands) - 1) + 26
 
-    o = [head(H, "Data sources feed one core engine, which the interfaces read; "
-                 "the engine imports nothing from them")]
-    y = 24
-    band_mid = []
-    step, cycle = 1.1, 3.3
+    o = [head(H, "Three data sources feed one core engine, which the interfaces "
+                 "read; the replay engine feeds back to the resampler and the "
+                 "engine imports nothing from either side")]
+    y, edges = 22, []
+    step, cycle = 1.15, 3.45
+
     for bi, (name, accent, chain_len, items) in enumerate(bands):
         o.append(f'<text x="{PAD}" y="{y + 13}" font-family="{MONO}" font-size="12.5" '
-                 f'letter-spacing="1" fill="{accent}" fill-opacity=".85">'
-                 f'{esc(name.upper())}</text>')
-        yy = y + BAND_LBL
+                 f'font-weight="700" letter-spacing="1.4" fill="{accent}" '
+                 f'fill-opacity=".9">{esc(name.upper())}</text>')
+        yy = y + LBL
         n = len(items)
         cw = (W - 2 * PAD - GAP * (n - 1)) / n
-        for i, (title, sub) in enumerate(items):
+        for i, (title, sub, ic) in enumerate(items):
             x = PAD + i * (cw + GAP)
-            o += card(x, yy, cw, CH, title, sub, accent, bi * step, cycle, i == 0)
-            # only inside a real chain, and never past its end
+            strong = i == 0
+            op = "0.55" if strong else "0.30"
+            o.append(f'<rect x="{x:.0f}" y="{yy}" width="{cw:.0f}" height="{CH}" rx="11" '
+                     f'fill="{PANEL}" stroke="{accent}" stroke-opacity="{op}" '
+                     f'stroke-width="{2 if strong else 1.2}">')
+            o.append(f'<animate attributeName="stroke-opacity" values="{op};0.95;{op};{op}" '
+                     f'keyTimes="0;0.06;0.30;1" begin="{bi * step:.2f}s" '
+                     f'dur="{cycle:.2f}s" repeatCount="indefinite"/>')
+            o.append("</rect>")
+            o.append(icon(ic, accent, x + 18, yy + CH / 2 - 15, 1.25))
+            tx = x + 54
+            o.append(f'<text x="{tx:.0f}" y="{yy + (CH / 2) - (5 if sub else -5):.0f}" '
+                     f'font-family="{FONT}" font-size="15" font-weight="700" '
+                     f'fill="{INK}">{esc(title)}</text>')
+            if sub:
+                o.append(f'<text x="{tx:.0f}" y="{yy + CH / 2 + 15:.0f}" '
+                         f'font-family="{FONT}" font-size="12.5" '
+                         f'fill="{DIM}">{esc(sub)}</text>')
             if i < chain_len - 1:
-                o += arrow_h(x + cw, x + cw + GAP, yy + CH / 2, "#2a3a52")
-        if chain_len and chain_len < n:
-            # the branch: this box hangs off the first, it does not follow the last
-            bx = PAD + chain_len * (cw + GAP)
-            o.append(f'<path d="M {PAD + cw / 2:.0f} {yy + CH:.0f} V {yy + CH + 16:.0f} '
-                     f'H {bx + cw / 2:.0f} V {yy + CH:.0f}" fill="none" '
-                     f'stroke="#2a3a52" stroke-width="1.4" stroke-dasharray="4 4"/>')
-        band_mid.append((yy, yy + CH))
+                o += arrow_h(x + cw, x + cw + GAP, yy + CH / 2, "#4c3a72")
+        edges.append((yy, yy + CH, cw))
         y = yy + CH + BAND_GAP
 
-    for a, b in zip(band_mid, band_mid[1:]):
-        o += arrow_v(W / 2, a[1], b[0])
-    o += dot([(W / 2, band_mid[0][1]), (W / 2, band_mid[1][0]),
-              (W / 2, band_mid[1][1]), (W / 2, band_mid[2][0])], 0, cycle, TEAL)
+    # Between bands: one arrow down the middle. Sources feed the engine; the
+    # engine feeds the interfaces.
+    for a, b in zip(edges, edges[1:]):
+        o += arrow_v(W / 2, a[1], b[0] , "#5b6a86")
+
+    # The feedback edge: replay engine back to STRATEGIES, not to the
+    # resampler. ReplayEngine.step() calls self.strategy.on_bar() once per
+    # bar and never touches the resampler -- so the loop is the engine driving
+    # the strategy each tick, which is what makes a replay deterministic
+    # rather than a one-way pass. Drawn dashed and beneath, as a return path.
+    cw_core = edges[1][2]
+    x_res = PAD + 2 * (cw_core + GAP) + cw_core / 2   # Strategies, index 2
+    x_rep = PAD + 4 * (cw_core + GAP) + cw_core / 2   # Replay Engine, index 4
+    y_core_bot = edges[1][1]
+    y_loop = y_core_bot + 26
+    o.append(f'<path d="M {x_rep:.0f} {y_core_bot} V {y_loop:.0f} H {x_res:.0f} V {y_core_bot}" '
+             f'fill="none" stroke="{VIOLET}" stroke-opacity=".45" stroke-width="1.4" '
+             f'stroke-dasharray="5 5"/>')
+    o.append(f'<path d="M {x_res - 4:.0f} {y_core_bot + 7:.0f} L {x_res:.0f} {y_core_bot:.0f} '
+             f'L {x_res + 4:.0f} {y_core_bot + 7:.0f} Z" fill="{VIOLET}" fill-opacity=".55"/>')
+
+    o += dot([(W / 2, edges[0][1]), (W / 2, edges[1][0]),
+              (W / 2, edges[1][1]), (W / 2, edges[2][0])], 0, cycle, TEAL)
     o.append("</svg>")
     return "\n".join(o) + "\n"
 
