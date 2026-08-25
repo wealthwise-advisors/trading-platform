@@ -22,7 +22,7 @@ import { StrategyMark } from "@/components/StrategyMark"
 import { CountUp, motion, useReducedMotion, SPRING } from "@/components/motion/primitives"
 import { AnimatePresence } from "framer-motion"
 import { Clock, Info, Globe, Landmark, CalendarRange, BarChart3, Check,
-         Activity, TrendingDown, Ruler } from "lucide-react"
+         Activity, TrendingDown, Ruler, ArrowRight } from "lucide-react"
 import { SummaryPanel, makeSummaryRows, ParamCard } from "./SetupPanels"
 import { IconField, TfGlyph } from "./SetupFields"
 import { DateField } from "@/components/ui/date-field"
@@ -82,9 +82,32 @@ const ALL_DEV_LEVELS = [0.5, 1, 1.5, 2, 2.5, 3] as const
  * Globex first: it is the one that matches a broker platform's DAY VWAP for
  * futures, and it is the one nobody types from memory.
  */
+/**
+ * The weekday an ISO date falls on, or "" if it is not a date yet.
+ *
+ * Shown under each end of the range because a trading span is chosen in
+ * weekdays: "Thursday to Monday" is what tells you the range covers three
+ * sessions rather than five, and reading that off two bare dates is work the
+ * interface can do for you. Parsed as UTC to match toISO/parseISO elsewhere --
+ * a local parse shifts the day backwards for anyone west of Greenwich.
+ */
+function weekdayOf(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "")
+  if (!m) return ""
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]))
+  return Number.isNaN(d.getTime())
+    ? ""
+    : ["Sunday", "Monday", "Tuesday", "Wednesday",
+       "Thursday", "Friday", "Saturday"][d.getUTCDay()]
+}
+
 const SESSION_PRESETS = [
   {
-    label: "Globex 6:00 PM – 5:00 PM",
+    // "(next day)" is load-bearing, not decoration: 6:00 PM to 5:00 PM reads as
+    // a 23-hour window running backwards unless you already know the futures
+    // session crosses midnight. Picking the wrong window is the exact mistake
+    // this control exists to prevent, so the card says which day it ends on.
+    label: "Globex 6:00 PM – 5:00 PM (next day)",
     from: "18:00", to: "17:00",
     why: "The futures session, 18:00–17:00 ET (17:00–16:00 CT). This is what a broker platform's DAY VWAP anchors to, so use it when comparing VWAP or bands against one.",
   },
@@ -1414,40 +1437,72 @@ export function ReplayPage() {
                          {sessionLabel}
                        </>
                      }>
-        {/* Dates on their own row, side by side. Held to the same column width as
-            the row above so the fields line up in a single vertical rhythm rather
-            than stretching across the whole card. */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4 items-start">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
-          <DateField label="Start date" value={startDate} onChange={setStartDate} disabled={ready} />
-          <DateField label="End date" value={endDate} onChange={setEndDate} disabled={ready} />
-        </div>
+        {/* One row, three groups: the range, the count derived from it, and the
+            summary those two produce. They used to be three separate rows with
+            the dates held to a narrow column, which left most of the card empty
+            and made the day count read as unrelated to the dates above it.
 
-        <SummaryPanel rows={makeSummaryRows({
-          days: dayCount,
-          sessions: tradingDays,
-          timeframe: timeframes.length
-            ? [...timeframes].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])[0]
-            : "—",
-          duration: sessionLabel,
-        })} />
-        </div>
+            The range is one bordered group rather than two loose fields. FROM
+            and TO are a single decision -- you are picking a span, not two
+            independent dates -- and an arrow between them says so more directly
+            than adjacency does. The weekday under each is there because a
+            trading range is chosen in weekdays: "Thursday to Monday" is the
+            fact that decides whether a range covers three sessions or five. */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_19rem] gap-3 items-stretch">
 
-        {/* Its own row, below the dates it derives from. Writes the End date
-            rather than holding its own count, so the number shown and the range
-            actually requested cannot drift apart. */}
-        <div className="mt-3">
-          <DayCountStepper
-            startDate={startDate}
-            endDate={endDate}
-            onStep={(delta) =>
-              // Functional update: prev is the latest committed end, so
-              // several clicks in one tick each advance a day.
-              setEndDate((prev) => steppedEndDate(startDate, prev, delta))
-            }
-            disabled={ready}
-            disabledReason={lockTitle("data")}
-          />
+          <div className="range-group">
+            <span className="range-cap">Date range</span>
+            <div className="range-body">
+              <div className="range-leg">
+                <span className="range-leg-label">From</span>
+                <DateField label="Start date" value={startDate}
+                           onChange={setStartDate} disabled={ready} />
+                <span className="range-leg-day">{weekdayOf(startDate)}</span>
+              </div>
+
+              {/* Keyed on the pair, so React remounts it when either date moves
+                  and the entrance replays -- the connector acknowledging the
+                  change rather than sitting inert through it. */}
+              <span key={`${startDate}->${endDate}`} className="range-arrow" aria-hidden>
+                <ArrowRight size={15} strokeWidth={2.4} />
+              </span>
+
+              <div className="range-leg">
+                <span className="range-leg-label">To</span>
+                <DateField label="End date" value={endDate}
+                           onChange={setEndDate} disabled={ready} />
+                <span className="range-leg-day">{weekdayOf(endDate)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Beside the range now, not under it. It writes the End date rather
+              than holding its own count, so the number shown and the range
+              actually requested cannot drift apart. */}
+          <div className="range-group range-days">
+            <span className="range-cap">Number of days</span>
+            <DayCountStepper
+              startDate={startDate}
+              endDate={endDate}
+              onStep={(delta) =>
+                // Functional update: prev is the latest committed end, so
+                // several clicks in one tick each advance a day.
+                setEndDate((prev) => steppedEndDate(startDate, prev, delta))
+              }
+              disabled={ready}
+              disabledReason={lockTitle("data")}
+              hideLabel
+            />
+          </div>
+
+          <SummaryPanel rows={makeSummaryRows({
+            days: dayCount,
+            sessions: tradingDays,
+            timeframe: timeframes.length
+              ? [...timeframes].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])[0]
+              : "—",
+            duration: sessionLabel,
+          })} />
         </div>
 
         {/* Coverage, stated before Load rather than after a failed one. The
@@ -1558,8 +1613,13 @@ export function ReplayPage() {
               was read as one thing. Split, the window is scannable -- which
               matters, because picking the wrong window is exactly the mistake
               this control exists to prevent. */}
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-start">
-          <div className="grid grid-cols-2 gap-3">
+          {/* items-stretch, not items-start: the custom-session panel is twice
+              the height of a preset card, and letting the presets keep their
+              natural height left a band of empty card under them. They now fill
+              the row, which is also what makes the three read as one group of
+              alternatives rather than two small things beside a big one. */}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-stretch">
+          <div className="grid grid-cols-2 gap-3 h-full">
             {SESSION_PRESETS.map((p) => {
               const on = !session24h && sessionStart === p.from && sessionEnd === p.to
               const [name, ...rest] = p.label.split(" ")
@@ -1595,6 +1655,13 @@ export function ReplayPage() {
                   <span className="preset-text relative">
                     <span className="preset-name">{name}</span>
                     <span className="preset-range">{rest.join(" ")}</span>
+                    {/* Already written, and until now only reachable by hovering
+                        and waiting. Picking the wrong window is the mistake this
+                        control exists to prevent, so the reason to pick one is
+                        on the card rather than behind a tooltip -- and it fills
+                        a card that otherwise sits empty next to the taller
+                        custom-session panel. */}
+                    <span className="preset-why">{p.why}</span>
                   </span>
                   <span aria-hidden className={`preset-radio${on ? " preset-radio-on" : ""}`}>
                     {on && <Check size={12} strokeWidth={3.4} />}

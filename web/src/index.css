@@ -1337,3 +1337,162 @@ button, [role="button"] {
   border-color: var(--input);
   background: transparent;
 }
+
+/* =========================================================================
+   Period & timeframe — the date range as ONE control
+   -------------------------------------------------------------------------
+   The range, the day count and the summary now sit on one row. Before, the
+   dates were pinned to a narrow column with the summary floating right, which
+   left roughly a third of the card empty and put the day count on its own row
+   below, where it read as unrelated to the dates it is derived from.
+
+   .range-group is the shared shell so all three line up on the same top edge
+   and the same height, rather than three boxes of different sizes.
+   ========================================================================= */
+.range-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px 15px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0)),
+    #0c1524;
+}
+
+/* The caption sits inside the group rather than above it, so the label cannot
+   drift away from the control when the row wraps at narrow widths. */
+.range-cap {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.range-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.range-leg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.range-leg-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #7c8ba1;
+}
+/* The weekday. Dimmer than the date because it is context for the number
+   above it, not a second thing to read. */
+.range-leg-day {
+  font-size: 11.5px;
+  color: #64748b;
+  padding-left: 2px;
+}
+
+/* The connector. Vertically centred on the date fields, not the whole leg,
+   so it points at the dates rather than floating between the captions. */
+.range-arrow {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 34px;
+  margin-top: 17px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.09);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  animation: range-arrow-shift 460ms var(--ease-out);
+}
+/* Keyed on the date pair in the JSX, so this replays whenever either end
+   moves: the connector acknowledging the change instead of sitting inert. */
+@keyframes range-arrow-shift {
+  0%   { transform: translateX(-4px); opacity: 0.25; }
+  60%  { transform: translateX(1px);  opacity: 1; }
+  100% { transform: translateX(0);    opacity: 1; }
+}
+
+.range-days { justify-content: flex-start; min-width: 13.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .range-arrow { animation: none; }
+}
+
+/* =========================================================================
+   Selection states — three that must never be confused
+   -------------------------------------------------------------------------
+   Timeframe, session preset and custom session are three different kinds of
+   choice on one screen, and at a glance the old flat fills read as the same
+   kind of "on". Each now says what it is in its own colour and its own motion.
+
+   All three are SLOW and low-amplitude on purpose. This is a setup screen a
+   trader stares at while deciding, not a landing page: anything that pulses
+   quickly competes with the numbers for attention, which is the opposite of
+   what a selection indicator is for.
+   ========================================================================= */
+
+/* The selected timeframe. tf-bloom above already fires once on click; this is
+   the resting state that keeps it findable afterwards. */
+@keyframes tf-hold {
+  0%, 100% { box-shadow: 0 2px 12px -2px rgba(47, 128, 255, 0.55); }
+  50%      { box-shadow: 0 2px 18px -2px rgba(47, 128, 255, 0.78); }
+}
+.tf-pill-on { animation: tf-bloom 520ms var(--ease-out), tf-hold 4.2s 520ms ease-in-out infinite; }
+
+/* The chosen session preset. Green, and slower than the timeframe, because it
+   changes far less often -- the breathing is a reminder, not an alert. */
+@keyframes preset-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.00), 0 2px 16px -6px rgba(34, 197, 94, 0.45); }
+  50%      { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.07), 0 2px 22px -6px rgba(34, 197, 94, 0.62); }
+}
+.preset-card-on { animation: preset-breathe 5.4s ease-in-out infinite; }
+
+/* Custom session. Violet, and the only one of the three whose edge moves --
+   it is a mode you switch INTO, so it earns being the most distinct. Off, it
+   stops entirely rather than breathing while doing nothing. */
+@keyframes cs-edge {
+  0%, 100% { border-color: rgba(139, 92, 246, 0.34); box-shadow: 0 0 22px -12px rgba(139, 92, 246, 0.55); }
+  50%      { border-color: rgba(167, 139, 250, 0.62); box-shadow: 0 0 30px -10px rgba(139, 92, 246, 0.80); }
+}
+.custom-session[data-on="true"] { animation: cs-edge 6s ease-in-out infinite; }
+.custom-session[data-on="false"] { animation: none; }
+
+/* Nothing above is load-bearing: every state is also carried by colour, a
+   check mark or a switch position, so turning the motion off loses no meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .tf-pill-on,
+  .preset-card-on,
+  .custom-session[data-on="true"] { animation: none; }
+}
+
+/* The two presets fill the row height rather than sitting short beside the
+   taller custom-session panel. Content stays top-aligned so the name and the
+   window keep the same relationship to the icon at any height. */
+.preset-card { height: 100%; align-items: flex-start; }
+.preset-card .preset-icon,
+.preset-card .preset-text,
+.preset-card .preset-radio { margin-top: 1px; }
+
+/* The reason to choose this preset. Deliberately quiet -- it is there to be
+   read once while deciding, not to compete with the name and the window. */
+.preset-why {
+  margin-top: 7px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #64748b;
+  text-align: left;
+  text-wrap: pretty;
+}
+.preset-card-on .preset-why { color: #7f9c88; }
+.preset-card:hover:not(:disabled) .preset-why { color: #7b8ca3; }

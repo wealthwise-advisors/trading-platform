@@ -21,10 +21,17 @@ interface Props {
   disabled?: boolean
   /** Reason the control is locked, surfaced as a tooltip. */
   disabledReason?: string
+  /**
+   * Drop the built-in caption. For callers that already label the control in
+   * their own layout -- Market Grid captions it alongside "Date range" so the
+   * two groups match -- where rendering this too would show the words twice.
+   * The number keeps its own aria-label, so nothing is lost to a screen reader.
+   */
+  hideLabel?: boolean
 }
 
 export function DayCountStepper({
-  startDate, endDate, onStep, disabled, disabledReason,
+  startDate, endDate, onStep, disabled, disabledReason, hideLabel,
 }: Props) {
   // null when either date is mid-edit and unparseable; the stepper then shows a
   // dash rather than inventing a number and rewriting the other field.
@@ -41,7 +48,7 @@ export function DayCountStepper({
 
   return (
     <div className="space-y-1" title={disabled ? disabledReason : undefined}>
-      <Label className="text-xs">Number of Days</Label>
+      {!hideLabel && <Label className="text-xs">Number of Days</Label>}
       <div className="flex items-center gap-1">
         <Button
           type="button" size="sm" variant="secondary"
