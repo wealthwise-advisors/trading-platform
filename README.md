@@ -300,7 +300,10 @@ is a slogan.
 <tr>
 <td width="50%" valign="top">
 
-### 🧾 A fill you can defend
+<img src="docs/assets/claim-1.svg" alt="" height="30" align="left"> &nbsp;&nbsp;**A fill you can defend**
+
+<img src="docs/assets/claim-rule-1.svg" alt="" width="100%" height="2">
+
 Orders fill at the *next* bar's open, plus slippage in ticks, rounded to the
 instrument's real increment — never the signal bar's close
 
@@ -309,7 +312,10 @@ instrument's real increment — never the signal bar's close
 </td>
 <td width="50%" valign="top">
 
-### 📐 One definition of a bar
+<img src="docs/assets/claim-2.svg" alt="" height="30" align="left"> &nbsp;&nbsp;**One definition of a bar**
+
+<img src="docs/assets/claim-rule-2.svg" alt="" width="100%" height="2">
+
 A single aggregator, session-anchored, shared by the historical and the live
 path — so a 5m bar cannot mean two things
 
@@ -320,7 +326,10 @@ path — so a 5m bar cannot mean two things
 <tr>
 <td width="50%" valign="top">
 
-### ♻️ A number that stays put
+<img src="docs/assets/claim-3.svg" alt="" height="30" align="left"> &nbsp;&nbsp;**A number that stays put**
+
+<img src="docs/assets/claim-rule-3.svg" alt="" width="100%" height="2">
+
 A session grown bar by bar must come out byte-identical to one handed all the
 data at once
 
@@ -329,7 +338,10 @@ data at once
 </td>
 <td width="50%" valign="top">
 
-### 🚀 A deploy that cannot lie
+<img src="docs/assets/claim-4.svg" alt="" height="30" align="left"> &nbsp;&nbsp;**A deploy that cannot lie**
+
+<img src="docs/assets/claim-rule-4.svg" alt="" width="100%" height="2">
+
 The pipeline asks the running server which commit it is serving and fails unless
 it matches
 

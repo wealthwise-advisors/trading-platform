@@ -216,6 +216,13 @@ def why_number(num, accent):
             '</svg>\n')
 
 
+def claim_icon(key, accent):
+    """A single accent-coloured icon for a What Makes It Different card."""
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" '
+            'width="44" height="44" role="img" aria-label="">'
+            + icon(key, accent, 4, 4, 1.5) + '</svg>\n')
+
+
 def about_rule(accent):
     """A one-colour rule, stretched to the card width by the img tag."""
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 2" '
@@ -479,6 +486,14 @@ DIAGRAMS = {
     ], rows=1, label="Bars produce a strategy signal, the paper broker fills it with "
                      "slippage and commission, and the position becomes P&L and metrics"),
     "architecture.svg": architecture,
+    "claim-1.svg": lambda: claim_icon("receipt", "#f97316"),
+    "claim-rule-1.svg": lambda: about_rule("#f97316"),
+    "claim-2.svg": lambda: claim_icon("bars", "#2dd4bf"),
+    "claim-rule-2.svg": lambda: about_rule("#2dd4bf"),
+    "claim-3.svg": lambda: claim_icon("target", "#22c55e"),
+    "claim-rule-3.svg": lambda: about_rule("#22c55e"),
+    "claim-4.svg": lambda: claim_icon("rocket", "#3b82f6"),
+    "claim-rule-4.svg": lambda: about_rule("#3b82f6"),
     "why-1.svg": lambda: why_number("1", SKY),
     "why-2.svg": lambda: why_number("2", AMBER),
     "why-3.svg": lambda: why_number("3", VIOLET),
