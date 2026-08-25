@@ -189,28 +189,38 @@ commit it claims**
 <table>
 <tr><td width="50%" valign="top">
 
-**◆ If you trade and want to check an idea**
+**◆ If you trade and want to check an idea;**
 
-Start with the [Quickstart](docs/QUICKSTART.md), point it at synthetic data, and
-run a strategy end to end without an account anywhere. Then read
-[Backtesting & Execution](#-backtesting--execution) for what the fills actually cost you.
+<ol type="I">
+<li>Start with the <a href="docs/QUICKSTART.md">Quickstart</a>.</li>
+<li>Point it at synthetic data.</li>
+<li>Run a strategy end to end without an account anywhere.</li>
+<li>Then read <a href="#-backtesting--execution">Backtesting &amp; Execution</a> for what the fills actually cost you.</li>
+</ol>
 
 </td><td width="50%" valign="top">
 
-**◆ If you build software and want to read the engine**
+**◆ If you build software and want to read the engine;**
 
-[`src/`](src) is the whole engine and imports nothing from `api/` or `web/` — it
-runs from a test, a script or a server unchanged. [Architecture](docs/ARCHITECTURE.md)
-explains the seams; [`src/analysis/`](src/analysis) is where the market reading lives.
+<ol type="I">
+<li>Start with <a href="src"><code>src/</code></a>.</li>
+<li><a href="src"><code>src/</code></a> is the whole engine and imports nothing from <code>api/</code> or <code>web/</code>.</li>
+<li>It runs from a test, a script or a server unchanged.</li>
+<li><a href="docs/ARCHITECTURE.md">Architecture</a> explains the seams.</li>
+<li><a href="src/analysis"><code>src/analysis/</code></a> is where the market reading lives.</li>
+</ol>
 
 </td></tr>
 </table>
 
-**Three ways in, depending on how much time you have.** Five minutes:
-[Quick Look](#-quick-look) and [Why It Exists](#-why-it-exists) — the four bugs
-that shaped it. An hour: [Quickstart](docs/QUICKSTART.md) and a real backtest. A day:
-[`docs/`](docs) carries the [product requirements](docs/PRD.md), the
-[requirements spec](docs/SRS.md) and the [Elliott Wave rule inventory](docs/ELLIOTT_WAVE_RULES.md).
+> [!NOTE]
+> **Three ways in,** depending on how much time you have;
+>
+> <ol type="I">
+> <li>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</li>
+> <li>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</li>
+> <li>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/SRS.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</li>
+> </ol>
 
 <br>
 
