@@ -368,15 +368,23 @@ it matches
 <td width="50%" valign="top">
 
 ### 📡 Follows the live market
-Load today, press Play, and the tape keeps up on its own — new bars land **within
-~15 seconds of closing**. No reloading, no checkbox to remember.
+
+<ol type="I">
+<li><p>Load today, press Play, and the tape keeps up on its own.</p></li>
+<li><p>New bars land within ~15 seconds of closing.</p></li>
+<li><p>No reloading, no checkbox to remember.</p></li>
+</ol>
 
 </td>
 <td width="50%" valign="top">
 
 ### 🌊 Elliott Wave engine
-Thirteen modules — impulses, corrections, diagonals, triangles, combinations — with
-explicit rules a count must satisfy and a hierarchy pass that nests degrees.
+
+<ol type="I">
+<li><p>Thirteen modules — impulses, corrections, diagonals, triangles, combinations.</p></li>
+<li><p>Explicit rules a count must satisfy.</p></li>
+<li><p>A hierarchy pass that nests degrees.</p></li>
+</ol>
 
 </td>
 </tr>
@@ -384,15 +392,21 @@ explicit rules a count must satisfy and a hierarchy pass that nests degrees.
 <td width="50%" valign="top">
 
 ### ⏱️ Eleven timeframes, one clock
-Panes advance off a **shared market clock** measured in market time, not in bars, so
-a 1m pane and a 1h pane always show the same instant.
+
+<ol type="I">
+<li><p>Panes advance off a shared market clock measured in market time, not in bars.</p></li>
+<li><p>So a 1m pane and a 1h pane always show the same instant.</p></li>
+</ol>
 
 </td>
 <td width="50%" valign="top">
 
 ### 📊 Broker-accurate VWAP
-Volume-weighted price per bar with σ bands at any level, colour-grouped by whole
-number so agreement across timeframes is visible at a glance.
+
+<ol type="I">
+<li><p>Volume-weighted price per bar with σ bands at any level.</p></li>
+<li><p>Colour-grouped by whole number so agreement across timeframes is visible at a glance.</p></li>
+</ol>
 
 </td>
 </tr>
@@ -400,15 +414,26 @@ number so agreement across timeframes is visible at a glance.
 <td width="50%" valign="top">
 
 ### 💰 Costs that are actually charged
-Commission per contract, slippage in ticks, tick-size rounding, and per-instrument
-contract specifications so P&L lands in real currency.
+
+<ol type="I">
+<li><p>Commission per contract.</p></li>
+<li><p>Slippage in ticks.</p></li>
+<li><p>Tick-size rounding.</p></li>
+<li><p>Per-instrument contract specifications so P&amp;L lands in real currency.</p></li>
+</ol>
 
 </td>
 <td width="50%" valign="top">
 
 ### 📤 Exports that match the screen
-**CSV · XLSX · PDF · DOCX**, with charts rendered server-side from the same data the
-dashboard drew.
+
+<ol type="I">
+<li><p>CSV.</p></li>
+<li><p>XLSX.</p></li>
+<li><p>PDF.</p></li>
+<li><p>DOCX.</p></li>
+<li><p>With charts rendered server-side from the same data the dashboard drew.</p></li>
+</ol>
 
 </td>
 </tr>
