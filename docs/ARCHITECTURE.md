@@ -138,7 +138,7 @@ Supporting modules:
 | Module | Role |
 |---|---|
 | `deps.py` | Contract specs, configuration loading |
-| `store.py` | `backtest_id → BacktestResults`, in memory and on disk |
+| `store.py` | `backtest_id → BacktestResults`, cached in front of [`db/`](../db/README.md) |
 | `strategy_registry.py` | Strategy id/label/param-schema, and the builder |
 | `serializers.py` | Results and frames → JSON |
 | `schemas/` | Pydantic request/response models |
@@ -153,24 +153,27 @@ surfaces start disagreeing about what a parameter means.
 
 ### Results outlive the process
 
-`store.py` keeps results in a process-local dictionary *and* writes each one to
-`data/backtests/<backtest_id>/` — a JSON manifest for the scalars and the
-trades, Parquet for the equity curve and the OHLCV frame. Reads come from
-memory first and fall back to disk, so a restart no longer 404s every id.
+`store.py` is an in-memory cache in front of the SQLite database in
+[`db/`](../db/README.md). Every run's scalars and trades become rows; the
+equity curve and the OHLCV frame are written as Parquet beside the database,
+because two frames of tens of thousands of rows, read back whole or not at all,
+would multiply the file size to serve a query nobody makes. Reads come from the
+cache first — one dashboard page hits six endpoints for the same id — and fall
+back to the database, so a restart no longer 404s every id.
 
-Files rather than a database, deliberately. The access pattern is: write one
-result, read it back by its exact id, never search it. A database would be
-bought for joins, concurrent writers and replication that this never uses,
-while charging for a server to run, a schema to migrate and backups to
-remember. The two pandas objects also do not become rows without someone
-deciding how; Parquet stores them as what they already are.
+SQLite rather than a server: one file, no port, no password, no monthly bill,
+and no way for it to be down while the app is up. What it buys over a folder of
+files is the ability to ask questions *across* runs, which is
+`db.backtests.summaries()` — symbol, minimum Sharpe, since a date.
 
-Persistence fails soft. An unwritable directory, a full disk or a corrupt file
-logs and leaves the in-memory cache working, because a failed write should cost
-history and not the run that just finished.
+Persistence fails soft. An unwritable file, a locked database or a missing
+Parquet engine logs and leaves the cache working, because a failed write should
+cost history and not the run that just finished. The corollary is that a broken
+database is quiet: look for `could not persist backtest` in the logs.
 
-The day this needs to answer questions *across* runs — every ES backtest with
-Sharpe above 1.5 since March — is the day a real database earns its place.
+A hand-written schema means a metric added to `BacktestResults` would fail its
+`INSERT` — and fail-soft would swallow it. A guard test compares the dataclass
+against `PRAGMA table_info` and fails the build naming the field.
 
 ## Frontend (`web/`)
 

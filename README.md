@@ -14,7 +14,7 @@ tape while it does. Built at **WealthWise Advisors**.
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/tests-1862%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Tests](https://img.shields.io/badge/tests-1864%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
 [![Coverage](https://img.shields.io/badge/coverage-77%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
@@ -59,7 +59,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **1,862** | **77%** | **3.12** | **5** |
+| **1,864** | **77%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -92,6 +92,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 - [Market Intelligence](#-market-intelligence)
 - [Strategy Engine](#-strategy-engine)
 - [Backtesting & Execution](#-backtesting--execution)
+- [Result Database](#-result-database)
 - [Dashboard](#-dashboard)
 - [API Reference](#-api-reference)
 
@@ -167,7 +168,7 @@ price**
 
 <img src="docs/assets/rule-03.svg" alt="" width="100%" height="2">
 
-**➜ 1,862 tests**
+**➜ 1,864 tests**
 
 **➜ Deterministic runs**
 
@@ -501,7 +502,7 @@ How a change actually travels from an idea to the live URL.
 <tr><th width="20%" align="left">Stage</th><th align="left">What has to be true to move on</th></tr>
 <tr><td><b>02 &middot; Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
 <tr><td><b>03 &middot; Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
-<tr><td><b>04 &middot; Verify</b></td><td>1,862 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
+<tr><td><b>04 &middot; Verify</b></td><td>1,864 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
 <tr><td><b>08 &middot; Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
 </table>
 
@@ -621,6 +622,72 @@ base bar; every other timeframe steps only when its next bar has *closed*. See
 <div align="center">
 <img src="docs/assets/one-clock.svg" alt="One playhead crosses sixty minutes of market time; the 1m lane closes sixty bars, 5m closes twelve, 15m closes four and 1h closes once — and every lane reaches the right edge together" width="100%">
 </div>
+
+<br>
+
+---
+
+## 🗄️ Result Database
+
+Every backtest is written to SQLite, so a restart stops throwing your results
+away — and so you can ask questions across runs, not just reopen one.
+
+<table>
+<tr><td width="50%" valign="top">
+
+**◆ In SQL**
+
+Every scalar and every trade — the parts you can query.
+
+```python
+from api import store
+
+store.summaries(symbol="ES", min_sharpe=1.5,
+                since="2026-03-01")
+```
+
+</td><td width="50%" valign="top">
+
+**◆ Beside it, as Parquet**
+
+The equity curve and the OHLCV frame. Tens of thousands of rows each, read
+back whole or not at all — shredding a 70,000-bar frame into rows would
+multiply the database size to serve a query nobody makes.
+
+</td></tr>
+</table>
+
+| | |
+|:---|:---|
+| **Engine** | SQLite — one file, no server, no port, no password, no monthly bill |
+| **Location** | `data/autotrader.db`, on the volume compose already mounts, so it survives a redeploy |
+| **Schema** | [`db/schema.sql`](db/schema.sql) — `backtests`, `trades`, 6 indexes |
+| **Layout** | [`db/`](db/README.md) is the only place that knows the tables; routers never see a cursor |
+
+> [!NOTE]
+> **Persistence fails soft, and that is a trade.** An unwritable file or a
+> locked database logs and carries on as the in-memory cache — a failed write
+> costs history, a raised exception would cost the run that just finished. The
+> corollary is that a broken database is quiet: if results stop surviving
+> restarts, look for `could not persist backtest` in the logs.
+
+**Why SQLite and not Postgres, MySQL, Mongo, Supabase or Firebase.** They buy
+concurrent writers, replication and sharding a one-process tool never uses, and
+charge a server to run, a schema to migrate and backups to remember. Supabase
+and Firebase are mostly bought for auth and realtime — this application has no
+auth at all, and using them would send result data off the machine that holds
+the broker credentials. SQLite is the one with no operational surface: it is a
+file.
+
+**A schema costs you migrations, so there is a guard.** Add a metric to
+`BacktestResults` and the `INSERT` fails on an unknown column — which
+persistence-fails-soft would then swallow. A test compares the dataclass
+against `PRAGMA table_info` and fails the build naming the field:
+
+```
+BacktestResults has ['calmar_ratio'] but the backtests table does not.
+Add the column to db/schema.sql and bump SCHEMA_VERSION.
+```
 
 <br>
 
@@ -853,6 +920,10 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |------------▶  <a href="config">config/</a>   <i>settings and credential templates</i>  <b>3</b>
 |               |- - - ▶  <a href="config/credentials.yaml.example">credentials.yaml.example</a>
 |               └- - - ▶  <a href="config/settings.yaml">settings.yaml</a>
+|------------▶  <a href="db">db/</a>   <i>SQLite schema, connection and the result repository</i>  <b>5</b>
+|               |- - - ▶  <a href="db/schema.sql">schema.sql</a>
+|               |- - - ▶  <a href="db/connection.py">connection.py</a>
+|               └- - - ▶  <a href="db/backtests.py">backtests.py</a>
 |------------▶  <a href="data">data/</a>   <i>bundled samples, downloads, and saved results</i>  <b>18</b>
 |------------▶  <a href="scripts">scripts/</a>   <i>CLI entry points and the local launcher</i>  <b>5</b>
 |               |- - - ▶  <a href="scripts/download_rithmic_data.py">download_rithmic_data.py</a>
@@ -941,7 +1012,7 @@ frees the ports first and pins the right Python.
 ## 🧪 Testing & Quality
 
 ```bash
-py -3.12 -m pytest              # 1,566 Python tests
+py -3.12 -m pytest              # 1,568 Python tests
 cd web && npm test              #   296 web tests
 cd web && npm run build         # tsc -b — the real typecheck
 py -3.12 -m ruff check .        # lint
@@ -953,9 +1024,9 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 
 | Suite | Count | Covers |
 |:---|---:|:---|
-| 🐍 **Python** | **1,566** | engine, analysis, API, providers, replay |
+| 🐍 **Python** | **1,568** | engine, analysis, API, providers, replay |
 | ⚛️ **Web** | **296** | pure logic in [`web/src/lib`](web/src/lib) |
-| **Total** | **1,862** | |
+| **Total** | **1,864** | |
 | 📊 **Coverage** | **77%** | `src/` and `api/`, measured on every push |
 
 </div>
@@ -1077,6 +1148,7 @@ every Docker image.
 
 ### ◆ Going deeper
 - 🏛 [Architecture](docs/ARCHITECTURE.md)
+- 🗄️ [Result Database](db/README.md)
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - 🎨 [UI / UX](docs/UI_UX.md)
 - 🔌 [API Guide](docs/API_GUIDE.md)

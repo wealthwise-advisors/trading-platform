@@ -30,9 +30,13 @@ config/credentials.yaml*
 # Data files — too large / user-specific
 data/historical/
 data/live/
-# Saved backtest results. Inside /app/data, which docker-compose mounts as
-# the named volume autotrader-data, so these survive a redeploy on the server.
+# The result database and its parquet sidecars. Both sit inside /app/data,
+# which docker-compose mounts as the named volume autotrader-data, so they
+# survive a redeploy on the server. -wal and -shm belong to the db file.
 data/backtests/
+data/autotrader.db
+data/autotrader.db-wal
+data/autotrader.db-shm
 
 # Logs
 logs/
