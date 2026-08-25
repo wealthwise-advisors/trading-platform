@@ -108,10 +108,22 @@ def arrow_v(x, y1, y2, accent="#3a4a63"):
             f'L {x + 4:.0f} {y2 - 7:.0f} Z" fill="{accent}"/>']
 
 
-def dot(pts, begin, dur, accent):
-    """One dot walking a list of (x, y) stops, once per cycle."""
+def dot(pts, begin, dur, accent, by_distance=False):
+    """
+    One dot walking a list of (x, y) stops, once per cycle.
+
+    by_distance spaces the keyTimes by segment length instead of evenly, so a
+    path with elbow points (workflow's row wrap) travels at a constant speed
+    rather than crawling through the three short corner segments.
+    """
     n = len(pts)
-    kt = ";".join(f"{i / (n - 1):.3f}" for i in range(n))
+    if by_distance:
+        d = [0.0]
+        for a, b in zip(pts, pts[1:]):
+            d.append(d[-1] + ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5)
+        kt = ";".join(f"{v / d[-1]:.3f}" for v in d)
+    else:
+        kt = ";".join(f"{i / (n - 1):.3f}" for i in range(n))
     xs = ";".join(f"{p[0]:.0f}" for p in pts)
     ys = ";".join(f"{p[1]:.0f}" for p in pts)
     return [
@@ -170,6 +182,91 @@ def chain(nodes, rows, label, accent_default=SLATE):
     return "\n".join(o) + "\n"
 
 
+# == workflow: eight numbered stages over two rows =========================
+def workflow():
+    """
+    Eight stages, four to a row. Each card carries its step number, an icon,
+    the stage name and its one supporting line. Verify and Deploy are the two
+    checkpoints, so they get the accent border and a heavier stroke.
+
+    Two rows, not one: eight cards across 1280px give 138px each, and
+    "Backtest & Replay" does not fit in 138px. Four give 288px.
+    """
+    PAD, GAP, CW, CH = 28, 24, 288, 140
+    ROW_GAP, TOP = 74, 24
+    H = TOP + 2 * CH + ROW_GAP + 24
+
+    nodes = [
+        ("01", "Idea", None, "bulb", SKY, False),
+        ("02", "Research", "measure it", "search", SKY, False),
+        ("03", "Implement", "+ tests that can fail", "code", SKY, False),
+        ("04", "Verify", "1,853 tests \u00b7 ruff \u00b7 tsc", "shield", TEAL, True),
+        ("05", "Backtest & Replay", "against real bars", "bars", VIOLET, False),
+        ("06", "Pull Request", "6 CI checks", "branch", VIOLET, False),
+        ("07", "Merge", None, "merge", VIOLET, False),
+        ("08", "Deploy", "SHA asserted", "rocket", TEAL, True),
+    ]
+    step = 1.0
+    cycle = len(nodes) * step
+
+    o = [head(H, "A change travels from idea through research, implementation, "
+                 "verification, backtest, pull request and merge to a deploy "
+                 "whose commit is asserted")]
+    stops = []
+    for i, (num, title, sub, ic, accent, strong) in enumerate(nodes):
+        r, c = divmod(i, 4)
+        x = PAD + c * (CW + GAP)
+        y = TOP + r * (CH + ROW_GAP)
+        cx = x + CW / 2
+        op = "0.55" if strong else "0.26"
+
+        o.append(f'<rect x="{x:.0f}" y="{y:.0f}" width="{CW}" height="{CH}" rx="14" '
+                 f'fill="{PANEL}" stroke="{accent}" stroke-opacity="{op}" '
+                 f'stroke-width="{2 if strong else 1.2}">')
+        o.append(f'<animate attributeName="stroke-opacity" values="{op};0.95;{op};{op}" '
+                 f'keyTimes="0;0.04;0.22;1" begin="{i * step:.2f}s" '
+                 f'dur="{cycle:.2f}s" repeatCount="indefinite"/>')
+        o.append("</rect>")
+
+        # step number, in its own chip so it reads as an index, not as data
+        o.append(f'<rect x="{x + 16:.0f}" y="{y + 16}" width="36" height="22" rx="6" '
+                 f'fill="{accent}" fill-opacity=".12"/>')
+        o.append(f'<text x="{x + 34:.0f}" y="{y + 31}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="11.5" font-weight="700" '
+                 f'letter-spacing=".5" fill="{accent}" fill-opacity=".85">{num}</text>')
+
+        o.append(icon(ic, accent, cx - 18, y + 46, 1.5))
+        o.append(f'<text x="{cx:.0f}" y="{y + 107}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="17" font-weight="700" '
+                 f'fill="{INK}">{esc(title)}</text>')
+        if sub:
+            o.append(f'<text x="{cx:.0f}" y="{y + 127}" text-anchor="middle" '
+                     f'font-family="{FONT}" font-size="12.5" '
+                     f'fill="{DIM}">{esc(sub)}</text>')
+        stops.append((cx, y + CH / 2))
+        if c < 3:
+            o += arrow_h(x + CW, x + CW + GAP, y + CH / 2,
+                         "#3d7ea6" if r == 0 else "#6350a0")
+
+    # The row wrap. Drawn as a real routed connector -- down out of Verify,
+    # back along the gutter, down into Backtest -- because a diagonal across
+    # the whole figure would read as a shortcut past stages 05 to 07.
+    y_elbow = TOP + CH + ROW_GAP / 2
+    x_v, x_b = stops[3][0], stops[4][0]
+    y_top, y_bot = TOP + CH, TOP + CH + ROW_GAP
+    o.append(f'<path d="M {x_v:.0f} {y_top} V {y_elbow:.0f} H {x_b:.0f} V {y_bot - 8:.0f}" '
+             f'fill="none" stroke="{TEAL}" stroke-opacity=".5" stroke-width="1.5" '
+             f'stroke-dasharray="5 5"/>')
+    o.append(f'<path d="M {x_b - 4.5:.0f} {y_bot - 8:.0f} L {x_b:.0f} {y_bot:.0f} '
+             f'L {x_b + 4.5:.0f} {y_bot - 8:.0f} Z" fill="{TEAL}" fill-opacity=".6"/>')
+
+    # The dot follows that same routing rather than cutting the corner.
+    path = stops[:4] + [(x_v, y_elbow), (x_b, y_elbow)] + stops[4:]
+    o += dot(path, 0, cycle, TEAL, by_distance=True)
+    o.append("</svg>")
+    return "\n".join(o) + "\n"
+
+
 # ══ architecture: three bands, top to bottom ══════════════════════════════
 # Icons on a 24x24 grid, outlined at one weight so they read as one family
 # rather than as clip art collected from three places.
@@ -193,6 +290,23 @@ ICONS = {
                '<path d="M7 9.6l2.6 2.4L7 14.4"/>', '<path d="M12.6 14.8h4.4"/>'],
     "chart": ['<rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2.2"/>',
               '<path d="M7.2 14.8 10.4 11l2.6 2.2 3.8-4.8"/>'],
+    "bulb": ['<path d="M12 2.8a6.3 6.3 0 0 0-3.7 11.4v2.2h7.4v-2.2A6.3 6.3 0 0 0 12 2.8z"/>',
+             '<path d="M9.6 19h4.8"/>', '<path d="M10.6 21.4h2.8"/>'],
+    "search": ['<circle cx="10.7" cy="10.7" r="6.5"/>', '<path d="M15.4 15.4 20.4 20.4"/>'],
+    "shield": ['<path d="M12 2.8 4.9 5.8v5.9c0 4.4 3 8.5 7.1 9.7 4.1-1.2 7.1-5.3 7.1-9.7V5.8z"/>',
+               '<path d="m8.8 11.9 2.4 2.4 4.2-4.7"/>'],
+    "branch": ['<path d="M6.6 3.8v12.4"/>', '<circle cx="17.4" cy="6.2" r="2.2"/>',
+               '<circle cx="6.6" cy="18.4" r="2.2"/>',
+               '<path d="M17.4 8.4a8.6 8.6 0 0 1-8.6 8.4"/>'],
+    "merge": ['<circle cx="6.4" cy="4.8" r="2.2"/>', '<circle cx="17.6" cy="4.8" r="2.2"/>',
+              '<circle cx="12" cy="19.2" r="2.2"/>',
+              '<path d="M6.4 7v1.9a3.5 3.5 0 0 0 3.5 3.5h4.2a3.5 3.5 0 0 0 3.5-3.5V7"/>',
+              '<path d="M12 12.4v4.6"/>'],
+    "rocket": ['<path d="M12 2.6c3 2.3 4.8 5.9 4.8 9.7 0 2.3-.7 4.5-1.9 6.3H9.1a11.7 11.7 0 0 1-1.9-6.3c0-3.8 1.8-7.4 4.8-9.7z"/>',
+               '<circle cx="12" cy="10.2" r="2"/>',
+               '<path d="M7.4 13.3 4.6 16.1v3.3h3"/>',
+               '<path d="M16.6 13.3l2.8 2.8v3.3h-3"/>',
+               '<path d="M10.4 20.6c.5.9 1 1.6 1.6 2.1.6-.5 1.1-1.2 1.6-2.1"/>'],
     "down": ['<path d="M12 3.8v10"/>', '<path d="M8 10l4 4 4-4"/>',
              '<path d="M4.8 16.6v2.6a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.6"/>'],
 }
@@ -298,18 +412,7 @@ def architecture():
 
 
 DIAGRAMS = {
-    "workflow.svg": lambda: chain([
-        ("Idea", None, None, False),
-        ("Research", "measure it", None, False),
-        ("Implement", "+ tests that can fail", None, False),
-        ("Verify", "1,853 tests · ruff · tsc", TEAL, True),
-        ("Backtest & Replay", "against real bars", None, False),
-        ("Pull Request", "6 CI checks", None, False),
-        ("Merge", None, None, False),
-        ("Deploy", "SHA asserted", TEAL, True),
-    ], rows=2, label="A change travels from idea through research, implementation, "
-                     "verification, backtest, pull request and merge to a deploy "
-                     "whose commit is asserted"),
+    "workflow.svg": workflow,
     "execution.svg": lambda: chain([
         ("Bars", None, None, False),
         ("Strategy", "signal", None, False),
