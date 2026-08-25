@@ -8,6 +8,17 @@ tooling to run/validate/package/deploy all of the above.
 `src/broker/rithmic_broker.py` remain an intentional stub — see "Known
 limitations" in [RELEASE_AUDIT.md](RELEASE_AUDIT.md)).
 
+> [!IMPORTANT]
+> **Historical record — accurate for 2026-07-18, not for today.** The Elliott
+> Wave engine described below was removed in full and rebuilt from scratch in
+> `c74fcf1` (2026-08-10), so its test count, its 80% coverage figure and its
+> benchmark no longer describe anything in this repository. The current engine
+> lives in [`src/analysis/elliott_wave/`](../src/analysis/elliott_wave) and is
+> documented in [ELLIOTT_WAVE_IMPLEMENTATION.md](ELLIOTT_WAVE_IMPLEMENTATION.md)
+> and [ELLIOTT_WAVE_RULES.md](ELLIOTT_WAVE_RULES.md). Everything outside the
+> Elliott Wave section — the backtesting engine, replay, the platform — still
+> stands.
+
 ## Highlights
 
 ### Elliott Wave engine
@@ -25,8 +36,10 @@ limitations" in [RELEASE_AUDIT.md](RELEASE_AUDIT.md)).
   markets × 5 timeframes).
 - Independent industry benchmark: 473 cases, 95% confidence intervals,
   Cohen's Kappa, a documented five-way disagreement taxonomy, and a 100%
-  reproducibility result across repeated runs. Full report:
-  [benchmark/TASK9_IMPROVEMENT_REPORT.md](../benchmark/TASK9_IMPROVEMENT_REPORT.md).
+  reproducibility result across repeated runs. The full report lived at
+  `benchmark/TASK9_IMPROVEMENT_REPORT.md`; it was removed in `c74fcf1` together
+  with the implementation it measured, and is recoverable from that commit's
+  parent.
 
 ### Platform
 
