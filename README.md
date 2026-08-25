@@ -92,7 +92,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 - [Market Intelligence](#-market-intelligence)
 - [Strategy Engine](#-strategy-engine)
 - [Backtesting & Execution](#-backtesting--execution)
-- [Result Database](#-result-database)
+- [Database](#-database)
 - [Dashboard](#-dashboard)
 - [API Reference](#-api-reference)
 
@@ -627,67 +627,54 @@ base bar; every other timeframe steps only when its next bar has *closed*. See
 
 ---
 
-## 🗄️ Result Database
+## 🗄️ Database
 
-Every backtest is written to SQLite, so a restart stops throwing your results
-away — and so you can ask questions across runs, not just reopen one.
+**SQLite** — one file, no server, no port, no password, no monthly bill.
 
 <table>
 <tr><td width="50%" valign="top">
 
 **◆ In SQL**
 
-Every scalar and every trade — the parts you can query.
+**➜** Every scalar metric
 
-```python
-from api import store
+**➜** One row per trade
 
-store.summaries(symbol="ES", min_sharpe=1.5,
-                since="2026-03-01")
-```
+**➜** 6 indexes — symbol, date, Sharpe, strategy
+
+**➜** Trades cascade on delete
 
 </td><td width="50%" valign="top">
 
 **◆ Beside it, as Parquet**
 
-The equity curve and the OHLCV frame. Tens of thousands of rows each, read
-back whole or not at all — shredding a 70,000-bar frame into rows would
-multiply the database size to serve a query nobody makes.
+**➜** Equity curve
+
+**➜** OHLCV frame
+
+**➜** dtypes and `DatetimeIndex` preserved
+
+**➜** Row counts recorded, so truncation shows
 
 </td></tr>
 </table>
 
 | | |
 |:---|:---|
-| **Engine** | SQLite — one file, no server, no port, no password, no monthly bill |
-| **Location** | `data/autotrader.db`, on the volume compose already mounts, so it survives a redeploy |
-| **Schema** | [`db/schema.sql`](db/schema.sql) — `backtests`, `trades`, 6 indexes |
-| **Layout** | [`db/`](db/README.md) is the only place that knows the tables; routers never see a cursor |
+| **File** | `data/autotrader.db` — survives restarts and redeploys |
+| **Schema** | [`db/schema.sql`](db/schema.sql) — `backtests`, `trades` |
+| **Code** | [`db/`](db/README.md) — routers never see a cursor |
+| **Guard** | A test fails the build if a metric has no column |
+
+Query across runs:
+
+```python
+store.summaries(symbol="ES", min_sharpe=1.5, since="2026-03-01")
+```
 
 > [!NOTE]
-> **Persistence fails soft, and that is a trade.** An unwritable file or a
-> locked database logs and carries on as the in-memory cache — a failed write
-> costs history, a raised exception would cost the run that just finished. The
-> corollary is that a broken database is quiet: if results stop surviving
-> restarts, look for `could not persist backtest` in the logs.
-
-**Why SQLite and not Postgres, MySQL, Mongo, Supabase or Firebase.** They buy
-concurrent writers, replication and sharding a one-process tool never uses, and
-charge a server to run, a schema to migrate and backups to remember. Supabase
-and Firebase are mostly bought for auth and realtime — this application has no
-auth at all, and using them would send result data off the machine that holds
-the broker credentials. SQLite is the one with no operational surface: it is a
-file.
-
-**A schema costs you migrations, so there is a guard.** Add a metric to
-`BacktestResults` and the `INSERT` fails on an unknown column — which
-persistence-fails-soft would then swallow. A test compares the dataclass
-against `PRAGMA table_info` and fails the build naming the field:
-
-```
-BacktestResults has ['calmar_ratio'] but the backtests table does not.
-Add the column to db/schema.sql and bump SCHEMA_VERSION.
-```
+> Writes fail soft — a locked file logs and serves from cache. If results stop
+> surviving restarts, grep for `could not persist backtest`.
 
 <br>
 
@@ -1148,7 +1135,7 @@ every Docker image.
 
 ### ◆ Going deeper
 - 🏛 [Architecture](docs/ARCHITECTURE.md)
-- 🗄️ [Result Database](db/README.md)
+- 🗄️ [Database](db/README.md)
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - 🎨 [UI / UX](docs/UI_UX.md)
 - 🔌 [API Guide](docs/API_GUIDE.md)
