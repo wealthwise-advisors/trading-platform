@@ -29,6 +29,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY src/ src/
 COPY api/ api/
+# db/ carries schema.sql, which db/connection.py reads at runtime; the whole
+# directory is copied rather than just the .py files.
+COPY db/ db/
 COPY config/settings.yaml config/settings.yaml
 COPY config/credentials.yaml.example config/credentials.yaml.example
 COPY pyproject.toml README.md ./
