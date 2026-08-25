@@ -115,10 +115,10 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 ## 🎯 About the Platform
 
-→ Most trading tools tell you what to buy. This one tells you whether you
+➜ Most trading tools tell you what to buy. This one tells you whether you
 should have believed the last thing that told you what to buy.
 
-→ **AutoTrader** is an instrument for measuring trading ideas. You give it an
+➜ **AutoTrader** is an instrument for measuring trading ideas. You give it an
 instrument, a date range and a strategy; it replays the market bar by bar,
 executes the strategy against a broker that charges commission and slippage on
 every fill, and hands back a result you can reproduce exactly.
@@ -131,17 +131,17 @@ every fill, and hands back a result you can reproduce exactly.
 
 <img src="docs/assets/rule-01.svg" alt="" width="100%" height="2">
 
-**→ Elliott Wave structure**
+**➜ Elliott Wave structure**
 
-**→ Swing pivots**
+**➜ Swing pivots**
 
-**→ Chart and candlestick patterns**
+**➜ Chart and candlestick patterns**
 
-**→ VWAP with deviation bands**
+**➜ VWAP with deviation bands**
 
-**→ Volume profile**
+**➜ Volume profile**
 
-**→ A regime classifier that says whether the market is trending, ranging or
+**➜ A regime classifier that says whether the market is trending, ranging or
 volatile**
 
 </td>
@@ -151,13 +151,13 @@ volatile**
 
 <img src="docs/assets/rule-02.svg" alt="" width="100%" height="2">
 
-**→ Bar-by-bar replay with a paper broker**
+**➜ Bar-by-bar replay with a paper broker**
 
-**→ Commission per contract**
+**➜ Commission per contract**
 
-**→ Slippage in ticks**
+**➜ Slippage in ticks**
 
-**→ Prices rounded to the real increment — a plausible fill, not a closing
+**➜ Prices rounded to the real increment — a plausible fill, not a closing
 price**
 
 </td>
@@ -167,13 +167,13 @@ price**
 
 <img src="docs/assets/rule-03.svg" alt="" width="100%" height="2">
 
-**→ 1,853 tests**
+**➜ 1,853 tests**
 
-**→ Deterministic runs**
+**➜ Deterministic runs**
 
-**→ One shared bar aggregator**
+**➜ One shared bar aggregator**
 
-**→ A deploy that refuses to succeed unless the server is actually running the
+**➜ A deploy that refuses to succeed unless the server is actually running the
 commit it claims**
 
 </td>
