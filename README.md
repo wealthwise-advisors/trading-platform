@@ -115,51 +115,70 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 ## 🎯 About the Platform
 
-Most trading tools tell you what to buy. **This one tells you whether you should
-have believed the last thing that told you what to buy.**
+→ Most trading tools tell you what to buy. This one tells you whether you
+should have believed the last thing that told you what to buy.
 
-AutoTrader is an instrument for measuring trading ideas. You give it an instrument,
-a date range and a strategy; it replays the market bar by bar, executes the strategy
-against a broker that charges commission and slippage on every fill, and hands back a
-result you can reproduce exactly.
+→ **AutoTrader** is an instrument for measuring trading ideas. You give it an
+instrument, a date range and a strategy; it replays the market bar by bar,
+executes the strategy against a broker that charges commission and slippage on
+every fill, and hands back a result you can reproduce exactly.
 
 <table>
 <tr>
-<td width="33%" valign="top" align="center">
+<td width="33%" valign="top">
 
-### 📖
-**Read the market**
+<img src="docs/assets/about-01.svg" alt="" height="38" align="left"> &nbsp;&nbsp;**Read the market**
 
-Elliott Wave structure, swing pivots, chart and candlestick patterns, VWAP with
-deviation bands, volume profile, and a regime classifier that says whether the
-market is trending, ranging or volatile.
+<img src="docs/assets/rule-01.svg" alt="" width="100%" height="2">
+
+→ Elliott Wave structure
+
+→ Swing pivots
+
+→ Chart and candlestick patterns
+
+→ VWAP with deviation bands
+
+→ Volume profile
+
+→ A regime classifier that says whether the market is trending, ranging or
+volatile
 
 </td>
-<td width="33%" valign="top" align="center">
+<td width="33%" valign="top">
 
-### ⚖️
-**Test the idea**
+<img src="docs/assets/about-02.svg" alt="" height="38" align="left"> &nbsp;&nbsp;**Test the idea**
 
-Bar-by-bar replay with a paper broker. Commission per contract, slippage in ticks,
-prices rounded to the real increment — a plausible fill, not a closing price.
+<img src="docs/assets/rule-02.svg" alt="" width="100%" height="2">
+
+→ Bar-by-bar replay with a paper broker
+
+→ Commission per contract
+
+→ Slippage in ticks
+
+→ Prices rounded to the real increment — a plausible fill, not a closing
+price
 
 </td>
-<td width="33%" valign="top" align="center">
+<td width="33%" valign="top">
 
-### 🔬
-**Trust the number**
+<img src="docs/assets/about-03.svg" alt="" height="38" align="left"> &nbsp;&nbsp;**Trust the number**
 
-1,853 tests, deterministic runs, one shared bar aggregator, and a deploy that
-refuses to succeed unless the server is actually running the commit it claims.
+<img src="docs/assets/rule-03.svg" alt="" width="100%" height="2">
+
+→ 1,853 tests
+
+→ Deterministic runs
+
+→ One shared bar aggregator
+
+→ A deploy that refuses to succeed unless the server is actually running the
+commit it claims
 
 </td>
 </tr>
 </table>
-
-> **What it is not.** Not a signal service, not an auto-trading bot, not a promise
-> about tomorrow. Live *data* is production-ready; live *execution* is deliberately
-> experimental and unwired. The output is evidence, and evidence is only worth
-> something if you can say how it was produced.
 
 <br>
 

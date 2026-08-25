@@ -182,6 +182,39 @@ def chain(nodes, rows, label, accent_default=SLATE):
     return "\n".join(o) + "\n"
 
 
+# == About the Platform: card headers and rules ============================
+# Not diagrams. GitHub strips style attributes and <style> blocks from README
+# markdown, so a heading number, an icon and a horizontal rule cannot be given
+# a colour in markup -- the only way to put an accent colour on the page is to
+# ship it as an image. These are the smallest images that do that: the prose
+# they sit above stays real text.
+def about_header(num, key, accent):
+    """A numbered chip and its icon, drawn inline above a card's title."""
+    w, h = 108, 46
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" '
+            f'width="{w}" height="{h}" role="img" '
+            f'aria-label="Step {num}">'
+            f'<rect x="1" y="5" width="44" height="36" rx="10" fill="{accent}" '
+            f'fill-opacity=".10" stroke="{accent}" stroke-opacity=".65" '
+            f'stroke-width="1.4"/>'
+            f'<text x="23" y="30" text-anchor="middle" font-family="{MONO}" '
+            f'font-size="19" font-weight="700" fill="{accent}">{num}</text>'
+            + icon(key, accent, 60, 2, 1.75) +
+            '</svg>\n')
+
+
+def about_rule(accent):
+    """A one-colour rule, stretched to the card width by the img tag."""
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 2" '
+            'width="100" height="2" preserveAspectRatio="none" role="img" '
+            'aria-label="">'
+            f'<rect width="100" height="2" rx="1" fill="{accent}" '
+            'fill-opacity=".55"/></svg>\n')
+
+
+ABOUT = [("01", "book", SKY), ("02", "scales", AMBER), ("03", "trusted", VIOLET)]
+
+
 # == workflow: eight numbered stages over two rows =========================
 def workflow():
     """
@@ -307,6 +340,16 @@ ICONS = {
                '<path d="M7.4 13.3 4.6 16.1v3.3h3"/>',
                '<path d="M16.6 13.3l2.8 2.8v3.3h-3"/>',
                '<path d="M10.4 20.6c.5.9 1 1.6 1.6 2.1.6-.5 1.1-1.2 1.6-2.1"/>'],
+    "book": ['<path d="M12 6.4v13.4"/>',
+             '<path d="M12 6.4C10.2 4.9 7.8 4.2 4.4 4.2v12.6c3.4 0 5.8.7 7.6 2.2"/>',
+             '<path d="M12 6.4c1.8-1.5 4.2-2.2 7.6-2.2v12.6c-3.4 0-5.8.7-7.6 2.2"/>'],
+    "scales": ['<circle cx="12" cy="4.6" r="1.5"/>', '<path d="M12 6.1v13.3"/>',
+               '<path d="M5 7.4h14"/>', '<path d="M8.4 19.4h7.2"/>',
+               '<path d="M5 7.4 2.4 12.8h5.2z"/>', '<path d="M19 7.4l-2.6 5.4h5.2z"/>'],
+    "trusted": ['<circle cx="9.6" cy="6.6" r="2.9"/>',
+                '<path d="M3.8 19.6a5.8 5.8 0 0 1 5.8-5.8c.9 0 1.8.2 2.6.6"/>',
+                '<path d="M17.4 11.2 21.6 12.7v3.3c0 2.3-1.7 4.4-4.2 5.2-2.5-.8-4.2-2.9-4.2-5.2v-3.3z"/>',
+                '<path d="m15.6 16.2 1.3 1.3 2.3-2.6"/>'],
     "down": ['<path d="M12 3.8v10"/>', '<path d="M8 10l4 4 4-4"/>',
              '<path d="M4.8 16.6v2.6a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.6"/>'],
 }
@@ -423,6 +466,12 @@ DIAGRAMS = {
     ], rows=1, label="Bars produce a strategy signal, the paper broker fills it with "
                      "slippage and commission, and the position becomes P&L and metrics"),
     "architecture.svg": architecture,
+    "about-01.svg": lambda: about_header("01", "book", SKY),
+    "rule-01.svg": lambda: about_rule(SKY),
+    "about-02.svg": lambda: about_header("02", "scales", AMBER),
+    "rule-02.svg": lambda: about_rule(AMBER),
+    "about-03.svg": lambda: about_header("03", "trusted", VIOLET),
+    "rule-03.svg": lambda: about_rule(VIOLET),
 }
 
 
