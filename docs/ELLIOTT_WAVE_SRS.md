@@ -837,7 +837,7 @@ implementable gate is never created (FR-5.4), so there is nothing for such a fie
 | ID | Tier | Requirement |
 |---|---|---|
 | API-1.1 | **EN** | One new read-only sub-resource: `GET /api/backtests/{backtest_id}/elliott-wave`. Follows the existing sub-resource convention (`/zigzag`, `/chart-patterns`, `/candlestick-patterns`). |
-| API-1.2 | **EN** | It SHALL read `price_data` from the existing in-memory store and SHALL NOT re-run the backtest or re-fetch data. |
+| API-1.2 | **EN** | It SHALL read `price_data` from the existing result store and SHALL NOT re-run the backtest or re-fetch data. |
 | API-1.3 | **EN** | 404 for an unknown/expired `backtest_id`, matching sibling endpoints. |
 | API-1.4 | **EN — D-13 CLOSED** | The endpoint SHALL expose the pivot detector's `theta_base`, `ratio` and `scales` as optional query parameters, defaulting to the FR-1e.3 values. FR-1e.4's parity test applies. Any further parameters depend on OQ-05 and are out of v1. `max_combination_depth` is deliberately **not** exposed — it is capped at 1 by the ladder's expressive limit (FR-3.9a.1), so a caller-supplied value could only be wrong. |
 | API-1.5 | **EN** | The response SHALL include `blocked_rules` (DM-3) so the client can honestly display what was not evaluated. |

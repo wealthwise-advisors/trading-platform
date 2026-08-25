@@ -853,7 +853,7 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |------------▶  <a href="config">config/</a>   <i>settings and credential templates</i>  <b>3</b>
 |               |- - - ▶  <a href="config/credentials.yaml.example">credentials.yaml.example</a>
 |               └- - - ▶  <a href="config/settings.yaml">settings.yaml</a>
-|------------▶  <a href="data">data/</a>   <i>bundled samples, and where downloads land</i>  <b>18</b>
+|------------▶  <a href="data">data/</a>   <i>bundled samples, downloads, and saved results</i>  <b>18</b>
 |------------▶  <a href="scripts">scripts/</a>   <i>CLI entry points and the local launcher</i>  <b>5</b>
 |               |- - - ▶  <a href="scripts/download_rithmic_data.py">download_rithmic_data.py</a>
 |               |- - - ▶  <a href="scripts/generate_data.py">generate_data.py</a>

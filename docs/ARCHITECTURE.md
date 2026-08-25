@@ -138,7 +138,7 @@ Supporting modules:
 | Module | Role |
 |---|---|
 | `deps.py` | Contract specs, configuration loading |
-| `store.py` | In-memory `backtest_id → BacktestResults` |
+| `store.py` | `backtest_id → BacktestResults`, in memory and on disk |
 | `strategy_registry.py` | Strategy id/label/param-schema, and the builder |
 | `serializers.py` | Results and frames → JSON |
 | `schemas/` | Pydantic request/response models |
@@ -151,11 +151,26 @@ web config form and the Market Grid setup both build their inputs from it, so
 adding a strategy adds its UI. Hand-wiring a form per strategy is how the two
 surfaces start disagreeing about what a parameter means.
 
-### Results are in memory
+### Results outlive the process
 
-`store.py` is a process-local dictionary. A restart loses stored runs. This is
-adequate for a single-desk tool and is a deliberate simplification, not an
-oversight — but it is the first thing to revisit if the tool is ever shared.
+`store.py` keeps results in a process-local dictionary *and* writes each one to
+`data/backtests/<backtest_id>/` — a JSON manifest for the scalars and the
+trades, Parquet for the equity curve and the OHLCV frame. Reads come from
+memory first and fall back to disk, so a restart no longer 404s every id.
+
+Files rather than a database, deliberately. The access pattern is: write one
+result, read it back by its exact id, never search it. A database would be
+bought for joins, concurrent writers and replication that this never uses,
+while charging for a server to run, a schema to migrate and backups to
+remember. The two pandas objects also do not become rows without someone
+deciding how; Parquet stores them as what they already are.
+
+Persistence fails soft. An unwritable directory, a full disk or a corrupt file
+logs and leaves the in-memory cache working, because a failed write should cost
+history and not the run that just finished.
+
+The day this needs to answer questions *across* runs — every ES backtest with
+Sharpe above 1.5 since March — is the day a real database earns its place.
 
 ## Frontend (`web/`)
 

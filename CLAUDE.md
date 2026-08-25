@@ -110,7 +110,8 @@ Trading/
 ├── api/                        # FastAPI backend
 │   ├── main.py                 # App entrypoint, mounts all routers under /api
 │   ├── deps.py                 # Contract specs, config loading
-│   ├── store.py                # In-memory backtest_id -> BacktestResults store
+│   ├── store.py                # backtest_id -> BacktestResults; in memory, and
+│   │                           #   persisted to data/backtests/ so a restart keeps them
 │   ├── strategy_registry.py    # Strategy id/label/param-schema -> build_strategy()
 │   ├── serializers.py          # BacktestResults/DataFrame -> JSON dicts
 │   ├── routers/                # backtests, replay, schwab, optimize, meta
@@ -140,7 +141,9 @@ Trading/
 │                                            #   swing containment, live/report parity)
 │
 ├── data/
-│   └── historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
+│   ├── historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
+│   └── backtests/             # Saved results, one dir per backtest_id (gitignored)
+│                              #   meta.json + equity.parquet + prices.parquet
 │
 └── reports/                   # Generated HTML reports (gitignored)
 ```
