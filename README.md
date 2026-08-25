@@ -192,10 +192,10 @@ commit it claims**
 **◆ If you trade and want to check an idea;**
 
 <ol type="I">
-<li>Start with the <a href="docs/QUICKSTART.md">Quickstart</a>.</li>
-<li>Point it at synthetic data.</li>
-<li>Run a strategy end to end without an account anywhere.</li>
-<li>Then read <a href="#-backtesting--execution">Backtesting &amp; Execution</a> for what the fills actually cost you.</li>
+<li><p>Start with the <a href="docs/QUICKSTART.md">Quickstart</a>.</p></li>
+<li><p>Point it at synthetic data.</p></li>
+<li><p>Run a strategy end to end without an account anywhere.</p></li>
+<li><p>Then read <a href="#-backtesting--execution">Backtesting &amp; Execution</a> for what the fills actually cost you.</p></li>
 </ol>
 
 </td><td width="50%" valign="top">
@@ -203,11 +203,11 @@ commit it claims**
 **◆ If you build software and want to read the engine;**
 
 <ol type="I">
-<li>Start with <a href="src"><code>src/</code></a>.</li>
-<li><a href="src"><code>src/</code></a> is the whole engine and imports nothing from <code>api/</code> or <code>web/</code>.</li>
-<li>It runs from a test, a script or a server unchanged.</li>
-<li><a href="docs/ARCHITECTURE.md">Architecture</a> explains the seams.</li>
-<li><a href="src/analysis"><code>src/analysis/</code></a> is where the market reading lives.</li>
+<li><p>Start with <a href="src"><code>src/</code></a>.</p></li>
+<li><p><a href="src"><code>src/</code></a> is the whole engine and imports nothing from <code>api/</code> or <code>web/</code>.</p></li>
+<li><p>It runs from a test, a script or a server unchanged.</p></li>
+<li><p><a href="docs/ARCHITECTURE.md">Architecture</a> explains the seams.</p></li>
+<li><p><a href="src/analysis"><code>src/analysis/</code></a> is where the market reading lives.</p></li>
 </ol>
 
 </td></tr>
@@ -217,9 +217,9 @@ commit it claims**
 > **Three ways in,** depending on how much time you have;
 >
 > <ol type="I">
-> <li>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</li>
-> <li>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</li>
-> <li>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/SRS.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</li>
+> <li><p>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</p></li>
+> <li><p>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</p></li>
+> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/SRS.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</p></li>
 > </ol>
 
 <br>
