@@ -146,8 +146,15 @@ jobs:
             CREDS_B64="${{ secrets.SCHWAB_CREDENTIALS_YAML_B64 }}"
             if [ -n "$CREDS_B64" ]; then
               mkdir -p config
-              umask 077
-              printf '%s' "$CREDS_B64" | base64 -d > config/credentials.yaml
+              # The umask is scoped to a SUBSHELL on purpose. Set bare, it stays
+              # in force for the rest of this script -- including `git reset
+              # --hard` below, which then creates every NEW file mode 600. Those
+              # modes are preserved by `docker build`'s COPY into the image, and
+              # nginx's worker runs as `nginx`, so any newly added static asset
+              # answered 403 Forbidden in production while every pre-existing
+              # file kept its old 644 and worked. That is how the sign-in pages
+              # 403'd on the deploy that first added them.
+              ( umask 077; printf '%s' "$CREDS_B64" | base64 -d > config/credentials.yaml )
               chmod 600 config/credentials.yaml
               # Report shape only -- never the values.
               echo "credentials.yaml written: $(wc -c < config/credentials.yaml) bytes, keys: $(grep -cE '^[a-z_]+:' config/credentials.yaml)"
@@ -172,8 +179,9 @@ jobs:
             # dead weight and should be deleted.
             TOKENS_B64="${{ secrets.SCHWAB_TOKENS_JSON_B64 }}"
             if [ -n "$TOKENS_B64" ]; then
-              umask 077
-              printf %s "$TOKENS_B64" | base64 -d > /tmp/incoming_tokens.json
+              # Scoped to a subshell for the reason spelled out above: a bare
+              # umask here leaks into the checkout and 403s every new asset.
+              ( umask 077; printf %s "$TOKENS_B64" | base64 -d > /tmp/incoming_tokens.json )
 
               # Install when there is nothing there, or when the secret holds a
               # NEWER refresh token than the box does.
@@ -242,6 +250,22 @@ jobs:
             git reset --hard FETCH_HEAD
             git clean -fd -e docker-compose.override.yml
             echo "now at: $(git log --oneline -1)"
+
+            # ---- repair read bits ------------------------------------------
+            # Git tracks only the execute bit, so `git reset --hard` will NOT
+            # fix a file that is already mode 600 -- it sets modes only on
+            # files it creates. Any file checked out by an earlier deploy that
+            # ran with the leaked umask (see the Schwab block above) stays
+            # unreadable forever, gets COPYed into the image with that mode,
+            # and is answered 403 by nginx's worker.
+            #
+            # Scoped to TRACKED files: config/credentials.yaml and
+            # config/schwab_tokens.json are gitignored and must stay 600, so
+            # `git ls-files` is what keeps this from widening a secret.
+            git ls-files -z | xargs -0 --no-run-if-empty chmod a+r
+            find . -type d -not -path './.git*' -not -path './config*' \
+                 -exec chmod a+rx {} +
+            echo "read bits normalised on $(git ls-files | wc -l) tracked files"
 
             # ---- one-time cutover: retire the previous project's stack ------
             # Compose derives its project name from the working directory. The
@@ -396,8 +420,31 @@ jobs:
           # healthy. Following the redirect also proves the HTTPS side serves.
           curl -fsSL --max-time 30 "http://${{ secrets.EC2_HOST }}/" | grep -q '<title>AutoTrader</title>'
           echo "  dashboard served"
-          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/strategies" | grep -q 'rsi_divergence'
-          echo "  API responding through the single origin"
+
+          # /api/strategies is PROTECTED. This check used to read its body and
+          # grep for a strategy id, which stopped being possible the moment the
+          # app went behind a login -- an anonymous caller now gets 401, which
+          # is the whole point, and the deploy failed on the app working
+          # correctly. Asserting the 401 is the stronger check anyway: it
+          # proves the API is up AND that the guard is live.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+                 "http://${{ secrets.EC2_HOST }}/api/strategies")
+          [ "$code" = "401" ] || { echo "  /api/strategies answered $code, expected 401"; exit 1; }
+          echo "  API up and refusing anonymous callers (401)"
+
+          # The sign-in page must actually be served. It lives in web/public/
+          # and reaches the image through Vite's dist/. This catches both a
+          # missing page and one the box made unreadable (403).
+          curl -fsSL --max-time 30 "http://${{ secrets.EC2_HOST }}/autotrader_signin.html" \
+            | grep -q 'AutoTrader' \
+            || { echo "  sign-in page not served"; exit 1; }
+          echo "  sign-in page served"
+
+          # The OAuth provider list must answer without a session -- it is what
+          # tells the sign-in page which buttons can do anything.
+          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/auth/oauth/providers" \
+            | grep -q '"google"'
+          echo "  OAuth provider list reachable signed-out"
 
       - name: Close SSH again
         if: always()          # runs even when an earlier step fails
