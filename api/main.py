@@ -26,7 +26,7 @@ from importlib.metadata import version as _pkg_version, PackageNotFoundError as 
 
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export)
+                         schwab, optimize, data_export, oauth as oauth_router)
 
 try:
     _version = _pkg_version("autotrader")
@@ -91,6 +91,13 @@ async def _unhandled_exception(request: Request, exc: Exception):
 # Public: sign in/out, and the two liveness endpoints inside meta.
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(meta.router, prefix="/api")
+
+# Also public, and necessarily so: someone signing in with Google has no
+# session yet, and the provider redirects the browser back to the callback
+# carrying none of our cookies. These routes defend themselves with a
+# single-use server-side state plus PKCE -- see api/routers/oauth.py. They
+# cannot create an account; they can only attach a session to one that exists.
+app.include_router(oauth_router.router, prefix="/api")
 
 # Everything below requires a session. The dependency is declared on the
 # ROUTER, not on each function, so an endpoint added to any of these files

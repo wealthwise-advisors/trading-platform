@@ -123,3 +123,48 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+-- ── OAuth sign-in (schema v3) ───────────────────────────────────────────────
+-- Signing in with Google/LinkedIn/Twitter. These tables let an EXISTING account
+-- be entered a second way; they never create one. There is still exactly one
+-- route to a new account, and it is scripts/manage_users.py.
+
+CREATE TABLE IF NOT EXISTS oauth_identities (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      INTEGER NOT NULL,
+    provider     TEXT    NOT NULL,          -- 'google' | 'linkedin' | 'twitter'
+    -- The provider's permanent, opaque id for the person. Matching happens on
+    -- THIS, not on the email: an email address can be released and re-issued to
+    -- somebody else, and it can change on the provider's side, while the
+    -- subject cannot. The email below is kept only so an administrator can see
+    -- which account a link came from.
+    subject      TEXT    NOT NULL,
+    email        TEXT    NOT NULL DEFAULT '' COLLATE NOCASE,
+    linked_at    TEXT    NOT NULL,
+    last_used_at TEXT,
+
+    -- One provider account signs in as exactly one local user. Without this a
+    -- second row could quietly point the same Google account at somebody
+    -- else's login.
+    UNIQUE (provider, subject),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_identities_user ON oauth_identities(user_id);
+
+-- The in-flight half of an authorization-code exchange.
+--
+-- Deliberately a TABLE and not a cookie. The state has to survive a top-level
+-- redirect back from another site, and it carries the PKCE code_verifier, which
+-- must never be readable by the browser -- a verifier the client can read
+-- defeats the entire point of PKCE. Rows are single-use and short-lived.
+CREATE TABLE IF NOT EXISTS oauth_states (
+    state         TEXT PRIMARY KEY,          -- the opaque value sent to the provider
+    provider      TEXT NOT NULL,
+    code_verifier TEXT NOT NULL,
+    next_path     TEXT NOT NULL DEFAULT '/', -- validated same-site before storing
+    created_at    TEXT NOT NULL,
+    expires_at    TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);

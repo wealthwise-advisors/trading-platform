@@ -142,7 +142,15 @@ def test_registration_endpoint_refuses_everyone(client, db):
 
 # ── route protection ─────────────────────────────────────────────────────────
 PUBLIC = {"/api/health", "/api/version",
-          "/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/register"}
+          "/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/register",
+          # OAuth has to be reachable without a session -- that is the point of
+          # it -- and the provider redirects the browser back to the callback
+          # carrying none of our cookies. These defend themselves with a
+          # single-use server-side state plus PKCE instead; see
+          # tests/test_oauth_auth.py, which is where that is proven.
+          "/api/auth/oauth/providers",
+          "/api/auth/oauth/{name}/start",
+          "/api/auth/oauth/{name}/callback"}
 
 
 def _app_routes():

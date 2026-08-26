@@ -58,10 +58,21 @@ def _signed_in_for_the_session():
     auth_mod.user_for_websocket = _REAL_WS_GUARD
 
 
+#: The suites that assert the guard REFUSES people. They must run against the
+#: real dependency; exempting them would leave a security suite proving nothing.
+#:
+#: An explicit set, and not `name.endswith("test_auth")`, because that spelling
+#: silently decided the question for every file added later: a new module called
+#: test_oauth.py would have run with require_user overridden and its refusal
+#: assertions would have passed without ever reaching the guard.
+_SECURITY_SUITES = {"test_auth", "test_oauth_auth"}
+
+
 @pytest.fixture(autouse=True)
 def _real_guard_for_auth_tests(request):
-    """test_auth.py runs against the genuine dependency, not the override."""
-    if not getattr(request.module, "__name__", "").endswith("test_auth"):
+    """The security suites run against the genuine dependency, not the override."""
+    name = getattr(request.module, "__name__", "").rsplit(".", 1)[-1]
+    if name not in _SECURITY_SUITES:
         yield
         return
 

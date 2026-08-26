@@ -38,6 +38,17 @@ data/autotrader.db
 data/autotrader.db-wal
 data/autotrader.db-shm
 
+# scripts/run_local.py's scratch database and its assembled site folder.
+#
+# local-demo.db holds real accounts -- argon2 password hashes and live session
+# tokens for whoever has signed in locally. It was matched by none of the rules
+# above, so `git add -A` would have committed it. The site folder is just a
+# copy of the sign-in pages plus web/dist, rebuilt on every run.
+data/local-demo.db
+data/local-demo.db-wal
+data/local-demo.db-shm
+data/local-site/
+
 # Logs
 logs/
 *.log

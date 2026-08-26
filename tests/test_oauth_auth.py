@@ -1,0 +1,445 @@
+"""OAuth sign-in: it must let the right person in and nobody else.
+
+The dangerous failure for a "sign in with Google" button is not that it breaks
+-- that is obvious the moment you press it. It is that it lets in someone it
+should not, quietly, while looking like it works. So most of what is below is
+about refusal: replayed state, forged state, an unverified email, an email
+belonging to nobody, a disabled account, a provider identity already spoken for.
+
+The network is never touched. `_post_token` and `_fetch_userinfo` are the two
+seams in api/oauth.py, monkeypatched here exactly as
+tests/test_schwab_redirect_parsing.py stubs the Schwab exchange -- what is under
+test is the decision logic, not requests.
+
+This module is named so that conftest.py's _SECURITY_SUITES includes it. Without
+that, `require_user` is overridden for the whole session and the refusal
+assertions would pass without the guard ever running.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+
+from api import auth, oauth
+from api.main import app
+from db import connection
+from db import users as repo
+
+GOOGLE_SUB = "108120915361234567890"
+TWITTER_SUB = "1465235834"
+
+
+# ── fixtures ─────────────────────────────────────────────────────────────────
+@pytest.fixture
+def db(tmp_path, monkeypatch):
+    """A scratch database, a fresh throttle, and cookies that work over http."""
+    monkeypatch.setattr(connection, "DB_PATH", tmp_path / "oauth.db")
+    monkeypatch.setattr(auth, "throttle", auth.Throttle())
+    monkeypatch.setattr(auth, "_INSECURE", True)   # TestClient speaks http://
+    return tmp_path
+
+
+@pytest.fixture
+def configured(monkeypatch):
+    """Credentials for every provider. Fake values -- nothing here dials out."""
+    monkeypatch.setenv("AUTOTRADER_PUBLIC_BASE_URL", "https://trade.example.com")
+    for p in ("GOOGLE", "LINKEDIN", "TWITTER"):
+        monkeypatch.setenv(f"AUTOTRADER_{p}_CLIENT_ID", f"{p.lower()}-id")
+        monkeypatch.setenv(f"AUTOTRADER_{p}_CLIENT_SECRET", f"{p.lower()}-secret")
+
+
+@pytest.fixture
+def user(db):
+    repo.create_user("trader", auth.hash_password("Correct-Horse-99"),
+                     full_name="A Trader", email="trader@example.com", country="IN")
+    return repo.get_user("trader")
+
+
+@pytest.fixture
+def client(db):
+    with TestClient(app) as c:
+        yield c
+
+
+def stub(monkeypatch, info, *, token=None, on_token=None):
+    """Answer as a provider would, without a network."""
+    def fake_token(provider, code, verifier):
+        if on_token:
+            on_token(provider, code, verifier)
+        return token if token is not None else {"access_token": "at-123"}
+
+    def fake_userinfo(provider, access_token):
+        return info
+
+    monkeypatch.setattr(oauth, "_post_token", fake_token)
+    monkeypatch.setattr(oauth, "_fetch_userinfo", fake_userinfo)
+
+
+def google_info(sub=GOOGLE_SUB, email="trader@example.com", verified=True):
+    return {"sub": sub, "email": email, "email_verified": verified, "name": "A Trader"}
+
+
+def begin(client, provider="google", next_path="/"):
+    """Run /start and return the state the server minted."""
+    r = client.get(f"/api/auth/oauth/{provider}/start",
+                   params={"next": next_path}, follow_redirects=False)
+    assert r.status_code == 303, r.text
+    location = r.headers["location"]
+    assert "state=" in location, location
+    return location.split("state=")[1].split("&")[0]
+
+
+def finish(client, state, code="auth-code", provider="google"):
+    return client.get(f"/api/auth/oauth/{provider}/callback",
+                      params={"code": code, "state": state}, follow_redirects=False)
+
+
+# ── configuration is reported honestly ───────────────────────────────────────
+def test_providers_report_unconfigured_when_no_credentials(client, db, monkeypatch):
+    for p in ("GOOGLE", "LINKEDIN", "TWITTER"):
+        monkeypatch.delenv(f"AUTOTRADER_{p}_CLIENT_ID", raising=False)
+        monkeypatch.delenv(f"AUTOTRADER_{p}_CLIENT_SECRET", raising=False)
+    body = client.get("/api/auth/oauth/providers").json()
+    assert {p["key"] for p in body["providers"]} == {"google", "linkedin", "twitter"}
+    assert all(p["configured"] is False for p in body["providers"])
+
+
+def test_providers_report_configured_once_credentials_exist(client, db, configured):
+    body = client.get("/api/auth/oauth/providers").json()
+    assert all(p["configured"] is True for p in body["providers"])
+
+
+def test_start_without_credentials_explains_itself(client, db, monkeypatch):
+    """Requirement: a missing credential must say so, not fail silently."""
+    monkeypatch.delenv("AUTOTRADER_GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("AUTOTRADER_GOOGLE_CLIENT_SECRET", raising=False)
+    r = client.get("/api/auth/oauth/google/start", follow_redirects=False)
+    assert r.status_code == 303
+    assert "reason=oauth_unconfigured" in r.headers["location"]
+    assert "provider=google" in r.headers["location"]
+
+
+def test_unconfigured_start_never_500s(client, db, monkeypatch):
+    monkeypatch.delenv("AUTOTRADER_LINKEDIN_CLIENT_ID", raising=False)
+    r = client.get("/api/auth/oauth/linkedin/start", follow_redirects=False)
+    assert r.status_code < 500
+
+
+def test_unknown_provider_is_404(client, db, configured):
+    assert client.get("/api/auth/oauth/facebook/start",
+                      follow_redirects=False).status_code == 404
+
+
+# ── the authorization redirect ───────────────────────────────────────────────
+def test_start_sends_the_browser_to_the_provider(client, db, configured):
+    r = client.get("/api/auth/oauth/google/start", follow_redirects=False)
+    loc = r.headers["location"]
+    assert loc.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
+    assert "client_id=google-id" in loc
+    assert "response_type=code" in loc
+    # The redirect_uri must be absolute and must match what was registered.
+    assert ("redirect_uri=https%3A%2F%2Ftrade.example.com%2Fapi%2Fauth%2Foauth"
+            "%2Fgoogle%2Fcallback") in loc
+
+
+def test_pkce_challenge_is_sent_and_the_verifier_is_not(client, db, configured):
+    loc = client.get("/api/auth/oauth/google/start",
+                     follow_redirects=False).headers["location"]
+    assert "code_challenge=" in loc
+    assert "code_challenge_method=S256" in loc
+    assert "code_verifier" not in loc, "the verifier must never leave the server"
+
+
+def test_twitter_uses_pkce_and_linkedin_does_not(client, db, configured):
+    tw = client.get("/api/auth/oauth/twitter/start",
+                    follow_redirects=False).headers["location"]
+    li = client.get("/api/auth/oauth/linkedin/start",
+                    follow_redirects=False).headers["location"]
+    assert "code_challenge=" in tw, "X requires PKCE"
+    assert "code_challenge=" not in li, "LinkedIn's OIDC rejects the parameters"
+
+
+def test_challenge_matches_the_verifier():
+    v = oauth.new_verifier()
+    assert 43 <= len(v) <= 128, "RFC 7636 length"
+    assert oauth.challenge_for(v) == oauth.challenge_for(v)
+    assert oauth.challenge_for(v) != oauth.challenge_for(oauth.new_verifier())
+    assert "=" not in oauth.challenge_for(v), "must be unpadded base64url"
+
+
+def test_start_records_exactly_one_state(client, db, configured):
+    state = begin(client)
+    pending = repo.take_oauth_state(state)
+    assert pending is not None and pending.provider == "google"
+
+
+# ── state: the thing that stops a forged callback ────────────────────────────
+def test_a_replayed_callback_is_refused(client, db, configured, user, monkeypatch):
+    stub(monkeypatch, google_info())
+    state = begin(client)
+
+    first = finish(client, state)
+    assert first.status_code == 303 and first.headers["location"] == "/"
+
+    client.cookies.clear()
+    second = finish(client, state)            # same state, a second time
+    assert "reason=oauth_expired" in second.headers["location"]
+    assert auth.COOKIE not in second.headers.get("set-cookie", "")
+
+
+def test_a_state_we_never_issued_is_refused(client, db, configured, user, monkeypatch):
+    stub(monkeypatch, google_info())
+    r = finish(client, "not-a-state-this-server-minted")
+    assert "reason=oauth_expired" in r.headers["location"]
+    assert auth.COOKIE not in r.headers.get("set-cookie", "")
+
+
+def test_an_expired_state_is_refused(client, db, configured, user, monkeypatch):
+    from datetime import timedelta
+    monkeypatch.setattr(repo, "OAUTH_STATE_TTL", timedelta(seconds=-1))
+    stub(monkeypatch, google_info())
+    state = begin(client)
+    r = finish(client, state)
+    assert "reason=oauth_expired" in r.headers["location"]
+
+
+def test_a_state_cannot_be_used_on_a_different_provider(client, db, configured,
+                                                        user, monkeypatch):
+    stub(monkeypatch, google_info())
+    state = begin(client, "google")
+    r = finish(client, state, provider="linkedin")
+    assert "reason=oauth_expired" in r.headers["location"]
+
+
+def test_a_cancelled_sign_in_returns_quietly(client, db, configured):
+    state = begin(client)
+    r = client.get("/api/auth/oauth/google/callback",
+                   params={"error": "access_denied", "state": state},
+                   follow_redirects=False)
+    assert r.status_code == 303
+    assert "reason=oauth_cancelled" in r.headers["location"]
+
+
+def test_an_error_callback_still_burns_the_state(client, db, configured):
+    state = begin(client)
+    client.get("/api/auth/oauth/google/callback",
+               params={"error": "access_denied", "state": state},
+               follow_redirects=False)
+    assert repo.take_oauth_state(state) is None, "an errored state must not survive"
+
+
+# ── who gets in ──────────────────────────────────────────────────────────────
+def test_a_verified_email_signs_the_matching_account_in(client, db, configured,
+                                                        user, monkeypatch):
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client))
+    assert r.status_code == 303
+    raw = r.headers.get("set-cookie", "")
+    assert auth.COOKIE in raw
+    assert "HttpOnly" in raw, "an OAuth session must be as protected as a password one"
+    assert "samesite=lax" in raw.lower()
+    assert client.get("/api/auth/me").json()["username"] == "trader"
+
+
+def test_first_sign_in_pins_the_subject(client, db, configured, user, monkeypatch):
+    stub(monkeypatch, google_info())
+    finish(client, begin(client))
+    links = repo.list_identities(user.id)
+    assert [(i.provider, i.subject) for i in links] == [("google", GOOGLE_SUB)]
+
+
+def test_the_second_sign_in_matches_on_subject_not_email(client, db, configured,
+                                                         user, monkeypatch):
+    """The person changes their Google email. They must still get in."""
+    stub(monkeypatch, google_info())
+    finish(client, begin(client))
+    client.cookies.clear()
+
+    stub(monkeypatch, google_info(email="brand-new@elsewhere.com"))
+    r = finish(client, begin(client))
+    assert r.status_code == 303
+    assert client.get("/api/auth/me").json()["username"] == "trader"
+    assert len(repo.list_identities(user.id)) == 1, "no duplicate link"
+
+
+def test_the_destination_survives_the_round_trip(client, db, configured,
+                                                 user, monkeypatch):
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client, next_path="/replay?symbol=ES"))
+    assert r.headers["location"] == "/replay?symbol=ES"
+
+
+# ── who does not get in ──────────────────────────────────────────────────────
+def test_an_unverified_email_is_refused(client, db, configured, user, monkeypatch):
+    """The whole reason matching is on a VERIFIED address: anyone can type
+    someone else's email at a provider that does not check it."""
+    stub(monkeypatch, google_info(verified=False))
+    r = finish(client, begin(client))
+    assert "reason=oauth_no_account" in r.headers["location"]
+    assert auth.COOKIE not in r.headers.get("set-cookie", "")
+    assert repo.list_identities(user.id) == []
+
+
+def test_an_unknown_email_is_refused_and_creates_nothing(client, db, configured,
+                                                         monkeypatch):
+    stub(monkeypatch, google_info(email="a-stranger@example.com"))
+    r = finish(client, begin(client))
+    assert "reason=oauth_no_account" in r.headers["location"]
+    assert repo.list_users() == [], "OAuth must never create an account"
+
+
+def test_a_disabled_account_is_refused(client, db, configured, user, monkeypatch):
+    repo.set_active("trader", False)
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client))
+    assert "reason=oauth_no_account" in r.headers["location"]
+    assert auth.COOKIE not in r.headers.get("set-cookie", "")
+
+
+def test_disabling_an_account_locks_out_an_already_linked_identity(
+        client, db, configured, user, monkeypatch):
+    stub(monkeypatch, google_info())
+    finish(client, begin(client))          # link it first
+    client.cookies.clear()
+    repo.set_active("trader", False)
+
+    r = finish(client, begin(client))
+    assert "reason=oauth_no_account" in r.headers["location"]
+    assert auth.COOKIE not in r.headers.get("set-cookie", "")
+
+
+def test_an_existing_link_wins_over_a_matching_email(client, db, configured,
+                                                     user, monkeypatch):
+    """That Google account is already somebody else's door.
+
+    `trader` shares the email address, so the email path would have picked
+    them -- but the subject is already bound to `rival`, and a link is never
+    re-pointed. The person who controls that Google account gets `rival`, which
+    is whose account it actually is, and never `trader`.
+    """
+    rival_id = repo.create_user("rival", auth.hash_password("Correct-Horse-99"),
+                                email="trader@example.com")
+    repo.link_identity(rival_id, "google", GOOGLE_SUB, email="trader@example.com")
+
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client))
+
+    assert r.status_code == 303
+    assert client.get("/api/auth/me").json()["username"] == "rival"
+    assert repo.identity_user("google", GOOGLE_SUB).username == "rival"
+    assert repo.list_identities(user.id) == [], "trader must gain no link"
+
+
+def test_two_accounts_sharing_an_email_are_refused(client, db, configured,
+                                                   user, monkeypatch):
+    """With two matches there is no way to know which person this is."""
+    repo.create_user("twin", auth.hash_password("Correct-Horse-99"),
+                     email="trader@example.com")
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client))
+    assert "reason=oauth_no_account" in r.headers["location"]
+
+
+def test_a_callback_with_no_code_is_refused(client, db, configured, user):
+    state = begin(client)
+    r = client.get("/api/auth/oauth/google/callback",
+                   params={"state": state}, follow_redirects=False)
+    assert "reason=oauth_failed" in r.headers["location"]
+
+
+# ── Twitter/X cannot self-serve ──────────────────────────────────────────────
+def twitter_info(sub=TWITTER_SUB):
+    return {"data": {"id": sub, "name": "A Trader", "username": "atrader"}}
+
+
+def test_twitter_reports_no_email(client, db, configured):
+    who = oauth.normalise(oauth.PROVIDERS["twitter"], twitter_info())
+    assert who.subject == TWITTER_SUB
+    assert who.email == "" and who.email_verified is False
+
+
+def test_twitter_without_a_prelink_is_refused(client, db, configured, user, monkeypatch):
+    stub(monkeypatch, twitter_info())
+    r = finish(client, begin(client, "twitter"), provider="twitter")
+    assert "reason=oauth_no_account" in r.headers["location"]
+    assert repo.list_identities(user.id) == []
+
+
+def test_twitter_with_a_prelink_signs_in(client, db, configured, user, monkeypatch):
+    assert repo.link_identity(user.id, "twitter", TWITTER_SUB) is True
+    stub(monkeypatch, twitter_info())
+    r = finish(client, begin(client, "twitter"), provider="twitter")
+    assert r.status_code == 303
+    assert client.get("/api/auth/me").json()["username"] == "trader"
+
+
+def test_a_provider_account_links_to_exactly_one_user(db, user):
+    other = repo.create_user("second", auth.hash_password("Correct-Horse-99"))
+    assert repo.link_identity(user.id, "twitter", TWITTER_SUB) is True
+    assert repo.link_identity(other, "twitter", TWITTER_SUB) is False
+
+
+# ── a broken provider is not a broken app ────────────────────────────────────
+def test_a_provider_failure_does_not_500(client, db, configured, user, monkeypatch):
+    def boom(provider, code, verifier):
+        raise oauth.OAuthError("Google rejected the sign-in.")
+    monkeypatch.setattr(oauth, "_post_token", boom)
+
+    r = finish(client, begin(client))
+    assert r.status_code == 303, "a provider outage must not become a 500"
+    assert "reason=oauth_failed" in r.headers["location"]
+
+
+def test_an_unexpected_exception_does_not_leak(client, db, configured,
+                                               user, monkeypatch):
+    def boom(provider, code, verifier):
+        raise ConnectionError("dns is down; /etc/secret/path in the message")
+    monkeypatch.setattr(oauth, "_post_token", boom)
+
+    r = finish(client, begin(client))
+    assert r.status_code == 303
+    assert "/etc/secret/path" not in r.headers["location"]
+
+
+def test_a_token_response_with_no_access_token_is_refused(client, db, configured,
+                                                          user, monkeypatch):
+    stub(monkeypatch, google_info(), token={"error": "invalid_grant"})
+    r = finish(client, begin(client))
+    assert "reason=oauth_failed" in r.headers["location"]
+
+
+def test_a_profile_with_no_subject_is_refused(client, db, configured,
+                                              user, monkeypatch):
+    stub(monkeypatch, {"email": "trader@example.com", "email_verified": True})
+    r = finish(client, begin(client))
+    assert "reason=oauth_failed" in r.headers["location"]
+
+
+def test_the_code_and_verifier_reach_the_exchange(client, db, configured,
+                                                  user, monkeypatch):
+    seen = {}
+    stub(monkeypatch, google_info(),
+         on_token=lambda p, c, v: seen.update(code=c, verifier=v, provider=p.key))
+    finish(client, begin(client), code="the-real-code")
+    assert seen["code"] == "the-real-code"
+    assert seen["provider"] == "google"
+    assert len(seen["verifier"]) >= 43, "the stored PKCE verifier must be replayed"
+
+
+# ── the destination cannot be turned into an open redirect ───────────────────
+@pytest.mark.parametrize("hostile", [
+    "https://evil.example/steal",     # absolute
+    "//evil.example/steal",           # protocol-relative
+    "/autotrader_signin.html",        # a loop back to the form
+])
+def test_a_hostile_next_is_ignored(client, db, configured, user, monkeypatch, hostile):
+    stub(monkeypatch, google_info())
+    r = finish(client, begin(client, next_path=hostile))
+    assert r.headers["location"] == "/", f"{hostile!r} must not survive"
+
+
+def test_safe_next_accepts_ordinary_paths():
+    assert oauth.safe_next("/replay") == "/replay"
+    assert oauth.safe_next("/a?b=c&d=e") == "/a?b=c&d=e"
+    assert oauth.safe_next(None) == "/"
+    assert oauth.safe_next("") == "/"
+    assert oauth.safe_next("relative") == "/"

@@ -28,6 +28,29 @@ services:
       # is the one it just built. "unknown" locally; the deploy workflow sets
       # it to the commit being shipped.
       AUTOTRADER_COMMIT: "${AUTOTRADER_COMMIT:-unknown}"
+
+      # ── OAuth sign-in (Google / LinkedIn / Twitter) ────────────────────────
+      # Every one of these defaults to empty, and empty means the provider is
+      # reported as unconfigured and its button explains itself. Nothing here
+      # is a secret in the repo: the values come from GitHub repo secrets via
+      # the inline env prefix in .github/workflows/deploy.yml.
+      #
+      # The base URL is the public origin a browser reaches this deployment on.
+      # It cannot be derived from the request -- Host is client-supplied -- and
+      # it has to match the redirect URI registered at each provider byte for
+      # byte, so it is stated rather than guessed.
+      #
+      # Apple is deliberately absent: "Sign in with Apple" needs a paid Apple
+      # Developer Program membership and an ES256-signed JWT in place of a
+      # client secret. api/oauth.py has no Apple provider, so its button keeps
+      # showing the honest "not connected yet" notice until that account exists.
+      AUTOTRADER_PUBLIC_BASE_URL: "${AUTOTRADER_PUBLIC_BASE_URL:-}"
+      AUTOTRADER_GOOGLE_CLIENT_ID: "${AUTOTRADER_GOOGLE_CLIENT_ID:-}"
+      AUTOTRADER_GOOGLE_CLIENT_SECRET: "${AUTOTRADER_GOOGLE_CLIENT_SECRET:-}"
+      AUTOTRADER_LINKEDIN_CLIENT_ID: "${AUTOTRADER_LINKEDIN_CLIENT_ID:-}"
+      AUTOTRADER_LINKEDIN_CLIENT_SECRET: "${AUTOTRADER_LINKEDIN_CLIENT_SECRET:-}"
+      AUTOTRADER_TWITTER_CLIENT_ID: "${AUTOTRADER_TWITTER_CLIENT_ID:-}"
+      AUTOTRADER_TWITTER_CLIENT_SECRET: "${AUTOTRADER_TWITTER_CLIENT_SECRET:-}"
     volumes:
       # NOT read-only. The Schwab client persists refreshed OAuth tokens back
       # to config/schwab_tokens.json (see src/data/schwab_provider.py), so a

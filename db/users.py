@@ -1,8 +1,8 @@
 """Users and sessions.
 
-The only module that knows the shape of the `users` and `sessions` tables,
-mirroring how db/backtests.py owns the result tables. api/auth.py talks to
-this and nothing else.
+The only module that knows the shape of the `users`, `sessions`,
+`oauth_identities` and `oauth_states` tables, mirroring how db/backtests.py
+owns the result tables. api/auth.py talks to this and nothing else.
 
 A session token is generated as 32 random bytes, handed to the browser once,
 and stored here only as its SHA-256. Reading this table therefore does not
@@ -12,6 +12,7 @@ yield a usable cookie -- the same reason a password is stored as a hash.
 import hashlib
 import logging
 import secrets
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -221,6 +222,150 @@ def purge_expired(db: Path | None = None) -> int:
     conn = connect(db)
     try:
         return conn.execute("DELETE FROM sessions WHERE expires_at <= ?",
+                            (_now(),)).rowcount
+    finally:
+        conn.close()
+
+
+# ── OAuth identities ─────────────────────────────────────────────────────────
+# A link between an existing local account and one provider account. Creating a
+# link never creates a USER -- see api/routers/oauth.py for the rule these
+# functions serve.
+
+@dataclass(frozen=True)
+class Identity:
+    provider: str
+    subject: str
+    email: str
+    user_id: int
+    linked_at: str
+    last_used_at: str | None
+
+
+def link_identity(user_id: int, provider: str, subject: str, *, email: str = "",
+                  db: Path | None = None) -> bool:
+    """Bind a provider account to a local user.
+
+    Returns False if that provider account is already bound -- to this user or
+    to anyone else. It is never re-pointed here: silently moving a link would
+    let whoever controls the provider account take over a different login.
+    """
+    conn = connect(db)
+    try:
+        conn.execute(
+            "INSERT INTO oauth_identities (user_id, provider, subject, email, "
+            "linked_at) VALUES (?,?,?,?,?)",
+            (user_id, provider, subject, email, _now()),
+        )
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+
+def identity_user(provider: str, subject: str, db: Path | None = None) -> User | None:
+    """The local user a provider account signs in as, if it has been linked."""
+    conn = connect(db)
+    try:
+        r = conn.execute(
+            "SELECT u.* FROM oauth_identities i JOIN users u ON u.id = i.user_id "
+            "WHERE i.provider = ? AND i.subject = ?", (provider, subject),
+        ).fetchone()
+    finally:
+        conn.close()
+    return _row_to_user(r)
+
+
+def touch_identity(provider: str, subject: str, db: Path | None = None) -> None:
+    conn = connect(db)
+    try:
+        conn.execute("UPDATE oauth_identities SET last_used_at = ? "
+                     "WHERE provider = ? AND subject = ?", (_now(), provider, subject))
+    finally:
+        conn.close()
+
+
+def unlink_identity(user_id: int, provider: str, db: Path | None = None) -> int:
+    conn = connect(db)
+    try:
+        return conn.execute("DELETE FROM oauth_identities WHERE user_id = ? "
+                            "AND provider = ?", (user_id, provider)).rowcount
+    finally:
+        conn.close()
+
+
+def list_identities(user_id: int | None = None, db: Path | None = None) -> list[Identity]:
+    conn = connect(db)
+    try:
+        sql = ("SELECT provider, subject, email, user_id, linked_at, last_used_at "
+               "FROM oauth_identities")
+        args: tuple = ()
+        if user_id is not None:
+            sql += " WHERE user_id = ?"
+            args = (user_id,)
+        return [Identity(**dict(r)) for r in conn.execute(sql + " ORDER BY provider", args)]
+    finally:
+        conn.close()
+
+
+# ── OAuth in-flight state ────────────────────────────────────────────────────
+# One row per authorization request we have started but not yet completed. The
+# PKCE verifier lives here and never leaves the server.
+
+#: How long a started sign-in may take before it has to be restarted.
+OAUTH_STATE_TTL = timedelta(minutes=10)
+
+
+@dataclass(frozen=True)
+class OAuthState:
+    provider: str
+    code_verifier: str
+    next_path: str
+
+
+def new_oauth_state(provider: str, code_verifier: str, next_path: str,
+                    db: Path | None = None) -> str:
+    """Record a started sign-in and return the opaque state to send onward."""
+    state = secrets.token_urlsafe(32)
+    now = datetime.now()
+    conn = connect(db)
+    try:
+        conn.execute(
+            "INSERT INTO oauth_states (state, provider, code_verifier, next_path, "
+            "created_at, expires_at) VALUES (?,?,?,?,?,?)",
+            (state, provider, code_verifier, next_path,
+             now.isoformat(timespec="seconds"),
+             (now + OAUTH_STATE_TTL).isoformat(timespec="seconds")),
+        )
+    finally:
+        conn.close()
+    return state
+
+
+def take_oauth_state(state: str, db: Path | None = None) -> OAuthState | None:
+    """Consume a state. Single use -- the row is deleted whether or not it was
+    still valid, so a replayed callback finds nothing the second time."""
+    if not state:
+        return None
+    conn = connect(db)
+    try:
+        r = conn.execute("SELECT * FROM oauth_states WHERE state = ?", (state,)).fetchone()
+        if r is None:
+            return None
+        conn.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
+        if datetime.fromisoformat(r["expires_at"]) <= datetime.now():
+            return None
+        return OAuthState(provider=r["provider"], code_verifier=r["code_verifier"],
+                          next_path=r["next_path"])
+    finally:
+        conn.close()
+
+
+def purge_oauth_states(db: Path | None = None) -> int:
+    conn = connect(db)
+    try:
+        return conn.execute("DELETE FROM oauth_states WHERE expires_at <= ?",
                             (_now(),)).rowcount
     finally:
         conn.close()

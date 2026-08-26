@@ -298,11 +298,33 @@ jobs:
             esac
             echo "TLS hostname: $TLS_DOMAIN"
 
+            # OAuth sign-in. Each of these is unset until the matching repo
+            # secret exists, and unset means that provider reports itself as
+            # unconfigured and its button says so -- the deploy still succeeds.
+            #
+            # AUTOTRADER_PUBLIC_BASE_URL must equal the origin registered as the
+            # redirect URI at each provider, character for character. It follows
+            # $TLS_DOMAIN by default, which follows the elastic IP: if that IP
+            # ever changes, TLS_DOMAIN changes with it and every registered
+            # redirect URI stops matching until they are re-registered. Set the
+            # OAUTH_PUBLIC_BASE_URL secret to a stable custom domain to break
+            # that dependency.
+            OAUTH_BASE="${{ secrets.OAUTH_PUBLIC_BASE_URL }}"
+            [ -n "$OAUTH_BASE" ] || OAUTH_BASE="https://$TLS_DOMAIN"
+            echo "OAuth redirect base: $OAUTH_BASE"
+
             WEB_PORT=80 \
             TLS_PORT=443 \
             TLS_DOMAIN="$TLS_DOMAIN" \
             AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }},https://$TLS_DOMAIN" \
             AUTOTRADER_COMMIT="${{ github.sha }}" \
+            AUTOTRADER_PUBLIC_BASE_URL="$OAUTH_BASE" \
+            AUTOTRADER_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            AUTOTRADER_GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            AUTOTRADER_LINKEDIN_CLIENT_ID="${{ secrets.LINKEDIN_CLIENT_ID }}" \
+            AUTOTRADER_LINKEDIN_CLIENT_SECRET="${{ secrets.LINKEDIN_CLIENT_SECRET }}" \
+            AUTOTRADER_TWITTER_CLIENT_ID="${{ secrets.TWITTER_CLIENT_ID }}" \
+            AUTOTRADER_TWITTER_CLIENT_SECRET="${{ secrets.TWITTER_CLIENT_SECRET }}" \
             docker compose up --build -d --remove-orphans
 
             docker image prune -f          # t3.micro has an 8 GiB disk

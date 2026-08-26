@@ -30,7 +30,8 @@ DB_PATH = Path(os.environ.get("AUTOTRADER_DB_PATH", "data/autotrader.db"))
 
 SCHEMA = Path(__file__).with_name("schema.sql")
 
-SCHEMA_VERSION = 2
+#: v2 added users + sessions; v3 added oauth_identities + oauth_states.
+SCHEMA_VERSION = 3
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:

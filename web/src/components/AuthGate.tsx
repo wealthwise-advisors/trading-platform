@@ -28,6 +28,13 @@ export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
           setState({ phase: "in", user })
         } else {
           setState({ phase: "out" })
+          // Do not bounce if we are ALREADY on the sign-in page. Without this
+          // guard, any deployment where /autotrader_signin.html falls through
+          // to the SPA answers that URL with this component, which finds no
+          // session and navigates to the same URL again -- an endless loop
+          // that looks like the login page "not loading". api.ts's toSignIn
+          // has had this check; this one was missing it.
+          if (window.location.pathname.endsWith("autotrader_signin.html")) return
           const next = window.location.pathname + window.location.search
           window.location.assign(
             `${SIGN_IN_PAGE}?${new URLSearchParams({ reason: "required", next })}`,

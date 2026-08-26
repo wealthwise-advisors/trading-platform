@@ -77,11 +77,53 @@ Summary:
 | Variable | Default | Purpose |
 |---|---|---|
 | `AUTOTRADER_CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Comma-separated origins the API accepts browser requests from |
+| `AUTOTRADER_CONFIG_DIR` | (unset) | Explicit override for where `config/` lives |
+| `AUTOTRADER_DB_PATH` | `data/autotrader.db` | SQLite file |
+| `AUTOTRADER_COMMIT` | `unknown` | Deployed commit SHA, surfaced by `/api/version` |
+| `AUTOTRADER_INSECURE_COOKIE` | (unset) | `1` drops the `Secure` flag on the session cookie. **Local `http://` only** |
 | `RITHMIC_CREDENTIALS_PATH` | (unset) | Alternative to `credentials.yaml`'s `rithmic.credentials_path` |
 
 Schwab credentials are **not** read from environment variables — the
 underlying `schwabdev` client needs a token *file* it can read/write
 across restarts, which doesn't fit an env-var model.
+
+### OAuth sign-in
+
+Google, LinkedIn and Twitter/X sign-in. All default to empty, and empty is a
+supported state: the provider reports itself as unconfigured and its button on
+the sign-in page says so, rather than failing silently.
+
+| Variable | Purpose |
+|---|---|
+| `AUTOTRADER_PUBLIC_BASE_URL` | The public origin browsers reach this deployment on, no trailing slash. Required — the redirect URI is built from it |
+| `AUTOTRADER_GOOGLE_CLIENT_ID` / `_SECRET` | From the Google Cloud console, OAuth 2.0 Client ID of type *Web application* |
+| `AUTOTRADER_LINKEDIN_CLIENT_ID` / `_SECRET` | From LinkedIn Developers, with the *Sign In with LinkedIn using OpenID Connect* product added |
+| `AUTOTRADER_TWITTER_CLIENT_ID` / `_SECRET` | From the X developer portal, an OAuth 2.0 **Confidential** client |
+
+Register this redirect URI at each provider, exactly:
+
+```text
+{AUTOTRADER_PUBLIC_BASE_URL}/api/auth/oauth/{google|linkedin|twitter}/callback
+```
+
+`py -3.12 scripts/manage_users.py oauth-status` prints which are configured and
+the exact URI for each, so there is no need to assemble it by hand.
+
+**OAuth never creates an account.** It is a second door into an account that
+already exists. Google and LinkedIn link themselves on first use by matching a
+*verified* email to an existing user; an unverified or unknown address is
+refused. Twitter/X returns no email at any scope, so it has nothing to match on
+and must be linked by hand:
+
+```powershell
+py -3.12 scripts/manage_users.py link akash --provider twitter --subject <id>
+```
+
+**Apple is not implemented.** "Sign in with Apple" needs a paid Apple Developer
+Program membership and uses an ES256-signed JWT built from a `.p8` key instead
+of a client secret, plus a cross-site `form_post` callback. The button stays on
+the "not connected yet" notice until that account exists; see the module
+docstring in `api/oauth.py` for what adding it would involve.
 
 ## Docker
 
