@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { api } from "@/lib/api"
+import { api, auth, SIGN_IN_PAGE } from "@/lib/api"
 
 const REPORT_FORMATS = [
   { id: "html", label: "HTML" },
@@ -74,6 +74,20 @@ function App() {
             </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Sign out. Calls the backend so the SESSION is revoked, not just
+                the cookie cleared -- clearing only the cookie leaves a live
+                session on the server that a copied cookie could still use. */}
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Sign out"
+              onClick={async () => {
+                await auth.logout()
+                window.location.assign(SIGN_IN_PAGE)
+              }}
+            >
+              Sign out
+            </Button>
             {/* The way back, so collapsing the panel is never a one-way door. */}
             {page === "backtest" && !configOpen && (
               <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
