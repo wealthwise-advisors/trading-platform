@@ -31,6 +31,8 @@ dependencies = [
     "pandas>=2.0.0",
     # parquet engine for api/store.py -- see requirements.txt for why
     "pyarrow>=13.0.0",
+    # argon2id password hashing for api/auth.py
+    "argon2-cffi>=23.1.0",
     "numpy>=1.24.0",
     "pandas_ta>=0.4.71b0",
     "plotly>=5.15.0",

@@ -13,6 +13,7 @@ is a thin consumer of the same backtesting/strategy/data-provider code.
 
 import os
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,7 +24,9 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
-from api.routers import meta, backtests, replay, schwab, optimize, data_export
+from api.auth import PROTECTED
+from api.routers import (auth as auth_router, meta, backtests, replay,
+                         schwab, optimize, data_export)
 
 try:
     _version = _pkg_version("autotrader")
@@ -65,19 +68,38 @@ async def _unhandled_exception(request: Request, exc: Exception):
     exception type and message so the UI, which already renders `detail`, can
     show something a person can act on.
     """
-    logger.exception(f"Unhandled error on {request.method} {request.url.path}")
+    # An error id ties what the caller sees to what the log holds, so a report
+    # of "it broke" can be found without the response carrying the details.
+    error_id = uuid.uuid4().hex[:12]
+    logger.exception(
+        f"[{error_id}] Unhandled error on {request.method} {request.url.path}")
+
+    # The reasoning above still stands for someone signed in: they own this
+    # system and the message is the actionable part. It must not go to a
+    # stranger, though -- an exception message can carry a filesystem path, a
+    # query, or a driver's own text. require_user sets request.state.user, so
+    # its absence means the caller never authenticated.
+    signed_in = getattr(request.state, "user", None) is not None
+    detail = (f"{type(exc).__name__}: {exc}" if signed_in
+              else "Internal server error.")
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": f"{type(exc).__name__}: {exc}",
-            "path": request.url.path,
-        },
+        content={"detail": detail, "path": request.url.path, "error_id": error_id},
     )
 
 
+# Public: sign in/out, and the two liveness endpoints inside meta.
+app.include_router(auth_router.router, prefix="/api")
 app.include_router(meta.router, prefix="/api")
-app.include_router(backtests.router, prefix="/api")
-app.include_router(replay.router, prefix="/api")
-app.include_router(schwab.router, prefix="/api")
-app.include_router(optimize.router, prefix="/api")
-app.include_router(data_export.router, prefix="/api")
+
+# Everything below requires a session. The dependency is declared on the
+# ROUTER, not on each function, so an endpoint added to any of these files
+# later is protected by default rather than by remembering to protect it.
+app.include_router(backtests.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(replay.router, prefix="/api", dependencies=[PROTECTED])
+# Not PROTECTED: a websocket handshake cannot resolve an HTTP dependency.
+# replay_ws authenticates the cookie itself, before accept().
+app.include_router(replay.ws_router, prefix="/api")
+app.include_router(schwab.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(optimize.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(data_export.router, prefix="/api", dependencies=[PROTECTED])

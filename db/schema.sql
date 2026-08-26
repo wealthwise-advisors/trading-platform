@@ -86,3 +86,40 @@ CREATE INDEX IF NOT EXISTS idx_backtests_sharpe   ON backtests(sharpe_ratio DESC
 CREATE INDEX IF NOT EXISTS idx_backtests_strategy ON backtests(strategy_name);
 CREATE INDEX IF NOT EXISTS idx_trades_backtest    ON trades(backtest_id);
 CREATE INDEX IF NOT EXISTS idx_trades_entry_time  ON trades(entry_time);
+
+-- ── auth (schema v2) ────────────────────────────────────────────────────────
+-- Added when the app stopped being open to the internet. Both tables are
+-- IF NOT EXISTS like the rest of this file, so applying it to a v1 database
+-- simply adds them; connection.py bumps the recorded version afterwards.
+
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    -- argon2id, produced by argon2-cffi. The full encoded string is stored:
+    -- it carries the algorithm, its parameters and the per-user salt, so the
+    -- cost can be raised later and old hashes still verify.
+    password_hash TEXT    NOT NULL,
+    full_name     TEXT    NOT NULL DEFAULT '',
+    email         TEXT    NOT NULL DEFAULT '' COLLATE NOCASE,
+    country       TEXT    NOT NULL DEFAULT '',
+    phone         TEXT    NOT NULL DEFAULT '',
+    is_active     INTEGER NOT NULL DEFAULT 1,
+    created_at    TEXT    NOT NULL,
+    last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    -- SHA-256 of the cookie value, never the value itself. Someone who reads
+    -- this table cannot mint a working cookie from it.
+    token_hash  TEXT    PRIMARY KEY,
+    user_id     INTEGER NOT NULL,
+    created_at  TEXT    NOT NULL,
+    expires_at  TEXT    NOT NULL,
+    last_seen_at TEXT   NOT NULL,
+    user_agent  TEXT    NOT NULL DEFAULT '',
+    ip          TEXT    NOT NULL DEFAULT '',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);

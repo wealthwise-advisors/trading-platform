@@ -95,9 +95,40 @@ class TestUnhandledErrorsCarryAMessage:
 
         assert r.status_code == 500
         body = r.json()
+
+        # The detailed message is for someone SIGNED IN. This probe app has no
+        # auth, so the caller is anonymous and gets the generic form -- an
+        # exception message can carry a filesystem path, a query, or a driver's
+        # own text, and none of that should reach a stranger.
+        assert body["detail"] == "Internal server error."
+        assert body["path"] == "/boom"
+        # An id ties the response to the traceback in the log, so "it broke"
+        # can still be traced without the response carrying the details.
+        assert len(body["error_id"]) == 12
+
+    def test_a_signed_in_caller_still_gets_the_actionable_message(self):
+        """The original reasoning stands for the operator: a missing CSV and a
+        genuine defect must not look identical to the person who can fix it."""
+        from fastapi import FastAPI, Request
+
+        from api.main import _unhandled_exception
+
+        probe_app = FastAPI()
+        probe_app.add_exception_handler(Exception, _unhandled_exception)
+
+        @probe_app.middleware("http")
+        async def _pretend_signed_in(request: Request, call_next):
+            request.state.user = object()      # what require_user sets
+            return await call_next(request)
+
+        @probe_app.get("/boom")
+        def _boom():
+            raise RuntimeError("kaboom for the test")
+
+        c = TestClient(probe_app, raise_server_exceptions=False)
+        body = c.get("/boom").json()
         assert "RuntimeError" in body["detail"]
         assert "kaboom for the test" in body["detail"]
-        assert body["path"] == "/boom"
         # The bare default is exactly what this replaces.
         assert body["detail"] != "Internal Server Error"
 

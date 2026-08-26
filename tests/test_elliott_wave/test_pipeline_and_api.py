@@ -260,4 +260,7 @@ class TestExistingApiUnchanged:
         paths = set(app.openapi()["paths"])
         assert "/api/backtests/{backtest_id}/elliott-wave" in paths
         assert "/api/symbols" in paths
-        assert len(paths) == 25
+        # 25 before authentication; +4 for /api/auth/{login,logout,me,register}.
+        # This count is a guard against a route appearing unnoticed, so it
+        # is restated rather than removed.
+        assert len(paths) == 29, sorted(paths)

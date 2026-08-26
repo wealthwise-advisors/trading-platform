@@ -30,7 +30,7 @@ DB_PATH = Path(os.environ.get("AUTOTRADER_DB_PATH", "data/autotrader.db"))
 
 SCHEMA = Path(__file__).with_name("schema.sql")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -51,18 +51,28 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn.execute("PRAGMA synchronous = NORMAL")
     conn.execute("PRAGMA foreign_keys = ON")
 
-    _init(conn)
+    _init(conn, path)
     return conn
 
 
-def _init(conn: sqlite3.Connection) -> None:
+def _init(conn: sqlite3.Connection, path: Path | None = None) -> None:
     """Apply the schema. Idempotent -- every statement is IF NOT EXISTS."""
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
     row = conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
+    now = datetime.now().isoformat(timespec="seconds")
     if row["v"] is None:
         conn.execute(
             "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
-            (SCHEMA_VERSION, datetime.now().isoformat(timespec="seconds")),
+            (SCHEMA_VERSION, now),
+        )
+    elif row["v"] < SCHEMA_VERSION:
+        # Every statement in schema.sql is IF NOT EXISTS, so the executescript
+        # above has already added whatever the newer version introduced. All
+        # that is left is to record that the file is now at this version.
+        log.info("%s upgraded from schema v%s to v%s", path, row["v"], SCHEMA_VERSION)
+        conn.execute(
+            "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
+            (SCHEMA_VERSION, now),
         )
     elif row["v"] > SCHEMA_VERSION:
         # Refuse rather than guess. A newer file may have columns this build

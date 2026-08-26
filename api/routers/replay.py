@@ -37,10 +37,17 @@ from src.backtesting.multi_replay import (
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
 from api.routers.backtests import _build_provider
-from api import replay_store, serializers
+from api import auth, replay_store, serializers
 from api.schemas.replay import ReplayCreateRequest, ReplayCreateResponse
 
 router = APIRouter(prefix="/replay", tags=["replay"])
+
+#: The websocket lives on its own router because include_router's
+#: `dependencies=` applies to websocket routes as well, and an HTTP dependency
+#: expecting a Request cannot be resolved for a socket handshake. This one is
+#: mounted WITHOUT that dependency and authenticates itself in replay_ws,
+#: before accept().
+ws_router = APIRouter(prefix="/replay", tags=["replay"])
 
 _TF_MINUTES = TF_MINUTES
 
@@ -371,8 +378,20 @@ def create_replay(req: ReplayCreateRequest):
     )
 
 
-@router.websocket("/ws/{replay_id}")
+@ws_router.websocket("/ws/{replay_id}")
 async def replay_ws(websocket: WebSocket, replay_id: str):
+    # A websocket upgrade does NOT run the router's HTTP dependencies, so the
+    # dependencies=[PROTECTED] on this router protects every route in it
+    # EXCEPT this one. The check has to be here, and it has to happen before
+    # accept() -- accepting first and closing after would still have opened
+    # the socket to an anonymous caller.
+    user = await auth.user_for_websocket(websocket)
+    if user is None:
+        # 1008 = policy violation. No message body: an unauthenticated caller
+        # learns only that it was refused.
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     stored = replay_store.get(replay_id)
     if stored is None:

@@ -3,7 +3,9 @@
 import os
 from functools import lru_cache
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from api.auth import require_user
 
 from api.deps import BASE_PRICES, CONTRACT_SPECS, get_config
 from src.data.rithmic_provider import EXCHANGE_MAP
@@ -43,12 +45,12 @@ def get_version():
     }
 
 
-@router.get("/strategies")
+@router.get("/strategies", dependencies=[Depends(require_user)])
 def list_strategies():
     return STRATEGIES
 
 
-@router.get("/contracts")
+@router.get("/contracts", dependencies=[Depends(require_user)])
 def list_contracts():
     cfg = get_config()
     contracts = cfg.get("contracts", {})
@@ -131,7 +133,7 @@ def csv_coverage(data_dir, symbol: str) -> list[dict]:
     return sorted(spans, key=lambda s: s["start"])
 
 
-@router.get("/symbols")
+@router.get("/symbols", dependencies=[Depends(require_user)])
 def list_symbols(data_source: str = "synthetic"):
     """Symbols selectable for a given data source.
 
@@ -213,7 +215,7 @@ def list_symbols(data_source: str = "synthetic"):
     return [entry(s) for s in specs]
 
 
-@router.get("/data-sources")
+@router.get("/data-sources", dependencies=[Depends(require_user)])
 def list_data_sources():
     availability = {"synthetic": True}
     try:

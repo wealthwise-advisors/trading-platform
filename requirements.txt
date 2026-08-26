@@ -22,6 +22,11 @@ numpy>=1.24.0
 # development only as a leftover of streamlit, which was removed on 2026-07-15.
 pyarrow>=13.0.0   # >=13 matches pandas' own floor for the parquet extra
 
+# Password hashing for the login system (argon2id). api/auth.py stores the
+# full encoded hash, so the cost parameters can be raised later without
+# invalidating existing passwords.
+argon2-cffi>=23.1.0
+
 # Technical indicators
 pandas_ta>=0.4.71b0
 
