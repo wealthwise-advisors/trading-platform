@@ -44,6 +44,21 @@ from db import users as repo
 
 log = logging.getLogger(__name__)
 
+
+def _https_only(url: str) -> str:
+    """Refuse anything that is not an https:// URL.
+
+    urlopen is happy to fetch file:// and ftp://, so a URL that ever becomes
+    configurable would let the environment redirect this call at the local
+    filesystem. The constants below are hard-coded today; this is what keeps
+    that true if one is ever made settable. It also satisfies bandit B310,
+    which is right to ask.
+    """
+    if not url.startswith("https://"):
+        raise ValueError(f"refusing a non-https endpoint: {url[:40]!r}")
+    return url
+
+
 API_URL = "https://api.resend.com/emails"
 
 API_KEY_ENV = "AUTOTRADER_RESEND_API_KEY"
@@ -127,11 +142,11 @@ def send_if_configured(user_id: int, email: str, username: str) -> bool:
             ),
         }
         req = urllib.request.Request(
-            API_URL, data=json.dumps(payload).encode(),
+            _https_only(API_URL), data=json.dumps(payload).encode(),
             headers={"Authorization": f"Bearer {_api_key()}",
                      "Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             ok = 200 <= resp.status < 300
         if ok:
             log.info("verification email sent to %s", _redact(email))

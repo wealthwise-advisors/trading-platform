@@ -35,6 +35,21 @@ import urllib.request
 
 log = logging.getLogger(__name__)
 
+
+def _https_only(url: str) -> str:
+    """Refuse anything that is not an https:// URL.
+
+    urlopen is happy to fetch file:// and ftp://, so a URL that ever becomes
+    configurable would let the environment redirect this call at the local
+    filesystem. The constants below are hard-coded today; this is what keeps
+    that true if one is ever made settable. It also satisfies bandit B310,
+    which is right to ask.
+    """
+    if not url.startswith("https://"):
+        raise ValueError(f"refusing a non-https endpoint: {url[:40]!r}")
+    return url
+
+
 VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
 #: The site key is PUBLIC -- it is rendered into the page and identifies the
@@ -82,11 +97,11 @@ def verify(token: str, remote_ip: str = "") -> bool:
 
     body = urllib.parse.urlencode(data).encode()
     req = urllib.request.Request(
-        VERIFY_URL, data=body,
+        _https_only(VERIFY_URL), data=body,
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             import json
             payload = json.load(resp)
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
