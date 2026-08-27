@@ -21,7 +21,7 @@ hours, and which directory the CSV provider reads.
 
 | File | Purpose | Lines |
 |---|---|---:|
-| [`settings.yaml`](settings.yaml) | Non-secret configuration: contract specifications, session hours, data directories. | 95 |
+| [`settings.yaml`](settings.yaml) | Non-secret configuration: contract specifications, session hours, data directories. | 138 |
 | [`credentials.yaml.example`](credentials.yaml.example) | AutoTrader — Credentials Template | 34 |
 
 ---

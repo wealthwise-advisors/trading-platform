@@ -28,18 +28,24 @@ py -3.12 -m pytest tests/test_follow_live_matrix.py -q
 
 | File | Purpose | Lines |
 |---|---|---:|
+| [`test_auth.py`](test_auth.py) | 🔐 The guard holds. Every route refuses an anonymous caller, sessions die on logout, a new account never gets the broker. | 502 |
+| [`test_reset_auth.py`](test_reset_auth.py) | 🔑 Password and username recovery: no enumeration by body, status or timing; tokens single-use, expiring, purpose-scoped. | 678 |
+| [`test_oauth_auth.py`](test_oauth_auth.py) | 🌐 Four providers. Only a **verified** address may match an account; a disabled one is refused, never re-provisioned. | 711 |
+| [`test_isolation.py`](test_isolation.py) | 🚧 One user must never reach another's data — swept from the app's own OpenAPI schema, so a route added later is covered the day it appears. | 392 |
+| [`conftest.py`](conftest.py) | Shared setup. `_SECURITY_SUITES` exempts the four above from the signed-in override — without it they would pass while testing nothing. | 91 |
+| [`_isolation_helpers.py`](_isolation_helpers.py) | A minimal `BacktestResults` for store-level tests. Underscore-prefixed so pytest does not collect it. | 37 |
 | [`test_indicator_correctness.py`](test_indicator_correctness.py) | Permanent guard on bar construction: boundaries AND OHLC, every timeframe. | 1,069 |
 | [`test_multi_replay.py`](test_multi_replay.py) | Tests for the multi-timeframe replay clock. | 663 |
 | [`test_replay_follow_live.py`](test_replay_follow_live.py) | Following the live market over the replay WebSocket. | 477 |
 | [`test_swing_zigzag_regression.py`](test_swing_zigzag_regression.py) | Regression baseline for the Swing (major, 10-leg) / 3-Leg Deviation (minor) zigzag visualization --… | 436 |
 | [`test_replay_extend.py`](test_replay_extend.py) | Tests for growing a live replay past the end of the snapshot it loaded. | 398 |
 | [`test_follow_live_matrix.py`](test_follow_live_matrix.py) | Following the live market across EVERY timeframe, offset and date. | 321 |
-| [`test_api_provider_errors.py`](test_api_provider_errors.py) | A provider that cannot serve the requested symbol is a BAD REQUEST, not a server defect. | 235 |
+| [`test_api_provider_errors.py`](test_api_provider_errors.py) | A provider that cannot serve the requested symbol is a BAD REQUEST, not a server defect. | 266 |
 | [`test_reference_platform_parity.py`](test_reference_platform_parity.py) | Parity against the reference platform, pinned to bars it actually printed. | 201 |
 | [`test_vwap_bands.py`](test_vwap_bands.py) | VWAP band regression tests. | 175 |
 | [`test_schwab_redirect_parsing.py`](test_schwab_redirect_parsing.py) | How the pasted Schwab redirect URL is turned into an auth code. | 158 |
 | [`test_symbol_universe.py`](test_symbol_universe.py) | The symbol list the UI offers must match what the backend can actually serve. | 117 |
-| [`test_provider_timeframes.py`](test_provider_timeframes.py) | Every timeframe the UI offers must be loadable from every file/API provider. | 63 |
+| [`test_provider_timeframes.py`](test_provider_timeframes.py) | Every timeframe the UI offers must be loadable from every file/API provider. | 83 |
 | [`test_engine.py`](test_engine.py) | Smoke tests for the backtesting engine. | 57 |
 
 ### Subdirectories

@@ -9,7 +9,10 @@ is not.
 
 ### Files in this directory
 
-| File | Purpose | Lines |
+| File | Purpose |
+|---|---|
+| [`manage_users.py`](manage_users.py) | 👤 Create, disable and inspect accounts, and the **only** way to grant `is_owner` — the Schwab entitlement. Needs shell access on the server, which is the point. |
+| [`run_local.py`](run_local.py) | 🖥 Serves the sign-in pages, the built dashboard and the API on **one** port, so local behaviour matches production. | Lines |
 |---|---|---:|
 | [`run_backtest.py`](run_backtest.py) | Quick CLI backtest runner. | 109 |
 | [`download_rithmic_data.py`](download_rithmic_data.py) | CLI script to download historical data from Rithmic and cache it locally. | 70 |

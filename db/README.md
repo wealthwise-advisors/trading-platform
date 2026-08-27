@@ -7,11 +7,27 @@ monthly bill, and no way for it to be down while the application is up.
 |:---|:---|
 | [`schema.sql`](schema.sql) | The tables. Every statement is `IF NOT EXISTS`, so applying it is idempotent |
 | [`connection.py`](connection.py) | Opening the file, the PRAGMAs, applying and versioning the schema |
-| [`backtests.py`](backtests.py) | The only module that knows the table layout |
+| [`backtests.py`](backtests.py) | The only module that knows the backtest table layout |
+| [`users.py`](users.py) | 👥 Accounts, sessions, OAuth identities, email tokens — everything about **people** |
 | `__init__.py` | Package docstring |
 
-[`api/store.py`](../api/store.py) is the only caller. Nothing else imports from
+[`api/store.py`](../api/store.py) is the only caller for backtests, and
+[`api/auth.py`](../api/auth.py) the only one for users. Nothing else imports from
 here, so the SQL stays in one place and the routers never see a cursor.
+
+### 🔐 What `users.py` guarantees
+
+| Rule | Why |
+|---|---|
+| Passwords are **argon2id** | Never reversible, never stored in the clear |
+| Every token stored as **SHA-256** | A leaked database yields no working session and no usable reset link |
+| OAuth matched on **subject**, not email | An address can be released and re-issued; a subject cannot |
+| `is_owner` defaults to **0** | The Schwab connection is the operator's own — no route can grant it |
+
+### 🔒 Per-user isolation
+
+`backtests` and `trades` carry a `user_id`, and **no function here takes a
+default for it** — a forgotten argument is a `TypeError`, not a leak.
 
 ---
 
