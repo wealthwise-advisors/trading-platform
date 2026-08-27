@@ -264,13 +264,13 @@ def resend_verification(request: Request):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required.")
 
     ip = auth.client_ip(request)
-    if wait := auth.signup_throttle.retry_after(ip):
+    if wait := auth.recovery_throttle.retry_after(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Try again later.",
             headers={"Retry-After": str(wait)},
         )
-    auth.signup_throttle.record(ip)
+    auth.recovery_throttle.record(ip)
 
     if user.email_verified:
         return {"ok": True, "sent": False, "detail": "That address is already confirmed."}
@@ -351,13 +351,13 @@ def forgot_password(body: ForgotRequest, request: Request,
     # address the caller chooses, which is how a sending domain gets
     # blacklisted. The 429 is the one response that legitimately differs, and
     # it depends on the CALLER, not on whether the address exists.
-    if wait := auth.signup_throttle.retry_after(ip):
+    if wait := auth.recovery_throttle.retry_after(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Try again later.",
+            detail="Too many requests. Please wait a few minutes and try again.",
             headers={"Retry-After": str(wait)},
         )
-    auth.signup_throttle.record(ip)
+    auth.recovery_throttle.record(ip)
 
     # NO CAPTCHA HERE, deliberately -- see the note on /forgot-username.
     user = repo.get_user_by_email(body.email.strip())
@@ -475,13 +475,13 @@ def forgot_username(body: ForgotUsernameRequest, request: Request,
     """
     ip = auth.client_ip(request)
 
-    if wait := auth.signup_throttle.retry_after(ip):
+    if wait := auth.recovery_throttle.retry_after(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Try again later.",
+            detail="Too many requests. Please wait a few minutes and try again.",
             headers={"Retry-After": str(wait)},
         )
-    auth.signup_throttle.record(ip)
+    auth.recovery_throttle.record(ip)
 
     # NO CAPTCHA ON THE TWO RECOVERY ENDPOINTS.
     #

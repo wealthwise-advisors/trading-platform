@@ -39,6 +39,7 @@ def db(tmp_path, monkeypatch):
     # accounts spends the allowance and later tests collect 429
     # where they expected a validation error.
     monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
+    monkeypatch.setattr(auth, "recovery_throttle", auth.RecoveryThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)   # TestClient speaks http://
     return tmp_path
 

@@ -37,6 +37,7 @@ def db(tmp_path, monkeypatch):
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "reset.db")
     monkeypatch.setattr(auth, "throttle", auth.Throttle())
     monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
+    monkeypatch.setattr(auth, "recovery_throttle", auth.RecoveryThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)
     return tmp_path
 
@@ -402,9 +403,18 @@ def test_forgot_password_is_rate_limited(client, db, user, sent):
 
     Unmetered, that is how a sending domain ends up blacklisted -- and how one
     address gets buried in reset emails by someone who simply dislikes them.
+
+    The budget is RecoveryThrottle's, not the signup one. Sharing them meant
+    registering once and then forgetting a password twice bought an hour-long
+    lockout of the flow that exists for people already locked out.
     """
-    codes = [forgot(client, "t@example.com").status_code for _ in range(8)]
+    limit = auth.RecoveryThrottle.MAX_PER_WINDOW
+    codes = [forgot(client, "t@example.com").status_code
+             for _ in range(limit + 3)]
     assert 429 in codes, f"a reset flood was never throttled: {codes}"
+    assert codes[:3] == [200, 200, 200], (
+        "three ordinary attempts were refused -- someone whose email is slow "
+        f"would be locked out: {codes}")
 
 
 def test_guessing_reset_tokens_is_throttled(client, db, user):
@@ -506,8 +516,11 @@ def test_a_username_miss_queues_nothing(client, db, sent_names, monkeypatch):
 
 
 def test_it_is_rate_limited(client, db, user, sent_names):
-    codes = [forgot_user(client, "t@example.com").status_code for _ in range(8)]
+    limit = auth.RecoveryThrottle.MAX_PER_WINDOW
+    codes = [forgot_user(client, "t@example.com").status_code
+             for _ in range(limit + 3)]
     assert 429 in codes, f"never throttled: {codes}"
+    assert codes[:3] == [200, 200, 200], f"ordinary retries refused: {codes}"
 
 
 def test_the_reminder_carries_no_token(client, db, user, monkeypatch):
@@ -590,3 +603,20 @@ def test_registration_still_requires_the_captcha(client, db, monkeypatch):
         "email": "botlike@example.com", "accept_terms": True})
     assert r.status_code == 400
     assert repo.get_user("botlike") is None
+
+
+def test_recovery_does_not_share_the_signup_budget(client, db, user, sent):
+    """Registering must not spend the allowance for forgetting a password.
+
+    They shared one budget. Signing up once and then asking for a reset twice
+    hit the five-per-hour signup limit and locked recovery for an hour --
+    punishing exactly the person with no other way in.
+    """
+    for i in range(auth.SignupThrottle.MAX_PER_WINDOW + 2):
+        client.post("/api/auth/register", json={
+            "username": f"newbie{i}", "password": "Correct-Horse-99",
+            "email": f"newbie{i}@example.com", "accept_terms": True})
+
+    # Signup is now exhausted. Recovery must still work.
+    assert forgot(client, "t@example.com").status_code == 200
+    assert len(sent) == 1, "registration attempts spent the recovery budget"

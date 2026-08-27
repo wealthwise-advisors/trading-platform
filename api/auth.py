@@ -177,6 +177,35 @@ class SignupThrottle:
 signup_throttle = SignupThrottle()
 
 
+class RecoveryThrottle(SignupThrottle):
+    """A separate, gentler budget for password and username recovery.
+
+    Recovery shared the signup budget, and that was wrong twice over.
+
+    It CONFLATED unrelated actions: creating an account and asking for a reset
+    drew on the same five-per-hour allowance, so signing up once and then
+    forgetting a password twice locked someone out of recovery for an hour.
+
+    And the numbers were wrong for this flow. Someone whose email is slow, or
+    who lands in spam and asks again, or who is simply unsure whether the first
+    click registered, will legitimately press the button three or four times in
+    a minute. Under the signup budget that was a one-hour lockout -- imposed on
+    the person least able to get in any other way.
+
+    Eight in fifteen minutes, then a fifteen-minute pause. That still caps
+    mail-bombing at a rate no sending domain will notice, while leaving normal
+    impatience unpunished. A block that outlasts the person's patience is not a
+    rate limit, it is an outage they cannot report.
+    """
+
+    MAX_PER_WINDOW = 8
+    WINDOW_SECONDS = 900
+    BLOCK_SECONDS = 900
+
+
+recovery_throttle = RecoveryThrottle()
+
+
 #: Rejected outright regardless of length. Not a substitute for a real
 #: breach-corpus check -- it is the shortlist that a determined guesser tries
 #: first, and it costs nothing to refuse them.
