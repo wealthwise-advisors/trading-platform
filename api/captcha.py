@@ -98,7 +98,13 @@ def verify(token: str, remote_ip: str = "") -> bool:
     body = urllib.parse.urlencode(data).encode()
     req = urllib.request.Request(
         _https_only(VERIFY_URL), data=body,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers={"Content-Type": "application/x-www-form-urlencoded",
+                 "Accept": "application/json",
+                 # Same reasoning as api/verification.py: a default
+                 # "Python-urllib/3.12" is a bot signature, and this endpoint
+                 # is Cloudflare's own.
+                 "User-Agent": "AutoTrader/1.0 (+https://github.com/"
+                               "wealthwise-advisors/trading-platform)"},
     )
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme

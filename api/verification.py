@@ -110,6 +110,26 @@ def _explain(exc) -> str:
     return f"{code or type(exc).__name__}: {exc}"
 
 
+#: Sent on every call to Resend.
+#:
+#: The User-Agent is not decoration. urllib introduces itself as
+#: "Python-urllib/3.12", which is a textbook automation signature, and
+#: api.resend.com sits behind Cloudflare -- which refused every request with
+#: "403: error code: 1010", meaning blocked on client signature. The request
+#: never reached Resend at all, so their Logs page stayed empty and there was
+#: nothing anywhere to say why. Naming the application honestly is enough.
+_USER_AGENT = "AutoTrader/1.0 (+https://github.com/wealthwise-advisors/trading-platform)"
+
+
+def _headers() -> dict:
+    return {
+        "Authorization": f"Bearer {_api_key()}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": _USER_AGENT,
+    }
+
+
 def _api_key() -> str:
     return os.environ.get(API_KEY_ENV, "").strip()
 
@@ -181,8 +201,7 @@ def send_if_configured(user_id: int, email: str, username: str) -> bool:
         }
         req = urllib.request.Request(
             _https_only(API_URL), data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {_api_key()}",
-                     "Content-Type": "application/json"},
+            headers=_headers(),
         )
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             ok = 200 <= resp.status < 300
@@ -254,8 +273,7 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
         }
         req = urllib.request.Request(
             _https_only(API_URL), data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {_api_key()}",
-                     "Content-Type": "application/json"},
+            headers=_headers(),
         )
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             ok = 200 <= resp.status < 300
