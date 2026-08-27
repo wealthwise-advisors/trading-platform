@@ -28,6 +28,8 @@ def db(tmp_path, monkeypatch):
     # where they expected a validation error.
     monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
     monkeypatch.setattr(auth, "recovery_throttle", auth.RecoveryThrottle())
+    monkeypatch.setattr(auth, "username_throttle", auth.RecoveryThrottle())
+    monkeypatch.setattr(auth, "verify_throttle", auth.RecoveryThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)   # TestClient speaks http://
     return tmp_path
 

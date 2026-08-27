@@ -38,6 +38,8 @@ def db(tmp_path, monkeypatch):
     monkeypatch.setattr(auth, "throttle", auth.Throttle())
     monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
     monkeypatch.setattr(auth, "recovery_throttle", auth.RecoveryThrottle())
+    monkeypatch.setattr(auth, "username_throttle", auth.RecoveryThrottle())
+    monkeypatch.setattr(auth, "verify_throttle", auth.RecoveryThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)
     return tmp_path
 
@@ -655,21 +657,22 @@ def test_recovery_allows_a_realistic_number_of_retries(client, db, user, sent):
     assert len(sent) == 10
 
 
-def test_a_few_password_resets_do_not_block_forgot_username(
+def test_password_resets_never_block_forgot_username(
         client, db, user, sent, sent_names):
-    """The two recovery flows DO share one budget -- deliberately.
+    """Each recovery flow answers only for its own use.
 
-    Both send mail to an address the caller picks, so one counter is the right
-    shape: the thing being limited is "how much mail can this caller cause",
-    not "which button did they press".
+    They shared one counter, on the reasoning that what matters is how much
+    mail a caller can cause. True in the abstract and wrong in practice: using
+    password reset a few times and then pressing "forgot username" produced a
+    refusal with no visible cause, and the second button looked broken.
 
-    What was wrong before was the SIZE and the penalty, not the sharing. Five
-    per hour across registration and both recovery flows, with a fifteen-minute
-    lockout on top, meant ordinary use ran out. Twelve in a rolling ten minutes
-    with no penalty does not.
+    Exhausting one flow entirely must leave the other untouched.
     """
-    for _ in range(5):
+    # Spend the password-reset budget completely.
+    for _ in range(auth.RecoveryThrottle.MAX_PER_WINDOW + 2):
         forgot(client, "t@example.com")
+    assert forgot(client, "t@example.com").status_code == 429, "precondition"
 
+    # The username flow must be entirely unaffected.
     assert forgot_user(client, "t@example.com").status_code == 200
     assert len(sent_names) == 1, "password resets spent the username allowance"

@@ -233,7 +233,20 @@ class RecoveryThrottle:
         self._ips[ip] = seen
 
 
-recovery_throttle = RecoveryThrottle()
+#: One budget per FLOW, not one shared between them.
+#:
+#: They shared a counter, on the reasoning that what matters is how much mail a
+#: caller can cause. True in the abstract, and wrong in practice: asking for a
+#: password reset a few times then trying "forgot username" met a refusal the
+#: person had no way to connect to anything they had done. Two buttons, two
+#: purposes, one invisible shared allowance -- the second one appearing broken.
+#:
+#: Twelve each in a rolling ten minutes. The ceiling on mail is now twice what
+#: it was, which is still far below anything that troubles a sending domain,
+#: and each flow answers only for its own use.
+recovery_throttle = RecoveryThrottle()          # password reset
+username_throttle = RecoveryThrottle()          # username reminder
+verify_throttle = RecoveryThrottle()            # resend verification
 
 
 #: Rejected outright regardless of length. Not a substitute for a real

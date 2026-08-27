@@ -264,13 +264,13 @@ def resend_verification(request: Request):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required.")
 
     ip = auth.client_ip(request)
-    if wait := auth.recovery_throttle.retry_after(ip):
+    if wait := auth.verify_throttle.retry_after(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Try again later.",
             headers={"Retry-After": str(wait)},
         )
-    auth.recovery_throttle.record(ip)
+    auth.verify_throttle.record(ip)
 
     if user.email_verified:
         return {"ok": True, "sent": False, "detail": "That address is already confirmed."}
@@ -475,13 +475,13 @@ def forgot_username(body: ForgotUsernameRequest, request: Request,
     """
     ip = auth.client_ip(request)
 
-    if wait := auth.recovery_throttle.retry_after(ip):
+    if wait := auth.username_throttle.retry_after(ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please wait a few minutes and try again.",
             headers={"Retry-After": str(wait)},
         )
-    auth.recovery_throttle.record(ip)
+    auth.username_throttle.record(ip)
 
     # NO CAPTCHA ON THE TWO RECOVERY ENDPOINTS.
     #
