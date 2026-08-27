@@ -376,6 +376,19 @@ body.recovery .hide-in-recovery{ display:none !important }
 .cap.on{ display:block; min-height:65px }
 .cap .why{ margin:7px 2px 0; font-size:12px; color:#7f8ca3 }
 
+
+/* "Forgot password?" -- reported as missing, because at 13px in the far corner
+   of a photographic background it read as fine print rather than the way out
+   of being locked out. It is the only route back into an account for someone
+   who cannot sign in, so it gets the weight of a control: larger, underlined
+   so it is legibly a link, and with a hit area big enough for a thumb. */
+.row a{
+  font-size:14px; font-weight:600; text-decoration:underline;
+  text-underline-offset:3px; padding:6px 2px; border-radius:6px;
+}
+.row a:hover{ color:var(--ink); text-decoration-thickness:2px }
+.row a:focus-visible{ outline:2px solid var(--em2); outline-offset:2px }
+
 </style>
 
 <div class="scene" aria-hidden="true">

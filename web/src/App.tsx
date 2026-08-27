@@ -76,11 +76,18 @@ function App() {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Sign out. Calls the backend so the SESSION is revoked, not just
                 the cookie cleared -- clearing only the cookie leaves a live
-                session on the server that a copied cookie could still use. */}
+                session on the server that a copied cookie could still use.
+
+                variant="outline", not "ghost". Ghost renders a borderless
+                transparent control, so this sat among four real buttons looking
+                like a text label -- and was reported as "there is no sign out
+                button on the app". It was there the whole time and did not look
+                like it. The only way out of a signed-in app is not the place to
+                be subtle. */}
             <Button
               size="sm"
-              variant="ghost"
-              title="Sign out"
+              variant="outline"
+              title="Sign out of AutoTrader"
               onClick={async () => {
                 await auth.logout()
                 window.location.assign(SIGN_IN_PAGE)
