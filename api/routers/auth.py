@@ -12,7 +12,8 @@ access on the server. A new account gets the analysis app and nothing else.
 import logging
 import sqlite3
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import (APIRouter, BackgroundTasks, HTTPException, Request,
+                     Response, status)
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
@@ -274,3 +275,155 @@ def resend_verification(request: Request):
     if not user.email_verified and user.email:
         verification.send_if_configured(user.id, user.email, user.username)
     return {"ok": True}
+
+
+class ForgotRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=254)
+    captcha_token: str = Field(default="", max_length=4096)
+
+
+class ResetRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)
+    password: str = Field(min_length=1, max_length=256)
+
+
+#: The single answer /forgot-password gives, whatever actually happened.
+_FORGOT_REPLY = {
+    "ok": True,
+    "detail": ("If that address has an account, a reset link is on its way. "
+               "Check your inbox, and your spam folder."),
+}
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotRequest, request: Request,
+                    background: BackgroundTasks):
+    """Start a password reset.
+
+    ALWAYS returns the same body and the same status, whether or not the
+    address has an account. Anything else turns this into a free membership
+    oracle: point it at a list of addresses and it tells you which people have
+    accounts here -- the same reason /register refuses without saying whether
+    it was the username or the email that collided.
+
+    That extends to TIMING, which is the part that is easy to get wrong. A real
+    send makes an outbound HTTPS call to Resend taking a few hundred
+    milliseconds; a miss makes none. Returning as soon as the answer is known
+    would therefore let a miss reply measurably faster, and the identical body
+    would leak anyway to anyone with a stopwatch.
+
+    So the send is handed to a BackgroundTask and the response is returned
+    immediately in BOTH branches. Nothing the caller can observe depends on
+    whether an account was found -- and it also means a slow or hanging mail
+    provider cannot hold the request open.
+
+    OAUTH-ONLY ACCOUNTS
+    -------------------
+    An account whose only credential is a provider gets a reset link ONLY if
+    its address was verified by that provider. For a password account, reset
+    RESTORES a credential that existed. For an OAuth-only account it CREATES a
+    new kind of credential that never existed -- so it must rest on an address
+    somebody proved, not one that was typed. X sign-ups type their own address
+    and nobody checks it; sending a reset there would hand a brand-new way in
+    to whoever holds an unverified inbox, while the X link keeps working for
+    the original person. Two people, one account, neither aware.
+    """
+    ip = auth.client_ip(request)
+
+    # Rate-limited on the signup budget: this sends mail on demand to an
+    # address the caller chooses, which is how a sending domain gets
+    # blacklisted. The 429 is the one response that legitimately differs, and
+    # it depends on the CALLER, not on whether the address exists.
+    if wait := auth.signup_throttle.retry_after(ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Try again later.",
+            headers={"Retry-After": str(wait)},
+        )
+    auth.signup_throttle.record(ip)
+
+    if not captcha.verify(body.captcha_token, ip):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "Could not confirm you are human. Please try again.")
+
+    user = repo.get_user_by_email(body.email.strip())
+
+    if user is None or not user.is_active:
+        log.info("password reset asked for an unknown or disabled address from %s", ip)
+    elif _may_reset(user):
+        # Queued, not awaited. See the note on timing above: doing it inline
+        # makes a hit measurably slower than a miss and undoes every other
+        # precaution in this function.
+        background.add_task(verification.send_reset,
+                            user.id, user.email, user.username)
+    else:
+        # OAuth-only on an unverified address. Refused, silently -- saying so
+        # would reveal both that the account exists and how it signs in.
+        log.warning("password reset refused for %r: no password and an "
+                    "unverified address", user.username)
+
+    return _FORGOT_REPLY
+
+
+def _may_reset(user) -> bool:
+    """Whether this account may set a password by email.
+
+    True for anything that already has a usable password -- reset restores what
+    was there. True for a passwordless account whose address a provider
+    verified. False for a passwordless account whose address is merely claimed.
+    """
+    if user.email_verified:
+        return True
+    # A password account is identified by having a hash anyone can actually
+    # verify against. OAuth-created accounts hold argon2 over random bytes, so
+    # no password matches -- but the hash is well-formed, so it cannot be told
+    # apart by inspection. `has_password` records the distinction at creation.
+    return bool(getattr(user, "has_password", True))
+
+
+@router.post("/reset-password", response_model=Me)
+def reset_password(body: ResetRequest, request: Request, response: Response):
+    """Finish a password reset.
+
+    Signs the person in afterwards, because the alternative is bouncing someone
+    who has just proved control of the account back to a login form to type the
+    password they set four seconds ago.
+    """
+    ip = auth.client_ip(request)
+
+    if wait := auth.throttle.retry_after(ip, "reset"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+
+    if problem := auth.password_problem(body.password):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
+
+    user_id = verification.consume_reset(body.token, auth.hash_password(body.password))
+    if user_id is None:
+        # Unknown, expired, already spent, or a verification token being
+        # offered as a reset. One message for all four.
+        auth.throttle.record_failure(ip, "reset")
+        log.warning("a bad password-reset token was offered from %s", ip)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That reset link is invalid or has expired. Please ask for a new one.",
+        )
+
+    auth.throttle.record_success(ip, "reset")
+    user = repo.get_user_by_id(user_id)
+    log.info("password reset completed for %s from %s", user.username, ip)
+
+    # take_reset_token revoked every session this account had, inside the same
+    # transaction as the password change. Someone resets because they believe
+    # another person has their password; leaving that person signed in would
+    # make the reset change nothing for them. A fresh session is issued here,
+    # so the reset does not sign the rightful owner out of the tab they are in.
+    token_raw = repo.new_session(user_id, ip=ip,
+                                 user_agent=request.headers.get("user-agent", ""))
+    auth.set_session_cookie(response, token_raw)
+    repo.touch_login(user_id)
+    return Me(username=user.username, full_name=user.full_name,
+              email=user.email, country=user.country)

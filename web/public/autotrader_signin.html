@@ -359,6 +359,15 @@ body{overflow-x:hidden;overflow-y:auto}
    could not have been made to work. */
 .soc{ grid-template-columns:repeat(3,1fr) }
 
+
+/* Forgot-password / set-new-password modes. */
+body.recovery .hide-in-recovery{ display:none !important }
+.backlink{
+  display:block; margin:15px 0 0; text-align:center; font-size:13px;
+  color:#8c9ab2; text-decoration:none;
+}
+.backlink:hover{ color:var(--em2) }
+
 </style>
 
 <div class="scene" aria-hidden="true">
@@ -422,7 +431,7 @@ body{overflow-x:hidden;overflow-y:auto}
         <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
              stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
       </span>Remember me</label>
-      <a href="#">Forgot password?</a>
+      <a href="autotrader_signin.html?forgot=1">Forgot password?</a>
     </div>
 
     <button class="go" type="submit">Sign In
@@ -692,5 +701,167 @@ body{overflow-x:hidden;overflow-y:auto}
       j.providers.forEach(function (p) { configured[p.key] = !!p.configured; });
     })
     .catch(function () { /* leave every button on the honest notice */ });
+})();
+</script>
+<script>
+/* ---------------------------------------------------------------------------
+   Password recovery, in two modes of this same card.
+
+     ?forgot=1        ask for an address and send a link
+     ?reset=<token>   set a new password with the link that arrived
+
+   The alternative was a third page, which would have meant a third copy of the
+   inlined photograph and flag font -- roughly 650 KB -- to show two fields.
+--------------------------------------------------------------------------- */
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  var forgot = q.get("forgot");
+  var token = q.get("reset");
+  if (!forgot && !token) return;
+
+  var form = document.querySelector("form.card");
+  if (!form) return;
+  document.body.classList.add("recovery");
+
+  var head = document.querySelector(".hello h2");
+  var sub = document.querySelector(".hello p");
+  var btn = form.querySelector(".go");
+  var msg = form.querySelector(".msg:not(.socmsg)");
+  if (!msg) {
+    msg = document.createElement("div");
+    msg.className = "msg";
+    msg.setAttribute("role", "status");
+    btn.insertAdjacentElement("afterend", msg);
+  }
+  function say(text, kind) {
+    msg.innerHTML = text;
+    msg.className = "msg show " + (kind || "err");
+  }
+
+  /* Everything that belongs to signing in goes away: the tabs, the provider
+     row and its divider, the remember-me line, and whichever field this mode
+     does not use. */
+  [".tabs", ".or", ".soc", ".socmsg", ".row"].forEach(function (sel) {
+    var el = form.querySelector(sel) || document.querySelector(sel);
+    if (el) el.classList.add("hide-in-recovery");
+  });
+
+  var uBox = document.getElementById("u") &&
+             document.getElementById("u").closest(".f");
+  var pBox = document.getElementById("p") &&
+             document.getElementById("p").closest(".f");
+
+  var back = document.createElement("a");
+  back.className = "backlink";
+  back.href = "autotrader_signin.html";
+  back.textContent = "Back to sign in";
+  form.appendChild(back);
+
+  /* Replace the submit path outright. Cloning drops the sign-in listeners, so
+     one click cannot fire both this and a login attempt. */
+  var fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+  function label(text) {
+    if (fresh.childNodes.length) fresh.childNodes[0].nodeValue = text + " ";
+  }
+
+  async function post(path, body) {
+    var res = await fetch(path, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    var payload = await res.json().catch(function () { return {}; });
+    return { ok: res.ok, status: res.status, body: payload };
+  }
+
+  if (forgot) {
+    // ── ask for an address ──────────────────────────────────────────────
+    if (pBox) pBox.classList.add("hide-in-recovery");
+    if (head) head.textContent = "Reset your password";
+    if (sub) sub.textContent = "We will email you a link to set a new one.";
+    label("Send reset link");
+
+    var u = document.getElementById("u");
+    if (u) {
+      u.type = "email";
+      u.name = "email";
+      u.setAttribute("placeholder", "Email Address");
+      u.setAttribute("autocomplete", "email");
+      u.value = "";
+    }
+
+    fresh.addEventListener("click", async function (e) {
+      e.preventDefault();
+      var email = (u && u.value || "").trim();
+      if (!email) { say("Please enter your email address."); return; }
+      fresh.setAttribute("aria-busy", "true");
+      try {
+        var r = await post("/api/auth/forgot-password",
+                           { email: email, captcha_token: window.__captchaToken || "" });
+        /* The server answers the same way whether or not that address has an
+           account -- on purpose, so this cannot be used to discover who has
+           one. So this reports what the server said and nothing more. */
+        say(r.body.detail || "If that address has an account, a link is on its way.",
+            r.ok ? "info" : "err");
+        if (r.ok && u) u.value = "";
+      } catch (err) {
+        say("Cannot reach the server. Check your connection and try again.");
+      } finally {
+        fresh.removeAttribute("aria-busy");
+      }
+    });
+  } else {
+    // ── set a new password ──────────────────────────────────────────────
+    if (uBox) uBox.classList.add("hide-in-recovery");
+    if (head) head.textContent = "Choose a new password";
+    if (sub) sub.textContent = "Make it long. Length beats punctuation.";
+    label("Set password");
+
+    var p = document.getElementById("p");
+    if (p) {
+      p.setAttribute("placeholder", "New Password");
+      p.setAttribute("autocomplete", "new-password");
+      p.value = "";
+    }
+
+    /* A confirm field, because a typo here locks someone out of the account
+       they are in the middle of recovering. */
+    var second = pBox.cloneNode(true);
+    var p2 = second.querySelector("input");
+    p2.id = "p2";
+    p2.value = "";
+    p2.setAttribute("placeholder", "Confirm New Password");
+    p2.setAttribute("autocomplete", "new-password");
+    var eye = second.querySelector(".eye");
+    if (eye) {
+      eye.addEventListener("click", function () {
+        p2.type = p2.type === "password" ? "text" : "password";
+      });
+    }
+    pBox.insertAdjacentElement("afterend", second);
+
+    fresh.addEventListener("click", async function (e) {
+      e.preventDefault();
+      var a = (p && p.value) || "", b = p2.value || "";
+      if (!a) { say("Please choose a new password."); return; }
+      if (a !== b) { say("The two passwords do not match."); return; }
+      fresh.setAttribute("aria-busy", "true");
+      try {
+        var r = await post("/api/auth/reset-password", { token: token, password: a });
+        if (r.ok) {
+          /* The reset signed us in and revoked every other session. */
+          window.location.assign("/");
+          return;
+        }
+        say(r.body.detail || "Could not set that password. Please try again.");
+      } catch (err) {
+        say("Cannot reach the server. Check your connection and try again.");
+      } finally {
+        fresh.removeAttribute("aria-busy");
+      }
+    });
+  }
 })();
 </script>

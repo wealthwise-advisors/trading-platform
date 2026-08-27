@@ -277,6 +277,13 @@ PUBLIC = {"/api/health", "/api/version",
           # single-use handle that only a completed OAuth round-trip produces
           # -- test_oauth_auth.py's forged-handle test is what holds it shut.
           "/api/auth/oauth/complete",
+          # Password recovery. Public of necessity: somebody who has forgotten
+          # their password cannot present a session, and the reset link is
+          # clicked out of an email client. Both defend themselves with a
+          # single-use hashed token -- tests/test_reset_auth.py is what holds
+          # them shut, including that neither reveals whether an address has
+          # an account.
+          "/api/auth/forgot-password", "/api/auth/reset-password",
           # OAuth has to be reachable without a session -- that is the point of
           # it -- and the provider redirects the browser back to the callback
           # carrying none of our cookies. These defend themselves with a

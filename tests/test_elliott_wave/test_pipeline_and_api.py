@@ -272,6 +272,10 @@ class TestExistingApiUnchanged:
         # +1 for /api/auth/oauth/complete, which turns a Twitter/X identity
         # into an account -- X returns no email at any scope, so that sign-up
         # has to stop and ask for one before an account can exist.
+        # +2 for password recovery -- /api/auth/forgot-password and
+        # /api/auth/reset-password. Open registration made a forgotten password
+        # unrecoverable: there is no longer an administrator who knows who
+        # anybody is.
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
-        assert len(paths) == 36, sorted(paths)
+        assert len(paths) == 38, sorted(paths)

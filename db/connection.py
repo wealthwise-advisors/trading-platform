@@ -33,8 +33,10 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: v2 added users + sessions; v3 added oauth_identities + oauth_states;
 #: v4 added ownership (backtests.user_id, trades.user_id, users.is_owner);
 #: v5 added users.email_verified and made a non-empty email unique;
-#: v6 added oauth_pending for sign-ups that need a username before they exist.
-SCHEMA_VERSION = 6
+#: v6 added oauth_pending for sign-ups that need a username before they exist;
+#: v7 added email_tokens.purpose so a reset and a verification cannot
+#: cancel or impersonate each other.
+SCHEMA_VERSION = 7
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:
@@ -53,6 +55,10 @@ _ADDED_COLUMNS = [
     ("trades", "user_id", "INTEGER REFERENCES users(id)"),
     ("users", "is_owner", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
+    ("email_tokens", "purpose", "TEXT NOT NULL DEFAULT 'verify'"),
+    # Defaults to 1: every account that existed before v7 was made with a real
+    # password, so the default is correct for all of them.
+    ("users", "has_password", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

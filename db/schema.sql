@@ -154,6 +154,19 @@ CREATE TABLE IF NOT EXISTS users (
     -- registering with their email first.
     email_verified INTEGER NOT NULL DEFAULT 0,
 
+    -- Does a real password exist for this account (schema v7)?
+    --
+    -- An OAuth-created account stores argon2 over random bytes, so nothing
+    -- verifies against it -- but the hash is well-formed and cannot be told
+    -- apart from a real one by inspection. This records the distinction at
+    -- creation instead of trying to infer it later.
+    --
+    -- It decides one thing: whether "forgot password" may issue a link. For an
+    -- account that HAS a password, reset restores what was there. For one that
+    -- does not, it creates a new kind of credential -- which is only safe on an
+    -- address somebody proved, never one that was merely typed.
+    has_password  INTEGER NOT NULL DEFAULT 1,
+
     created_at    TEXT    NOT NULL,
     last_login_at TEXT
 );
@@ -184,10 +197,24 @@ CREATE TABLE IF NOT EXISTS email_tokens (
     -- Set when spent. Kept rather than deleted so a second click on the same
     -- link can be told apart from a forgery in the log.
     used_at     TEXT,
+
+    -- What this token is for (schema v7): 'verify' or 'reset'.
+    --
+    -- Not cosmetic. Issuing a token deletes the user's earlier ones so an old
+    -- link stops working, and without this column that delete is not scoped --
+    -- so sending a verification email would silently destroy a password reset
+    -- the same person had just requested, and the link in their inbox would
+    -- fail with no explanation.
+    --
+    -- It also keeps the two from being interchangeable: a verification link
+    -- must not be spendable as a password reset, which would turn "click here
+    -- to confirm your address" into "click here to let someone set a
+    -- password".
+    purpose     TEXT    NOT NULL DEFAULT 'verify',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_email_tokens_user ON email_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_tokens_user ON email_tokens(user_id, purpose);
 
 -- ── half-finished OAuth sign-ups (schema v6) ────────────────────────────────
 -- Twitter/X returns no email address at any scope, so an X identity arriving

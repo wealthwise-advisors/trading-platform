@@ -168,6 +168,71 @@ def consume(token: str) -> int | None:
     return repo.take_verification_token(repo.hash_token(token))
 
 
+#: Deliberately shorter than the 24h verification window. A verification link
+#: sits in an inbox as a convenience; a reset link is a live key to an account,
+#: and the person asking for one is, by definition, at a keyboard right now.
+RESET_TTL = timedelta(hours=1)
+
+
+def new_reset_token(user_id: int) -> str:
+    """Mint a single-use password-reset token and record its hash."""
+    raw = secrets.token_urlsafe(32)
+    expires = (datetime.now() + RESET_TTL).isoformat(timespec="seconds")
+    repo.new_email_token(user_id, repo.hash_token(raw), expires, purpose="reset")
+    return raw
+
+
+def send_reset(user_id: int, email: str, username: str) -> bool:
+    """Send a password-reset link. False when unconfigured or the send failed.
+
+    Never raises, and the caller must not vary its response on the result --
+    "we could not send you an email" and "there is no such account" are the
+    same observable thing to whoever is probing, and one of them is an answer
+    they should not get.
+    """
+    if not email or not configured():
+        log.info("password reset requested for %r but mail is dormant", username)
+        return False
+    try:
+        token = new_reset_token(user_id)
+        link = f"{_base_url()}/autotrader_signin.html?reset={token}"
+        payload = {
+            "from": _sender(),
+            "to": [email],
+            "subject": "Reset your AutoTrader password",
+            "text": (
+                f"Hello {username},\n\n"
+                f"Someone asked to reset the password on your AutoTrader "
+                f"account. If that was you, set a new one here:\n\n{link}\n\n"
+                f"The link works once and expires in "
+                f"{int(RESET_TTL.total_seconds() // 60)} minutes.\n\n"
+                f"If it was not you, ignore this message -- your password has "
+                f"not changed, and nobody can use this link without your "
+                f"inbox.\n"
+            ),
+        }
+        req = urllib.request.Request(
+            _https_only(API_URL), data=json.dumps(payload).encode(),
+            headers={"Authorization": f"Bearer {_api_key()}",
+                     "Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
+            ok = 200 <= resp.status < 300
+        if ok:
+            log.info("password reset email sent to %s", _redact(email))
+        return ok
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        log.warning("could not send a reset email to %s: %s", _redact(email), exc)
+        return False
+
+
+def consume_reset(token: str, new_password_hash: str) -> int | None:
+    """Spend a reset token and set the new password. Returns the user id."""
+    if not token:
+        return None
+    return repo.take_reset_token(repo.hash_token(token), new_password_hash)
+
+
 def _redact(email: str) -> str:
     """An address, enough to identify it in a log, not enough to harvest it."""
     name, _, domain = email.partition("@")

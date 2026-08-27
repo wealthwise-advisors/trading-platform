@@ -43,6 +43,9 @@ class User:
     #: The Schwab entitlement. See users.is_owner in db/schema.sql -- it is not
     #: something an account can earn by signing up or verifying an address.
     is_owner: bool = False
+    #: False for an account whose only credential is a provider. See
+    #: users.has_password in db/schema.sql.
+    has_password: bool = True
     #: Whether the address has been PROVED to belong to the holder, as opposed
     #: to merely typed in. What makes email-matched OAuth safe.
     email_verified: bool = False
@@ -59,7 +62,7 @@ def hash_token(raw: str) -> str:
 # ── users ────────────────────────────────────────────────────────────────────
 def create_user(username: str, password_hash: str, *, full_name: str = "",
                 email: str = "", country: str = "", phone: str = "",
-                email_verified: bool = False,
+                email_verified: bool = False, has_password: bool = True,
                 db: Path | None = None) -> int:
     """Create an account. Raises sqlite3.IntegrityError on a taken name or email.
 
@@ -76,10 +79,10 @@ def create_user(username: str, password_hash: str, *, full_name: str = "",
     try:
         cur = conn.execute(
             "INSERT INTO users (username, password_hash, full_name, email, "
-            "country, phone, is_active, email_verified, created_at) "
-            "VALUES (?,?,?,?,?,?,1,?,?)",
+            "country, phone, is_active, email_verified, created_at, has_password) "
+            "VALUES (?,?,?,?,?,?,1,?,?,?)",
             (username, password_hash, full_name, email, country, phone,
-             1 if email_verified else 0, _now()),
+             1 if email_verified else 0, _now(), 1 if has_password else 0),
         )
         return int(cur.lastrowid)
     finally:
@@ -145,6 +148,8 @@ def _row_to_user(r) -> User | None:
                 full_name=r["full_name"], email=r["email"], country=r["country"],
                 phone=r["phone"], is_active=bool(r["is_active"]),
                 is_owner=bool(r["is_owner"]) if "is_owner" in cols else False,
+                has_password=(bool(r["has_password"])
+                              if "has_password" in cols else True),
                 email_verified=(bool(r["email_verified"])
                                 if "email_verified" in cols else False))
 
@@ -164,7 +169,8 @@ def list_users(db: Path | None = None) -> list[dict]:
 def set_password(username: str, password_hash: str, db: Path | None = None) -> bool:
     conn = connect(db)
     try:
-        cur = conn.execute("UPDATE users SET password_hash = ? WHERE username = ?",
+        cur = conn.execute("UPDATE users SET password_hash = ?, has_password = 1 "
+                           "WHERE username = ?",
                            (password_hash, username))
         return cur.rowcount > 0
     finally:
@@ -429,21 +435,83 @@ def purge_oauth_states(db: Path | None = None) -> int:
 
 
 # ── email verification tokens ────────────────────────────────────────────────
-def new_verification_token(user_id: int, token_hash: str, expires_at: str,
-                           db: Path | None = None) -> None:
-    """Record a verification token, superseding any earlier one.
+def new_email_token(user_id: int, token_hash: str, expires_at: str,
+                    purpose: str = "verify", db: Path | None = None) -> None:
+    """Record a token, superseding any earlier one FOR THE SAME PURPOSE.
 
-    Earlier tokens for the same account are deleted rather than left valid:
-    asking for a new link should invalidate the old one, or a link forwarded
-    to the wrong place stays usable after the person has already noticed and
-    requested another.
+    Earlier tokens are deleted rather than left valid: asking for a new link
+    should invalidate the old one, or a link forwarded to the wrong place stays
+    usable after the person has noticed and requested another.
+
+    Scoped by purpose, which is the whole reason that column exists. An
+    unscoped delete means sending a verification email destroys a password
+    reset the same person requested a minute earlier, and the link already
+    sitting in their inbox fails for no visible reason.
     """
     conn = connect(db)
     try:
-        conn.execute("DELETE FROM email_tokens WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM email_tokens WHERE user_id = ? AND purpose = ?",
+                     (user_id, purpose))
         conn.execute(
-            "INSERT INTO email_tokens (token_hash, user_id, expires_at, created_at) "
-            "VALUES (?,?,?,?)", (token_hash, user_id, expires_at, _now()))
+            "INSERT INTO email_tokens (token_hash, user_id, expires_at, created_at,"
+            " purpose) VALUES (?,?,?,?,?)",
+            (token_hash, user_id, expires_at, _now(), purpose))
+    finally:
+        conn.close()
+
+
+def new_verification_token(user_id: int, token_hash: str, expires_at: str,
+                           db: Path | None = None) -> None:
+    """Back-compatible alias for the verification case."""
+    new_email_token(user_id, token_hash, expires_at, purpose="verify", db=db)
+
+
+def take_reset_token(token_hash: str, new_password_hash: str,
+                     db: Path | None = None) -> int | None:
+    """Spend a reset token and set the new password. Returns the user id.
+
+    None for unknown, already-used, expired and wrong-purpose alike -- there is
+    nothing an unauthenticated caller gains from being told which.
+
+    Everything happens in ONE transaction: the token is marked used, the
+    password is replaced, and every session that user had is revoked. Split
+    across separate connections, a crash between them could leave a spent token
+    with the old password still in place, or a changed password with the
+    attacker's session still live.
+
+    Revoking sessions is the point of the whole flow, not a nicety. Someone
+    resets a password because they think another person has it -- and if that
+    person is already signed in, leaving their session alive means the reset
+    changed nothing for them.
+    """
+    conn = connect(db)
+    try:
+        row = conn.execute(
+            "SELECT user_id, expires_at, used_at, purpose FROM email_tokens "
+            "WHERE token_hash = ?", (token_hash,)).fetchone()
+        if row is None or row["used_at"] is not None:
+            return None
+        # A verification link must not be spendable as a password reset.
+        if row["purpose"] != "reset":
+            return None
+        if row["expires_at"] <= _now():
+            return None
+
+        conn.execute("BEGIN")
+        cur = conn.execute(
+            "UPDATE email_tokens SET used_at = ? WHERE token_hash = ? "
+            "AND used_at IS NULL", (_now(), token_hash))
+        if cur.rowcount == 0:
+            conn.execute("ROLLBACK")        # someone else spent it first
+            return None
+        conn.execute("UPDATE users SET password_hash = ?, has_password = 1 "
+                     "WHERE id = ?", (new_password_hash, row["user_id"]))
+        conn.execute("DELETE FROM sessions WHERE user_id = ?", (row["user_id"],))
+        # Any other outstanding reset for this account dies with it.
+        conn.execute("DELETE FROM email_tokens WHERE user_id = ? AND purpose = 'reset'"
+                     " AND token_hash != ?", (row["user_id"], token_hash))
+        conn.execute("COMMIT")
+        return int(row["user_id"])
     finally:
         conn.close()
 
@@ -458,9 +526,12 @@ def take_verification_token(token_hash: str, db: Path | None = None) -> int | No
     conn = connect(db)
     try:
         row = conn.execute(
-            "SELECT user_id, expires_at, used_at FROM email_tokens "
+            "SELECT user_id, expires_at, used_at, purpose FROM email_tokens "
             "WHERE token_hash = ?", (token_hash,)).fetchone()
         if row is None or row["used_at"] is not None:
+            return None
+        # Symmetrical with take_reset_token: the two are not interchangeable.
+        if row["purpose"] != "verify":
             return None
         if row["expires_at"] <= _now():
             return None
@@ -527,7 +598,7 @@ def create_oauth_user(username: str, *, full_name: str = "", email: str = "",
 
     unusable = hash_password(_secrets.token_urlsafe(32))
     return create_user(username, unusable, full_name=full_name, email=email,
-                       email_verified=email_verified, db=db)
+                       email_verified=email_verified, has_password=False, db=db)
 
 
 # ── pending OAuth sign-ups ───────────────────────────────────────────────────

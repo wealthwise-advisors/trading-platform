@@ -70,7 +70,8 @@ def _signed_in_for_the_session():
 #: and asserts neither can reach the other's data. Under the override both
 #: clients resolve to the same TEST_USER, so every assertion would pass while
 #: testing nothing at all.
-_SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation"}
+_SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
+                    "test_reset_auth"}
 
 
 @pytest.fixture(autouse=True)
