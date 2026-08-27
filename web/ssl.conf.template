@@ -63,6 +63,17 @@ server {
         proxy_send_timeout 3600s;
     }
 
+    # The sign-in and sign-up pages must revalidate, for the same reason as
+    # index.html. See the longer note in nginx.conf.
+    #
+    # This file is a SECOND server block, and that is the trap: the rule was
+    # added to nginx.conf alone, the header did not appear, and port 80 is not
+    # what anybody browses -- everything redirects here. A change to caching,
+    # headers or locations belongs in BOTH files or it only half exists.
+    location ~ ^/autotrader_(signin|signup)\.html$ {
+        add_header Cache-Control "no-cache, must-revalidate" always;
+    }
+
     location = /index.html {
         add_header Cache-Control "no-cache, must-revalidate" always;
     }
