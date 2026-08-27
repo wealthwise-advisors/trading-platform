@@ -479,16 +479,20 @@ def test_the_flag_never_weakens_the_other_cookie_protections(client, db, user):
         assert "samesite=lax" in raw, remember
 
 
-def test_omitting_the_flag_behaves_as_before(client, db, user):
-    """A cached older page sends no `remember` field at all.
+def test_omitting_the_flag_gives_the_SAFER_default(client, db, user):
+    """A caller that says nothing gets a session cookie, not a week-long one.
 
-    It must keep working, and keep the behaviour it had -- otherwise deploying
-    this silently signs out everyone still on the previous page.
+    This started as the opposite, to spare anyone on a cached older page from
+    being signed out by the deploy. Right worry, wrong answer: it made the
+    common case -- saying nothing -- the persistent one. On a platform wired to
+    a live brokerage, staying signed in for a week should be chosen, never
+    inherited by omission.
     """
     r = client.post("/api/auth/login",
                     json={"username": "trader", "password": "Correct-Horse-99"})
     assert r.status_code == 200
-    assert "max-age" in r.headers.get("set-cookie", "").lower()
+    raw = r.headers.get("set-cookie", "").lower()
+    assert "max-age" not in raw, f"omitting the flag still persisted: {raw}"
 
 
 def test_the_session_still_works_either_way(client, db, user):

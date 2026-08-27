@@ -30,9 +30,16 @@ class LoginRequest(BaseModel):
     #: The "Remember me" box. True keeps the cookie for SESSION_TTL; false
     #: makes it a session cookie the browser drops when it closes.
     #:
-    #: Defaults to True so an older cached page, or any caller that omits the
-    #: field, behaves exactly as it did before this existed.
-    remember: bool = True
+    #: Defaults to FALSE -- the safer of the two.
+    #:
+    #: It defaulted to True to protect anyone on a cached older page from being
+    #: signed out by the deploy. That was the right worry and the wrong answer:
+    #: it meant the common case, a caller who says nothing, got the week-long
+    #: cookie. On a platform wired to a live brokerage, staying signed in is
+    #: the choice that should be made deliberately, not the one that happens by
+    #: omission. Anyone on the old page now closes their browser and signs in
+    #: again, which is a mild inconvenience rather than a surprise.
+    remember: bool = False
 
 
 class RegisterRequest(BaseModel):
