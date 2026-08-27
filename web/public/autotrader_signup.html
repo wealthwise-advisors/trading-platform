@@ -493,6 +493,29 @@ body.completing .brandline p::after{ opacity:.7 }
 }
 .finishing b{ color:var(--em2); font-weight:600 }
 
+
+/* The consent control, made as clickable as it looks.
+ *
+ * Every part of this label now toggles the box, because the two phrases inside
+ * it are no longer anchors -- see the note in the patch that made this change.
+ * The box also becomes a real target rather than a 13px square, and the whole
+ * row lights on hover so it reads as one control.
+ */
+.terms{ padding:7px 5px; margin:10px 0 14px; border-radius:9px;
+        transition:background .15s }
+.terms:hover{ background:rgba(255,255,255,.04) }
+.terms .box{
+  width:20px; height:20px; margin-top:0; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+}
+.terms .box svg{ width:13px; height:13px }
+/* The two phrases are emphasis, not links. Styled so they do not read as
+   something to click and then fail to be. */
+.terms b{ color:var(--ink); font-weight:600 }
+/* Keyboard users get a visible ring on the box, since the input is invisible. */
+.terms input:focus ~ .box,
+.terms input:focus-visible ~ .box{ outline:2px solid var(--em2); outline-offset:2px }
+
 </style>
 
 <div class="scene" aria-hidden="true">
@@ -639,7 +662,7 @@ body.completing .brandline p::after{ opacity:.7 }
     <label class="terms"><input type="checkbox"><span class="box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
            stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
-    </span><span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span></label>
+    </span><span>I agree to the <b>Terms of Service</b> and <b>Privacy Policy</b></span></label>
 
     <button class="go" type="submit">Create Account
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
