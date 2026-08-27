@@ -620,3 +620,56 @@ def test_recovery_does_not_share_the_signup_budget(client, db, user, sent):
     # Signup is now exhausted. Recovery must still work.
     assert forgot(client, "t@example.com").status_code == 200
     assert len(sent) == 1, "registration attempts spent the recovery budget"
+
+
+def test_recovery_imposes_no_penalty_block(client, db, user, sent):
+    """Over the cap must mean "not yet", never "not for the next quarter hour".
+
+    The previous throttle set a fixed block on hitting the limit and refused
+    everything until it expired, whatever the caller did. That is not a rate
+    limit, it is a lockout -- and it landed on people already locked out.
+
+    A sliding window refuses only while the window is genuinely full, and frees
+    a slot as the oldest request ages out.
+    """
+    t = auth.RecoveryThrottle()
+    for _ in range(t.MAX_PER_WINDOW):
+        assert t.retry_after("9.9.9.9") == 0
+        t.record("9.9.9.9")
+
+    wait = t.retry_after("9.9.9.9")
+    assert 0 < wait <= t.WINDOW_SECONDS + 1, wait
+
+    # Nothing was cleared or punished: a DIFFERENT caller is unaffected.
+    assert t.retry_after("8.8.8.8") == 0, "one caller's burst blocked another"
+
+
+def test_recovery_allows_a_realistic_number_of_retries(client, db, user, sent):
+    """Someone whose mail is slow will press the button several times.
+
+    That is a person using a form, not abuse, and it must not cost them the
+    flow. Ten in a row is well past anything a real person does.
+    """
+    codes = [forgot(client, "t@example.com").status_code for _ in range(10)]
+    assert all(c == 200 for c in codes), f"ordinary retries were refused: {codes}"
+    assert len(sent) == 10
+
+
+def test_a_few_password_resets_do_not_block_forgot_username(
+        client, db, user, sent, sent_names):
+    """The two recovery flows DO share one budget -- deliberately.
+
+    Both send mail to an address the caller picks, so one counter is the right
+    shape: the thing being limited is "how much mail can this caller cause",
+    not "which button did they press".
+
+    What was wrong before was the SIZE and the penalty, not the sharing. Five
+    per hour across registration and both recovery flows, with a fifteen-minute
+    lockout on top, meant ordinary use ran out. Twelve in a rolling ten minutes
+    with no penalty does not.
+    """
+    for _ in range(5):
+        forgot(client, "t@example.com")
+
+    assert forgot_user(client, "t@example.com").status_code == 200
+    assert len(sent_names) == 1, "password resets spent the username allowance"

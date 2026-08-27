@@ -177,30 +177,60 @@ class SignupThrottle:
 signup_throttle = SignupThrottle()
 
 
-class RecoveryThrottle(SignupThrottle):
-    """A separate, gentler budget for password and username recovery.
+class RecoveryThrottle:
+    """A sliding window for recovery. No punishment block.
 
-    Recovery shared the signup budget, and that was wrong twice over.
+    THE PROBLEM THIS REPLACES
+    -------------------------
+    SignupThrottle does not merely refuse the request over the limit -- it sets
+    a fixed block and refuses EVERYTHING for the next quarter of an hour. So a
+    person who pressed the button a few times too many was not slowed down,
+    they were shut out, and nothing they could do shortened it. Reported twice:
+    "one time is working, but the second time the email is not coming."
 
-    It CONFLATED unrelated actions: creating an account and asking for a reset
-    drew on the same five-per-hour allowance, so signing up once and then
-    forgetting a password twice locked someone out of recovery for an hour.
+    It also shared one counter with registration, so signing up spent the
+    allowance for forgetting a password.
 
-    And the numbers were wrong for this flow. Someone whose email is slow, or
-    who lands in spam and asks again, or who is simply unsure whether the first
-    click registered, will legitimately press the button three or four times in
-    a minute. Under the signup budget that was a one-hour lockout -- imposed on
-    the person least able to get in any other way.
+    WHAT THIS DOES INSTEAD
+    ----------------------
+    Counts what happened in the last WINDOW_SECONDS and allows the request if
+    that is under the cap. Nothing is punished, nothing is cleared, no penalty
+    period is imposed. Ask ten times in a minute and the eleventh waits only
+    until the oldest of the ten ages out -- seconds or a couple of minutes, not
+    a flat fifteen. For anybody using this like a person it is invisible.
 
-    Eight in fifteen minutes, then a fifteen-minute pause. That still caps
-    mail-bombing at a rate no sending domain will notice, while leaving normal
-    impatience unpunished. A block that outlasts the person's patience is not a
-    rate limit, it is an outage they cannot report.
+    WHY THERE IS A CAP AT ALL
+    -------------------------
+    Not to stop guessing -- there is nothing to guess here. It stops one person
+    typing somebody else's address and burying them in mail, and it protects a
+    shared, finite resource: the mail provider's free tier is a few hundred
+    messages a day for the WHOLE application. Uncapped, one bored visitor
+    exhausts it and nobody can register or reset anything until tomorrow.
+
+    Keyed per IP, so one caller cannot spend anyone else's share.
     """
 
-    MAX_PER_WINDOW = 8
-    WINDOW_SECONDS = 900
-    BLOCK_SECONDS = 900
+    MAX_PER_WINDOW = 12
+    WINDOW_SECONDS = 600
+
+    def __init__(self) -> None:
+        self._ips: dict[str, list[float]] = {}
+
+    def retry_after(self, ip: str) -> int:
+        """Seconds until the caller may try again. 0 when they may go now."""
+        now = time.monotonic()
+        seen = [t for t in self._ips.get(ip, []) if now - t < self.WINDOW_SECONDS]
+        self._ips[ip] = seen
+        if len(seen) < self.MAX_PER_WINDOW:
+            return 0
+        # The oldest request in the window is the one whose expiry frees a slot.
+        return int(self.WINDOW_SECONDS - (now - seen[0])) + 1
+
+    def record(self, ip: str) -> None:
+        now = time.monotonic()
+        seen = [t for t in self._ips.get(ip, []) if now - t < self.WINDOW_SECONDS]
+        seen.append(now)
+        self._ips[ip] = seen
 
 
 recovery_throttle = RecoveryThrottle()
