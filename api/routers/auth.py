@@ -272,9 +272,26 @@ def resend_verification(request: Request):
         )
     auth.signup_throttle.record(ip)
 
-    if not user.email_verified and user.email:
-        verification.send_if_configured(user.id, user.email, user.username)
-    return {"ok": True}
+    if user.email_verified:
+        return {"ok": True, "sent": False, "detail": "That address is already confirmed."}
+    if not user.email:
+        return {"ok": True, "sent": False, "detail": "This account has no email address."}
+    if not verification.configured():
+        return {"ok": True, "sent": False,
+                "detail": "Email is not configured on this server."}
+
+    sent = verification.send_if_configured(user.id, user.email, user.username)
+    if sent:
+        return {"ok": True, "sent": True, "detail": "Sent. Check your inbox and spam."}
+
+    # The provider's own explanation, to the person whose address it is.
+    #
+    # Not a disclosure: this endpoint already requires a session, and the only
+    # thing being revealed is why a message to the caller's OWN address did not
+    # arrive. Without it the failure is a log line on a host reachable only over
+    # SSH, which is how "the email did not come" becomes unanswerable.
+    return {"ok": True, "sent": False,
+            "detail": verification.last_error() or "The email could not be sent."}
 
 
 class ForgotRequest(BaseModel):

@@ -72,6 +72,44 @@ TIMEOUT_SECONDS = 10.0
 TOKEN_TTL = timedelta(hours=24)
 
 
+#: Why the last send failed, or "" after a success. Kept in memory only: it is
+#: a diagnostic for the person who just pressed the button, not a record.
+#:
+#: Deliberately NOT logged-and-forgotten. Resend explains the refusal in the
+#: response body, urlopen raises before anything reads it, and the process log
+#: is on a host reachable only over SSH -- so the one sentence that says what is
+#: wrong was being thrown away microseconds after it arrived.
+_last_error: str = ""
+
+
+def last_error() -> str:
+    return _last_error
+
+
+def _remember(reason: str) -> None:
+    global _last_error
+    _last_error = reason
+
+
+def _explain(exc) -> str:
+    """The provider's own words, where it gave any.
+
+    urllib raises HTTPError for 4xx/5xx, and HTTPError is also a file object --
+    reading it yields the body that says what was actually wrong. Truncated,
+    because it is going into a log line and an HTTP response.
+    """
+    body = ""
+    try:
+        raw = exc.read()
+        body = raw.decode("utf-8", "replace").strip() if raw else ""
+    except Exception:
+        body = ""
+    code = getattr(exc, "code", None)
+    if body:
+        return f"{code or 'error'}: {body[:400]}"
+    return f"{code or type(exc).__name__}: {exc}"
+
+
 def _api_key() -> str:
     return os.environ.get(API_KEY_ENV, "").strip()
 
@@ -149,11 +187,14 @@ def send_if_configured(user_id: int, email: str, username: str) -> bool:
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             ok = 200 <= resp.status < 300
         if ok:
+            _remember("")
             log.info("verification email sent to %s", _redact(email))
         return ok
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        reason = _explain(exc)
+        _remember(reason)
         log.warning("could not send verification email to %s: %s",
-                    _redact(email), exc)
+                    _redact(email), reason)
         return False
 
 
@@ -219,10 +260,13 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
         with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
             ok = 200 <= resp.status < 300
         if ok:
+            _remember("")
             log.info("password reset email sent to %s", _redact(email))
         return ok
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-        log.warning("could not send a reset email to %s: %s", _redact(email), exc)
+        reason = _explain(exc)
+        _remember(reason)
+        log.warning("could not send a reset email to %s: %s", _redact(email), reason)
         return False
 
 
