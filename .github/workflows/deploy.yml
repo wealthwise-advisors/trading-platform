@@ -363,6 +363,7 @@ jobs:
             report_secret GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
             report_secret LINKEDIN_CLIENT_ID "${{ secrets.LINKEDIN_CLIENT_ID }}"
             report_secret TWITTER_CLIENT_ID "${{ secrets.TWITTER_CLIENT_ID }}"
+            report_secret GH_OAUTH_CLIENT_ID "${{ secrets.GH_OAUTH_CLIENT_ID }}"
 
             WEB_PORT=80 \
             TLS_PORT=443 \
@@ -376,6 +377,8 @@ jobs:
             AUTOTRADER_LINKEDIN_CLIENT_SECRET="${{ secrets.LINKEDIN_CLIENT_SECRET }}" \
             AUTOTRADER_TWITTER_CLIENT_ID="${{ secrets.TWITTER_CLIENT_ID }}" \
             AUTOTRADER_TWITTER_CLIENT_SECRET="${{ secrets.TWITTER_CLIENT_SECRET }}" \
+            AUTOTRADER_GITHUB_CLIENT_ID="${{ secrets.GH_OAUTH_CLIENT_ID }}" \
+            AUTOTRADER_GITHUB_CLIENT_SECRET="${{ secrets.GH_OAUTH_CLIENT_SECRET }}" \
             AUTOTRADER_RESEND_API_KEY="${{ secrets.AUTOTRADER_RESEND_API_KEY }}" \
             AUTOTRADER_MAIL_FROM="${{ secrets.AUTOTRADER_MAIL_FROM }}" \
             AUTOTRADER_TURNSTILE_SITE_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}" \

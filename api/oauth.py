@@ -105,6 +105,11 @@ class Provider:
     basic_auth: bool = False
     #: X cannot report an email, so it can never find an account by itself.
     provides_email: bool = True
+    #: A SECOND endpoint for the address, where the profile does not carry one.
+    #: GitHub's /user omits `email` unless the person made it public, and the
+    #: verified address lives at /user/emails. Empty for providers whose
+    #: profile response already contains it.
+    emails_url: str = ""
     extra_authorize: dict = field(default_factory=dict)
 
 
@@ -127,6 +132,22 @@ PROVIDERS: dict[str, Provider] = {
         token_url="https://www.linkedin.com/oauth/v2/accessToken",
         userinfo_url="https://api.linkedin.com/v2/userinfo",
         scope="openid email profile",
+        use_pkce=False,
+    ),
+    "github": Provider(
+        key="github",
+        label="GitHub",
+        authorize_url="https://github.com/login/oauth/authorize",
+        token_url="https://github.com/login/oauth/access_token",
+        userinfo_url="https://api.github.com/user",
+        emails_url="https://api.github.com/user/emails",
+        # read:user for the profile, user:email for the address. user:email is
+        # what makes /user/emails readable, and without it GitHub can never
+        # find an existing account or create one.
+        scope="read:user user:email",
+        # GitHub OAuth Apps authenticate with the secret in the body and do not
+        # require PKCE. Sending code_challenge is accepted but buys nothing
+        # here, since the exchange is already server-to-server.
         use_pkce=False,
     ),
     "twitter": Provider(
@@ -261,9 +282,36 @@ def _fetch_userinfo(provider: Provider, access_token: str) -> dict:
         log.warning("%s userinfo failed: HTTP %s", provider.key, resp.status_code)
         raise OAuthError(f"Could not read your {provider.label} profile.")
     try:
-        return resp.json()
+        info = resp.json()
     except ValueError as exc:
         raise OAuthError(f"{provider.label} returned an unreadable profile.") from exc
+
+    if provider.emails_url:
+        info["emails"] = _fetch_emails(provider, access_token)
+    return info
+
+
+def _fetch_emails(provider: Provider, access_token: str) -> list:
+    """The address list, for a provider whose profile does not carry one.
+
+    Failing to read it is NOT an error here. It leaves the identity with no
+    address, which the caller already handles the same way it handles X: the
+    person is asked rather than refused. Raising instead would turn a missing
+    optional scope into a dead end.
+    """
+    try:
+        resp = requests.get(provider.emails_url,
+                            headers={"Authorization": f"Bearer {access_token}",
+                                     "Accept": "application/json"},
+                            timeout=HTTP_TIMEOUT)
+        if not resp.ok:
+            log.warning("%s emails failed: HTTP %s", provider.key, resp.status_code)
+            return []
+        out = resp.json()
+        return out if isinstance(out, list) else []
+    except (requests.RequestException, ValueError) as exc:
+        log.warning("%s emails unreadable: %s", provider.key, exc)
+        return []
 
 
 # ── normalising what came back ───────────────────────────────────────────────
@@ -289,6 +337,31 @@ def normalise(provider: Provider, info: dict) -> ProviderUser:
         return ProviderUser(subject=str(data.get("id") or ""), email="",
                             email_verified=False,
                             full_name=str(data.get("name") or ""))
+
+    if provider.key == "github":
+        # The profile carries a numeric id and a display name; the address
+        # comes from /user/emails, where each entry reports primary/verified.
+        #
+        # ONLY a verified address is taken, and only the primary one. An
+        # unverified entry is somebody's claim -- GitHub lets an address be
+        # added before it is confirmed -- so honouring it would let a stranger
+        # attach another person's email to their GitHub account and be handed
+        # the local account that owns it.
+        best = ""
+        for row in info.get("emails") or []:
+            if not isinstance(row, dict) or not row.get("verified"):
+                continue
+            if row.get("primary"):
+                best = str(row.get("email") or "").strip()
+                break
+            if not best:                       # a verified non-primary will do
+                best = str(row.get("email") or "").strip()
+        return ProviderUser(
+            subject=str(info.get("id") or ""),
+            email=best,
+            email_verified=bool(best),
+            full_name=str(info.get("name") or info.get("login") or "").strip(),
+        )
 
     raw_verified = info.get("email_verified")
     verified = raw_verified is True or str(raw_verified).lower() == "true"

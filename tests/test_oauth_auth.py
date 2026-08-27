@@ -47,9 +47,11 @@ def db(tmp_path, monkeypatch):
 def configured(monkeypatch):
     """Credentials for every provider. Fake values -- nothing here dials out."""
     monkeypatch.setenv("AUTOTRADER_PUBLIC_BASE_URL", "https://trade.example.com")
-    for p in ("GOOGLE", "LINKEDIN", "TWITTER"):
-        monkeypatch.setenv(f"AUTOTRADER_{p}_CLIENT_ID", f"{p.lower()}-id")
-        monkeypatch.setenv(f"AUTOTRADER_{p}_CLIENT_SECRET", f"{p.lower()}-secret")
+    # Every provider in the registry, so adding one does not silently leave it
+    # unconfigured here and quietly skip whatever asserts against it.
+    for key in oauth.PROVIDERS:
+        monkeypatch.setenv(f"AUTOTRADER_{key.upper()}_CLIENT_ID", f"{key}-id")
+        monkeypatch.setenv(f"AUTOTRADER_{key.upper()}_CLIENT_SECRET", f"{key}-secret")
 
 
 @pytest.fixture
@@ -100,11 +102,17 @@ def finish(client, state, code="auth-code", provider="google"):
 
 # ── configuration is reported honestly ───────────────────────────────────────
 def test_providers_report_unconfigured_when_no_credentials(client, db, monkeypatch):
-    for p in ("GOOGLE", "LINKEDIN", "TWITTER"):
-        monkeypatch.delenv(f"AUTOTRADER_{p}_CLIENT_ID", raising=False)
-        monkeypatch.delenv(f"AUTOTRADER_{p}_CLIENT_SECRET", raising=False)
+    """Derived from the registry, not a hand-written list.
+
+    A literal set here means every provider added later fails this test for no
+    reason except that it exists -- which trains whoever adds one to edit the
+    assertion rather than read it.
+    """
+    for key in oauth.PROVIDERS:
+        monkeypatch.delenv(f"AUTOTRADER_{key.upper()}_CLIENT_ID", raising=False)
+        monkeypatch.delenv(f"AUTOTRADER_{key.upper()}_CLIENT_SECRET", raising=False)
     body = client.get("/api/auth/oauth/providers").json()
-    assert {p["key"] for p in body["providers"]} == {"google", "linkedin", "twitter"}
+    assert {p["key"] for p in body["providers"]} == set(oauth.PROVIDERS)
     assert all(p["configured"] is False for p in body["providers"])
 
 
@@ -624,3 +632,77 @@ def test_safe_next_accepts_ordinary_paths():
     assert oauth.safe_next(None) == "/"
     assert oauth.safe_next("") == "/"
     assert oauth.safe_next("relative") == "/"
+
+
+# ── GitHub ───────────────────────────────────────────────────────────────────
+GITHUB_SUB = "58231907"
+
+
+def github_info(sub=GITHUB_SUB, emails=None):
+    """GitHub's shape: /user has no address, /user/emails carries it."""
+    return {"id": int(sub), "login": "atrader", "name": "A Trader",
+            "emails": emails if emails is not None else
+            [{"email": "trader@example.com", "primary": True, "verified": True}]}
+
+
+def test_github_reads_the_address_from_the_emails_endpoint(db):
+    """/user omits `email` unless it is public, which for most people it is not.
+
+    Without the second call GitHub behaves exactly like X -- an identity with
+    no address, refused on every first sign-in -- and nothing says why.
+    """
+    who = oauth.normalise(oauth.PROVIDERS["github"], github_info())
+    assert who.subject == GITHUB_SUB
+    assert who.email == "trader@example.com"
+    assert who.email_verified is True
+    assert who.full_name == "A Trader"
+
+
+def test_github_ignores_an_unverified_address(db):
+    """GitHub lets an address be ADDED before it is confirmed.
+
+    Honouring an unverified entry would let someone attach another person's
+    email to their own GitHub account and be handed the local account that
+    owns it -- the exact takeover the verified rule exists to stop.
+    """
+    who = oauth.normalise(oauth.PROVIDERS["github"], github_info(
+        emails=[{"email": "victim@example.com", "primary": True, "verified": False}]))
+    assert who.email == ""
+    assert who.email_verified is False
+
+
+def test_github_prefers_the_primary_verified_address(db):
+    who = oauth.normalise(oauth.PROVIDERS["github"], github_info(emails=[
+        {"email": "old@example.com", "primary": False, "verified": True},
+        {"email": "main@example.com", "primary": True, "verified": True},
+    ]))
+    assert who.email == "main@example.com"
+
+
+def test_github_falls_back_to_a_verified_non_primary(db):
+    """Better than refusing: a verified address is a verified address."""
+    who = oauth.normalise(oauth.PROVIDERS["github"], github_info(emails=[
+        {"email": "unverified@example.com", "primary": True, "verified": False},
+        {"email": "works@example.com", "primary": False, "verified": True},
+    ]))
+    assert who.email == "works@example.com"
+
+
+def test_github_with_no_addresses_at_all_is_empty(db):
+    who = oauth.normalise(oauth.PROVIDERS["github"], github_info(emails=[]))
+    assert who.email == "" and who.email_verified is False
+
+
+def test_github_asks_for_the_scope_that_makes_emails_readable(db):
+    """user:email is what makes /user/emails return anything.
+
+    Drop it and the call 403s, the address is empty, and GitHub silently
+    degrades into a provider that can never sign anyone in.
+    """
+    assert "user:email" in oauth.PROVIDERS["github"].scope
+
+
+def test_github_is_offered_and_can_self_serve(db):
+    p = oauth.PROVIDERS["github"]
+    assert p.provides_email is True, "GitHub can find an account by itself"
+    assert p.emails_url, "the second call is what makes that true"
