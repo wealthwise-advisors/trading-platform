@@ -401,10 +401,32 @@ async def user_for_websocket(websocket) -> object | None:
     return repo.resolve_session(websocket.cookies.get(COOKIE, ""))
 
 
-def set_session_cookie(response, raw_token: str) -> None:
+def set_session_cookie(response, raw_token: str, remember: bool = True) -> None:
+    """Hand the browser its half of the session.
+
+    `remember` is the "Remember me" box, and until now the box was decorative:
+    it was ticked by default, the page never sent it, this function had no
+    parameter for it, and the cookie always carried a seven-day Max-Age. So
+    closing every tab -- or the whole browser -- left someone signed in for a
+    week, and unticking the box changed nothing.
+
+    A cookie with NO Max-Age lives only as long as the browser process; one
+    WITH it survives restarts. That is precisely the choice the box appears to
+    offer, so it now makes it.
+
+    Note this governs the BROWSER's half only. The row in `sessions` expires on
+    its own schedule either way -- a discarded cookie leaves a harmless orphan
+    that ages out, which is the safe direction. The reverse, a browser holding
+    a cookie for a session the server has revoked, is what must never happen,
+    and does not: the guard resolves every request against the database.
+
+    Defaults to True so any caller that does not pass it behaves as before.
+    """
     response.set_cookie(
         COOKIE, raw_token,
-        max_age=int(repo.SESSION_TTL.total_seconds()),
+        # None, not 0. Omitting Max-Age makes it a session cookie; a Max-Age of
+        # 0 would delete the cookie on arrival.
+        max_age=(int(repo.SESSION_TTL.total_seconds()) if remember else None),
         httponly=True,               # unreadable from JavaScript
         secure=not _INSECURE,        # HTTPS only, unless explicitly relaxed
         samesite="lax",              # not sent on cross-site state changes

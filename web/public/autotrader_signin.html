@@ -628,7 +628,11 @@ body.recovery .hide-in-recovery{ display:none !important }
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username, password: password }),
+        body: JSON.stringify({ username: username, password: password,
+          /* Unticked means a cookie that dies with the browser, which is
+             what this box has always appeared to promise and never did. */
+          remember: !!(document.querySelector(".row input[type=checkbox]")
+                       || {}).checked }),
       });
       if (res.ok) {
         var me = await res.json().catch(function(){ return null; });

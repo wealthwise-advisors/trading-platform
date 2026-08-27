@@ -27,6 +27,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=256)
+    #: The "Remember me" box. True keeps the cookie for SESSION_TTL; false
+    #: makes it a session cookie the browser drops when it closes.
+    #:
+    #: Defaults to True so an older cached page, or any caller that omits the
+    #: field, behaves exactly as it did before this existed.
+    remember: bool = True
 
 
 class RegisterRequest(BaseModel):
@@ -93,9 +99,9 @@ def login(body: LoginRequest, request: Request, response: Response):
     auth.throttle.record_success(ip, body.username)
     token = repo.new_session(user.id, ip=ip,
                              user_agent=request.headers.get("user-agent", ""))
-    auth.set_session_cookie(response, token)
+    auth.set_session_cookie(response, token, remember=body.remember)
     repo.touch_login(user.id)
-    log.info("login: %s from %s", user.username, ip)
+    log.info("login: %s from %s (remember=%s)", user.username, ip, body.remember)
     return Me(username=user.username, full_name=user.full_name,
               email=user.email, country=user.country)
 

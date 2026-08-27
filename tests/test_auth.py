@@ -438,3 +438,61 @@ def test_usernames_are_unique_case_insensitively(db):
     repo.create_user("Trader", auth.hash_password("Correct-Horse-99"))
     with pytest.raises(sqlite3.IntegrityError):
         repo.create_user("trader", auth.hash_password("Correct-Horse-99"))
+
+
+# ── "Remember me" ────────────────────────────────────────────────────────────
+#
+# It was decorative: ticked by default, never sent, no field on the request,
+# and the cookie always carried a seven-day Max-Age. Closing the whole browser
+# left someone signed in for a week and unticking the box changed nothing.
+
+
+def test_remember_me_ticked_gives_a_persistent_cookie(client, db, user):
+    r = client.post("/api/auth/login", json={
+        "username": "trader", "password": "Correct-Horse-99", "remember": True})
+    assert r.status_code == 200
+    raw = r.headers.get("set-cookie", "")
+    assert "max-age" in raw.lower(), f"no Max-Age, so it dies with the browser: {raw}"
+
+
+def test_remember_me_unticked_gives_a_session_cookie(client, db, user):
+    """No Max-Age means the browser drops it on exit.
+
+    That is the whole promise of the checkbox, and the thing it never did.
+    """
+    r = client.post("/api/auth/login", json={
+        "username": "trader", "password": "Correct-Horse-99", "remember": False})
+    assert r.status_code == 200
+    raw = r.headers.get("set-cookie", "")
+    assert "max-age" not in raw.lower(), f"still persistent: {raw}"
+    assert "expires" not in raw.lower(), f"still persistent: {raw}"
+
+
+def test_the_flag_never_weakens_the_other_cookie_protections(client, db, user):
+    """Whatever the box says, the cookie stays HttpOnly and SameSite=Lax."""
+    for remember in (True, False):
+        r = client.post("/api/auth/login", json={
+            "username": "trader", "password": "Correct-Horse-99",
+            "remember": remember})
+        raw = r.headers.get("set-cookie", "").lower()
+        assert "httponly" in raw, remember
+        assert "samesite=lax" in raw, remember
+
+
+def test_omitting_the_flag_behaves_as_before(client, db, user):
+    """A cached older page sends no `remember` field at all.
+
+    It must keep working, and keep the behaviour it had -- otherwise deploying
+    this silently signs out everyone still on the previous page.
+    """
+    r = client.post("/api/auth/login",
+                    json={"username": "trader", "password": "Correct-Horse-99"})
+    assert r.status_code == 200
+    assert "max-age" in r.headers.get("set-cookie", "").lower()
+
+
+def test_the_session_still_works_either_way(client, db, user):
+    """The cookie's lifetime is the browser's half. The session is the server's."""
+    client.post("/api/auth/login", json={
+        "username": "trader", "password": "Correct-Horse-99", "remember": False})
+    assert client.get("/api/auth/me").json()["username"] == "trader"
