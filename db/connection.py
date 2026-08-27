@@ -31,8 +31,9 @@ DB_PATH = Path(os.environ.get("AUTOTRADER_DB_PATH", "data/autotrader.db"))
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 #: v2 added users + sessions; v3 added oauth_identities + oauth_states;
-#: v4 added ownership (backtests.user_id, trades.user_id, users.is_owner).
-SCHEMA_VERSION = 4
+#: v4 added ownership (backtests.user_id, trades.user_id, users.is_owner);
+#: v5 added users.email_verified and made a non-empty email unique.
+SCHEMA_VERSION = 5
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:
@@ -50,6 +51,7 @@ _ADDED_COLUMNS = [
     ("backtests", "user_id", "INTEGER REFERENCES users(id)"),
     ("trades", "user_id", "INTEGER REFERENCES users(id)"),
     ("users", "is_owner", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
@@ -92,6 +94,49 @@ def _add_missing_columns(conn: sqlite3.Connection) -> list[str]:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
         added.append(f"{table}.{column}")
     return added
+
+
+def _dedupe_emails(conn: sqlite3.Connection) -> list[str]:
+    """Clear duplicate addresses so the v5 unique index can be created.
+
+    schema.sql creates a UNIQUE index over a non-empty email. CREATE UNIQUE
+    INDEX fails outright if the data already violates it, and a failure here
+    means the application does not start -- so a database holding two accounts
+    with one address would be taken off the air by its own upgrade.
+
+    Resolution is deterministic: the lowest user id keeps the address, later
+    ones have it cleared. Clearing an email neither deletes an account nor
+    locks anyone out, because sign-in is by username; it only means those
+    accounts cannot be found by address until someone sets a new one. That is
+    the correct outcome, since "which of these accounts owns this address" has
+    no answer the database can be trusted to give -- and answering it wrongly
+    is an account takeover once OAuth starts matching on it.
+
+    Returns a description of every change, for logging. Normally empty.
+    """
+    present = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    if not present or "email" not in present:
+        return []
+
+    rows = conn.execute(
+        "SELECT id, username, email FROM users "
+        "WHERE email != '' AND email IN ("
+        "  SELECT email FROM users WHERE email != '' "
+        "  GROUP BY email HAVING COUNT(*) > 1) "
+        "ORDER BY email, id"
+    ).fetchall()
+    if not rows:
+        return []
+
+    cleared, seen = [], set()
+    for r in rows:
+        key = r["email"].lower()
+        if key not in seen:
+            seen.add(key)          # the oldest account keeps it
+            continue
+        conn.execute("UPDATE users SET email = '' WHERE id = ?", (r["id"],))
+        cleared.append(f"{r['username']!r} (id {r['id']}) lost duplicate {r['email']!r}")
+    return cleared
 
 
 def _backfill_ownership(conn: sqlite3.Connection) -> int:
@@ -137,6 +182,14 @@ def _init(conn: sqlite3.Connection, path: Path | None = None) -> None:
     added = _add_missing_columns(conn)
     if added:
         log.info("%s: added column(s) %s", path, ", ".join(added))
+
+    # Also before the script, and for the same reason as the columns: the
+    # script creates a UNIQUE index over email, and CREATE UNIQUE INDEX fails
+    # on data that already violates it. An upgrade must not be able to stop the
+    # application from starting.
+    cleared = _dedupe_emails(conn)
+    for line in cleared:
+        log.warning("%s: %s -- duplicate addresses are not allowed from v5", path, line)
 
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
 

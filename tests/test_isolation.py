@@ -54,6 +54,11 @@ def db(tmp_path, monkeypatch):
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "isolation.db")
     monkeypatch.setattr(bt_repo, "BLOB_DIR", tmp_path / "blobs")
     monkeypatch.setattr(auth, "throttle", auth.Throttle())
+    # Reset the signup budget too. It is module-level and counts
+    # SUCCESSES, so without this an early test that registers
+    # accounts spends the allowance and later tests collect 429
+    # where they expected a validation error.
+    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)
     monkeypatch.setattr(store, "_store", {})
     return tmp_path

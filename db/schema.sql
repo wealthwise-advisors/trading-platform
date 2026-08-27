@@ -142,9 +142,52 @@ CREATE TABLE IF NOT EXISTS users (
     -- scripts/manage_users.py, which needs shell access on the server.
     is_owner      INTEGER NOT NULL DEFAULT 0,
 
+    -- Has this address been proved to belong to whoever is using it (v5)?
+    --
+    -- Set by clicking a link sent to the address, or by an OAuth provider that
+    -- positively reports the address as verified. Never set by the person
+    -- typing it in: an address someone typed is a claim, not a fact.
+    --
+    -- This is what makes email-matched OAuth safe. Signing in with Google
+    -- finds a local account by address, so an unverified address that anyone
+    -- could type would let a stranger claim someone else's account simply by
+    -- registering with their email first.
+    email_verified INTEGER NOT NULL DEFAULT 0,
+
     created_at    TEXT    NOT NULL,
     last_login_at TEXT
 );
+
+-- One account per address (v5).
+--
+-- The column was merely a label while accounts came from a CLI. Open signup
+-- plus OAuth-by-email makes duplicates dangerous: two accounts sharing an
+-- address make "which account does this Google identity belong to" ambiguous,
+-- and an ambiguous answer resolved the wrong way is an account takeover.
+--
+-- Partial, because the empty string is the default and several accounts may
+-- legitimately have no address at all -- a plain UNIQUE would collide them
+-- with each other. COLLATE NOCASE on the column means Foo@x.com and
+-- foo@x.com are already the same address to this index.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email
+    ON users(email) WHERE email != '';
+
+-- ── email verification (schema v5) ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS email_tokens (
+    -- SHA-256 of the token, never the token. Same reasoning as sessions: a
+    -- leaked database must not hand over working verification links, and a
+    -- verification link is a means of taking over an account.
+    token_hash  TEXT    PRIMARY KEY,
+    user_id     INTEGER NOT NULL,
+    expires_at  TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL,
+    -- Set when spent. Kept rather than deleted so a second click on the same
+    -- link can be told apart from a forgery in the log.
+    used_at     TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_tokens_user ON email_tokens(user_id);
 
 CREATE TABLE IF NOT EXISTS sessions (
     -- SHA-256 of the cookie value, never the value itself. Someone who reads

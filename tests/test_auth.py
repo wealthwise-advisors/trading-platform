@@ -22,6 +22,11 @@ def db(tmp_path, monkeypatch):
     """A scratch database, and a throttle that has not seen anything."""
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "auth.db")
     monkeypatch.setattr(auth, "throttle", auth.Throttle())
+    # Reset the signup budget too. It is module-level and counts
+    # SUCCESSES, so without this an early test that registers
+    # accounts spends the allowance and later tests collect 429
+    # where they expected a validation error.
+    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)   # TestClient speaks http://
     return tmp_path
 
@@ -132,17 +137,141 @@ def test_a_stolen_cookie_is_useless_after_logout(client, user):
     assert client.get("/api/auth/me").status_code == 401
 
 
-# ── registration is closed on the server ─────────────────────────────────────
-def test_registration_endpoint_refuses_everyone(client, db):
-    r = client.post("/api/auth/register",
-                    json={"username": "intruder", "password": "Correct-Horse-99"})
-    assert r.status_code == 403
-    assert repo.get_user("intruder") is None, "no account may be created"
+# ── registration is open, and grants nothing but an account ──────────────────
+#
+# This section used to assert the opposite: /register answered 403 and no
+# account could be created over the internet. Registration is deliberately open
+# now. What has NOT changed is what an account is worth -- see the broker test
+# below, which is the assertion that replaced the 403.
+def test_anyone_can_register(client, db):
+    r = client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert r.status_code == 201, r.text
+    assert repo.get_user("newcomer") is not None
+
+
+def test_registering_signs_you_in(client, db):
+    client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert client.get("/api/auth/me").json()["username"] == "newcomer"
+
+
+def test_a_new_account_never_gets_the_broker(client, db):
+    """The assertion that replaced the 403.
+
+    There is one Schwab connection and it belongs to the operator. Registration
+    being open must not make it reachable, and `is_owner` defaulting to 0 in
+    the schema is what guarantees that -- create_user has no parameter for it.
+    """
+    client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert repo.get_user("newcomer").is_owner is False
+
+
+def test_a_new_account_starts_unverified(client, db):
+    """An address someone typed is a claim, not a fact."""
+    client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert repo.get_user("newcomer").email_verified is False
+
+
+def test_registration_refuses_a_taken_username_without_saying_which(client, db, user):
+    r = client.post("/api/auth/register", json={
+        "username": "trader", "password": "Correct-Horse-99",
+        "email": "different@example.com", "accept_terms": True})
+    assert r.status_code == 409
+    # "username or email" -- never which one, or this enumerates both.
+    assert "username or email" in r.json()["detail"].lower()
+
+
+def test_registration_refuses_a_taken_email(client, db, user):
+    """Two accounts on one address is what makes OAuth-by-email ambiguous."""
+    r = client.post("/api/auth/register", json={
+        "username": "someone-else", "password": "Correct-Horse-99",
+        "email": "t@example.com", "accept_terms": True})
+    assert r.status_code == 409
+    assert repo.get_user("someone-else") is None
+
+
+def test_registration_requires_accepting_the_terms(client, db):
+    r = client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": False})
+    assert r.status_code == 400
+    assert repo.get_user("newcomer") is None
+
+
+def test_registration_refuses_a_weak_password(client, db):
+    r = client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "short",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert r.status_code == 400
+    assert repo.get_user("newcomer") is None
+
+
+def test_registration_refuses_a_reserved_username(client, db):
+    r = client.post("/api/auth/register", json={
+        "username": "admin", "password": "Correct-Horse-99",
+        "email": "admin@example.com", "accept_terms": True})
+    assert r.status_code == 400
+    assert repo.get_user("admin") is None
+
+
+def test_registration_is_rate_limited(client, db, monkeypatch):
+    """A signup burst from one address is a bot, not a person.
+
+    The login throttle counts FAILURES keyed on (ip, username) and would never
+    see this: every attempt here uses a new username and every one succeeds.
+    """
+    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
+    codes = []
+    for i in range(8):
+        r = client.post("/api/auth/register", json={
+            "username": f"bot{i}", "password": "Correct-Horse-99",
+            "email": f"bot{i}@example.com", "accept_terms": True})
+        codes.append(r.status_code)
+    assert 429 in codes, f"a signup flood was never throttled: {codes}"
+    assert codes.index(429) <= auth.SignupThrottle.MAX_PER_WINDOW
+
+
+def test_the_captcha_is_enforced_once_configured(client, db, monkeypatch):
+    """Dormant is a supported state; configured must actually refuse."""
+    from api import captcha
+
+    monkeypatch.setenv(captcha.SITE_KEY_ENV, "site-key")
+    monkeypatch.setenv(captcha.SECRET_KEY_ENV, "secret-key")
+    # Do not reach Cloudflare from a test: the seam is verify() itself.
+    monkeypatch.setattr(captcha, "verify", lambda token, ip="": False)
+
+    r = client.post("/api/auth/register", json={
+        "username": "newcomer", "password": "Correct-Horse-99",
+        "email": "newcomer@example.com", "accept_terms": True})
+    assert r.status_code == 400
+    assert repo.get_user("newcomer") is None, "a failed CAPTCHA still created an account"
+
+
+def test_the_captcha_secret_is_never_sent_to_the_browser(client, db, monkeypatch):
+    from api import captcha
+
+    monkeypatch.setenv(captcha.SITE_KEY_ENV, "site-key-public")
+    monkeypatch.setenv(captcha.SECRET_KEY_ENV, "secret-key-private")
+    body = client.get("/api/auth/signup-config").text
+    assert "site-key-public" in body
+    assert "secret-key-private" not in body
 
 
 # ── route protection ─────────────────────────────────────────────────────────
 PUBLIC = {"/api/health", "/api/version",
           "/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/register",
+          # Registration is open, so the page that renders it must be able to
+          # ask how. /verify-email is reached by clicking a link in an email,
+          # which by definition carries no session. Note what is NOT here:
+          # /api/auth/resend-verification needs one, and is guarded.
+          "/api/auth/signup-config", "/api/auth/verify-email",
           # OAuth has to be reachable without a session -- that is the point of
           # it -- and the provider redirects the browser back to the callback
           # carrying none of our cookies. These defend themselves with a

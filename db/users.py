@@ -40,6 +40,12 @@ class User:
     country: str
     phone: str
     is_active: bool
+    #: The Schwab entitlement. See users.is_owner in db/schema.sql -- it is not
+    #: something an account can earn by signing up or verifying an address.
+    is_owner: bool = False
+    #: Whether the address has been PROVED to belong to the holder, as opposed
+    #: to merely typed in. What makes email-matched OAuth safe.
+    email_verified: bool = False
 
 
 def _now() -> str:
@@ -53,15 +59,58 @@ def hash_token(raw: str) -> str:
 # ── users ────────────────────────────────────────────────────────────────────
 def create_user(username: str, password_hash: str, *, full_name: str = "",
                 email: str = "", country: str = "", phone: str = "",
+                email_verified: bool = False,
                 db: Path | None = None) -> int:
+    """Create an account. Raises sqlite3.IntegrityError on a taken name or email.
+
+    `is_owner` is deliberately not a parameter. It is the Schwab entitlement
+    and there is exactly one brokerage connection, belonging to the operator --
+    so no caller, including a public registration endpoint, can grant it by
+    passing an argument. It is set only by scripts/manage_users.py.
+
+    `email_verified` defaults to False and should stay False for anything a
+    person typed. Pass True only when an identity provider has positively
+    reported the address as verified.
+    """
     conn = connect(db)
     try:
         cur = conn.execute(
             "INSERT INTO users (username, password_hash, full_name, email, "
-            "country, phone, is_active, created_at) VALUES (?,?,?,?,?,?,1,?)",
-            (username, password_hash, full_name, email, country, phone, _now()),
+            "country, phone, is_active, email_verified, created_at) "
+            "VALUES (?,?,?,?,?,?,1,?,?)",
+            (username, password_hash, full_name, email, country, phone,
+             1 if email_verified else 0, _now()),
         )
         return int(cur.lastrowid)
+    finally:
+        conn.close()
+
+
+def get_user_by_email(email: str, db: Path | None = None) -> User | None:
+    """Find an account by address. Empty never matches.
+
+    The empty string is the default for an account with no address, so a blank
+    lookup would otherwise return an arbitrary one of them -- which, on the
+    OAuth path that matches by address, is somebody else's account.
+    """
+    if not (email or "").strip():
+        return None
+    conn = connect(db)
+    try:
+        return _row_to_user(conn.execute(
+            "SELECT * FROM users WHERE email = ? AND email != ''",
+            (email.strip(),)).fetchone())
+    finally:
+        conn.close()
+
+
+def set_email_verified(user_id: int, verified: bool = True,
+                       db: Path | None = None) -> bool:
+    conn = connect(db)
+    try:
+        cur = conn.execute("UPDATE users SET email_verified = ? WHERE id = ?",
+                           (1 if verified else 0, user_id))
+        return cur.rowcount > 0
     finally:
         conn.close()
 
@@ -87,9 +136,17 @@ def get_user_by_id(user_id: int, db: Path | None = None) -> User | None:
 def _row_to_user(r) -> User | None:
     if r is None:
         return None
+    # .keys() rather than direct indexing: this same function reads rows from a
+    # database that may not have been migrated yet in a test, and a missing
+    # column should degrade to the safe default (not an owner, not verified)
+    # rather than raising.
+    cols = r.keys()
     return User(id=r["id"], username=r["username"], password_hash=r["password_hash"],
                 full_name=r["full_name"], email=r["email"], country=r["country"],
-                phone=r["phone"], is_active=bool(r["is_active"]))
+                phone=r["phone"], is_active=bool(r["is_active"]),
+                is_owner=bool(r["is_owner"]) if "is_owner" in cols else False,
+                email_verified=(bool(r["email_verified"])
+                                if "email_verified" in cols else False))
 
 
 def list_users(db: Path | None = None) -> list[dict]:
@@ -367,5 +424,56 @@ def purge_oauth_states(db: Path | None = None) -> int:
     try:
         return conn.execute("DELETE FROM oauth_states WHERE expires_at <= ?",
                             (_now(),)).rowcount
+    finally:
+        conn.close()
+
+
+# ── email verification tokens ────────────────────────────────────────────────
+def new_verification_token(user_id: int, token_hash: str, expires_at: str,
+                           db: Path | None = None) -> None:
+    """Record a verification token, superseding any earlier one.
+
+    Earlier tokens for the same account are deleted rather than left valid:
+    asking for a new link should invalidate the old one, or a link forwarded
+    to the wrong place stays usable after the person has already noticed and
+    requested another.
+    """
+    conn = connect(db)
+    try:
+        conn.execute("DELETE FROM email_tokens WHERE user_id = ?", (user_id,))
+        conn.execute(
+            "INSERT INTO email_tokens (token_hash, user_id, expires_at, created_at) "
+            "VALUES (?,?,?,?)", (token_hash, user_id, expires_at, _now()))
+    finally:
+        conn.close()
+
+
+def take_verification_token(token_hash: str, db: Path | None = None) -> int | None:
+    """Spend a token and mark the address verified. Returns the user id.
+
+    None for unknown, already-used and expired alike. Single-use is enforced
+    here rather than by the caller, inside the same connection that marks the
+    account, so two simultaneous clicks cannot both succeed.
+    """
+    conn = connect(db)
+    try:
+        row = conn.execute(
+            "SELECT user_id, expires_at, used_at FROM email_tokens "
+            "WHERE token_hash = ?", (token_hash,)).fetchone()
+        if row is None or row["used_at"] is not None:
+            return None
+        if row["expires_at"] <= _now():
+            return None
+        conn.execute("BEGIN")
+        cur = conn.execute(
+            "UPDATE email_tokens SET used_at = ? WHERE token_hash = ? "
+            "AND used_at IS NULL", (_now(), token_hash))
+        if cur.rowcount == 0:
+            conn.execute("ROLLBACK")       # someone else spent it first
+            return None
+        conn.execute("UPDATE users SET email_verified = 1 WHERE id = ?",
+                     (row["user_id"],))
+        conn.execute("COMMIT")
+        return int(row["user_id"])
     finally:
         conn.close()

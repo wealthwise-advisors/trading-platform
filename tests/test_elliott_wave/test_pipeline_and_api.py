@@ -265,6 +265,10 @@ class TestExistingApiUnchanged:
         # {name}/start + {name}/callback pair shared by Google, LinkedIn and
         # Twitter. Those three are PUBLIC, so tests/test_auth.py's PUBLIC set
         # was widened to match and test_oauth_auth.py is what holds them shut.
+        # +3 for open registration -- /api/auth/signup-config (the sign-up page
+        # asks whether a CAPTCHA is configured), /api/auth/verify-email (reached
+        # by clicking a link in an email, so it carries no session) and
+        # /api/auth/resend-verification (which DOES need one and is guarded).
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
-        assert len(paths) == 32, sorted(paths)
+        assert len(paths) == 35, sorted(paths)

@@ -464,6 +464,23 @@ body{overflow-x:hidden;overflow-y:auto}
   background:rgba(255,255,255,.05); border:1px solid var(--line); color:#c3d0e2;
 }
 
+
+/* ── Turnstile ───────────────────────────────────────────────────────────────
+   Cloudflare renders the widget into #cf-turnstile in its own iframe, sized by
+   them. The slot reserves the space it will occupy so the card does not jump
+   when it loads, and collapses to nothing when the CAPTCHA is not configured
+   -- an empty bordered box would read as something failing to load. */
+.cap{ margin:13px 0 0; display:none }
+.cap.on{ display:block; min-height:65px }
+.cap .why{ margin:7px 2px 0; font-size:12px; color:#7f8ca3 }
+
+
+/* Three providers, not four. Apple is deliberately absent -- it needs a paid
+   Apple Developer membership and an ES256-signed JWT from a .p8 key rather
+   than a client secret, so there is no backend for it and a fourth button
+   could not have been made to work. */
+.soc{ grid-template-columns:repeat(3,1fr) }
+
 </style>
 
 <div class="scene" aria-hidden="true">
@@ -603,6 +620,10 @@ body{overflow-x:hidden;overflow-y:auto}
       </div>
     </div>
 
+    <!-- Turnstile mounts here. Empty and hidden until a site key exists. -->
+    <div class="cap" id="cap"><div id="cf-turnstile"></div>
+      <p class="why">Confirms you are a person, not a script.</p></div>
+
     <label class="terms"><input type="checkbox"><span class="box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
            stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
@@ -617,7 +638,6 @@ body{overflow-x:hidden;overflow-y:auto}
 
     <div class="soc">
       <button type="button"><svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.7 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 23.5c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.6-2-6.5-4.8H1.7v3A11.5 11.5 0 0 0 12 23.5z"/><path fill="#FBBC05" d="M5.5 14.1a6.9 6.9 0 0 1 0-4.4v-3H1.7a11.5 11.5 0 0 0 0 10.4l3.8-3z"/><path fill="#EA4335" d="M12 5.1c1.7 0 3.2.6 4.4 1.7l3.3-3.3A11.5 11.5 0 0 0 1.7 6.7l3.8 3c.9-2.8 3.5-4.6 6.5-4.6z"/></svg>Google</button>
-      <button type="button"><svg viewBox="0 0 24 24" fill="#fff"><path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7 2-1.1 2.7-2.2c.9-1.2 1.2-2.4 1.3-2.5-.1 0-2.5-1-2.5-3.6zM14.2 5.1c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.6 1.4-.6.7-1.1 1.8-.9 2.8 1 .1 2-.5 2.6-1.3z"/></svg>Apple</button>
       <button type="button"><svg viewBox="0 0 24 24"><rect width="24" height="24" rx="3.5" fill="#0A66C2"/><path fill="#fff" d="M8.3 18.5H5.6V9.7h2.7v8.8zM6.9 8.5A1.6 1.6 0 1 1 6.9 5.3a1.6 1.6 0 0 1 0 3.2zM18.7 18.5h-2.7v-4.3c0-1 0-2.3-1.4-2.3s-1.6 1.1-1.6 2.3v4.3H10.3V9.7h2.6v1.2h.1c.4-.7 1.3-1.4 2.6-1.4 2.8 0 3.3 1.8 3.3 4.2v4.8z"/></svg>LinkedIn</button>
       <button type="button"><svg viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Twitter</button>
     </div>
@@ -846,11 +866,17 @@ body{overflow-x:hidden;overflow-y:auto}
           full_name: v.name, username: v.username, email: v.email,
           country: v.country, phone: v.dial + " " + (v.phone || ""),
           date_of_birth: v.dob, password: v.password,
+          accept_terms: window.__acceptTerms ? window.__acceptTerms() : false,
+          captcha_token: window.__captchaToken || "",
         }),
       });
       var body = await res.json().catch(function () { return {}; });
       if (res.ok) {
-        say("Account created. <a href='autotrader_signin.html'>Sign in</a>.", "info");
+        /* Registration signs you in, so go straight to the app rather than
+           sending someone who is already authenticated to a login form. */
+        say("Account created. Taking you in…", "info");
+        window.location.assign("/");
+        return;
       } else if (res.status === 403) {
         /* The server's own words, not ours. */
         say((body.detail || "Registration is not open.") +
@@ -944,5 +970,53 @@ body{overflow-x:hidden;overflow-y:auto}
       j.providers.forEach(function (p) { configured[p.key] = !!p.configured; });
     })
     .catch(function () { /* leave every button on the honest notice */ });
+})();
+</script>
+<script>
+/* ---------------------------------------------------------------------------
+   Registration wiring.
+
+   Two things the form did not send and the server now requires: whether the
+   Terms were accepted, and a Turnstile token once one is configured. The
+   CAPTCHA is loaded only when the server says a site key exists -- asking
+   every visitor's browser to fetch a Cloudflare script for a widget that will
+   not render is a request nobody needed to make.
+--------------------------------------------------------------------------- */
+(function () {
+  var form = document.querySelector("form.card");
+  if (!form || !document.getElementById("cap")) return;
+
+  window.__captchaToken = "";
+  window.__acceptTerms = function () {
+    var c = form.querySelector(".terms input");
+    return !!(c && c.checked);
+  };
+
+  fetch("/api/auth/signup-config", { credentials: "same-origin" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      var key = cfg && cfg.captcha && cfg.captcha.site_key;
+      if (!key) return;                       // dormant -- nothing to show
+      document.getElementById("cap").classList.add("on");
+
+      window.__onTurnstile = function (token) { window.__captchaToken = token; };
+      window.__onTurnstileExpired = function () { window.__captchaToken = ""; };
+
+      var s = document.createElement("script");
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js" +
+              "?onload=__renderTurnstile";
+      s.async = true; s.defer = true;
+      window.__renderTurnstile = function () {
+        window.turnstile.render("#cf-turnstile", {
+          sitekey: key,
+          theme: "dark",
+          callback: window.__onTurnstile,
+          "expired-callback": window.__onTurnstileExpired,
+          "error-callback": window.__onTurnstileExpired,
+        });
+      };
+      document.head.appendChild(s);
+    })
+    .catch(function () { /* leave the CAPTCHA hidden; the server still decides */ });
 })();
 </script>

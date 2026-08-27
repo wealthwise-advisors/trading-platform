@@ -34,6 +34,11 @@ def db(tmp_path, monkeypatch):
     """A scratch database, a fresh throttle, and cookies that work over http."""
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "oauth.db")
     monkeypatch.setattr(auth, "throttle", auth.Throttle())
+    # Reset the signup budget too. It is module-level and counts
+    # SUCCESSES, so without this an early test that registers
+    # accounts spends the allowance and later tests collect 429
+    # where they expected a validation error.
+    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
     monkeypatch.setattr(auth, "_INSECURE", True)   # TestClient speaks http://
     return tmp_path
 
@@ -316,8 +321,12 @@ def test_an_existing_link_wins_over_a_matching_email(client, db, configured,
     re-pointed. The person who controls that Google account gets `rival`, which
     is whose account it actually is, and never `trader`.
     """
+    # From schema v5 the rival cannot share the address -- a non-empty email is
+    # unique. The precedence being tested is unaffected: what matters is that a
+    # subject already bound to `rival` wins over an email that matches
+    # `trader`, and the provider still reports trader@example.com.
     rival_id = repo.create_user("rival", auth.hash_password("Correct-Horse-99"),
-                                email="trader@example.com")
+                                email="rival@example.com")
     repo.link_identity(rival_id, "google", GOOGLE_SUB, email="trader@example.com")
 
     stub(monkeypatch, google_info())
@@ -329,14 +338,28 @@ def test_an_existing_link_wins_over_a_matching_email(client, db, configured,
     assert repo.list_identities(user.id) == [], "trader must gain no link"
 
 
-def test_two_accounts_sharing_an_email_are_refused(client, db, configured,
-                                                   user, monkeypatch):
-    """With two matches there is no way to know which person this is."""
-    repo.create_user("twin", auth.hash_password("Correct-Horse-99"),
-                     email="trader@example.com")
-    stub(monkeypatch, google_info())
-    r = finish(client, begin(client))
-    assert "reason=oauth_no_account" in r.headers["location"]
+def test_two_accounts_cannot_share_an_email_at_all(db, user):
+    """The ambiguity OAuth used to defend against is now unreachable.
+
+    This was a test that two matching accounts made the email path refuse,
+    because with two matches there is no way to know which person is signing
+    in. From schema v5 a non-empty address is UNIQUE, so the ambiguous state
+    cannot be created in the first place -- which is the stronger guarantee,
+    and the one open signup needs: registration is what would otherwise let
+    anyone manufacture that collision on purpose.
+
+    The refusal in api/routers/oauth.py is kept as defence in depth; this
+    asserts the condition it guards against can no longer arise.
+    """
+    import sqlite3
+
+    with pytest.raises(sqlite3.IntegrityError):
+        repo.create_user("twin", auth.hash_password("Correct-Horse-99"),
+                         email="trader@example.com")
+
+    # And the original account is untouched by the attempt.
+    assert repo.get_user("trader") is not None
+    assert repo.get_user("twin") is None
 
 
 def test_a_callback_with_no_code_is_refused(client, db, configured, user):
