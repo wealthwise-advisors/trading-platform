@@ -632,9 +632,22 @@ body.recovery .hide-in-recovery{ display:none !important }
     el.addEventListener("input", clear);
   });
 
-  /* Already signed in? Skip the form. */
+  /* Already signed in? Skip the form -- UNLESS this is a recovery visit.
+   *
+   * Password recovery lives on this same page, at ?forgot=1 and ?reset=<token>.
+   * Without the guard below, anyone who still had a session was bounced into
+   * the app the instant they opened either -- so "Forgot password?" could not
+   * be reached at all by the people most likely to click it, and a reset link
+   * arriving by email silently opened the dashboard instead of asking for a
+   * new password.
+   *
+   * A reset link especially must work while signed in: the usual reason for
+   * resetting is believing somebody ELSE is signed in as you. */
+  var recovering = q.get("forgot") || q.get("reset");
   fetch("/api/auth/me", { credentials: "same-origin" })
-    .then(function (r) { if (r.ok && !reason) window.location.assign(destination()); })
+    .then(function (r) {
+      if (r.ok && !reason && !recovering) window.location.assign(destination());
+    })
     .catch(function () { /* offline: leave the form up */ });
 })();
 </script>
