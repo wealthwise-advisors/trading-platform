@@ -337,6 +337,33 @@ jobs:
             [ -n "$OAUTH_BASE" ] || OAUTH_BASE="https://$TLS_DOMAIN"
             echo "OAuth redirect base: $OAUTH_BASE"
 
+            # Which optional integrations is this deploy carrying?
+            #
+            # PRESENCE only -- never a value, and never a length, which for a
+            # key of known format is a fingerprint.
+            #
+            # This exists because the failure it catches is invisible from
+            # outside: an application reporting a feature as "dormant" looks
+            # identical whether the secret was never created or was created and
+            # never plumbed through to the container. The second case is what
+            # happened to all four of the names below, and it cost a full
+            # round-trip of "the secrets are set" / "the app says they are not".
+            report_secret() {
+              if [ -n "$2" ]; then echo "  present: $1"; else echo "  ABSENT : $1"; fi
+            }
+            echo "---- optional integrations ----"
+            report_secret AUTOTRADER_RESEND_API_KEY \
+              "${{ secrets.AUTOTRADER_RESEND_API_KEY }}"
+            report_secret AUTOTRADER_MAIL_FROM \
+              "${{ secrets.AUTOTRADER_MAIL_FROM }}"
+            report_secret AUTOTRADER_TURNSTILE_SITE_KEY \
+              "${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}"
+            report_secret AUTOTRADER_TURNSTILE_SECRET_KEY \
+              "${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}"
+            report_secret GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
+            report_secret LINKEDIN_CLIENT_ID "${{ secrets.LINKEDIN_CLIENT_ID }}"
+            report_secret TWITTER_CLIENT_ID "${{ secrets.TWITTER_CLIENT_ID }}"
+
             WEB_PORT=80 \
             TLS_PORT=443 \
             TLS_DOMAIN="$TLS_DOMAIN" \
@@ -349,6 +376,10 @@ jobs:
             AUTOTRADER_LINKEDIN_CLIENT_SECRET="${{ secrets.LINKEDIN_CLIENT_SECRET }}" \
             AUTOTRADER_TWITTER_CLIENT_ID="${{ secrets.TWITTER_CLIENT_ID }}" \
             AUTOTRADER_TWITTER_CLIENT_SECRET="${{ secrets.TWITTER_CLIENT_SECRET }}" \
+            AUTOTRADER_RESEND_API_KEY="${{ secrets.AUTOTRADER_RESEND_API_KEY }}" \
+            AUTOTRADER_MAIL_FROM="${{ secrets.AUTOTRADER_MAIL_FROM }}" \
+            AUTOTRADER_TURNSTILE_SITE_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}" \
+            AUTOTRADER_TURNSTILE_SECRET_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}" \
             docker compose up --build -d --remove-orphans
 
             docker image prune -f          # t3.micro has an 8 GiB disk

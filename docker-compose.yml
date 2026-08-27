@@ -45,6 +45,15 @@ services:
       # client secret. api/oauth.py has no Apple provider, so its button keeps
       # showing the honest "not connected yet" notice until that account exists.
       AUTOTRADER_PUBLIC_BASE_URL: "${AUTOTRADER_PUBLIC_BASE_URL:-}"
+
+      # Email verification and password reset (Resend), and the CAPTCHA.
+      # Empty is a supported state: the application reports each as dormant
+      # and the features that depend on them stay shut, rather than the
+      # container refusing to start. See api/verification.py and api/captcha.py.
+      AUTOTRADER_RESEND_API_KEY: "${AUTOTRADER_RESEND_API_KEY:-}"
+      AUTOTRADER_MAIL_FROM: "${AUTOTRADER_MAIL_FROM:-}"
+      AUTOTRADER_TURNSTILE_SITE_KEY: "${AUTOTRADER_TURNSTILE_SITE_KEY:-}"
+      AUTOTRADER_TURNSTILE_SECRET_KEY: "${AUTOTRADER_TURNSTILE_SECRET_KEY:-}"
       AUTOTRADER_GOOGLE_CLIENT_ID: "${AUTOTRADER_GOOGLE_CLIENT_ID:-}"
       AUTOTRADER_GOOGLE_CLIENT_SECRET: "${AUTOTRADER_GOOGLE_CLIENT_SECRET:-}"
       AUTOTRADER_LINKEDIN_CLIENT_ID: "${AUTOTRADER_LINKEDIN_CLIENT_ID:-}"
