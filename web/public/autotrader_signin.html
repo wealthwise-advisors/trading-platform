@@ -910,62 +910,7 @@ body.recovery .hide-in-recovery{ display:none !important }
   }
 })();
 </script>
-<script>
-/* ---------------------------------------------------------------------------
-   Turnstile for password recovery.
 
-   /api/auth/forgot-password verifies a token, and this page had no widget to
-   produce one -- so the form posted an empty token and was refused every time,
-   with nothing on screen to click. The endpoint is right to want it: it sends
-   mail to an address the caller picks.
-
-   Only in recovery mode. Ordinary sign-in stays unobstructed; a password
-   attempt is already throttled per (ip, username).
---------------------------------------------------------------------------- */
-(function () {
-  var q = new URLSearchParams(window.location.search);
-  if (!q.get("forgot")) return;               // not the reset-password step
-
-  var form = document.querySelector("form.card");
-  var btn = form && form.querySelector(".go");
-  if (!form || !btn) return;
-
-  var slot = document.createElement("div");
-  slot.className = "cap";
-  slot.id = "cap";
-  slot.innerHTML = '<div id="cf-turnstile"></div>' +
-                   '<p class="why">Confirms you are a person, not a script.</p>';
-  btn.insertAdjacentElement("beforebegin", slot);
-
-  window.__captchaToken = "";
-
-  fetch("/api/auth/signup-config", { credentials: "same-origin" })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (cfg) {
-      var key = cfg && cfg.captcha && cfg.captcha.site_key;
-      if (!key) return;                        // dormant: nothing to show
-      slot.classList.add("on");
-
-      window.__onTurnstileR = function (t) { window.__captchaToken = t; };
-      window.__offTurnstileR = function () { window.__captchaToken = ""; };
-      window.__renderTurnstileR = function () {
-        window.turnstile.render("#cf-turnstile", {
-          sitekey: key,
-          theme: "dark",
-          callback: window.__onTurnstileR,
-          "expired-callback": window.__offTurnstileR,
-          "error-callback": window.__offTurnstileR,
-        });
-      };
-      var s = document.createElement("script");
-      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js" +
-              "?onload=__renderTurnstileR";
-      s.async = true; s.defer = true;
-      document.head.appendChild(s);
-    })
-    .catch(function () { /* leave it hidden; the server still decides */ });
-})();
-</script>
 <script>
 /* ---------------------------------------------------------------------------
    "Forgot username?" -- the third recovery mode of this card.
@@ -1021,37 +966,6 @@ body.recovery .hide-in-recovery{ display:none !important }
   back.href = "autotrader_signin.html";
   back.textContent = "Back to sign in";
   form.appendChild(back);
-
-  /* The CAPTCHA, for the same reason as ?forgot=1: this sends mail to an
-     address the caller chooses. Loaded only when a site key exists. */
-  var slot = document.createElement("div");
-  slot.className = "cap"; slot.id = "cap";
-  slot.innerHTML = '<div id="cf-turnstile"></div>' +
-                   '<p class="why">Confirms you are a person, not a script.</p>';
-  btn.insertAdjacentElement("beforebegin", slot);
-  window.__captchaToken = "";
-  fetch("/api/auth/signup-config", { credentials: "same-origin" })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (cfg) {
-      var key = cfg && cfg.captcha && cfg.captcha.site_key;
-      if (!key) return;
-      slot.classList.add("on");
-      window.__onTsU = function (t) { window.__captchaToken = t; };
-      window.__offTsU = function () { window.__captchaToken = ""; };
-      window.__renderTsU = function () {
-        window.turnstile.render("#cf-turnstile", {
-          sitekey: key, theme: "dark",
-          callback: window.__onTsU,
-          "expired-callback": window.__offTsU,
-          "error-callback": window.__offTsU,
-        });
-      };
-      var s = document.createElement("script");
-      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__renderTsU";
-      s.async = true; s.defer = true;
-      document.head.appendChild(s);
-    })
-    .catch(function () { /* stays hidden; the server still decides */ });
 
   /* Cloning drops the sign-in listeners so one click cannot also try to log in. */
   var fresh = btn.cloneNode(true);

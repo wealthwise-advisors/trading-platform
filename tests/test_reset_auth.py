@@ -543,3 +543,50 @@ def test_the_reminder_carries_no_token(client, db, user, monkeypatch):
     body = captured.get("body", "")
     assert "trader" in body, "the username should be in the message"
     assert "verify-email" not in body and "?reset=" not in body,         "a spendable link reached a username reminder"
+
+
+def test_recovery_needs_no_captcha(client, db, user, sent):
+    """Deliberate: the two recovery endpoints do NOT require a token.
+
+    The widget is a third-party script, and when an extension, a privacy
+    setting or a network blocks it, nothing renders -- so there is no token,
+    the server refuses, and the person sees a form that will not submit with
+    no way to fix it. That happened on the deployed site, to the two people
+    who most needed the flow.
+
+    The per-IP budget is what actually protects these: five an hour, then a
+    block. The CAPTCHA was a second lock on a door already bolted, and the only
+    one that could fail closed on a legitimate person.
+    """
+    from api import captcha
+
+    # Configured AND refusing everything -- the worst case for a blocked widget.
+    monkeypatch = pytest.MonkeyPatch()
+    try:
+        monkeypatch.setenv(captcha.SITE_KEY_ENV, "site")
+        monkeypatch.setenv(captcha.SECRET_KEY_ENV, "secret")
+        monkeypatch.setattr(captcha, "verify", lambda t, ip="": False)
+
+        assert forgot(client, "t@example.com").status_code == 200
+        assert len(sent) == 1, "reset was refused with no CAPTCHA token"
+    finally:
+        monkeypatch.undo()
+
+
+def test_registration_still_requires_the_captcha(client, db, monkeypatch):
+    """Registration keeps it -- that is where bot protection earns its keep.
+
+    It creates accounts, the rate limit alone is a weaker answer, and someone
+    signing up can retry from another browser. Someone locked out cannot.
+    """
+    from api import captcha
+
+    monkeypatch.setenv(captcha.SITE_KEY_ENV, "site")
+    monkeypatch.setenv(captcha.SECRET_KEY_ENV, "secret")
+    monkeypatch.setattr(captcha, "verify", lambda t, ip="": False)
+
+    r = client.post("/api/auth/register", json={
+        "username": "botlike", "password": "Correct-Horse-99",
+        "email": "botlike@example.com", "accept_terms": True})
+    assert r.status_code == 400
+    assert repo.get_user("botlike") is None

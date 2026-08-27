@@ -359,10 +359,7 @@ def forgot_password(body: ForgotRequest, request: Request,
         )
     auth.signup_throttle.record(ip)
 
-    if not captcha.verify(body.captcha_token, ip):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST,
-                            "Could not confirm you are human. Please try again.")
-
+    # NO CAPTCHA HERE, deliberately -- see the note on /forgot-username.
     user = repo.get_user_by_email(body.email.strip())
 
     if user is None or not user.is_active:
@@ -486,10 +483,25 @@ def forgot_username(body: ForgotUsernameRequest, request: Request,
         )
     auth.signup_throttle.record(ip)
 
-    if not captcha.verify(body.captcha_token, ip):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST,
-                            "Could not confirm you are human. Please try again.")
-
+    # NO CAPTCHA ON THE TWO RECOVERY ENDPOINTS.
+    #
+    # It was here, and it locked people out of the one flow that exists for
+    # people already locked out. The widget is a third-party script from
+    # challenges.cloudflare.com, and when an extension, a privacy setting or a
+    # network blocks it, nothing renders -- so there is no token, the server
+    # refuses, and the person sees a form that simply will not submit with no
+    # way to fix it from their side. That happened here, to two people, on the
+    # deployed site.
+    #
+    # What it was protecting against was mail-bombing an address. The per-IP
+    # budget above already does that: five requests an hour, then a block. The
+    # CAPTCHA was a second lock on a door the rate limiter had already bolted,
+    # and it was the only one that could fail closed on a legitimate person.
+    #
+    # Registration KEEPS its CAPTCHA. That is where bot protection earns its
+    # keep -- it creates accounts, the rate limit alone is a weaker answer, and
+    # someone signing up can retry from another browser. Someone who has
+    # forgotten their password cannot.
     user = repo.get_user_by_email(body.email.strip())
     if user is None or not user.is_active:
         log.info("username reminder asked for an unknown address from %s", ip)
