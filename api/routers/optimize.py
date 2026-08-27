@@ -14,6 +14,7 @@ from src.backtesting.engine import BacktestEngine
 from api.deps import get_contract_spec
 from api.strategy_registry import STRATEGIES, build_strategy
 from api.routers.backtests import _build_provider
+from api.auth import PROTECTED
 from api import store, serializers
 from api.schemas.optimize import OptimizeRequest, OptimizeResponse, OptimizeCombo
 
@@ -50,7 +51,7 @@ def _strategy_spec(strategy_id: str) -> dict:
 
 
 @router.post("", response_model=OptimizeResponse)
-def run_optimizer(req: OptimizeRequest):
+def run_optimizer(req: OptimizeRequest, user=PROTECTED):
     if req.metric not in _METRICS:
         raise HTTPException(400, f"metric must be one of {sorted(_METRICS)}")
 
@@ -105,7 +106,8 @@ def run_optimizer(req: OptimizeRequest):
     best_backtest_id = None
     if best is not None:
         _, _, best_results = best
-        best_backtest_id = store.save(best_results, req.data_source, req.session_start, req.session_end)
+        best_backtest_id = store.save(best_results, req.data_source, req.session_start,
+                                      req.session_end, user_id=user.id)
 
     return OptimizeResponse(
         metric=req.metric,

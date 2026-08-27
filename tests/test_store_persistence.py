@@ -24,6 +24,14 @@ from db import connection
 from src.backtesting.results import BacktestResults, Trade
 
 
+#: Whose results these are. Ownership arrived in schema v4; this suite is about
+#: persistence, not isolation (tests/test_isolation.py covers that), so every
+#: call here belongs to one owner and the id is threaded through explicitly.
+#: There is no default on the store functions on purpose -- a default is what
+#: lets an unscoped call slip through unnoticed.
+OWNER = 1
+
+
 @pytest.fixture
 def tmp_store(tmp_path, monkeypatch):
     """A scratch database, scratch parquet directory, and an empty cache."""
@@ -32,6 +40,13 @@ def tmp_store(tmp_path, monkeypatch):
     monkeypatch.setattr(repo, "DB_PATH", db)
     monkeypatch.setattr(repo, "BLOB_DIR", tmp_path / "backtests")
     monkeypatch.setattr(store, "_store", {})
+
+    # backtests.user_id is a foreign key and PRAGMA foreign_keys is ON, so the
+    # owner has to actually exist or every insert fails the constraint.
+    from api import auth
+    from db import users as user_repo
+    uid = user_repo.create_user("persistence-owner", auth.hash_password("x" * 14))
+    assert uid == OWNER, f"expected the first user to be id {OWNER}, got {uid}"
     return store
 
 
@@ -84,10 +99,10 @@ def _results() -> BacktestResults:
 
 # ── the promise ──────────────────────────────────────────────────────────────
 def test_result_survives_a_restart(tmp_store):
-    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
 
     tmp_store._store.clear()          # this is what a restart costs you
-    got = tmp_store.get(bid)
+    got = tmp_store.get(bid, user_id=OWNER)
 
     assert got is not None, "result did not come back from the database"
     assert got.data_source == "synthetic"
@@ -97,9 +112,9 @@ def test_result_survives_a_restart(tmp_store):
 
 def test_every_scalar_field_round_trips(tmp_store):
     original = _results()
-    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
     tmp_store._store.clear()
-    got = tmp_store.get(bid).results
+    got = tmp_store.get(bid, user_id=OWNER).results
 
     for name in repo.RESULT_COLUMNS:
         assert getattr(got, name) == getattr(original, name), f"{name} changed"
@@ -107,9 +122,9 @@ def test_every_scalar_field_round_trips(tmp_store):
 
 def test_frames_round_trip_with_index_and_dtypes(tmp_store):
     original = _results()
-    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
     tmp_store._store.clear()
-    got = tmp_store.get(bid).results
+    got = tmp_store.get(bid, user_id=OWNER).results
 
     # check_freq=False, and only that. Parquet does not carry a DatetimeIndex's
     # freq attribute, but no provider sets one -- an index parsed out of a CSV
@@ -127,9 +142,9 @@ def test_frames_round_trip_with_index_and_dtypes(tmp_store):
 
 def test_open_trade_keeps_its_nulls(tmp_store):
     original = _results()
-    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
     tmp_store._store.clear()
-    got = tmp_store.get(bid).results
+    got = tmp_store.get(bid, user_id=OWNER).results
 
     assert len(got.trades) == 2
     closed, open_ = got.trades
@@ -141,7 +156,7 @@ def test_open_trade_keeps_its_nulls(tmp_store):
 
 
 def test_unknown_id_returns_none(tmp_store):
-    assert tmp_store.get("AT-doesnotexist") is None
+    assert tmp_store.get("AT-doesnotexist", user_id=OWNER) is None
 
 
 # ── failure modes ────────────────────────────────────────────────────────────
@@ -151,17 +166,17 @@ def test_an_unwritable_database_does_not_break_the_backtest(tmp_store, monkeypat
         raise sqlite3.OperationalError("attempt to write a readonly database")
 
     monkeypatch.setattr(repo, "insert", boom)
-    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
 
-    assert tmp_store.get(bid) is not None, "in-memory result was lost too"
+    assert tmp_store.get(bid, user_id=OWNER) is not None, "in-memory result was lost too"
     tmp_store._store.clear()
-    assert tmp_store.get(bid) is None, "nothing should have reached the database"
+    assert tmp_store.get(bid, user_id=OWNER) is None, "nothing should have reached the database"
 
 
 def test_a_newer_schema_is_refused_not_guessed(tmp_store, tmp_path):
     """A database written by a later build may have columns this one does not
     write. Refusing beats a partial INSERT that corrupts it quietly."""
-    tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0))
+    tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
     conn = connection.connect()
     conn.execute("INSERT INTO schema_version (version, applied_at) VALUES (999, '')")
     conn.close()
@@ -172,19 +187,19 @@ def test_a_newer_schema_is_refused_not_guessed(tmp_store, tmp_path):
 
 def test_deleting_a_result_takes_its_trades_with_it(tmp_store):
     """ON DELETE CASCADE, and the PRAGMA that makes it actually fire."""
-    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0))
+    bid = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
     conn = connection.connect()
     assert conn.execute("SELECT COUNT(*) c FROM trades").fetchone()["c"] == 2
     conn.close()
 
-    assert tmp_store.delete(bid) is True
+    assert tmp_store.delete(bid, user_id=OWNER) is True
     conn = connection.connect()
     assert conn.execute("SELECT COUNT(*) c FROM trades").fetchone()["c"] == 0
     conn.close()
 
     tmp_store._store.clear()
-    assert tmp_store.get(bid) is None
-    assert tmp_store.delete("AT-nothing") is False
+    assert tmp_store.get(bid, user_id=OWNER) is None
+    assert tmp_store.delete("AT-nothing", user_id=OWNER) is False
 
 
 # ── the reason a database was worth it ───────────────────────────────────────
@@ -195,20 +210,20 @@ def test_querying_across_runs(tmp_store):
     bad.sharpe_ratio = 0.3
     bad.symbol = "NQ"
 
-    tmp_store.save(good, "synthetic", time(9, 30), time(16, 0))
-    tmp_store.save(bad, "synthetic", time(9, 30), time(16, 0))
+    tmp_store.save(good, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
+    tmp_store.save(bad, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
 
-    assert len(tmp_store.summaries()) == 2
-    assert len(tmp_store.summaries(symbol="ES")) == 1
-    assert len(tmp_store.summaries(min_sharpe=1.0)) == 1
-    assert tmp_store.summaries(min_sharpe=1.0)[0]["symbol"] == "ES"
-    assert len(tmp_store.summaries(symbol="NQ", min_sharpe=1.0)) == 0
+    assert len(tmp_store.summaries(user_id=OWNER)) == 2
+    assert len(tmp_store.summaries(user_id=OWNER, symbol="ES")) == 1
+    assert len(tmp_store.summaries(user_id=OWNER, min_sharpe=1.0)) == 1
+    assert tmp_store.summaries(user_id=OWNER, min_sharpe=1.0)[0]["symbol"] == "ES"
+    assert len(tmp_store.summaries(user_id=OWNER, symbol="NQ", min_sharpe=1.0)) == 0
 
 
 def test_list_ids_is_newest_first(tmp_store):
-    a = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0))
-    b = tmp_store.save(_results(), "csv", time(9, 30), time(16, 0))
-    ids = tmp_store.list_ids()
+    a = tmp_store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
+    b = tmp_store.save(_results(), "csv", time(9, 30), time(16, 0), user_id=OWNER)
+    ids = tmp_store.list_ids(user_id=OWNER)
     assert set(ids) == {a, b}
     assert len(ids) == 2
 

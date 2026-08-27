@@ -18,6 +18,7 @@ from src.analysis.elliott_wave import (
 )
 from api.report.report import generate_html_report
 
+from api.auth import PROTECTED
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
 from api import store, serializers
@@ -119,7 +120,7 @@ def _explain_run_failure(exc: Exception, req) -> str:
 
 
 @router.post("")
-def run_backtest(req: BacktestRequest):
+def run_backtest(req: BacktestRequest, user=PROTECTED):
     spec = get_contract_spec(req.symbol)
     provider = _build_provider(req.data_source, req.symbol, req.timeframe,
                                req.start_date, req.end_date, spec,
@@ -172,13 +173,21 @@ def run_backtest(req: BacktestRequest):
     except (ValueError, ImportError, RuntimeError) as exc:
         raise HTTPException(400, _explain_run_failure(exc, req))
 
-    backtest_id = store.save(results, req.data_source, req.session_start, req.session_end)
+    backtest_id = store.save(results, req.data_source, req.session_start,
+                             req.session_end, user_id=user.id)
     return serializers.results_to_summary(backtest_id, results, req.data_source,
                                           req.session_start, req.session_end)
 
 
-def _get_or_404(backtest_id: str) -> store.StoredBacktest:
-    stored = store.get(backtest_id)
+def _get_or_404(backtest_id: str, user) -> store.StoredBacktest:
+    """This user's backtest, or 404.
+
+    Someone else's backtest is a 404, not a 403. A 403 would confirm the id
+    exists, turning this into an oracle for enumerating other people's runs --
+    the same reason /api/auth/login refuses an unknown username and a wrong
+    password with identical wording.
+    """
+    stored = store.get(backtest_id, user_id=user.id)
     if stored is None:
         raise HTTPException(404, f"Backtest {backtest_id!r} not found — it may have expired "
                                  "(results are held in memory) or the id is wrong.")
@@ -186,35 +195,35 @@ def _get_or_404(backtest_id: str) -> store.StoredBacktest:
 
 
 @router.get("/{backtest_id}")
-def get_backtest(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_backtest(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.results_to_summary(backtest_id, stored.results, stored.data_source,
                                           stored.session_start, stored.session_end)
 
 
 @router.get("/{backtest_id}/trades")
-def get_trades(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_trades(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     quality = score_trades(stored.results)
     quality_by_index = {q.trade_index: q for q in quality}
     return serializers.trades_to_records(stored.results, quality_by_index)
 
 
 @router.get("/{backtest_id}/price-data")
-def get_price_data(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_price_data(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.price_data_to_response(stored.results.price_data, stored.session_start)
 
 
 @router.get("/{backtest_id}/equity-curve")
-def get_equity_curve(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_equity_curve(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.equity_curve_to_records(stored.results)
 
 
 @router.get("/{backtest_id}/zigzag")
-def get_zigzag(backtest_id: str, dev_3: float = Query(0.0005), dev_10: float = Query(0.0010)):
-    stored = _get_or_404(backtest_id)
+def get_zigzag(backtest_id: str, dev_3: float = Query(0.0005), dev_10: float = Query(0.0010), user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.zigzag_to_records(stored.results.price_data, dev_3, dev_10)
 
 
@@ -224,6 +233,7 @@ def get_elliott_wave(
     theta_base: float = Query(DEFAULT_THETA_BASE, gt=0, lt=1),
     ratio: float = Query(DEFAULT_RATIO, gt=1),
     scales: int = Query(DEFAULT_SCALES, ge=1, le=8),
+    user=PROTECTED,
 ):
     """Elliott Wave analysis of a stored backtest's price data.
 
@@ -239,27 +249,27 @@ def get_elliott_wave(
     plus `notes`. A client must never be able to render a partial analysis as
     though it were complete (FE-3).
     """
-    stored = _get_or_404(backtest_id)
+    stored = _get_or_404(backtest_id, user)
     return serializers.elliott_wave_to_records(
         stored.results.price_data, theta_base, ratio, scales
     )
 
 
 @router.get("/{backtest_id}/win-loss")
-def get_win_loss(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_win_loss(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.win_loss(stored.results)
 
 
 @router.get("/{backtest_id}/monthly-returns")
-def get_monthly_returns(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_monthly_returns(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     return serializers.monthly_returns(stored.results)
 
 
 @router.get("/{backtest_id}/candlestick-patterns")
-def get_candlestick_patterns(backtest_id: str, min_confidence: float = Query(70.0)):
-    stored = _get_or_404(backtest_id)
+def get_candlestick_patterns(backtest_id: str, min_confidence: float = Query(70.0), user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     patterns = detect_candlestick_patterns(stored.results.price_data)
     # _safe() also narrows numpy scalars: confidence is derived from the price
     # frame, which ExternalCSVProvider loads as float32 -- and float32 cannot
@@ -272,8 +282,8 @@ def get_candlestick_patterns(backtest_id: str, min_confidence: float = Query(70.
 
 
 @router.get("/{backtest_id}/chart-patterns")
-def get_chart_patterns(backtest_id: str):
-    stored = _get_or_404(backtest_id)
+def get_chart_patterns(backtest_id: str, user=PROTECTED):
+    stored = _get_or_404(backtest_id, user)
     df = stored.results.price_data
     patterns = find_chart_patterns(df, left=2, right=2, min_move=0.0)
     return [
@@ -289,11 +299,13 @@ def get_chart_patterns(backtest_id: str):
 
 @router.get("/{backtest_id}/report")
 def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float = Query(0.0005),
-               format: str = Query("html")):
+               format: str = Query("html"),
+    user=PROTECTED,
+):
     """Backtest report, downloadable as HTML (full charts, via
     api/report/report.py) or as CSV/Excel/PDF/Word (metrics summary + trade
     log table only -- those formats can't carry interactive Plotly charts)."""
-    stored = _get_or_404(backtest_id)
+    stored = _get_or_404(backtest_id, user)
     r = stored.results
     base_name = f"backtest_{r.symbol}_{r.strategy_name}"
 

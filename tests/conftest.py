@@ -65,7 +65,12 @@ def _signed_in_for_the_session():
 #: silently decided the question for every file added later: a new module called
 #: test_oauth.py would have run with require_user overridden and its refusal
 #: assertions would have passed without ever reaching the guard.
-_SECURITY_SUITES = {"test_auth", "test_oauth_auth"}
+#:
+#: test_isolation matters most of all here: it signs in as two DIFFERENT people
+#: and asserts neither can reach the other's data. Under the override both
+#: clients resolve to the same TEST_USER, so every assertion would pass while
+#: testing nothing at all.
+_SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation"}
 
 
 @pytest.fixture(autouse=True)

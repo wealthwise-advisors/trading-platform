@@ -24,6 +24,21 @@ Persistence must never break a backtest. Every database call here is wrapped:
 an unwritable directory, a locked file, a missing parquet engine -- all of it
 logs and carries on as the in-memory cache. A failed write costs history; a
 raised exception would cost the run that just finished.
+
+THE CACHE IS KEYED BY OWNER TOO
+-------------------------------
+`_store` used to be keyed by backtest_id alone. Adding user_id to the database
+would not have been enough on its own: a cache hit returns before any query
+runs, so a second user asking for a cached id would have been handed the first
+user's result without SQLite ever being consulted. The scoped key is what makes
+that unreachable rather than merely unlikely -- there is no code path that can
+read another owner's entry, because the entry is not filed under a key that
+another owner can construct.
+
+The failing-soft rule above is deliberately NOT extended to ownership. A
+database error means history is lost and the run still returns; an ownership
+mismatch means someone is asking for what is not theirs, and that returns
+nothing at all.
 """
 
 import logging
@@ -45,16 +60,18 @@ class StoredBacktest:
     session_end: time_type
 
 
-_store: dict[str, StoredBacktest] = {}
+#: Keyed by (user_id, backtest_id). See the note in the module docstring.
+_store: dict[tuple[int, str], StoredBacktest] = {}
 
 
 def save(results: BacktestResults, data_source: str, session_start: time_type,
-        session_end: time_type) -> str:
+        session_end: time_type, user_id: int) -> str:
     backtest_id = f"AT-{uuid.uuid4().hex[:10]}"
-    _store[backtest_id] = StoredBacktest(results, data_source, session_start,
-                                         session_end)
+    _store[(user_id, backtest_id)] = StoredBacktest(results, data_source,
+                                                    session_start, session_end)
     try:
-        repo.insert(backtest_id, results, data_source, session_start, session_end)
+        repo.insert(backtest_id, results, data_source, session_start, session_end,
+                    user_id=user_id)
     except Exception:
         # The run succeeded and is in memory; only its history is lost.
         log.exception("could not persist backtest %s -- serving from memory only",
@@ -62,49 +79,54 @@ def save(results: BacktestResults, data_source: str, session_start: time_type,
     return backtest_id
 
 
-def get(backtest_id: str) -> StoredBacktest | None:
-    stored = _store.get(backtest_id)
+def get(backtest_id: str, user_id: int) -> StoredBacktest | None:
+    """This user's result, or None. None also means "not yours"."""
+    stored = _store.get((user_id, backtest_id))
     if stored is not None:
         return stored
     try:
-        found = repo.fetch(backtest_id)
+        found = repo.fetch(backtest_id, user_id=user_id)
     except Exception:
         log.exception("could not load backtest %s from the database", backtest_id)
         return None
     if found is None:
         return None
     stored = StoredBacktest(*found)
-    _store[backtest_id] = stored          # warm the cache for the next endpoint
+    _store[(user_id, backtest_id)] = stored   # warm the cache for the next endpoint
     return stored
 
 
-def list_ids() -> list[str]:
-    """Every backtest id, newest first. Ids only in memory are included."""
+def list_ids(user_id: int) -> list[str]:
+    """This user's backtest ids, newest first. Ids only in memory are included."""
     try:
-        ids = repo.list_ids()
+        ids = repo.list_ids(user_id=user_id)
     except Exception:
         log.exception("could not list backtests")
         ids = []
-    for bid in _store:
-        if bid not in ids:
+    for owner, bid in _store:
+        if owner == user_id and bid not in ids:
             ids.append(bid)
     return ids
 
 
-def summaries(**kw) -> list[dict]:
-    """Query across runs -- symbol, min_sharpe, since, limit. See db.backtests."""
+def summaries(user_id: int, **kw) -> list[dict]:
+    """Query across this user's runs -- symbol, min_sharpe, since, limit."""
     try:
-        return repo.summaries(**kw)
+        return repo.summaries(user_id=user_id, **kw)
     except Exception:
         log.exception("could not query backtest summaries")
         return []
 
 
-def delete(backtest_id: str) -> bool:
-    """Drop a result from the cache and the database. True if anything was there."""
-    had = _store.pop(backtest_id, None) is not None
+def delete(backtest_id: str, user_id: int) -> bool:
+    """Drop this user's result from the cache and the database.
+
+    True if anything was there. Another user's backtest is left untouched and
+    reported as absent.
+    """
+    had = _store.pop((user_id, backtest_id), None) is not None
     try:
-        had = repo.delete(backtest_id) or had
+        had = repo.delete(backtest_id, user_id=user_id) or had
     except Exception:
         log.exception("could not delete backtest %s", backtest_id)
     return had

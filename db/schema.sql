@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS backtests (
     id                      TEXT    PRIMARY KEY,
     created_at              TEXT    NOT NULL,
 
+    -- Who ran it (schema v4). NULL means "from before ownership existed";
+    -- connection.py backfills those to the founding account on upgrade, so a
+    -- NULL never survives a migration and is never treated as public.
+    --
+    -- Deliberately NOT "ON DELETE CASCADE": deleting a person should not
+    -- silently destroy the record of what was run. The row is reassigned or
+    -- kept, and that is a decision for whoever removes the account.
+    user_id                 INTEGER REFERENCES users(id),
+
     -- what was run
     symbol                  TEXT    NOT NULL,
     strategy_name           TEXT    NOT NULL,
@@ -61,6 +70,14 @@ CREATE TABLE IF NOT EXISTS trades (
     backtest_id     TEXT    NOT NULL,
     seq             INTEGER NOT NULL,          -- order within the run
 
+    -- Denormalised owner (schema v4). Ownership is derivable by joining to
+    -- backtests, so this column is redundant -- on purpose. A query that
+    -- reaches trades directly and forgets the join returns another user's
+    -- fills, and that is the exact mistake this table is most likely to
+    -- suffer. Writing it costs nothing: it is set inside the same transaction
+    -- as the parent row, from the same value.
+    user_id         INTEGER REFERENCES users(id),
+
     symbol          TEXT    NOT NULL,
     direction       TEXT    NOT NULL,
     quantity        INTEGER NOT NULL,
@@ -87,6 +104,12 @@ CREATE INDEX IF NOT EXISTS idx_backtests_strategy ON backtests(strategy_name);
 CREATE INDEX IF NOT EXISTS idx_trades_backtest    ON trades(backtest_id);
 CREATE INDEX IF NOT EXISTS idx_trades_entry_time  ON trades(entry_time);
 
+-- Ownership indexes (v4). Every list and every summary now filters on user_id
+-- first, so without these the common query degrades to a full scan the moment
+-- there is more than one account.
+CREATE INDEX IF NOT EXISTS idx_backtests_user     ON backtests(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_trades_user        ON trades(user_id);
+
 -- ── auth (schema v2) ────────────────────────────────────────────────────────
 -- Added when the app stopped being open to the internet. Both tables are
 -- IF NOT EXISTS like the rest of this file, so applying it to a v1 database
@@ -104,6 +127,21 @@ CREATE TABLE IF NOT EXISTS users (
     country       TEXT    NOT NULL DEFAULT '',
     phone         TEXT    NOT NULL DEFAULT '',
     is_active     INTEGER NOT NULL DEFAULT 1,
+
+    -- The Schwab entitlement (schema v4).
+    --
+    -- There is ONE brokerage connection and it belongs to the operator, not to
+    -- the application: one config/credentials.yaml, one schwab_tokens.json, no
+    -- per-user notion anywhere in src/data/schwab_provider.py. So this is not
+    -- a permission level that a person can earn by signing up or by verifying
+    -- an email address -- verifying an inbox says nothing about whether
+    -- someone should reach the operator's broker.
+    --
+    -- DEFAULT 0 is the security property: every account created by any route
+    -- that exists now or later starts without it. It is granted only by
+    -- scripts/manage_users.py, which needs shell access on the server.
+    is_owner      INTEGER NOT NULL DEFAULT 0,
+
     created_at    TEXT    NOT NULL,
     last_login_at TEXT
 );

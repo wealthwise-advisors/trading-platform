@@ -30,8 +30,27 @@ DB_PATH = Path(os.environ.get("AUTOTRADER_DB_PATH", "data/autotrader.db"))
 
 SCHEMA = Path(__file__).with_name("schema.sql")
 
-#: v2 added users + sessions; v3 added oauth_identities + oauth_states.
-SCHEMA_VERSION = 3
+#: v2 added users + sessions; v3 added oauth_identities + oauth_states;
+#: v4 added ownership (backtests.user_id, trades.user_id, users.is_owner).
+SCHEMA_VERSION = 4
+
+#: Columns added to tables that already existed, as (table, column, definition).
+#:
+#: Everything in schema.sql is CREATE ... IF NOT EXISTS, which is why migrating
+#: has so far been free: a new TABLE simply appears. That does not extend to a
+#: new COLUMN. `CREATE TABLE IF NOT EXISTS backtests (...)` is a no-op against a
+#: database that already has a backtests table, so the added column is silently
+#: absent, and the first query naming it fails at runtime rather than at
+#: startup -- on the server, after the deploy reported success.
+#:
+#: SQLite has no ADD COLUMN IF NOT EXISTS, so each one is guarded by reading
+#: PRAGMA table_info first. Adding a column is O(1) in SQLite: it rewrites the
+#: header, not the rows.
+_ADDED_COLUMNS = [
+    ("backtests", "user_id", "INTEGER REFERENCES users(id)"),
+    ("trades", "user_id", "INTEGER REFERENCES users(id)"),
+    ("users", "is_owner", "INTEGER NOT NULL DEFAULT 0"),
+]
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -56,9 +75,77 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     return conn
 
 
+def _add_missing_columns(conn: sqlite3.Connection) -> list[str]:
+    """Bring an existing database up to the current column set.
+
+    Returns what it added, so the caller can log it. Safe to run on every
+    connection: a column that is already there is skipped.
+    """
+    added = []
+    for table, column, definition in _ADDED_COLUMNS:
+        # The table may not exist yet on a brand-new file -- executescript has
+        # already run by this point, so it does, but a future reordering
+        # should not turn this into a crash.
+        present = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if not present or column in present:
+            continue
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        added.append(f"{table}.{column}")
+    return added
+
+
+def _backfill_ownership(conn: sqlite3.Connection) -> int:
+    """Give pre-ownership rows an owner.
+
+    Rows written before v4 have user_id IS NULL. A NULL owner must never be
+    readable by everyone -- that is precisely the leak this migration exists to
+    close -- so they are assigned to the founding account, the lowest user id,
+    which is the operator who ran them.
+
+    If there are no users yet the rows stay NULL and stay unreachable: the
+    query layer matches on an explicit user_id and NULL never equals anything
+    in SQL, so they are invisible rather than public. They are picked up by the
+    next connection after an account exists.
+    """
+    owner = conn.execute("SELECT MIN(id) AS id FROM users").fetchone()
+    if owner is None or owner["id"] is None:
+        return 0
+    total = 0
+    for table in ("backtests", "trades"):
+        cur = conn.execute(
+            f"UPDATE {table} SET user_id = ? WHERE user_id IS NULL", (owner["id"],)
+        )
+        total += cur.rowcount or 0
+    return total
+
+
 def _init(conn: sqlite3.Connection, path: Path | None = None) -> None:
     """Apply the schema. Idempotent -- every statement is IF NOT EXISTS."""
+    # ORDER MATTERS, and it is the reverse of the obvious one.
+    #
+    # Columns are added BEFORE the schema script runs, not after. schema.sql
+    # ends with `CREATE INDEX IF NOT EXISTS idx_backtests_user ON
+    # backtests(user_id, ...)`, and an index over a column that does not exist
+    # yet is an error, not a no-op. Running the script first therefore aborts
+    # partway through on exactly the databases that need migrating -- every
+    # one that predates v4, i.e. production -- while a fresh file, where the
+    # table is created complete, succeeds. That asymmetry is what makes the
+    # wrong order look correct in testing.
+    #
+    # On a new file the tables do not exist yet, PRAGMA table_info returns
+    # nothing, and this is a no-op.
+    added = _add_missing_columns(conn)
+    if added:
+        log.info("%s: added column(s) %s", path, ", ".join(added))
+
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+
+    # Backfill last: it reads `users`, which the script above may have created.
+    moved = _backfill_ownership(conn)
+    if moved:
+        log.info("%s: assigned %d pre-ownership row(s) to the founding account",
+                 path, moved)
+
     row = conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
     now = datetime.now().isoformat(timespec="seconds")
     if row["v"] is None:
@@ -67,9 +154,9 @@ def _init(conn: sqlite3.Connection, path: Path | None = None) -> None:
             (SCHEMA_VERSION, now),
         )
     elif row["v"] < SCHEMA_VERSION:
-        # Every statement in schema.sql is IF NOT EXISTS, so the executescript
-        # above has already added whatever the newer version introduced. All
-        # that is left is to record that the file is now at this version.
+        # New TABLES arrive via the IF NOT EXISTS script above; new COLUMNS
+        # arrive via _add_missing_columns. Both have run, so all that is left
+        # is to record that the file is now at this version.
         log.info("%s upgraded from schema v%s to v%s", path, row["v"], SCHEMA_VERSION)
         conn.execute(
             "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
