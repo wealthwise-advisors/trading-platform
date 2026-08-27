@@ -189,6 +189,32 @@ CREATE TABLE IF NOT EXISTS email_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_email_tokens_user ON email_tokens(user_id);
 
+-- ── half-finished OAuth sign-ups (schema v6) ────────────────────────────────
+-- Twitter/X returns no email address at any scope, so an X identity arriving
+-- for the first time cannot be matched to an account and cannot create one
+-- either -- there is nothing to create it from. Rather than refuse outright,
+-- the identity is parked here and the person is asked for a username and an
+-- address.
+--
+-- This is NOT a session and must never become one. It proves only that someone
+-- controls an X account; it grants nothing until the details come back and a
+-- real account is made. Hence a separate table with its own short expiry
+-- rather than a row in `sessions`.
+CREATE TABLE IF NOT EXISTS oauth_pending (
+    -- SHA-256 of the handle given to the browser, never the handle itself --
+    -- same reasoning as sessions and email tokens.
+    token_hash  TEXT    PRIMARY KEY,
+    provider    TEXT    NOT NULL,
+    subject     TEXT    NOT NULL,
+    -- What the provider volunteered, to prefill the form. Advisory only: the
+    -- person can change it, and the server revalidates whatever comes back.
+    suggested   TEXT    NOT NULL DEFAULT '',
+    next_path   TEXT    NOT NULL DEFAULT '/',
+    expires_at  TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL,
+    UNIQUE (provider, subject)
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
     -- SHA-256 of the cookie value, never the value itself. Someone who reads
     -- this table cannot mint a working cookie from it.

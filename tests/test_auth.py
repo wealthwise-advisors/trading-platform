@@ -272,6 +272,11 @@ PUBLIC = {"/api/health", "/api/version",
           # which by definition carries no session. Note what is NOT here:
           # /api/auth/resend-verification needs one, and is guarded.
           "/api/auth/signup-config", "/api/auth/verify-email",
+          # Finishing an X sign-up. Public by necessity: the caller is creating
+          # the account they would need a session for. It defends itself with a
+          # single-use handle that only a completed OAuth round-trip produces
+          # -- test_oauth_auth.py's forged-handle test is what holds it shut.
+          "/api/auth/oauth/complete",
           # OAuth has to be reachable without a session -- that is the point of
           # it -- and the provider redirects the browser back to the callback
           # carrying none of our cookies. These defend themselves with a

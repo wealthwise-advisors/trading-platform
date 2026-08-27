@@ -481,6 +481,18 @@ body{overflow-x:hidden;overflow-y:auto}
    could not have been made to work. */
 .soc{ grid-template-columns:repeat(3,1fr) }
 
+
+/* Completion mode: finishing a sign-up that began at a provider. */
+body.completing .hide-when-completing{ display:none !important }
+body.completing .brandline p::before,
+body.completing .brandline p::after{ opacity:.7 }
+.finishing{
+  margin:0 0 15px; padding:11px 13px; border-radius:10px; font-size:13px;
+  line-height:1.5; color:#c3d0e2;
+  background:rgba(255,255,255,.05); border:1px solid var(--line);
+}
+.finishing b{ color:var(--em2); font-weight:600 }
+
 </style>
 
 <div class="scene" aria-hidden="true">
@@ -1018,5 +1030,119 @@ body{overflow-x:hidden;overflow-y:auto}
       document.head.appendChild(s);
     })
     .catch(function () { /* leave the CAPTCHA hidden; the server still decides */ });
+})();
+</script>
+<script>
+/* ---------------------------------------------------------------------------
+   Completion mode.
+
+   ?complete=<handle> means the person has already proved they control an
+   account at a provider that returns no email address -- X returns none at any
+   scope. There is nothing to match them by and nothing to create an account
+   from, so the callback parked the identity and sent them here for a username
+   and an address.
+
+   The handle is NOT a session. It grants nothing until this form comes back
+   and the server makes a real account from it.
+--------------------------------------------------------------------------- */
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  var handle = q.get("complete");
+  if (!handle) return;
+
+  var provider = (q.get("provider") || "your account").replace(/[^a-zA-Z]/g, "");
+  var label = provider.charAt(0).toUpperCase() + provider.slice(1);
+  var form = document.querySelector("form.card");
+  if (!form) return;
+
+  document.body.classList.add("completing");
+
+  /* Hide what completion does not ask for. No password: the provider is the
+     credential, and inventing one here would leave the person with a second
+     way in they never chose. */
+  ["password", "confirm", "phone", "dob"].forEach(function (n) {
+    var el = form.querySelector('[name="' + n + '"]');
+    var box = el && (el.closest(".f") || el.closest(".combo"));
+    if (box) box.classList.add("hide-when-completing");
+  });
+  var phone = document.getElementById("cPhone");
+  if (phone) phone.classList.add("hide-when-completing");
+  var cap = document.getElementById("cap");
+  /* No CAPTCHA either: reaching this page required completing an OAuth
+     round-trip, which is a stronger bot check than a widget. */
+  if (cap) cap.classList.add("hide-when-completing");
+
+  /* A row that now holds only Country would sit half-empty. */
+  var country = document.getElementById("cCountry");
+  var row = country && country.closest(".two");
+  if (row) row.style.gridTemplateColumns = "1fr";
+
+  var note = document.createElement("div");
+  note.className = "finishing";
+  note.innerHTML = "You are signed in with <b>" + label + "</b>. " +
+    label + " does not share an email address, so choose a username and " +
+    "tell us where to reach you.";
+  form.insertBefore(note, form.firstChild);
+
+  var head = document.querySelector(".hello h2");
+  if (head) head.textContent = "Finish creating your account";
+  var sub = document.querySelector(".hello p");
+  if (sub) sub.textContent = "One more step and you are in.";
+
+  var btn = form.querySelector(".go");
+  if (btn) btn.childNodes[0].nodeValue = "Create Account ";
+
+  var msg = form.querySelector(".msg:not(.socmsg)");
+  function say(text, kind) {
+    if (!msg) return;
+    msg.innerHTML = text;
+    msg.className = "msg show " + (kind || "err");
+  }
+
+  /* Replace the ordinary submit path outright. Cloning the button drops every
+     listener the registration script attached, so the two cannot both fire and
+     send two different requests from one click. */
+  var fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+
+  async function submit() {
+    var name = (form.querySelector('[name="name"]') || {}).value || "";
+    var username = (form.querySelector('[name="username"]') || {}).value || "";
+    var email = (form.querySelector('[name="email"]') || {}).value || "";
+    var terms = form.querySelector(".terms input");
+
+    if (!username.trim() || !email.trim()) {
+      say("Please choose a username and enter your email address."); return;
+    }
+    if (!terms || !terms.checked) {
+      say("Please accept the Terms of Service and Privacy Policy."); return;
+    }
+
+    fresh.setAttribute("aria-busy", "true");
+    try {
+      var res = await fetch("/api/auth/oauth/complete", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          handle: handle, username: username.trim(),
+          email: email.trim(), full_name: name.trim(), accept_terms: true,
+        }),
+      });
+      var body = await res.json().catch(function () { return {}; });
+      if (res.ok) {
+        window.location.assign(body.next || "/");
+        return;
+      }
+      say(body.detail || "Could not finish creating your account.");
+    } catch (e) {
+      say("Cannot reach the server. Check your connection and try again.");
+    } finally {
+      fresh.removeAttribute("aria-busy");
+    }
+  }
+
+  fresh.addEventListener("click", function (e) { e.preventDefault(); submit(); });
+  form.addEventListener("submit", function (e) { e.preventDefault(); submit(); });
 })();
 </script>

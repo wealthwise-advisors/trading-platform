@@ -32,8 +32,9 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 
 #: v2 added users + sessions; v3 added oauth_identities + oauth_states;
 #: v4 added ownership (backtests.user_id, trades.user_id, users.is_owner);
-#: v5 added users.email_verified and made a non-empty email unique.
-SCHEMA_VERSION = 5
+#: v5 added users.email_verified and made a non-empty email unique;
+#: v6 added oauth_pending for sign-ups that need a username before they exist.
+SCHEMA_VERSION = 6
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:

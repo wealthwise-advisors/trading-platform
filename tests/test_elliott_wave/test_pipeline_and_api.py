@@ -269,6 +269,9 @@ class TestExistingApiUnchanged:
         # asks whether a CAPTCHA is configured), /api/auth/verify-email (reached
         # by clicking a link in an email, so it carries no session) and
         # /api/auth/resend-verification (which DOES need one and is guarded).
+        # +1 for /api/auth/oauth/complete, which turns a Twitter/X identity
+        # into an account -- X returns no email at any scope, so that sign-up
+        # has to stop and ask for one before an account can exist.
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
-        assert len(paths) == 35, sorted(paths)
+        assert len(paths) == 36, sorted(paths)

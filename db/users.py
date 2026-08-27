@@ -477,3 +477,104 @@ def take_verification_token(token_hash: str, db: Path | None = None) -> int | No
         return int(row["user_id"])
     finally:
         conn.close()
+
+
+# ── OAuth account creation ───────────────────────────────────────────────────
+def username_from(seed: str, db: Path | None = None) -> str:
+    """A free username derived from an email local part or a display name.
+
+    Providers hand back things like "Akash Nandepu" or "a.nandepu+news@x.com".
+    This reduces that to something the username rules accept, then appends a
+    number until it is free. It is only a SUGGESTION for the account that gets
+    created -- nothing here is authoritative, and the person can be given the
+    chance to change it.
+    """
+    import re as _re
+
+    base = _re.sub(r"[^a-zA-Z0-9._-]", "", (seed or "").split("@")[0].replace(" ", "."))
+    base = _re.sub(r"[._-]{2,}", ".", base).strip("._-").lower()[:24]
+    if len(base) < 3:
+        base = f"user{base}" if base else "user"
+
+    if get_user(base, db) is None:
+        return base
+    # Bounded: a suffix search that never terminates is a hang, not a name.
+    for n in range(2, 1000):
+        candidate = f"{base}{n}"[:32]
+        if get_user(candidate, db) is None:
+            return candidate
+    import secrets as _secrets
+    return f"{base[:20]}{_secrets.token_hex(4)}"
+
+
+def create_oauth_user(username: str, *, full_name: str = "", email: str = "",
+                      email_verified: bool = False,
+                      db: Path | None = None) -> int:
+    """Create an account that has no password and cannot be signed into with one.
+
+    password_hash is NOT NULL, so something has to go there. It is a hash of
+    random bytes that are immediately discarded: no string verifies against it,
+    including the empty one. That matters -- a placeholder like '' or 'x' would
+    make the account reachable by anyone who guessed the placeholder, turning
+    every OAuth account into a password account with a known password.
+
+    The person can set a real password later; until then the provider is the
+    only way in.
+    """
+    import secrets as _secrets
+
+    from api.auth import hash_password        # local: avoids a circular import
+
+    unusable = hash_password(_secrets.token_urlsafe(32))
+    return create_user(username, unusable, full_name=full_name, email=email,
+                       email_verified=email_verified, db=db)
+
+
+# ── pending OAuth sign-ups ───────────────────────────────────────────────────
+def new_pending_oauth(token_hash: str, provider: str, subject: str,
+                      suggested: str, next_path: str, expires_at: str,
+                      db: Path | None = None) -> None:
+    """Park an identity that needs a username before it can become an account."""
+    conn = connect(db)
+    try:
+        # One pending row per identity: asking again replaces the old handle so
+        # an abandoned link cannot be used later.
+        conn.execute("DELETE FROM oauth_pending WHERE provider = ? AND subject = ?",
+                     (provider, subject))
+        conn.execute(
+            "INSERT INTO oauth_pending (token_hash, provider, subject, suggested,"
+            " next_path, expires_at, created_at) VALUES (?,?,?,?,?,?,?)",
+            (token_hash, provider, subject, suggested, next_path, expires_at, _now()))
+    finally:
+        conn.close()
+
+
+def take_pending_oauth(token_hash: str, db: Path | None = None):
+    """Spend a pending handle. Returns the row, or None.
+
+    Single-use and deleted on read, inside one connection, so two submissions
+    of the same form cannot both create an account.
+    """
+    conn = connect(db)
+    try:
+        row = conn.execute(
+            "SELECT provider, subject, suggested, next_path, expires_at "
+            "FROM oauth_pending WHERE token_hash = ?", (token_hash,)).fetchone()
+        if row is None or row["expires_at"] <= _now():
+            return None
+        cur = conn.execute("DELETE FROM oauth_pending WHERE token_hash = ?",
+                           (token_hash,))
+        if cur.rowcount == 0:
+            return None                     # someone else spent it first
+        return dict(row)
+    finally:
+        conn.close()
+
+
+def purge_pending_oauth(db: Path | None = None) -> int:
+    conn = connect(db)
+    try:
+        return conn.execute("DELETE FROM oauth_pending WHERE expires_at <= ?",
+                            (_now(),)).rowcount or 0
+    finally:
+        conn.close()

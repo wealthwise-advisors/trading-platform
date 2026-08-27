@@ -284,12 +284,65 @@ def test_an_unverified_email_is_refused(client, db, configured, user, monkeypatc
     assert repo.list_identities(user.id) == []
 
 
-def test_an_unknown_email_is_refused_and_creates_nothing(client, db, configured,
-                                                         monkeypatch):
+def test_an_unknown_verified_email_creates_an_account(client, db, configured,
+                                                     monkeypatch):
+    """Registration is open, so this now provisions instead of refusing.
+
+    Inverted deliberately. It previously asserted OAuth must never create an
+    account, which was right while accounts came from a CLI. What has NOT
+    changed is the condition it rests on -- the address must be one the
+    PROVIDER states it verified. The test below is the half that still refuses.
+    """
     stub(monkeypatch, google_info(email="a-stranger@example.com"))
     r = finish(client, begin(client))
+
+    assert r.status_code == 303
+    assert "reason=" not in r.headers["location"]
+    created = repo.get_user_by_email("a-stranger@example.com")
+    assert created is not None
+    assert client.get("/api/auth/me").json()["username"] == created.username
+
+
+def test_an_auto_created_account_is_verified_but_not_an_owner(
+        client, db, configured, monkeypatch):
+    """Verified because Google said so. Never an owner, because nobody says so."""
+    stub(monkeypatch, google_info(email="a-stranger@example.com"))
+    finish(client, begin(client))
+
+    created = repo.get_user_by_email("a-stranger@example.com")
+    assert created.email_verified is True, "the provider verified this address"
+    assert created.is_owner is False, "the broker is never granted by signing in"
+
+
+def test_an_auto_created_account_has_no_usable_password(
+        client, db, configured, monkeypatch):
+    """password_hash is NOT NULL, so something is stored. Nothing may match it.
+
+    A placeholder like an empty string would make every OAuth account reachable
+    by anyone who guessed the placeholder, turning a passwordless account into
+    a password account with a known password.
+    """
+    stub(monkeypatch, google_info(email="a-stranger@example.com"))
+    finish(client, begin(client))
+    created = repo.get_user_by_email("a-stranger@example.com")
+
+    for guess in ("", "oauth", "password", "a-stranger@example.com",
+                  created.username, "!", "x" * 32):
+        assert not auth.verify_password(created.password_hash, guess), guess
+
+
+def test_an_unverified_email_still_creates_nothing(client, db, configured,
+                                                   monkeypatch):
+    """The condition auto-provisioning rests on.
+
+    An unverified address is a claim by whoever is signing in. Honouring it
+    would let someone assert another person's address and be handed an account
+    carrying it -- or be matched onto the account that already owns it.
+    """
+    stub(monkeypatch, google_info(email="a-stranger@example.com", verified=False))
+    r = finish(client, begin(client))
     assert "reason=oauth_no_account" in r.headers["location"]
-    assert repo.list_users() == [], "OAuth must never create an account"
+    assert repo.get_user_by_email("a-stranger@example.com") is None
 
 
 def test_a_disabled_account_is_refused(client, db, configured, user, monkeypatch):
@@ -380,11 +433,116 @@ def test_twitter_reports_no_email(client, db, configured):
     assert who.email == "" and who.email_verified is False
 
 
-def test_twitter_without_a_prelink_is_refused(client, db, configured, user, monkeypatch):
+def _handle_from(response) -> str:
+    """The pending handle the callback put in the redirect URL."""
+    return response.headers["location"].split("complete=")[1].split("&")[0]
+
+
+def test_twitter_without_a_prelink_asks_for_details(client, db, configured,
+                                                    user, monkeypatch):
+    """X has no address to offer, so it asks rather than refusing.
+
+    This was a flat refusal while an administrator had to pre-link every
+    identity. The person HAS proved they control that X account -- there is
+    simply nothing to build an account from, so they are asked.
+    """
     stub(monkeypatch, twitter_info())
     r = finish(client, begin(client, "twitter"), provider="twitter")
-    assert "reason=oauth_no_account" in r.headers["location"]
+
+    loc = r.headers["location"]
+    assert "autotrader_signup.html" in loc and "complete=" in loc
+    assert "reason=" not in loc
+    # Crucially: no account and no session yet.
     assert repo.list_identities(user.id) == []
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_the_pending_handle_is_not_a_session(client, db, configured, user,
+                                             monkeypatch):
+    """Holding it proves an OAuth round-trip happened. It grants nothing."""
+    stub(monkeypatch, twitter_info())
+    handle = _handle_from(finish(client, begin(client, "twitter"),
+                                 provider="twitter"))
+
+    assert client.get("/api/auth/me").status_code == 401
+    assert len(handle) >= 32, "must not be guessable"
+
+    from db.connection import connect
+    conn = connect()
+    try:
+        rows = [dict(x) for x in conn.execute("SELECT * FROM oauth_pending")]
+    finally:
+        conn.close()
+    assert rows, "nothing was parked"
+    assert handle not in str(rows), "the raw handle was stored, not its hash"
+
+
+def test_completing_a_twitter_signup_creates_and_links(client, db, configured,
+                                                       monkeypatch):
+    stub(monkeypatch, twitter_info())
+    handle = _handle_from(finish(client, begin(client, "twitter"),
+                                 provider="twitter"))
+
+    done = client.post("/api/auth/oauth/complete", json={
+        "handle": handle, "username": "xperson",
+        "email": "xperson@example.com", "accept_terms": True})
+    assert done.status_code == 201, done.text
+
+    assert repo.get_user("xperson") is not None
+    assert repo.identity_user("twitter", TWITTER_SUB).username == "xperson"
+    assert client.get("/api/auth/me").json()["username"] == "xperson"
+
+
+def test_a_typed_address_is_never_marked_verified(client, db, configured,
+                                                  monkeypatch):
+    """X told us nothing about this address; the person typed it a moment ago.
+
+    Marking it verified would let an X user claim someone else's Google
+    identity later, because the email path trusts a verified address.
+    """
+    stub(monkeypatch, twitter_info())
+    handle = _handle_from(finish(client, begin(client, "twitter"),
+                                 provider="twitter"))
+    client.post("/api/auth/oauth/complete", json={
+        "handle": handle, "username": "xperson",
+        "email": "xperson@example.com", "accept_terms": True})
+
+    assert repo.get_user("xperson").email_verified is False
+
+
+def test_a_pending_handle_is_single_use(client, db, configured, monkeypatch):
+    stub(monkeypatch, twitter_info())
+    handle = _handle_from(finish(client, begin(client, "twitter"),
+                                 provider="twitter"))
+    body = {"handle": handle, "username": "xperson",
+            "email": "xperson@example.com", "accept_terms": True}
+
+    assert client.post("/api/auth/oauth/complete", json=body).status_code == 201
+    again = client.post("/api/auth/oauth/complete", json=dict(
+        body, username="xperson2", email="xperson2@example.com"))
+    assert again.status_code == 400
+    assert repo.get_user("xperson2") is None
+
+
+def test_completion_refuses_a_forged_handle(client, db, configured):
+    r = client.post("/api/auth/oauth/complete", json={
+        "handle": "not-a-real-handle-at-all-0123456789",
+        "username": "intruder", "email": "intruder@example.com",
+        "accept_terms": True})
+    assert r.status_code == 400
+    assert repo.get_user("intruder") is None, "an account was created from nothing"
+
+
+def test_completion_requires_the_terms(client, db, configured, monkeypatch):
+    stub(monkeypatch, twitter_info())
+    handle = _handle_from(finish(client, begin(client, "twitter"),
+                                 provider="twitter"))
+
+    done = client.post("/api/auth/oauth/complete", json={
+        "handle": handle, "username": "xperson",
+        "email": "xperson@example.com", "accept_terms": False})
+    assert done.status_code == 400
+    assert repo.get_user("xperson") is None
 
 
 def test_twitter_with_a_prelink_signs_in(client, db, configured, user, monkeypatch):
