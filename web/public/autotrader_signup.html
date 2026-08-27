@@ -516,6 +516,25 @@ body.completing .brandline p::after{ opacity:.7 }
 .terms input:focus ~ .box,
 .terms input:focus-visible ~ .box{ outline:2px solid var(--em2); outline-offset:2px }
 
+
+/* THE TICK.
+ *
+ * The checked-state rules for this design are written against `.chk`:
+ *
+ *     .chk input:checked+.box     { background:var(--em) }
+ *     .chk input:checked+.box svg { opacity:1 }
+ *
+ * The consent label is class="terms", not .chk, so neither ever matched -- and
+ * the base rule is `.box svg{opacity:0}`. The result is a checkbox that toggles
+ * its input correctly and shows nothing at all, which is indistinguishable from
+ * a broken control and was reported as exactly that.
+ *
+ * It survived testing because every assertion checked `input.checked`, the DOM
+ * property, and never whether a human could SEE the state change.
+ */
+.terms input:checked + .box{ background:var(--em); border-color:var(--em) }
+.terms input:checked + .box svg{ opacity:1; transform:none }
+
 </style>
 
 <div class="scene" aria-hidden="true">
