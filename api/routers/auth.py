@@ -444,3 +444,56 @@ def reset_password(body: ResetRequest, request: Request, response: Response):
     repo.touch_login(user_id)
     return Me(username=user.username, full_name=user.full_name,
               email=user.email, country=user.country)
+
+
+class ForgotUsernameRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=254)
+    captcha_token: str = Field(default="", max_length=4096)
+
+
+#: The single answer /forgot-username gives, whatever actually happened.
+_USERNAME_REPLY = {
+    "ok": True,
+    "detail": ("If that address has an account, we have emailed the username "
+               "to it. Check your inbox, and your spam folder."),
+}
+
+
+@router.post("/forgot-username")
+def forgot_username(body: ForgotUsernameRequest, request: Request,
+                    background: BackgroundTasks):
+    """Email someone their own username.
+
+    Sign-in is by username, so forgetting it locks a person out exactly as
+    completely as forgetting the password -- and password reset does not help,
+    because it asks for the address and then never says what the username is.
+
+    No token, no link. A username is half of a public pair and grants nothing
+    on its own, so nothing here can be spent. That is what makes it safe to
+    send on a bare request.
+
+    Same disclosure rule as /forgot-password: one response for every outcome,
+    and the send is queued rather than awaited so a hit cannot be told from a
+    miss by timing.
+    """
+    ip = auth.client_ip(request)
+
+    if wait := auth.signup_throttle.retry_after(ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Try again later.",
+            headers={"Retry-After": str(wait)},
+        )
+    auth.signup_throttle.record(ip)
+
+    if not captcha.verify(body.captcha_token, ip):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "Could not confirm you are human. Please try again.")
+
+    user = repo.get_user_by_email(body.email.strip())
+    if user is None or not user.is_active:
+        log.info("username reminder asked for an unknown address from %s", ip)
+    else:
+        background.add_task(verification.send_username, user.email, user.username)
+
+    return _USERNAME_REPLY

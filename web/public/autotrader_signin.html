@@ -389,6 +389,17 @@ body.recovery .hide-in-recovery{ display:none !important }
 .row a:hover{ color:var(--ink); text-decoration-thickness:2px }
 .row a:focus-visible{ outline:2px solid var(--em2); outline-offset:2px }
 
+
+/* Two recovery links now, because sign-in is by USERNAME -- forgetting that
+   locks someone out exactly as completely as forgetting the password, and
+   password reset never tells them what it is. */
+.row .sep{ margin:0 7px; color:#5c6a80 }
+@media (max-width:420px){
+  .row{ flex-wrap:wrap; row-gap:6px }
+  .row .sep{ display:none }
+  .row a{ display:inline-block }
+}
+
 </style>
 
 <div class="scene" aria-hidden="true">
@@ -452,7 +463,7 @@ body.recovery .hide-in-recovery{ display:none !important }
         <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
              stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
       </span>Remember me</label>
-      <a href="autotrader_signin.html?forgot=1">Forgot password?</a>
+      <a href="autotrader_signin.html?forgot=1">Forgot password?</a><span class="sep">&middot;</span><a href="autotrader_signin.html?forgotuser=1">Forgot username?</a>
     </div>
 
     <button class="go" type="submit">Sign In
@@ -953,5 +964,124 @@ body.recovery .hide-in-recovery{ display:none !important }
       document.head.appendChild(s);
     })
     .catch(function () { /* leave it hidden; the server still decides */ });
+})();
+</script>
+<script>
+/* ---------------------------------------------------------------------------
+   "Forgot username?" -- the third recovery mode of this card.
+
+   Sign-in is by USERNAME. Someone who remembers their email and forgets their
+   username is locked out exactly as completely as someone who forgot the
+   password, and password reset does not rescue them: it asks for the address
+   and then never tells them what the username is.
+
+   Same shape as ?forgot=1, including the CAPTCHA -- this also sends mail on
+   demand to an address the caller picks.
+--------------------------------------------------------------------------- */
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  if (!q.get("forgotuser")) return;
+
+  var form = document.querySelector("form.card");
+  if (!form) return;
+  document.body.classList.add("recovery");
+
+  var head = document.querySelector(".hello h2");
+  var sub = document.querySelector(".hello p");
+  var btn = form.querySelector(".go");
+  var msg = form.querySelector(".msg:not(.socmsg)");
+  if (!msg) {
+    msg = document.createElement("div");
+    msg.className = "msg";
+    msg.setAttribute("role", "status");
+    btn.insertAdjacentElement("afterend", msg);
+  }
+  function say(t, kind) { msg.innerHTML = t; msg.className = "msg show " + (kind || "err"); }
+
+  [".tabs", ".or", ".soc", ".socmsg", ".row"].forEach(function (sel) {
+    var el = form.querySelector(sel) || document.querySelector(sel);
+    if (el) el.classList.add("hide-in-recovery");
+  });
+  var pBox = document.getElementById("p") && document.getElementById("p").closest(".f");
+  if (pBox) pBox.classList.add("hide-in-recovery");
+
+  if (head) head.textContent = "Find your username";
+  if (sub) sub.textContent = "We will email it to the address on your account.";
+  if (btn && btn.childNodes.length) btn.childNodes[0].nodeValue = "Email my username ";
+
+  var u = document.getElementById("u");
+  if (u) {
+    u.type = "email"; u.name = "email"; u.value = "";
+    u.setAttribute("placeholder", "Email Address");
+    u.setAttribute("autocomplete", "email");
+  }
+
+  var back = document.createElement("a");
+  back.className = "backlink";
+  back.href = "autotrader_signin.html";
+  back.textContent = "Back to sign in";
+  form.appendChild(back);
+
+  /* The CAPTCHA, for the same reason as ?forgot=1: this sends mail to an
+     address the caller chooses. Loaded only when a site key exists. */
+  var slot = document.createElement("div");
+  slot.className = "cap"; slot.id = "cap";
+  slot.innerHTML = '<div id="cf-turnstile"></div>' +
+                   '<p class="why">Confirms you are a person, not a script.</p>';
+  btn.insertAdjacentElement("beforebegin", slot);
+  window.__captchaToken = "";
+  fetch("/api/auth/signup-config", { credentials: "same-origin" })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (cfg) {
+      var key = cfg && cfg.captcha && cfg.captcha.site_key;
+      if (!key) return;
+      slot.classList.add("on");
+      window.__onTsU = function (t) { window.__captchaToken = t; };
+      window.__offTsU = function () { window.__captchaToken = ""; };
+      window.__renderTsU = function () {
+        window.turnstile.render("#cf-turnstile", {
+          sitekey: key, theme: "dark",
+          callback: window.__onTsU,
+          "expired-callback": window.__offTsU,
+          "error-callback": window.__offTsU,
+        });
+      };
+      var s = document.createElement("script");
+      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__renderTsU";
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    })
+    .catch(function () { /* stays hidden; the server still decides */ });
+
+  /* Cloning drops the sign-in listeners so one click cannot also try to log in. */
+  var fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+
+  fresh.addEventListener("click", async function (e) {
+    e.preventDefault();
+    var email = (u && u.value || "").trim();
+    if (!email) { say("Please enter your email address."); return; }
+    fresh.setAttribute("aria-busy", "true");
+    try {
+      var res = await fetch("/api/auth/forgot-username", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email,
+                               captcha_token: window.__captchaToken || "" }),
+      });
+      var body = await res.json().catch(function () { return {}; });
+      /* The server answers the same way whether or not that address has an
+         account, so this reports what it said and adds nothing. */
+      say(body.detail || "If that address has an account, the username is on its way.",
+          res.ok ? "info" : "err");
+      if (res.ok && u) u.value = "";
+    } catch (err) {
+      say("Cannot reach the server. Check your connection and try again.");
+    } finally {
+      fresh.removeAttribute("aria-busy");
+    }
+  });
+  form.addEventListener("submit", function (e) { e.preventDefault(); fresh.click(); });
 })();
 </script>

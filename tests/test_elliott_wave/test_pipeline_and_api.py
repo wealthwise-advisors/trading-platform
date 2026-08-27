@@ -278,4 +278,5 @@ class TestExistingApiUnchanged:
         # anybody is.
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
-        assert len(paths) == 38, sorted(paths)
+        # +1 for /api/auth/forgot-username.
+        assert len(paths) == 39, sorted(paths)

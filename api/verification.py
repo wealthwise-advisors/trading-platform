@@ -288,6 +288,50 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
         return False
 
 
+def send_username(email: str, username: str) -> bool:
+    """Remind someone of their own username. False when unconfigured or failed.
+
+    No token and no link. A username is not a credential -- it is half of a
+    public pair, and knowing it grants nothing without the password. So this
+    carries nothing that could be spent, which is why it can be sent on a bare
+    request where a reset link could not.
+    """
+    if not email or not configured():
+        log.info("username reminder requested but mail is dormant")
+        return False
+    try:
+        payload = {
+            "from": _sender(),
+            "to": [email],
+            "subject": "Your AutoTrader username",
+            "text": (
+                f"Hello,\n\n"
+                f"Someone asked for the username on the AutoTrader account "
+                f"registered to this address. It is:\n\n"
+                f"    {username}\n\n"
+                f"Sign in at {_base_url()}/autotrader_signin.html\n\n"
+                f"If this was not you, no action is needed -- a username on "
+                f"its own cannot be used to sign in.\n"
+            ),
+        }
+        req = urllib.request.Request(
+            _https_only(API_URL), data=json.dumps(payload).encode(),
+            headers=_headers(),
+        )
+        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
+            ok = 200 <= resp.status < 300
+        if ok:
+            _remember("")
+            log.info("username reminder sent to %s", _redact(email))
+        return ok
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        reason = _explain(exc)
+        _remember(reason)
+        log.warning("could not send a username reminder to %s: %s",
+                    _redact(email), reason)
+        return False
+
+
 def consume_reset(token: str, new_password_hash: str) -> int | None:
     """Spend a reset token and set the new password. Returns the user id."""
     if not token:

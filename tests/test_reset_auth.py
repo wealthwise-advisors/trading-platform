@@ -430,3 +430,116 @@ def test_the_forgot_link_is_not_dead(db):
     assert m, "the Forgot password link is gone"
     assert m.group(1) != "#", "the link is still dead"
     assert "forgot" in m.group(1)
+
+
+# ── forgot username ──────────────────────────────────────────────────────────
+#
+# Sign-in is by USERNAME, so forgetting it locks a person out exactly as
+# completely as forgetting the password -- and reset does not rescue them,
+# because it asks for the address and never says what the username is.
+
+
+@pytest.fixture
+def sent_names(monkeypatch):
+    out = []
+    monkeypatch.setattr(verification, "send_username",
+                        lambda email, username: (out.append((email, username)), True)[1])
+    return out
+
+
+def forgot_user(client, email):
+    return client.post("/api/auth/forgot-username", json={"email": email})
+
+
+def test_a_username_reminder_is_sent(client, db, user, sent_names):
+    r = forgot_user(client, "t@example.com")
+    assert r.status_code == 200
+    assert sent_names == [("t@example.com", "trader")]
+
+
+def test_it_does_not_reveal_whether_the_address_exists(client, db, user, sent_names):
+    """Same rule as /forgot-password -- otherwise this is a membership oracle."""
+    a = forgot_user(client, "t@example.com")
+    b = forgot_user(client, "nobody-at-all@example.com")
+    assert a.status_code == b.status_code == 200
+    assert a.json() == b.json()
+
+
+def test_the_reply_never_contains_the_username(client, db, user, sent_names):
+    """It goes to the INBOX, not to whoever asked.
+
+    Returning it in the response would hand any caller the username for any
+    address they can guess -- which is most of what an attacker needs before
+    they start on the password.
+    """
+    r = forgot_user(client, "t@example.com")
+    assert "trader" not in r.text
+
+
+def test_a_disabled_account_gets_nothing(client, db, user, sent_names):
+    repo.set_active("trader", False)
+    forgot_user(client, "t@example.com")
+    assert sent_names == []
+
+
+def test_the_send_is_queued_not_awaited(client, db, user, sent_names, monkeypatch):
+    """Same timing rule as /forgot-password."""
+    from starlette.background import BackgroundTasks
+
+    queued = []
+    real = BackgroundTasks.add_task
+    monkeypatch.setattr(BackgroundTasks, "add_task",
+                        lambda self, f, *a, **k: (queued.append(f), real(self, f, *a, **k))[1])
+    forgot_user(client, "t@example.com")
+    assert queued, "sent inline -- a hit is distinguishable from a miss by timing"
+
+
+def test_a_username_miss_queues_nothing(client, db, sent_names, monkeypatch):
+    from starlette.background import BackgroundTasks
+
+    queued = []
+    real = BackgroundTasks.add_task
+    monkeypatch.setattr(BackgroundTasks, "add_task",
+                        lambda self, f, *a, **k: (queued.append(f), real(self, f, *a, **k))[1])
+    forgot_user(client, "nobody-at-all@example.com")
+    assert queued == [] and sent_names == []
+
+
+def test_it_is_rate_limited(client, db, user, sent_names):
+    codes = [forgot_user(client, "t@example.com").status_code for _ in range(8)]
+    assert 429 in codes, f"never throttled: {codes}"
+
+
+def test_the_reminder_carries_no_token(client, db, user, monkeypatch):
+    """A username is not a credential, so nothing spendable may travel with it.
+
+    Bundling a reset token into a username reminder would mean every such email
+    was also a password-changing link -- a far larger thing to leave in an inbox.
+    """
+    import inspect
+    src = inspect.getsource(verification.send_username)
+    # Assert on what it CALLS, not on the word "token" -- the docstring says
+    # "No token and no link", so a naive text search matches its own promise.
+    for minted in ("new_reset_token", "new_email_token", "new_verification_token"):
+        assert minted not in src, f"send_username mints {minted}"
+
+    # And nothing spendable reaches the message body.
+    captured = {}
+    monkeypatch.setattr(verification.urllib.request, "urlopen",
+                        lambda *a, **k: (_ for _ in ()).throw(OSError("no network")))
+    monkeypatch.setenv(verification.API_KEY_ENV, "re_test")
+    monkeypatch.setenv(verification.FROM_ENV, "x@example.com")
+    monkeypatch.setenv(verification.BASE_URL_ENV, "https://example.com")
+
+    real_req = verification.urllib.request.Request
+
+    def spy(url, data=None, headers=None):
+        captured["body"] = (data or b"").decode()
+        return real_req(url, data=data, headers=headers or {})
+
+    monkeypatch.setattr(verification.urllib.request, "Request", spy)
+    verification.send_username("t@example.com", "trader")
+
+    body = captured.get("body", "")
+    assert "trader" in body, "the username should be in the message"
+    assert "verify-email" not in body and "?reset=" not in body,         "a spendable link reached a username reminder"

@@ -284,6 +284,9 @@ PUBLIC = {"/api/health", "/api/version",
           # them shut, including that neither reveals whether an address has
           # an account.
           "/api/auth/forgot-password", "/api/auth/reset-password",
+          # Forgetting a USERNAME locks you out as completely as forgetting
+          # the password, and reset never says what the username is.
+          "/api/auth/forgot-username",
           # OAuth has to be reachable without a session -- that is the point of
           # it -- and the provider redirects the browser back to the callback
           # carrying none of our cookies. These defend themselves with a
