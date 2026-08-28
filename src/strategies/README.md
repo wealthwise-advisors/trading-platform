@@ -1,29 +1,42 @@
-# 🧠 `src/strategies`
+<div align="center">
 
-**Turning a reading of the market into a decision.**
+# 🧠 Trading Strategies
 
-Every strategy implements the same interface from [`base_strategy.py`](base_strategy.py),
-so any of them can be dropped into a backtest or a replay without the engine knowing
-which one it is holding.
+**The rules that decide. Swap any one for any other.**
 
-### Stateful on purpose
-
-A strategy is allowed to remember. RSI divergence arms a setup on one bar and
-confirms it several bars later, which is why **each timeframe gets its own instance**
-— sharing one across timeframes would let an hourly bar overwrite the one-minute
-strategy's pre-conditions and silently change its signals.
-
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`rsi_divergence.py`](rsi_divergence.py) | RSI Divergence Strategy ======================= Based on strategy_original_first.py and strategy_six.py. | 308 |
-| [`breakout.py`](breakout.py) | Donchian Channel breakout strategy (common in futures trend-following). | 106 |
-| [`regime_adaptive.py`](regime_adaptive.py) | Regime-adaptive strategy: auto-switches trading logic based on the current market regime… | 104 |
-| [`rsi_mean_reversion.py`](rsi_mean_reversion.py) | RSI mean-reversion strategy. | 99 |
-| [`ma_crossover.py`](ma_crossover.py) | Moving Average Crossover strategy (fast MA crosses above/below slow MA). | 65 |
-| [`base_strategy.py`](base_strategy.py) | The interface every strategy implements, so any of them can be swapped into a run. | 45 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | Bars + indicators ➜ buy, sell or hold |
+| 🔌 **Interface** | Implement [`base_strategy.py`](base_strategy.py) and the engine can run it |
+| 🎛 **Parameters** | Declared in [`api/strategy_registry.py`](../../api/strategy_registry.py) so the optimiser can sweep them |
+| 📦 **Holds** | `6` files · `727` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`rsi_divergence.py`](rsi_divergence.py) | 📉 RSI divergence against confirmed swing pivots. | 308 |
+| [`breakout.py`](breakout.py) | 📊 Donchian channel breakout. | 106 |
+| [`regime_adaptive.py`](regime_adaptive.py) | 🌤 Switches logic based on the detected regime. | 104 |
+| [`rsi_mean_reversion.py`](rsi_mean_reversion.py) | ↩️ Fade the extreme. | 99 |
+| [`ma_crossover.py`](ma_crossover.py) | ✂️ Fast MA crosses slow MA. | 65 |
+| [`base_strategy.py`](base_strategy.py) | The interface every strategy implements. | 45 |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+
+</div>

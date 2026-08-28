@@ -1,24 +1,37 @@
-# 🖥 `web/src/features`
+<div align="center">
 
-**The pages.**
+# 🖼 Application Pages
 
-| Feature | What it is |
-|---|---|
-| [`replay/`](replay) | **Market Grid** — the multi-timeframe grid, consolidated tape and playback controls |
-| [`backtest/`](backtest) | Configure, run and read a scored backtest |
-| [`export/`](export) | Pull bars out for use elsewhere |
+**One folder per screen. Nothing shared lives here.**
 
-`replay/ReplayPage.tsx` is the largest component in the app. The logic it depends on
-is deliberately kept in [`../lib`](../lib), where it can be tested directly.
-
-### Subdirectories
-
-| Directory | Files |
-|---|---:|
-| [`backtest/`](backtest) | 2 |
-| [`export/`](export) | 1 |
-| [`replay/`](replay) | 1 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Rule** | Used by two screens? It belongs in [`components/`](../components) |
+| 🧭 **Routing** | These are tabs within one document, switched in [`App.tsx`](../App.tsx) |
+
+
+---
+
+## 🗃 Subfolders
+
+| Folder | ➜ What lives there |
+|:--|:--|
+| [`backtest/`](backtest) | 📊 Configure a run and read its results |
+| [`export/`](export) | 📤 Raw OHLC download |
+| [`replay/`](replay) | 📡 Market Grid — live and replayed bars |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+
+</div>

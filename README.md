@@ -1065,7 +1065,7 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
                 └------------▶  <a href=".github/workflows">workflows/</a>   <i>CI and deploy</i>  <b>3</b>
                                 |- - - ▶  <a href=".github/workflows/ci.yml">ci.yml</a>
                                 |- - - ▶  <a href=".github/workflows/deploy.yml">deploy.yml</a>
-                                └- - - ▶  <a href=".github/workflows/probe-creds.yml">probe-creds.yml</a>
+                                └- - - ▶  <a href=".github/workflows/oauth-logs.yml">oauth-logs.yml</a>
 </pre>
 
 </details>

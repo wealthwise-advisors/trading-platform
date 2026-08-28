@@ -1,46 +1,68 @@
-# 🐍 `src`
+<div align="center">
 
-**The engine. Everything that turns bars into a result.**
+# 🐍 The Trading Engine
 
-No web framework, no HTTP, no React — this layer knows nothing about how it is
-called. That separation is deliberate: the same analysis runs from a test, from the
-API, and from a script, and gets the same answer each time.
+**Every number the app reports is computed here. No HTTP, no UI.**
 
-### The packages
+![pure%20python](https://img.shields.io/badge/pure%20python-no%20web-3776AB?style=flat-square&logo=python&logoColor=white) ![importable](https://img.shields.io/badge/importable-standalone-22c55e?style=flat-square)
 
-| Package | What it owns |
-|---|---|
-| [`analysis/`](analysis) | Reading the market — waves, patterns, indicators, regime |
-| [`strategies/`](strategies) | Turning that reading into buy and sell decisions |
-| [`backtesting/`](backtesting) | Replaying history bar by bar, on one shared clock |
-| [`broker/`](broker) | Charging for fills — commission, slippage, tick rounding |
-| [`data/`](data) | Getting bars in, and aggregating them **one** way |
-| [`live/`](live) | The live loop (experimental) |
-
-### The rule that shapes this layer
-
-**One aggregator.** Bar aggregation lives only in [`data/resample.py`](data/resample.py).
-It used to be duplicated across three providers, and the copy that forgot to anchor to
-the session open kept reintroducing shifted bars on whichever path happened to reach
-it. Every timeframe in the app now derives from that single function.
-
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`config.py`](config.py) | Load and merge settings.yaml with optional credentials.yaml. | 71 |
-
-### Subdirectories
-
-| Directory | Files |
-|---|---:|
-| [`analysis/`](analysis) | 20 |
-| [`backtesting/`](backtesting) | 7 |
-| [`broker/`](broker) | 4 |
-| [`data/`](data) | 11 |
-| [`live/`](live) | 2 |
-| [`strategies/`](strategies) | 7 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | Data ➜ indicators ➜ strategy ➜ fills ➜ metrics |
+| 🚫 **Knows nothing about** | FastAPI, React, sessions or users |
+| ✅ **Why that matters** | It can be imported from a script, a notebook or a test with no server running |
+| 📦 **Holds** | `1` files · `71` lines · `6` subfolders |
+
+
+---
+
+## 🔄 How it fits together
+
+```
+   data/          analysis/         strategies/       backtesting/     broker/
+   ┌───────┐      ┌─────────┐      ┌───────────┐     ┌──────────┐    ┌────────┐
+   │ bars  │ ───► │ signals │ ───► │  decide   │ ──► │  replay  │ ─► │ fills  │
+   │ OHLCV │      │ RSI·EW  │      │ buy/sell  │     │  engine  │    │ + cost │
+   └───────┘      └─────────┘      └───────────┘     └────┬─────┘    └────────┘
+                                                          ▼
+                                                    trades · equity · metrics
+```
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`config.py`](config.py) | Reads `config/settings.yaml` and hands out typed settings. | 71 |
+
+
+---
+
+## 🗃 Subfolders
+
+| Folder | ➜ What lives there |
+|:--|:--|
+| [`analysis/`](analysis) | 🔍 Indicators, swings, patterns and Elliott Wave |
+| [`backtesting/`](backtesting) | ⏱ The engines that run those rules over history |
+| [`broker/`](broker) | 💰 What a fill actually costs |
+| [`data/`](data) | 📥 Where bars come from — Schwab, Rithmic, CSV, synthetic |
+| [`live/`](live) | 📡 Live trading — a stub, deliberately |
+| [`strategies/`](strategies) | 🧠 The rules that decide to buy or sell |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../README.md">Project README</a></sub>
+
+</div>

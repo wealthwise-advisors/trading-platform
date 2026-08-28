@@ -1,17 +1,37 @@
-# 📤 `api/export`
+<div align="center">
 
-**Getting results out — CSV, XLSX, PDF, DOCX.**
+# 📤 File Writers
 
-Four formats because four audiences: a spreadsheet for analysis, a PDF for reading,
-a DOCX for editing, and CSV for whatever comes next.
+**One backtest, four file formats.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`formats.py`](formats.py) | Shared multi-format export helpers -- turn one or more labeled DataFrames into CSV, Excel, PDF, or Word bytes. | 117 |
-| [`report_export.py`](report_export.py) | Builds the DataFrames used by the multi-format backtest report export (CSV/Excel/PDF/Word) -- a metrics… | 54 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | CSV · XLSX · PDF · DOCX from the same result object |
+| 📐 **Rule** | A writer formats. It never re-computes a number |
+| 📦 **Holds** | `2` files · `171` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`formats.py`](formats.py) | The writers themselves, one per format. | 117 |
+| [`report_export.py`](report_export.py) | Wraps a rendered report into a downloadable file. | 54 |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+
+</div>

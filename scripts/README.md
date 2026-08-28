@@ -1,24 +1,49 @@
-# 🚀 `scripts`
+<div align="center">
 
-**Command-line entry points and the local launcher.**
+# 🛠 Command-Line Tools
 
-[`run-autotrader.cmd`](run-autotrader.cmd) is the one to know on Windows: it frees
-ports 8000 and 5173, starts the API and the web server in their own windows, and pins
-Python 3.12 — 3.14 breaks `pandas_ta` and produces a test failure that looks real but
-is not.
+**Everything you run by hand.**
 
-### Files in this directory
-
-| File | Purpose |
-|---|---|
-| [`manage_users.py`](manage_users.py) | 👤 Create, disable and inspect accounts, and the **only** way to grant `is_owner` — the Schwab entitlement. Needs shell access on the server, which is the point. |
-| [`run_local.py`](run_local.py) | 🖥 Serves the sign-in pages, the built dashboard and the API on **one** port, so local behaviour matches production. | Lines |
-|---|---|---:|
-| [`run_backtest.py`](run_backtest.py) | Quick CLI backtest runner. | 109 |
-| [`download_rithmic_data.py`](download_rithmic_data.py) | CLI script to download historical data from Rithmic and cache it locally. | 70 |
-| [`run-autotrader.cmd`](run-autotrader.cmd) | Start AutoTrader locally: FastAPI on :8000, Vite on :5173. | 45 |
-| [`generate_data.py`](generate_data.py) | Generate synthetic historical data for all configured symbols. | 34 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| ▶️ **Run the app locally** | `py -3.12 scripts/run_local.py` ➜ one origin on `:8800` |
+| 👤 **Manage accounts** | `py -3.12 scripts/manage_users.py list` |
+| 🐍 **Python** | **Must be 3.12.** 3.14 breaks `pandas_ta` and fakes a test failure |
+| 📦 **Holds** | `6` files · `771` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`run_local.py`](run_local.py) | 🖥 Serves the sign-in pages, the built dashboard and the API on **one** port, so local matches production. | 203 |
+| [`manage_users.py`](manage_users.py) | 👤 Create, inspect, disable and link accounts. | 310 |
+| [`run_backtest.py`](run_backtest.py) | ⏱ Run a backtest from the terminal, no browser. | 109 |
+| [`generate_data.py`](generate_data.py) | 🎲 Write synthetic bars. | 34 |
+| [`download_rithmic_data.py`](download_rithmic_data.py) | 📡 Pull history from Rithmic. | 70 |
+| [`run-autotrader.cmd`](run-autotrader.cmd) | 🪟 Windows launcher. | 45 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **`run_local.py` prefers the Desktop copies of the sign-in pages** over [`web/public/`](../web/public). If a change seems not to apply locally, that is why.
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../README.md">Project README</a></sub>
+
+</div>

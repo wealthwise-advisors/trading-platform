@@ -1,21 +1,41 @@
-# 📋 `api/schemas`
+<div align="center">
 
-**Request and response models.**
+# 📋 Request & Response Models
 
-Pydantic models, which means validation happens at the edge. A malformed request is
-rejected with a message naming the field, rather than becoming a `500` from deep
-inside the engine.
+**The shape of every payload, in one place.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`backtest.py`](backtest.py) | Pydantic request/response models for the backtest endpoints. | 116 |
-| [`elliott_wave.py`](elliott_wave.py) | Pydantic response models for the Elliott Wave endpoint. | 65 |
-| [`replay.py`](replay.py) | Request/response models for the live-replay endpoints. | 58 |
-| [`optimize.py`](optimize.py) | Request/response models for the Strategy Optimizer (parameter sweep). | 38 |
-| [`schwab.py`](schwab.py) | Request/response models for the Schwab OAuth endpoints. | 21 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | Pydantic models — validation in, serialisation out |
+| 🔗 **Mirrored by** | [`web/src/lib/types.ts`](../../web/src/lib/types.ts) |
+| ⚠️ **Watch for** | Change a field here ➜ change it there, or the UI silently drops it |
+| 📦 **Holds** | `5` files · `298` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`backtest.py`](backtest.py) | Run request, summary, trades, equity curve. | 116 |
+| [`elliott_wave.py`](elliott_wave.py) | Wave structures and their measurements. | 65 |
+| [`replay.py`](replay.py) | Replay session setup and per-bar frames. | 58 |
+| [`optimize.py`](optimize.py) | Optimizer sweep request and ranked results. | 38 |
+| [`schwab.py`](schwab.py) | Schwab auth status and callback payloads. | 21 |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+
+</div>

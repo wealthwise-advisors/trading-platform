@@ -1,57 +1,64 @@
-# 📚 `docs`
+<div align="center">
 
-**Architecture, rules and guides.**
+# 📚 Documentation
 
-Start with [QUICKSTART.md](QUICKSTART.md) to get it running, then
-[ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit.
+**The long-form references. Start with QUICKSTART.**
 
-New here and wondering what the product is meant to do before reading how it
-works? [PRD.md](PRD.md) answers that, and [SRS.md](SRS.md) turns it into
-requirements you can check against the test suite.
-
-The Elliott Wave documents are the deepest material here: the rules a count must
-satisfy, how they are implemented, and the software requirements they came from.
-
-### Product and specification
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`PRD.md`](PRD.md) | Product Requirements Document — problem, users, goals, non-goals | 169 |
-| [`SRS.md`](SRS.md) | Software Requirements Specification — platform-wide, with traceability | 279 |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Architecture — layers, engines, data flow, deploy | 275 |
-| [`UI_UX.md`](UI_UX.md) | UI / UX — structure, motion policy, state legibility | 198 |
-| [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | Developer Guide — setup, workflows, debugging by symptom | 233 |
-
-### Elliott Wave
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`ELLIOTT_WAVE_SRS.md`](ELLIOTT_WAVE_SRS.md) | Elliott Wave — Software Requirements Specification | 1,251 |
-| [`ELLIOTT_WAVE_RULES.md`](ELLIOTT_WAVE_RULES.md) | Elliott Wave — Reference Rule Inventory | 1,152 |
-| [`ELLIOTT_WAVE_ARCHITECTURE.md`](ELLIOTT_WAVE_ARCHITECTURE.md) | Elliott Wave — Architecture | 639 |
-| [`ELLIOTT_WAVE_IMPLEMENTATION.md`](ELLIOTT_WAVE_IMPLEMENTATION.md) | Elliott Wave — Implementation Record | 456 |
-
-### Operations and reference
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md) | Task 10 — Production Release Audit (v1.0.0) | 320 |
-| [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) | Task 10.1 — Final Release Verification (Gold Certification) | 235 |
-| [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) | Security Audit (Task 10, v1.0.0) | 138 |
-| [`INSTALLATION.md`](INSTALLATION.md) | Installation | 92 |
-| [`API_GUIDE.md`](API_GUIDE.md) | API Guide | 91 |
-| [`CONFIGURATION.md`](CONFIGURATION.md) | Configuration | 91 |
-| [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | Release Notes — v1.0.0 | 80 |
-| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | Troubleshooting | 63 |
-| [`QUICKSTART.md`](QUICKSTART.md) | Quick Start | 41 |
-| [`FAQ.md`](FAQ.md) | FAQ | 22 |
-
-### Subdirectories
-
-| Directory | Files |
-|---|---:|
-| [`assets/`](assets) | 2 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🚀 **New here?** | [`QUICKSTART.md`](QUICKSTART.md) ➜ [`INSTALLATION.md`](INSTALLATION.md) ➜ [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) |
+| 🌊 **Elliott Wave** | Four documents, ~3,500 lines — the rules are the specification |
+| 🔒 **Security** | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) |
+| 📦 **Holds** | `19` files · `5,898` lines · `1` subfolders |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`QUICKSTART.md`](QUICKSTART.md) | 🚀 Running in five minutes. | 41 |
+| [`INSTALLATION.md`](INSTALLATION.md) | 📦 Full setup, including Python 3.12. | 92 |
+| [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | 🛠 How to work in this codebase. | 233 |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 🏗 How the pieces fit. | 293 |
+| [`CONFIGURATION.md`](CONFIGURATION.md) | ⚙️ Every setting explained. | 133 |
+| [`API_GUIDE.md`](API_GUIDE.md) | 🔌 The endpoints. | 91 |
+| [`ELLIOTT_WAVE_RULES.md`](ELLIOTT_WAVE_RULES.md) | 🌊 **The specification.** Every rule a structure must satisfy. | 1,152 |
+| [`ELLIOTT_WAVE_SRS.md`](ELLIOTT_WAVE_SRS.md) | 🌊 Requirements for the wave engine. | 1,251 |
+| [`ELLIOTT_WAVE_ARCHITECTURE.md`](ELLIOTT_WAVE_ARCHITECTURE.md) | 🌊 How the 13 modules interlock. | 639 |
+| [`ELLIOTT_WAVE_IMPLEMENTATION.md`](ELLIOTT_WAVE_IMPLEMENTATION.md) | 🌊 The build baseline. | 456 |
+| [`SRS.md`](SRS.md) | 📋 System requirements. | 279 |
+| [`PRD.md`](PRD.md) | 📋 Product requirements. | 169 |
+| [`UI_UX.md`](UI_UX.md) | 🎨 Interface decisions. | 198 |
+| [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) | 🔒 Findings and what was done. | 138 |
+| [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md) | ✅ Pre-release checks. | 320 |
+| [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | 📝 What changed. | 93 |
+| [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) | 🔬 Correctness evidence. | 235 |
+| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | 🔧 When it will not start. | 63 |
+| [`FAQ.md`](FAQ.md) | ❓ Short answers. | 22 |
+
+
+---
+
+## 🗃 Subfolders
+
+| Folder | ➜ What lives there |
+|:--|:--|
+| [`assets/`](assets) | 🖼 Images the documents embed |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../README.md">Project README</a></sub>
+
+</div>

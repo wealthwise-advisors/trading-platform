@@ -1,18 +1,37 @@
-# 📈 `api/report`
+<div align="center">
 
-**Charts rendered on the server.**
+# 📈 Report Rendering
 
-Used by the PDF and DOCX exports, which need an image rather than a live component.
-Rendering server-side keeps an exported chart identical to the one on screen instead
-of a second implementation that slowly drifts.
+**Charts and documents built on the server, not in the browser.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`report.py`](report.py) | Generate a self-contained HTML backtest report. | 1,168 |
-| [`charts.py`](charts.py) | Plotly chart builders for the Streamlit dashboard. | 648 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | Renders a finished backtest into a shareable report |
+| 🖼 **Why server-side** | A report must look identical wherever it is opened |
+| 📦 **Holds** | `2` files · `1,816` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`report.py`](report.py) | Assembles the full HTML report — sections, tables, verdicts. | 1,168 |
+| [`charts.py`](charts.py) | Draws the figures the report embeds. | 648 |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+
+</div>

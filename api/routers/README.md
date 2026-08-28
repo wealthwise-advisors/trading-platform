@@ -1,23 +1,52 @@
-# 🛣 `api/routers`
+<div align="center">
 
-**REST endpoints and the replay socket.**
+# 🛣 Endpoints
 
-The replay router is the interesting one: a session is created over HTTP and then
-driven over a **WebSocket**, one message per tick. Only panes that actually closed a
-bar are sent, so a 1h pane contributes nothing on 59 of every 60 ticks and the client
-leaves it untouched instead of redrawing it.
+**One module per area of the app. Nothing here computes anything.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`replay.py`](replay.py) | Live replay: create a session, then drive it bar-by-bar over a WebSocket. | 480 |
-| [`backtests.py`](backtests.py) | Backtest run + result sub-resource endpoints. | 335 |
-| [`meta.py`](meta.py) | Health check and reference/meta endpoints. | 247 |
-| [`optimize.py`](optimize.py) | Strategy Optimizer — sweeps a strategy's own parameter grid (from strategy_registry.STRATEGIES) through the… | 115 |
-| [`data_export.py`](data_export.py) | Raw OHLC data export -- pick a symbol, date range, and data source, get back a CSV/Excel/PDF/Word file. | 84 |
-| [`schwab.py`](schwab.py) | Schwab OAuth2 flow — thin wrapper around SchwabDataProvider's existing auth methods… | 64 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Does** | Validate input ➜ call [`src/`](../../src) ➜ serialise the answer |
+| 🔐 **Guarded** | All of these except `auth.py`, `oauth.py` and `meta.py` |
+| 📐 **Rule** | Business logic belongs in `src/`, not in a route |
+| 📦 **Holds** | `8` files · `2,275` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`replay.py`](replay.py) | ▶️ Live replay: create a session, then drive it bar-by-bar over a WebSocket. | 561 |
+| [`auth.py`](auth.py) | 🔐 Sign in · register · sign out · password reset · username reminder · email verification. | 524 |
+| [`oauth.py`](oauth.py) | 🌐 `/providers`, `/{name}/start`, `/{name}/callback` — the whole redirect dance. | 324 |
+| [`backtests.py`](backtests.py) | 📊 Run a backtest, then fetch its trades, equity, patterns and waves. | 347 |
+| [`meta.py`](meta.py) | ❤️ Health, version, symbols, timeframes and other reference data. | 254 |
+| [`optimize.py`](optimize.py) | 🎯 Sweeps a strategy's own parameter grid and ranks the runs. | 117 |
+| [`data_export.py`](data_export.py) | 📤 Raw OHLC export — symbol, range, source ➜ CSV/Excel/PDF/Word. | 84 |
+| [`schwab.py`](schwab.py) | 🏦 Schwab OAuth2, a thin wrapper over the provider's own auth methods. | 64 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Routers are guarded as a group**, in [`api/main.py`](../main.py), not per function — so a new endpoint is protected by default rather than by remembering.
+- ➜ **The replay WebSocket is the exception.** A handshake cannot resolve an HTTP dependency, so it checks the cookie itself before `accept()`.
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+
+</div>

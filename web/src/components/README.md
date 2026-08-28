@@ -1,29 +1,61 @@
-# 🎨 `web/src/components`
+<div align="center">
 
-**Shared UI.**
+# 🎨 Shared UI Components
 
-`ui/` holds the shadcn/ui primitives — button, select, table, dialog and friends,
-built on Radix. Everything above that is app-specific and composed from them.
+**Everything used in more than one place.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`DeviationColorSettings.tsx`](DeviationColorSettings.tsx) | Colour picker for the VWAP deviation groups. | 119 |
-| [`SchwabAuthWidget.tsx`](SchwabAuthWidget.tsx) | Port of ui/app.py's sidebar Schwab widget: status check, then the | 102 |
-| [`DayCountStepper.tsx`](DayCountStepper.tsx) | "Number of Days" stepper, shared by Live Replay and Backtest. | 79 |
-| [`SavedConfigsPanel.tsx`](SavedConfigsPanel.tsx) | Save, list and reload a run configuration so a setup can be returned to. | 65 |
-| [`StatusBanner.tsx`](StatusBanner.tsx) | The connection and session state shown above the workspace. | 27 |
-
-### Subdirectories
-
-| Directory | Files |
-|---|---:|
-| [`cards/`](cards) | 3 |
-| [`charts/`](charts) | 7 |
-| [`tables/`](tables) | 4 |
-| [`ui/`](ui) | 14 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features/`](../features) |
+| 🎨 **Base kit** | shadcn/ui in [`ui/`](ui) — do not edit those by hand |
+| 📦 **Holds** | `13` files · `1,593` lines · `5` subfolders |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`SymbolMark.tsx`](SymbolMark.tsx) | 🏷 The instrument badge. Each contract keeps its own identity colour. | 414 |
+| [`InstrumentPicker.tsx`](InstrumentPicker.tsx) | 🔍 Searchable symbol chooser. | 253 |
+| [`AuthGate.tsx`](AuthGate.tsx) | 🔐 Bounces an unauthenticated view to the sign-in page. | 86 |
+| [`SchwabAuthWidget.tsx`](SchwabAuthWidget.tsx) | 🏦 The Schwab connect/refresh control. | 102 |
+| [`DeviationColorSettings.tsx`](DeviationColorSettings.tsx) | 🎨 Colour rules for VWAP deviation columns. | 119 |
+| [`SourceMark.tsx`](SourceMark.tsx) | 📥 Which data source a run used. | 108 |
+| [`StrategyMark.tsx`](StrategyMark.tsx) | 🧠 Which strategy a run used. | 107 |
+| [`DayCountStepper.tsx`](DayCountStepper.tsx) | 📅 Day-range stepper. | 86 |
+| [`SectionHeader.tsx`](SectionHeader.tsx) | 📑 The bar at the top of each Market Grid panel. | 61 |
+| [`SavedConfigsPanel.tsx`](SavedConfigsPanel.tsx) | 💾 Save and reload a backtest configuration. | 66 |
+| [`StatusBanner.tsx`](StatusBanner.tsx) | ✅ The completion banner. | 28 |
+| [`SymbolOption.tsx`](SymbolOption.tsx) | One row in the symbol dropdown. | 45 |
+| [`SymbolMark.test.ts`](SymbolMark.test.ts) | Tests for `SymbolMark.tsx`. | 118 |
+
+
+---
+
+## 🗃 Subfolders
+
+| Folder | ➜ What lives there |
+|:--|:--|
+| [`cards/`](cards) | 🃏 Stat, info and legend cards |
+| [`charts/`](charts) | 📈 Plotly wrappers — candlestick, equity, P&L, Elliott Wave |
+| [`motion/`](motion) | ✨ Shared animation helpers |
+| [`tables/`](tables) | 📋 Trade log, patterns, optimiser |
+| [`ui/`](ui) | 🧱 shadcn/ui primitives — button, input, slider, tabs, dialog |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+
+</div>

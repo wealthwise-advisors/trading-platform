@@ -1,18 +1,36 @@
-# 📡 `src/live`
+<div align="center">
 
-**The live trading loop. Experimental.**
+# 📡 Live Trading
 
-> [!WARNING]
-> **Experimental and not wired to a live account.** Live *data* is production-ready
-> and used by Live Replay; live *execution* is not. Read this as a sketch of the
-> shape a live loop would take, not as something to point at a funded account.
+**A stub, on purpose. Nothing here places a real order.**
 
-### Files in this directory
-
-| File | Purpose | Lines |
-|---|---|---:|
-| [`trader.py`](trader.py) | Live trading loop — connects Rithmic data feed to a strategy. | 96 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Status** | ⚠️ **Not implemented.** The Deploy button is disabled to match |
+| 🤔 **Why a stub** | A half-built order path that looks finished is worse than an honest gap |
+| 📦 **Holds** | `1` files · `96` lines |
+
+
+---
+
+## 📂 Files
+
+| File | ➜ What it does | Lines |
+|:--|:--|--:|
+| [`trader.py`](trader.py) | The shape a live trader would take. Does not trade. | 96 |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+
+</div>

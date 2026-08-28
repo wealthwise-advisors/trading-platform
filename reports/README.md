@@ -1,16 +1,35 @@
-# 📄 `reports`
+<div align="center">
 
-**Generated output.**
+# 📄 Generated Reports
 
-Where exported reports are written. Contents are generated rather than authored, so
-this directory is mostly empty in a fresh clone.
+**Output only. Nothing here is source.**
 
-### Subdirectories
-
-| Directory | Files |
-|---|---:|
-| [`exports/`](exports) | 2 |
+</div>
 
 ---
 
-<sub>[⬅ Back to the project README](../README.md)</sub>
+
+## 📍 At a glance
+
+|   |   |
+|:--|:--|
+| 🎯 **Holds** | Reports written by [`api/report`](../api/report) and [`api/export`](../api/export) |
+| 🚫 **Gitignored** | Safe to delete at any time — it regenerates |
+
+
+---
+
+## 🗃 Subfolders
+
+| Folder | ➜ What lives there |
+|:--|:--|
+| [`exports/`](exports) | 📤 CSV · XLSX · PDF · DOCX written on request |
+
+
+---
+
+<div align="center">
+
+<sub>⬅ <a href="../README.md">Project README</a></sub>
+
+</div>
