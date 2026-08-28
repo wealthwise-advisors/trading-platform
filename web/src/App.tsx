@@ -43,7 +43,7 @@ function App() {
     // the first time, which is what finally lets the chart's flex-1 chain
     // resolve to "fill remaining viewport space" instead of an arbitrary
     // fixed pixel guess.
-    <div className="h-screen bg-background text-foreground flex flex-col md:flex-row overflow-hidden">
+    <div className="app-shell h-screen text-foreground flex flex-col md:flex-row overflow-hidden">
       {page === "backtest" && configOpen && (
         <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
                style={{ background: "linear-gradient(180deg, #0b1325 0%, #060b18 100%)" }}>
