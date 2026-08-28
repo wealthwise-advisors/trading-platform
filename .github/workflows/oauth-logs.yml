@@ -61,6 +61,30 @@ jobs:
               | tail -30 | sed 's/^/  /' || echo "  (none found)"
 
             echo
+            echo "===== did the callback PARK an identity, or refuse it? ====="
+            # This is the decisive question and the database answers it without
+            # any logging at all. Reaching NEEDS_DETAILS writes an oauth_pending
+            # row; every refusal writes nothing. So a row here means the X
+            # round-trip SUCCEEDED and the person was sent to choose a username
+            # -- and no row means it was refused before that point.
+            #
+            # Counts and timestamps only. Never the token hash, which is the
+            # one column that would be worth stealing.
+            # One line per query. An indented heredoc cannot carry Python
+            # inside a YAML block scalar -- the interpreter needs column 0 and
+            # the YAML needs indentation, and they cannot both have it.
+            Q='import sqlite3,os,json;c=sqlite3.connect(os.environ.get("AUTOTRADER_DB_PATH","data/autotrader.db"));c.row_factory=sqlite3.Row;p=lambda q:[print("   ",dict(r)) for r in c.execute(q)]'
+            docker exec repo-api-1 python -c \
+              "$Q;print('  parked, waiting for a username:');p('SELECT provider,substr(subject,1,6) AS subj,suggested,created_at,expires_at FROM oauth_pending ORDER BY created_at')" \
+              || echo "  (could not query oauth_pending)"
+            docker exec repo-api-1 python -c \
+              "$Q;print('  completed provider links:');p('SELECT provider,COUNT(*) AS n FROM oauth_identities GROUP BY provider')" \
+              || echo "  (could not query oauth_identities)"
+            docker exec repo-api-1 python -c \
+              "$Q;print('  accounts:');p('SELECT COUNT(*) AS total,SUM(has_password) AS with_password FROM users')" \
+              || echo "  (could not query users)"
+
+            echo
             echo "===== are the X credentials actually IN the container? ====="
             # Length and a short hash only. A length is enough to catch the
             # classic faults -- an empty value, or a key pasted with a trailing

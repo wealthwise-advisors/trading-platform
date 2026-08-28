@@ -11,6 +11,7 @@ web/vite.config.ts. Nothing under src/ is modified to support this; the API
 is a thin consumer of the same backtesting/strategy/data-provider code.
 """
 
+import logging
 import os
 import sys
 import uuid
@@ -32,6 +33,32 @@ try:
     _version = _pkg_version("autotrader")
 except _PkgNotFound:
     _version = "unknown"
+
+# ── make the application's own logs visible ──────────────────────────────────
+#
+# There was no logging configuration anywhere in this app. api/auth.py,
+# api/routers/oauth.py and api/verification.py all use the STANDARD library's
+# logging; main.py uses loguru, which does not adopt stdlib records unless it
+# is told to. So no handler was ever attached to them: every log.info was
+# dropped outright, and log.warning survived only via Python's "handler of last
+# resort", which prints a bare message with no logger name, level or time.
+#
+# That was not a cosmetic gap. Those modules log the reason behind every OAuth
+# refusal, every throttle, and every rejected recovery attempt -- deliberately,
+# because none of it can be told apart from the outside: a failed token
+# exchange and a failed profile fetch produce the identical redirect. Debugging
+# a live sign-in problem meant guessing between branches that had each already
+# written down exactly which one they took.
+#
+# force=True because uvicorn installs its own handlers first; without it this
+# call is a silent no-op under the server we actually deploy on -- which is the
+# only place it matters.
+logging.basicConfig(
+    level=os.environ.get("AUTOTRADER_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
 
 app = FastAPI(title="AutoTrader API", version=_version)
 
@@ -95,8 +122,13 @@ app.include_router(meta.router, prefix="/api")
 # Also public, and necessarily so: someone signing in with Google has no
 # session yet, and the provider redirects the browser back to the callback
 # carrying none of our cookies. These routes defend themselves with a
-# single-use server-side state plus PKCE -- see api/routers/oauth.py. They
-# cannot create an account; they can only attach a session to one that exists.
+# single-use server-side state plus PKCE -- see api/routers/oauth.py.
+#
+# They CAN create an account, and only on an address the provider positively
+# states it has verified. (This comment used to say the opposite; that stopped
+# being true when signup was opened.) What they still cannot do is grant the
+# broker: is_owner is not a parameter of create_user, so no path through here
+# reaches it.
 app.include_router(oauth_router.router, prefix="/api")
 
 # Everything below requires a session. The dependency is declared on the
