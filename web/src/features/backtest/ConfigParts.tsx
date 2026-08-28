@@ -200,7 +200,7 @@ export function SliderField({
           }}
           className="w-[86px] shrink-0 rounded-lg border border-white/12 bg-white/[0.03]
                      px-3 py-2 text-center text-sm tabular-nums
-                     focus:border-sky-500/50 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                     focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
           aria-label={label}
         />
       </div>
@@ -247,8 +247,8 @@ export function ToggleSwitch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50
-                    disabled:opacity-50 ${checked ? "bg-sky-500" : "bg-white/15"}`}
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50
+                    disabled:opacity-50 ${checked ? "bg-violet-500" : "bg-white/15"}`}
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform
@@ -279,7 +279,7 @@ export function QuickPresets({
           onClick={() => onPick(days)}
           className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1
                      text-[11px] font-medium text-muted-foreground transition-colors
-                     hover:border-sky-500/40 hover:bg-sky-500/10 hover:text-sky-300"
+                     hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-300"
         >
           {label}
         </button>

@@ -20,7 +20,7 @@ export function IconField({
   return (
     <div className="flex items-start gap-3">
       <span aria-hidden className="mt-6 grid place-items-center h-8 w-8 shrink-0 rounded-lg
-                                   bg-white/[0.04] text-sky-300 ring-1 ring-white/8">
+                                   bg-white/[0.04] text-violet-300 ring-1 ring-white/8">
         <Icon size={15} strokeWidth={2} />
       </span>
       <div className="min-w-0 flex-1 space-y-1.5">

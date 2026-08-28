@@ -48,7 +48,7 @@ function DialogContent({
             className="ml-auto grid place-items-center h-9 w-9 rounded-lg border border-white/10
                        bg-white/[0.03] text-slate-400 transition-colors duration-200
                        hover:bg-white/8 hover:text-slate-100
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
           >
             <X size={17} strokeWidth={2.2} />
           </DialogPrimitive.Close>

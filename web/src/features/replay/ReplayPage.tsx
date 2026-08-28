@@ -1436,7 +1436,7 @@ export function ReplayPage() {
                      Icon={CalendarRange}
                      hint={
                        <>
-                         <CalendarRange size={13} className="text-sky-400" />
+                         <CalendarRange size={13} className="text-violet-400" />
                          <CountUp value={dayCount} />{dayCount === 1 ? " Day" : " Days"}
                          <span className="opacity-40">·</span>
                          <CountUp value={timeframes.length} />
@@ -2615,7 +2615,7 @@ export function ReplayPage() {
         <SetupFooterHint active={status === "loading"}>
           {status === "loading"
             ? <>Fetching {symbol} bars from {sourceLabel}…</>
-            : <>Press <b className="text-sky-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
+            : <>Press <b className="text-violet-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
         </SetupFooterHint>
       )}
     </div>

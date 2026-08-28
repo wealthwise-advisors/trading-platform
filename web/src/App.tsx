@@ -66,7 +66,7 @@ function App() {
               alt=""
               aria-hidden
               className="h-9 w-9 shrink-0 rounded-lg object-cover
-                         ring-1 ring-sky-400/20 shadow-lg shadow-sky-900/30"
+                         ring-1 ring-violet-400/20 shadow-lg shadow-violet-900/30"
             />
             <h1 className="min-w-0">
               <img

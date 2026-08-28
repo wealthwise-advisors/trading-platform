@@ -211,7 +211,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               .map((tf) => (
                 <SelectItem key={tf} value={tf}>
                   <span className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5 text-sky-400/70" aria-hidden />
+                    <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
                     {tf}
                   </span>
                 </SelectItem>

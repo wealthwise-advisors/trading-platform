@@ -98,7 +98,7 @@ export function StrategyMark({ id, size = 20 }: { id: string; size?: number }) {
   return (
     <span
       aria-hidden
-      className={cn("shrink-0 grid place-items-center", TONE[id] ?? "text-sky-400")}
+      className={cn("shrink-0 grid place-items-center", TONE[id] ?? "text-violet-400")}
       style={{ width: size, height: size }}
     >
       <Glyph id={id} />

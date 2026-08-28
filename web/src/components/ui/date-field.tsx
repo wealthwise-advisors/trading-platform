@@ -87,12 +87,12 @@ export function DateField({ value, onChange, label, disabled, className }: Props
           className={cn(
             "flex h-9 w-full items-center gap-2 rounded-lg border border-input",
             "bg-transparent px-2.5 text-sm transition-colors",
-            "hover:border-sky-500/40 focus:outline-none focus-visible:ring-2",
-            "focus-visible:ring-sky-500/40 disabled:opacity-50",
+            "hover:border-violet-500/40 focus:outline-none focus-visible:ring-2",
+            "focus-visible:ring-violet-500/40 disabled:opacity-50",
             className,
           )}
         >
-          <CalendarDays className="h-4 w-4 shrink-0 text-sky-400" aria-hidden />
+          <CalendarDays className="h-4 w-4 shrink-0 text-violet-400" aria-hidden />
           <span className="min-w-0 flex-1 truncate text-left tabular-nums">
             {pretty(value)}
           </span>
@@ -143,8 +143,8 @@ export function DateField({ value, onChange, label, disabled, className }: Props
                   className={cn(
                     "rounded-md py-1.5 text-sm tabular-nums transition-colors",
                     "hover:bg-white/[0.08]",
-                    isSelected && "bg-sky-500 text-white hover:bg-sky-500",
-                    !isSelected && isToday && "ring-1 ring-sky-500/50",
+                    isSelected && "bg-violet-500 text-white hover:bg-violet-500",
+                    !isSelected && isToday && "ring-1 ring-violet-500/50",
                   )}
                 >
                   {d.getUTCDate()}
@@ -158,7 +158,7 @@ export function DateField({ value, onChange, label, disabled, className }: Props
             onClick={() => { onChange(todayISO); setOpen(false) }}
             className="mt-2 w-full rounded-lg border border-white/10 py-1.5 text-xs
                        text-muted-foreground transition-colors
-                       hover:border-sky-500/40 hover:text-sky-300"
+                       hover:border-violet-500/40 hover:text-violet-300"
           >
             Today
           </button>
