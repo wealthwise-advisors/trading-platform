@@ -420,7 +420,13 @@ Registration is open. Signing in is by **username + password**, or by
 | Confirmation / reset / reminder mail | [`api/verification.py`](api/verification.py) |
 | Turnstile | [`api/captcha.py`](api/captcha.py) |
 | Accounts, sessions, identities, tokens | [`db/users.py`](db/users.py) |
-| Creating accounts, granting `is_owner` | [`scripts/manage_users.py`](scripts/manage_users.py) |
+| Operator-side account admin (add · passwd · disable · link) | [`scripts/manage_users.py`](scripts/manage_users.py) |
+
+> `is_owner` is deliberately absent from that table. **Nothing in the codebase
+> sets it to 1** — not a route, not `create_user`, not `manage_users.py`. It is
+> granted by hand, in SQL, on the server. This entry used to name the script as
+> the way to grant it, which was worse than a missing line: it implied a
+> supported path where the real answer is that there isn't one.
 
 **Four rules worth knowing before changing any of it:**
 

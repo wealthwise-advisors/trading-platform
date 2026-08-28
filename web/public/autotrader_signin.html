@@ -187,6 +187,7 @@ body{
 .soc button:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);
   transform:translateY(-2px)}
 .soc svg{width:17px;height:17px}
+  .soc button.soc-off{opacity:.45}
 
 .legal{display:flex;align-items:center;justify-content:center;gap:12px;
   margin-top:20px;padding-top:15px;border-top:1px solid var(--line);
@@ -735,7 +736,23 @@ body.recovery .hide-in-recovery{ display:none !important }
       e.preventDefault();
       var key = keyFor(b);
       var who = (b.textContent || "That provider").trim();
-      if (!configured[key]) { say(who); return; }
+
+      /* Always go. Do NOT gate this on the fetch below.
+       *
+       * This used to read `if (!configured[key]) { say(who); return; }`, and
+       * `configured` is filled asynchronously -- so in the window before that
+       * request came back, the map was empty and EVERY provider answered "not
+       * connected yet", including all four that were configured perfectly
+       * well. The window is invisible on a fast connection and seconds wide on
+       * a slow one. Clicking a button the moment it appears is not an edge
+       * case; it is what people do.
+       *
+       * The server already owns this decision and answers it correctly: an
+       * unconfigured provider redirects straight back here with
+       * ?reason=oauth_unconfigured, which is handled below. A second copy of
+       * that judgement in the page could only ever disagree with the real one
+       * -- and its initial value made it disagree in the worst direction. */
+      if (configured[key] === false) { say(who); return; }
       note.textContent = "Redirecting to " + who + "…";
       note.className = "msg socmsg show info";
       window.location.assign("/api/auth/oauth/" + key + "/start?next=" +
@@ -743,13 +760,23 @@ body.recovery .hide-in-recovery{ display:none !important }
     });
   });
 
+  /* Still fetched, but now only to mark a provider that is genuinely off --
+     information shown up front, not permission to click. Undefined (not yet
+     known, or the request failed) means GO and let the server answer. */
   fetch("/api/auth/oauth/providers", { credentials: "same-origin" })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (j) {
       if (!j || !j.providers) return;
-      j.providers.forEach(function (p) { configured[p.key] = !!p.configured; });
+      j.providers.forEach(function (p) {
+        configured[p.key] = !!p.configured;
+        if (p.configured) return;
+        Array.prototype.forEach.call(soc.querySelectorAll("button"), function (b) {
+          if (keyFor(b) === p.key) { b.classList.add("soc-off"); b.title =
+            p.label + " sign-in is not connected yet."; }
+        });
+      });
     })
-    .catch(function () { /* leave every button on the honest notice */ });
+    .catch(function () { /* unknown is not "off": the click still goes. */ });
 })();
 </script>
 <script>

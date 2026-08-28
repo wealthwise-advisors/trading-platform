@@ -1,9 +1,21 @@
 """Create and manage AutoTrader accounts.
 
-This is the ONLY way an account comes into existence. There is no registration
-endpoint -- /api/auth/register answers 403 by design -- because this is a
-private instance and a self-serve endpoint would let anyone who reaches the URL
-provision themselves an account.
+Registration is OPEN. This script is the operator's door, not the only one:
+people sign themselves up through /api/auth/register, and an OAuth sign-in from
+an address nobody holds yet creates an account on the spot.
+
+    (This paragraph used to say the opposite -- "the ONLY way an account comes
+    into existence ... /api/auth/register answers 403 by design". That stopped
+    being true when signup was opened, and a --help that describes the security
+    model backwards is worse than one that describes nothing: it is read by
+    someone deciding whether a thing is safe.)
+
+What is still true, and is the part worth knowing:
+
+    An account grants the ANALYSIS app. It does not grant the broker. There is
+    one Schwab connection and it is the operator's own, so `users.is_owner`
+    defaults to 0, `create_user` has no parameter for it, and no route can set
+    it. Nothing a stranger can reach touches the brokerage.
 
     py -3.12 scripts/manage_users.py add    akash --name "Akash Yadav" --email a@b.c
     py -3.12 scripts/manage_users.py list
@@ -13,17 +25,32 @@ provision themselves an account.
     py -3.12 scripts/manage_users.py delete  akash
     py -3.12 scripts/manage_users.py logout-all akash
 
-OAuth sign-in (Google / LinkedIn / Twitter):
+OAuth sign-in (Google / LinkedIn / GitHub / Twitter-X):
 
     py -3.12 scripts/manage_users.py oauth-status
     py -3.12 scripts/manage_users.py links
     py -3.12 scripts/manage_users.py link   akash --provider twitter --subject 1234567890
     py -3.12 scripts/manage_users.py unlink akash --provider twitter
 
-Google and LinkedIn link themselves the first time someone uses them, by
-matching a VERIFIED email to an account that already exists here. Twitter/X
-reports no email at any scope, so it has nothing to match on and must be linked
-by hand with the command above. None of this can create an account.
+Google, LinkedIn and GitHub all report a VERIFIED email. On sign-in that
+address either matches an existing account -- which then gets the provider's
+permanent subject pinned to it, and is matched on that forever after -- or it
+matches nobody and an account is created, metered against the SIGNUP budget
+rather than the login throttle.
+
+Twitter/X reports no email at any scope, so it has nothing to match on. It no
+longer needs the `link` command: an unrecognised X identity is parked and the
+person is asked to choose a username, which completes the sign-up. `link` stays
+for the case the command was written for -- binding an X identity to an account
+that already exists.
+
+Two rules the resolution never bends:
+
+    * An UNVERIFIED address is only a claim by whoever is signing in, and is
+      refused. Matching on one would let anyone with a throwaway provider
+      account walk into an existing account by typing its address.
+    * A DISABLED account is refused, never re-provisioned. Creating a fresh
+      one would hand back exactly the access that was withdrawn.
 
 The password is never taken as an argument: it would land in the shell history
 and in the process list. It is prompted for, twice, with no echo.
