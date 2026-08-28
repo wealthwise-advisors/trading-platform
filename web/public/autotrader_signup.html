@@ -485,6 +485,16 @@ body{overflow-x:hidden;overflow-y:auto}
 
 /* Completion mode: finishing a sign-up that began at a provider. */
 body.completing .hide-when-completing{ display:none !important }
+  /* The tabs are a trap here, not navigation: 'Sign In' throws away a
+     completed OAuth round-trip and burns the single-use handle. There is
+     one thing to do on this page. */
+  .completing .tabs{ display:none !important }
+  .completing .finishing{
+    margin:0 0 16px; padding:12px 14px; border-radius:11px;
+    font-size:13.5px; line-height:1.5;
+    background:rgba(124,108,245,.10);
+    border:1px solid rgba(124,108,245,.32);
+  }
 body.completing .brandline p::before,
 body.completing .brandline p::after{ opacity:.7 }
 .finishing{
