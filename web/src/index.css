@@ -1684,35 +1684,36 @@ button, [role="button"] {
 
 /* ── the signed-in application background ────────────────────────────────────
  *
- * On .app-shell, not on body. The shell is `h-screen bg-background`, a
- * full-viewport opaque div inside #root -- so anything painted on body sits
- * behind it and is never seen. The image went there first and rendered
- * nothing at all, twice, while the computed style insisted it was present.
+ * On .app-shell, not on body. The shell is a full-viewport opaque div inside
+ * #root, so anything painted on body sits behind it and is never seen -- the
+ * image went there first and rendered nothing at all while getComputedStyle
+ * insisted it was present.
  *
  * CANNOT REACH THE SIGN-IN PAGES. They are standalone HTML in web/public/ with
- * their own inline styles; they never load this stylesheet and have no element
- * with this class. Their background is untouched.
+ * their own inline styles; they never load this stylesheet and carry no
+ * element with this class. Their background is untouched.
  *
- * LAYER ORDER, first paints last:
- *   1-2  the existing blue and purple radials, unchanged
- *   3    a dark scrim
- *   4    the photograph
+ * NO OVERLAY. An earlier version put a dark gradient over the image for
+ * readability and the result was a flat grey-blue wash -- the gold gone, the
+ * candles and the world map barely legible, the photograph no longer reading
+ * as one. Contrast is the panels' job: the sidebar and every card already
+ * paint their own opaque background, so text has its ground without dimming
+ * what sits behind it.
  *
- * The scrim is not decoration. The image is bright gold across most of its
- * area and this interface is light text on dark; dropped in raw, body copy and
- * table figures become unreadable wherever a candle or a reflection sits
- * behind them. At this alpha the image reads as depth rather than content and
- * every existing colour keeps the contrast it was designed with.
- *
- * `fixed` makes it a backdrop rather than something that scrolls with content,
- * and it holds across Backtest, Market Grid and every other tab -- those are
- * routes inside one document, so this is set once rather than per page.
+ * `fixed` makes it a backdrop rather than something that scrolls with the
+ * content, and it holds across Backtest, Market Grid and every other tab --
+ * those are routes inside one document, so it is set once rather than per
+ * page.
  */
 .app-shell {
+  /* The image, at full strength. No tint, no scrim, no filter.
+   *
+   * There was a dark overlay here and it was wrong: it washed the gold out to
+   * a flat grey-blue and the photograph stopped being visible as a
+   * photograph. Readability comes from the panels instead -- the sidebar and
+   * every card carry their own opaque background, so the text that needs
+   * contrast already has it without dimming what sits behind them. */
   background:
-    radial-gradient(circle at 15% 0%, rgba(47, 128, 255, 0.10) 0%, transparent 40%),
-    radial-gradient(circle at 85% 15%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
-    linear-gradient(180deg, rgba(6, 11, 24, 0.86) 0%, rgba(10, 16, 32, 0.80) 100%),
     url("./assets/app-background.jpg") center / cover no-repeat fixed,
     linear-gradient(180deg, #060b18 0%, #0a1020 100%);
 }
