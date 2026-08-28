@@ -1,0 +1,88 @@
+name: Read OAuth logs (temporary, read-only)
+
+# Twitter/X completes its round-trip -- the person signs in at X, authorises the
+# app -- and is then returned to the SIGN-IN page instead of the "finish
+# creating your account" step. Everything reachable from outside says it should
+# work: /start redirects correctly, the state row persists and is consumed once,
+# and the callback's error path answers cleanly.
+#
+# So the refusal happens INSIDE the callback, between the code arriving and the
+# redirect going out, and every branch there already logs its reason. Those log
+# lines are the only place the answer exists.
+#
+# Read-only. Prints the application's own oauth log lines, and the truncated
+# fingerprint of each X credential -- never a value, never a secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve this runner's public IP
+        id: ip
+        run: echo "addr=$(curl -fsS --max-time 15 https://checkip.amazonaws.com | tr -d '\n')" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Open port 22 for this runner only
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${{ secrets.EC2_SG_ID }}" \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.ip.outputs.addr }}/32"
+
+      - name: Install the SSH key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: What did the callback actually decide?
+        run: |
+          ssh -o BatchMode=yes -o ConnectTimeout=20 \
+              ec2-user@"${{ secrets.EC2_HOST }}" bash -euo pipefail <<'REMOTE'
+            echo "===== every oauth line the app has logged ====="
+            docker logs repo-api-1 2>&1 \
+              | grep -iE 'oauth|twitter|x\.com' \
+              | tail -60 | sed 's/^/  /' || echo "  (none found)"
+
+            echo
+            echo "===== anything that blew up ====="
+            docker logs repo-api-1 2>&1 \
+              | grep -iE 'traceback|error|exception|refused|failed' \
+              | tail -30 | sed 's/^/  /' || echo "  (none found)"
+
+            echo
+            echo "===== are the X credentials actually IN the container? ====="
+            # Length and a short hash only. A length is enough to catch the
+            # classic faults -- an empty value, or a key pasted with a trailing
+            # newline or a quote -- without ever printing the secret.
+            docker exec repo-api-1 sh -c '
+              for v in AUTOTRADER_TWITTER_CLIENT_ID AUTOTRADER_TWITTER_CLIENT_SECRET \
+                       AUTOTRADER_PUBLIC_BASE_URL; do
+                eval "val=\$$v"
+                if [ -z "$val" ]; then
+                  printf "  %-38s ABSENT\n" "$v"
+                else
+                  printf "  %-38s len=%-4s sha=%s\n" "$v" "${#val}" \
+                    "$(printf %s "$val" | sha256sum | cut -c1-8)"
+                fi
+              done
+            ' || echo "  (could not read the environment)"
+          REMOTE
+
+      - name: Close port 22
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${{ secrets.EC2_SG_ID }}" \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.ip.outputs.addr }}/32" || true
