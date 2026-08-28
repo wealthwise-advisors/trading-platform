@@ -1061,7 +1061,6 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |- - - ▶  <a href="scripts/run-autotrader.cmd">run-autotrader.cmd</a>
 |               └- - - ▶  <a href="scripts/run_backtest.py">run_backtest.py</a>
 |------------▶  <a href="reports">reports/</a>   <i>generated output</i>  <b>3</b>
-└------------▶  <a href="legacy">legacy/</a>   <i>archived predecessor repositories</i>  <b>451</b>
                 └------------▶  <a href=".github/workflows">workflows/</a>   <i>CI and deploy</i>  <b>3</b>
                                 |- - - ▶  <a href=".github/workflows/ci.yml">ci.yml</a>
                                 |- - - ▶  <a href=".github/workflows/deploy.yml">deploy.yml</a>
@@ -1104,8 +1103,9 @@ Fill in your Schwab app key and secret.
 
 > [!CAUTION]
 > **`config/credentials.yaml` and `config/schwab_tokens.json` are gitignored and must
-> never be committed.** Five predecessor repositories hardcoded live credentials into
-> source files — see [`legacy/REDACTIONS.md`](legacy/REDACTIONS.md) for what that cost.
+> never be committed.** Five predecessor repositories hardcoded live credentials
+> into source files, and every one had to be rotated. That is the cost this rule
+> exists to avoid.
 
 ### ◆ 3 · Run it
 
@@ -1163,7 +1163,7 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 
 **➜** Gated at **70%**, deliberately below the current 77% — a threshold pinned to today's number gets lowered the first time it fails
 
-**➜** Excludes the vendored Schwab client and `legacy/`, as [`ruff`](pyproject.toml) and `mypy` already do
+**➜** Excludes the vendored Schwab client, as [`ruff`](pyproject.toml) and `mypy` already do
 
 **➜** Runs in the same CI step as the tests
 
@@ -1245,21 +1245,29 @@ failure this exists to catch.
 ## 🗂 Repository Ecosystem
 
 <div align="center">
-<img src="docs/assets/ecosystem.svg" alt="Five retired repositories converge through a redaction step into legacy/ inside trading-platform, which reads full market history from the data repository" width="100%">
+<img src="docs/assets/ecosystem.svg" alt="Five retired repositories converge through a redaction step into trading-platform, which reads full market history from the data repository" width="100%">
 </div>
 
 | Repository | Purpose | |
 |---|---|---|
-| **trading-platform** | This repository — the platform, plus [`legacy/`](legacy) | *you are here* |
+| **trading-platform** | This repository — the platform | *you are here* |
 | **data** | Full market history in Git LFS, including an **18-year 1-minute ES series** too large for an ordinary repository | [Open ↗](https://github.com/wealthwise-advisors/data) |
 
-**Five predecessor repositories were consolidated into [`legacy/`](legacy) and
-retired** — `trading-strategy`, `trading-web`, `Wealthwise`, `backtest` and
-`Project_work`. Their 442 files live on here; hardcoded credentials were stripped on
-the way in and recorded in [`legacy/REDACTIONS.md`](legacy/REDACTIONS.md).
+**Five predecessor repositories were retired** — `trading-strategy`,
+`trading-web`, `Wealthwise`, `backtest` and `Project_work`. This platform is a
+**rebuild**, not a merge: none of their code runs here.
 
-`legacy/` is reference only — excluded from linting, from the test suite, and from
-every Docker image.
+> [!NOTE]
+> Their 519 files were archived in this repository and have now been removed from
+> the working tree, which is what keeps it clean. **Nothing was lost** — they
+> remain in git history, pinned by a tag:
+>
+> ```bash
+> git show archive/legacy-2026-08-28:legacy/README.md      # read it
+> git checkout archive/legacy-2026-08-28 -- legacy/        # restore it
+> ```
+>
+> Hardcoded credentials were stripped on the way in and every one was rotated.
 
 <br>
 

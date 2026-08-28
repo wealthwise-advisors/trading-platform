@@ -155,10 +155,6 @@ Trading/
 │   └── backtests.py           # the only module that knows the table layout
 │
 ├── docs/                      # long-form guides; see docs/README.md
-├── legacy/                    # superseded code, kept for reference. Not built,
-│                              #   not imported, not deployed. Dependabot alerts
-│                              #   here are dismissed as not_used.
-│
 ├── data/
 │   ├── historical/            # CSV files: {SYMBOL}_{timeframe}.csv  (gitignored)
 │   ├── autotrader.db          # SQLite result database (gitignored)

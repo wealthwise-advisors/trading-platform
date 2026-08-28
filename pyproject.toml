@@ -102,12 +102,10 @@ testpaths = ["tests"]
 # with `# noqa: E501` rather than pushed into a still-higher global limit.
 line-length = 160
 target-version = "py312"
-# legacy/ is an archive of the retired repositories, kept so they could be deleted
-# without losing code. It is not built, imported or deployed, and it predates every
-# convention this project now holds -- linting it would report ~13,000 findings
-# about code nobody is going to change. CI runs `ruff check .`, so the exclusion has
-# to live here rather than in the command.
-exclude = ["src/data/schwabdev", "legacy"]   # vendored client; archived repositories
+# The vendored Schwab client is third-party code. Linting it would report findings
+# about code we do not own and must not change, and CI runs `ruff check .`, so the
+# exclusion has to live here rather than in the command.
+exclude = ["src/data/schwabdev"]             # vendored client
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
@@ -135,10 +133,8 @@ exclude = ["src/data/schwabdev"]
 # project does not test code it has pledged not to modify. It is 340 statements
 # with none exercised, so leaving it in reported 71% where the code this team
 # actually writes sits at 77% -- a number that measured the wrong thing.
-# legacy/ is an archive of retired repositories, never built or deployed.
 omit = [
     "src/data/schwabdev/*",
-    "legacy/*",
     "*/__init__.py",
 ]
 

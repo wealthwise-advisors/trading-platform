@@ -1,4 +1,0 @@
-hmmlearn
-numpy
-pandas
-plotly
