@@ -444,116 +444,89 @@ def test_twitter_reports_no_email(client, db, configured):
     assert who.email == "" and who.email_verified is False
 
 
-def _handle_from(response) -> str:
-    """The pending handle the callback put in the redirect URL."""
-    return response.headers["location"].split("complete=")[1].split("&")[0]
+def test_twitter_signs_straight_in_and_creates_an_account(
+        client, db, configured, monkeypatch):
+    """X goes into the app. It does not stop to ask for anything.
 
+    It used to park the identity and send the person to a form for a username
+    and an address, and that was the wrong call. The rule that actually matters
+    is "never MATCH an existing account on an address the provider did not
+    verify" -- and creating a BRAND NEW account with no address at all does not
+    touch it. There is nothing to match and nothing to collide with; the
+    identity is the pinned X subject either way.
 
-def test_twitter_without_a_prelink_asks_for_details(client, db, configured,
-                                                    user, monkeypatch):
-    """X has no address to offer, so it asks rather than refusing.
-
-    This was a flat refusal while an administrator had to pre-link every
-    identity. The person HAS proved they control that X account -- there is
-    simply nothing to build an account from, so they are asked.
+    So the step was not buying security, it was buying a recovery address, and
+    charging a whole extra page for it.
     """
     stub(monkeypatch, twitter_info())
     r = finish(client, begin(client, "twitter"), provider="twitter")
 
+    assert r.status_code == 303
     loc = r.headers["location"]
-    assert "autotrader_signup.html" in loc and "complete=" in loc
-    assert "reason=" not in loc
-    # Crucially: no account and no session yet.
-    assert repo.list_identities(user.id) == []
-    assert client.get("/api/auth/me").status_code == 401
+    assert "reason=" not in loc, loc
+    assert "autotrader_sign" not in loc, "X must land in the app, not on a form"
+    assert loc == "/"
+
+    me = client.get("/api/auth/me")
+    assert me.status_code == 200, "the callback must leave a working session"
+    created = repo.get_user(me.json()["username"])
+    assert created is not None
 
 
-def test_the_pending_handle_is_not_a_session(client, db, configured, user,
-                                             monkeypatch):
-    """Holding it proves an OAuth round-trip happened. It grants nothing."""
-    stub(monkeypatch, twitter_info())
-    handle = _handle_from(finish(client, begin(client, "twitter"),
-                                 provider="twitter"))
+def test_the_account_x_creates_has_no_address_and_claims_none(
+        client, db, configured, monkeypatch):
+    """An empty email is a supported state, not a workaround.
 
-    assert client.get("/api/auth/me").status_code == 401
-    assert len(handle) >= 32, "must not be guessable"
-
-    from db.connection import connect
-    conn = connect()
-    try:
-        rows = [dict(x) for x in conn.execute("SELECT * FROM oauth_pending")]
-    finally:
-        conn.close()
-    assert rows, "nothing was parked"
-    assert handle not in str(rows), "the raw handle was stored, not its hash"
-
-
-def test_completing_a_twitter_signup_creates_and_links(client, db, configured,
-                                                       monkeypatch):
-    stub(monkeypatch, twitter_info())
-    handle = _handle_from(finish(client, begin(client, "twitter"),
-                                 provider="twitter"))
-
-    done = client.post("/api/auth/oauth/complete", json={
-        "handle": handle, "username": "xperson",
-        "email": "xperson@example.com", "accept_terms": True})
-    assert done.status_code == 201, done.text
-
-    assert repo.get_user("xperson") is not None
-    assert repo.identity_user("twitter", TWITTER_SUB).username == "xperson"
-    assert client.get("/api/auth/me").json()["username"] == "xperson"
-
-
-def test_a_typed_address_is_never_marked_verified(client, db, configured,
-                                                  monkeypatch):
-    """X told us nothing about this address; the person typed it a moment ago.
-
-    Marking it verified would let an X user claim someone else's Google
-    identity later, because the email path trusts a verified address.
+    users.email is NOT NULL DEFAULT '' and its unique index is PARTIAL --
+    `WHERE email != ''` -- so more than one address-less account is allowed by
+    design. What must never happen is one of them being marked verified: there
+    is no address, so there is nothing that could have been verified.
     """
     stub(monkeypatch, twitter_info())
-    handle = _handle_from(finish(client, begin(client, "twitter"),
-                                 provider="twitter"))
-    client.post("/api/auth/oauth/complete", json={
-        "handle": handle, "username": "xperson",
-        "email": "xperson@example.com", "accept_terms": True})
+    finish(client, begin(client, "twitter"), provider="twitter")
 
-    assert repo.get_user("xperson").email_verified is False
+    created = repo.get_user(client.get("/api/auth/me").json()["username"])
+    assert created.email == ""
+    assert created.email_verified is False
+    assert created.is_owner is False, "signing in never reaches the broker"
 
 
-def test_a_pending_handle_is_single_use(client, db, configured, monkeypatch):
+def test_signing_in_with_x_twice_reuses_the_same_account(
+        client, db, configured, monkeypatch):
+    """The identity is linked on creation, so the second visit finds it.
+
+    Returning the new account WITHOUT linking it would look identical on the
+    first sign-in and build a fresh account on every visit afterwards -- a bug
+    that only shows up the second time, which is the worst kind.
+    """
     stub(monkeypatch, twitter_info())
-    handle = _handle_from(finish(client, begin(client, "twitter"),
-                                 provider="twitter"))
-    body = {"handle": handle, "username": "xperson",
-            "email": "xperson@example.com", "accept_terms": True}
+    finish(client, begin(client, "twitter"), provider="twitter")
+    first = client.get("/api/auth/me").json()["username"]
 
-    assert client.post("/api/auth/oauth/complete", json=body).status_code == 201
-    again = client.post("/api/auth/oauth/complete", json=dict(
-        body, username="xperson2", email="xperson2@example.com"))
-    assert again.status_code == 400
-    assert repo.get_user("xperson2") is None
-
-
-def test_completion_refuses_a_forged_handle(client, db, configured):
-    r = client.post("/api/auth/oauth/complete", json={
-        "handle": "not-a-real-handle-at-all-0123456789",
-        "username": "intruder", "email": "intruder@example.com",
-        "accept_terms": True})
-    assert r.status_code == 400
-    assert repo.get_user("intruder") is None, "an account was created from nothing"
-
-
-def test_completion_requires_the_terms(client, db, configured, monkeypatch):
+    client.post("/api/auth/logout")
     stub(monkeypatch, twitter_info())
-    handle = _handle_from(finish(client, begin(client, "twitter"),
-                                 provider="twitter"))
+    finish(client, begin(client, "twitter"), provider="twitter")
+    second = client.get("/api/auth/me").json()["username"]
 
-    done = client.post("/api/auth/oauth/complete", json={
-        "handle": handle, "username": "xperson",
-        "email": "xperson@example.com", "accept_terms": False})
-    assert done.status_code == 400
-    assert repo.get_user("xperson") is None
+    assert first == second
+    with connection.connect() as conn:
+        n = conn.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
+    assert n == 1, "a second sign-in must not build a second account"
+
+
+def test_x_never_matches_an_existing_account(client, db, configured, user,
+                                             monkeypatch):
+    """The one thing removing the form must not have loosened.
+
+    X supplies no address, so it can never be matched against anybody. It gets
+    a new account or nothing -- never somebody else's.
+    """
+    stub(monkeypatch, twitter_info())
+    finish(client, begin(client, "twitter"), provider="twitter")
+
+    assert client.get("/api/auth/me").json()["username"] != user.username
+    assert repo.list_identities(user.id) == [],         "the pre-existing account must be untouched"
+
 
 
 def test_twitter_with_a_prelink_signs_in(client, db, configured, user, monkeypatch):

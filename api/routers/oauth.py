@@ -11,20 +11,21 @@ What keeps them safe instead of a session:
     first use. A callback we did not start, or one replayed a second time,
     finds nothing and is refused.
   * PKCE ties the code to the verifier that never left this process.
-  * The account must already exist. The callback can attach a session to an
-    existing user; it has no code path that creates one.
+  * An account IS created when the identity is new -- registration is open --
+    but only ever a fresh one. An existing account is matched on the provider's
+    permanent subject, or on an address the provider positively says it
+    verified, and on nothing else. An unverified address is a claim by whoever
+    is signing in; honouring it would hand them the account that owns it.
 """
 
 import logging
-import secrets
 import sqlite3
-from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from api import auth, verification, oauth
+from api import auth, oauth
 from db import users as repo
 
 log = logging.getLogger(__name__)
@@ -86,18 +87,6 @@ def start(name: str, request: Request, next: str = "/"):
                             status_code=status.HTTP_303_SEE_OTHER)
 
 
-#: Returned by _resolve_account when the identity is genuine but there is not
-#: enough information to make an account. Deliberately a unique object rather
-#: than None or False: those already mean "refused", and conflating "we will
-#: not let you in" with "we need one more thing from you" is how a working
-#: sign-up becomes an unexplained rejection.
-NEEDS_DETAILS = object()
-
-#: Short. This is an unauthenticated handle sitting in a URL; it needs to
-#: outlive filling in a two-field form and nothing more.
-PENDING_TTL = timedelta(minutes=20)
-
-
 def _refuse(reason: str, provider_key: str, next_path: str = "/") -> RedirectResponse:
     """Back to the sign-in page. Never a 500, never a stack trace, never a hint
     about which account does or does not exist."""
@@ -154,25 +143,10 @@ def callback(name: str, request: Request, response: Response,
     if not who.subject:
         return _refuse("oauth_failed", provider.key, pending.next_path)
 
+    # Every provider lands in the same place now, signed in. X used to be sent
+    # to a form for a username and an address instead; see _resolve_account for
+    # why that step was removed rather than polished.
     user = _resolve_account(provider, who, ip)
-
-    if user is NEEDS_DETAILS:
-        # Park the identity and send them to finish signing up. The handle
-        # below is NOT a session and grants nothing -- it only proves this
-        # browser just completed an OAuth round-trip for that subject.
-        if wait := auth.signup_throttle.retry_after(ip):
-            log.warning("oauth: signup throttled for %ss from %s", wait, ip)
-            return _refuse("oauth_no_account", provider.key, pending.next_path)
-
-        handle = secrets.token_urlsafe(32)
-        repo.new_pending_oauth(
-            repo.hash_token(handle), provider.key, who.subject,
-            suggested=(who.full_name or ""), next_path=pending.next_path,
-            expires_at=(datetime.now() + PENDING_TTL).isoformat(timespec="seconds"),
-        )
-        return RedirectResponse(
-            f"/autotrader_signup.html?complete={handle}&provider={provider.key}",
-            status_code=status.HTTP_303_SEE_OTHER)
 
     if user is None:
         return _refuse("oauth_no_account", provider.key, pending.next_path)
@@ -223,14 +197,33 @@ def _resolve_account(provider: oauth.Provider, who: oauth.ProviderUser,
 
     # 2. First time on a provider that cannot tell us an address.
     #
-    # X returns no email at any scope, so there is nothing to match an account
-    # by and nothing to create one from. It is not a refusal though -- the
-    # person has proved they control that X account. They are asked for a
-    # username and an address, and NEEDS_DETAILS says so.
+    # X returns no email at any scope. That used to send the person to a form
+    # asking for a username and an address -- and it was the wrong call. The
+    # rule that matters is "never MATCH an existing account on an address the
+    # provider did not verify", and creating a brand new account with NO
+    # address does not touch it: there is nothing to match, nothing to collide
+    # with, and the identity is the pinned X subject either way.
+    #
+    # So the form was not buying security. It was buying a recovery address,
+    # and charging a whole extra step for it -- to someone who had already
+    # proved they control the account they are signing in with, and who signs
+    # in by pressing that button rather than by typing a username.
+    #
+    # An empty email is a first-class state here, not a workaround: the column
+    # is NOT NULL DEFAULT '' and the unique index is PARTIAL, `WHERE email !=
+    # ''`. The schema was already built to allow exactly this.
+    #
+    # What is genuinely given up: this account cannot be recovered by email.
+    # It does not need to be -- it has no password to reset, and its recovery
+    # is X itself. If the person wants an address on file they can add one.
     if not provider.provides_email:
-        log.info("oauth: %s identity %s has no address; asking for details",
-                 provider.key, who.subject[:12])
-        return NEEDS_DETAILS
+        candidate = _create_from(provider, who, ip, email="", verified=False)
+        if candidate is None:
+            return None
+        # Falls THROUGH to link_identity below. Returning here would leave the
+        # new account with no identity attached, so the next sign-in would find
+        # no link and build another one, for ever.
+        return _link(provider, who, candidate, email="")
 
     if not who.email or not who.email_verified:
         log.warning("oauth: %s gave an %s email; refused", provider.key,
@@ -252,36 +245,19 @@ def _resolve_account(provider: oauth.Provider, who: oauth.ProviderUser,
 
     if candidate is None:
         # 3. Nobody has this address. Make an account for them.
-        #
-        # Rate-limited on the SIGNUP budget, not the login throttle: this is a
-        # registration path, and it is the one that does not pass through
-        # /api/auth/register or its CAPTCHA. Leaving it unmetered would make
-        # OAuth the cheap way to mass-create accounts.
-        if wait := auth.signup_throttle.retry_after(ip):
-            log.warning("oauth: signup throttled for %ss from %s", wait, ip)
+        candidate = _create_from(provider, who, ip, email=who.email,
+                                 verified=True)
+        if candidate is None:
             return None
-        auth.signup_throttle.record(ip)
 
-        username = repo.username_from(who.email or who.full_name)
-        try:
-            user_id = repo.create_oauth_user(
-                username, full_name=who.full_name or "", email=who.email,
-                # The provider stated it verified this address, and we reached
-                # that claim over our own server-to-server exchange -- so it is
-                # verified here too, and no confirmation email is needed.
-                email_verified=True,
-            )
-        except sqlite3.IntegrityError:
-            # Lost a race with a concurrent sign-in for the same address.
-            log.warning("oauth: collision creating an account for a %s identity",
-                        provider.key)
-            return _user_by_email(who.email)
-        candidate = repo.get_user_by_id(user_id)
-        log.info("oauth: created %s from a verified %s address",
-                 username, provider.key)
+    return _link(provider, who, candidate, email=who.email)
 
+
+def _link(provider: oauth.Provider, who: oauth.ProviderUser, candidate,
+          *, email: str):
+    """Pin this provider's permanent subject to the account, once."""
     if not repo.link_identity(candidate.id, provider.key, who.subject,
-                              email=who.email):
+                              email=email):
         # Lost a race, or that subject is already bound elsewhere. Never
         # re-point an existing link.
         log.warning("oauth: could not link %s to %s", provider.key, candidate.username)
@@ -290,6 +266,42 @@ def _resolve_account(provider: oauth.Provider, who: oauth.ProviderUser,
     log.info("oauth: linked %s to %s's account on first sign-in",
              provider.key, candidate.username)
     return candidate
+
+
+def _create_from(provider: oauth.Provider, who: oauth.ProviderUser, ip: str,
+                 *, email: str, verified: bool):
+    """Make a new account for a provider identity nobody here holds yet.
+
+    Rate-limited on the SIGNUP budget rather than the login throttle: this is a
+    registration path, and it is the one that does not pass through
+    /api/auth/register or its CAPTCHA. Leaving it unmetered would make OAuth
+    the cheap way to mass-create accounts.
+
+    `verified` is the provider's word, not ours, and it is only ever True when
+    the provider positively said so over our own server-to-server exchange.
+    """
+    if wait := auth.signup_throttle.retry_after(ip):
+        log.warning("oauth: signup throttled for %ss from %s", wait, ip)
+        return None
+    auth.signup_throttle.record(ip)
+
+    # For X there is no address, so the display name is the only seed. It is a
+    # suggestion either way -- username_from appends a number until it is free.
+    username = repo.username_from(email or who.full_name or provider.key)
+    try:
+        user_id = repo.create_oauth_user(
+            username, full_name=who.full_name or "", email=email,
+            email_verified=verified,
+        )
+    except sqlite3.IntegrityError:
+        # Lost a race with a concurrent sign-in for the same address.
+        log.warning("oauth: collision creating an account for a %s identity",
+                    provider.key)
+        return _user_by_email(email) if email else None
+
+    log.info("oauth: created %s from a %s identity (email: %s)", username,
+             provider.key, "verified" if verified else "none")
+    return repo.get_user_by_id(user_id)
 
 
 def _user_by_email(email: str):
@@ -310,90 +322,3 @@ def _user_by_email(email: str):
                       "guess between them", len(matches))
         return None
     return repo.get_user_by_id(int(matches[0]["id"]))
-
-
-class CompleteRequest(BaseModel):
-    """Finishing a sign-up that started at a provider with no email."""
-
-    handle: str = Field(min_length=1, max_length=128)
-    username: str = Field(min_length=1, max_length=64)
-    email: str = Field(min_length=1, max_length=254)
-    full_name: str = Field(default="", max_length=120)
-    accept_terms: bool = False
-
-
-@router.post("/complete", status_code=status.HTTP_201_CREATED)
-def complete(body: CompleteRequest, request: Request, response: Response):
-    """Turn a parked provider identity into a real account.
-
-    Reached only by someone holding a handle minted by the callback, which is
-    itself only issued after a completed OAuth round-trip. So this cannot be
-    used to create an account out of nothing: no handle, no account.
-
-    The address is NOT verified here. Unlike Google, X never told us anything
-    about it -- the person typed it in a moment ago, which makes it a claim.
-    It is stored unverified and a confirmation is sent if mail is configured.
-    That matters beyond tidiness: an address that could be marked verified by
-    typing it would let an X user claim someone else's Google identity later.
-    """
-    ip = auth.client_ip(request)
-
-    if wait := auth.signup_throttle.retry_after(ip):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many accounts created from here. Try again later.",
-            headers={"Retry-After": str(wait)},
-        )
-
-    parked = repo.take_pending_oauth(repo.hash_token(body.handle))
-    if parked is None:
-        # Unknown, expired or already spent -- one message for all three.
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="That sign-up link has expired. Please start again.",
-        )
-
-    username = body.username.strip()
-    email = body.email.strip()
-    if problem := auth.username_problem(username):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
-    if problem := auth.email_problem(email):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
-    if not body.accept_terms:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST,
-                            "Please accept the Terms of Service and Privacy Policy.")
-
-    auth.signup_throttle.record(ip)
-
-    try:
-        user_id = repo.create_oauth_user(
-            username, full_name=body.full_name.strip(), email=email,
-            email_verified=False,
-        )
-    except sqlite3.IntegrityError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="That username or email is already registered.",
-        )
-
-    if not repo.link_identity(user_id, parked["provider"], parked["subject"],
-                              email=email):
-        # The subject was bound to someone else between the callback and now.
-        # The account just created has no identity attached and no password, so
-        # it would be unreachable -- remove it rather than leave a ghost.
-        log.warning("oauth: could not link %s after completion; rolling back",
-                    parked["provider"])
-        repo.delete_user(username)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="That account is already linked. Try signing in instead.",
-        )
-
-    token_raw = repo.new_session(user_id, ip=ip,
-                                 user_agent=request.headers.get("user-agent", ""))
-    auth.set_session_cookie(response, token_raw)
-    repo.touch_login(user_id)
-    log.info("oauth: completed %s sign-up as %s", parked["provider"], username)
-
-    verification.send_if_configured(user_id, email, username)
-    return {"username": username, "next": parked.get("next_path") or "/"}

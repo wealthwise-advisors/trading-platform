@@ -275,11 +275,6 @@ PUBLIC = {"/api/health", "/api/version",
           # which by definition carries no session. Note what is NOT here:
           # /api/auth/resend-verification needs one, and is guarded.
           "/api/auth/signup-config", "/api/auth/verify-email",
-          # Finishing an X sign-up. Public by necessity: the caller is creating
-          # the account they would need a session for. It defends itself with a
-          # single-use handle that only a completed OAuth round-trip produces
-          # -- test_oauth_auth.py's forged-handle test is what holds it shut.
-          "/api/auth/oauth/complete",
           # Password recovery. Public of necessity: somebody who has forgotten
           # their password cannot present a session, and the reset link is
           # clicked out of an email client. Both defend themselves with a

@@ -269,9 +269,12 @@ class TestExistingApiUnchanged:
         # asks whether a CAPTCHA is configured), /api/auth/verify-email (reached
         # by clicking a link in an email, so it carries no session) and
         # /api/auth/resend-verification (which DOES need one and is guarded).
-        # +1 for /api/auth/oauth/complete, which turns a Twitter/X identity
-        # into an account -- X returns no email at any scope, so that sign-up
-        # has to stop and ask for one before an account can exist.
+        # /api/auth/oauth/complete is GONE, and the count dropped by one with
+        # it. X returns no email at any scope, so that sign-up used to stop and
+        # ask for a username and an address. It no longer does: an account is
+        # created straight from the X identity with no address, which the
+        # schema has always allowed (email is NOT NULL DEFAULT '' and its
+        # unique index is partial, WHERE email != '').
         # +2 for password recovery -- /api/auth/forgot-password and
         # /api/auth/reset-password. Open registration made a forgotten password
         # unrecoverable: there is no longer an administrator who knows who
@@ -279,4 +282,4 @@ class TestExistingApiUnchanged:
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
         # +1 for /api/auth/forgot-username.
-        assert len(paths) == 39, sorted(paths)
+        assert len(paths) == 38, sorted(paths)

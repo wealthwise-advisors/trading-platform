@@ -227,6 +227,11 @@ CREATE INDEX IF NOT EXISTS idx_email_tokens_user ON email_tokens(user_id, purpos
 -- controls an X account; it grants nothing until the details come back and a
 -- real account is made. Hence a separate table with its own short expiry
 -- rather than a row in `sessions`.
+-- UNUSED since X sign-in stopped asking for details. Nothing reads or writes
+-- this table any more: an X identity now creates its account directly, with
+-- no address, which the users table has always allowed. Kept rather than
+-- dropped because removing a table from a live database earns nothing here
+-- -- it is empty, unreferenced, and costs a few bytes. Do not build on it.
 CREATE TABLE IF NOT EXISTS oauth_pending (
     -- SHA-256 of the handle given to the browser, never the handle itself --
     -- same reasoning as sessions and email tokens.
