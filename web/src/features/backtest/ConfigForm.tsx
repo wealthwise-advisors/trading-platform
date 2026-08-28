@@ -150,7 +150,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <div className="h-px bg-white/8" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
-      <Section icon="source" label="Data Source" accent="blue">
+      <Section icon="source" label="Data Source" accent="iris">
         <Select value={cfg.dataSource} onValueChange={(v) => cfg.setField("dataSource", v)}>
           <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -173,7 +173,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {cfg.dataSource === "schwab" && <SchwabAuthWidget />}
 
       {/* ── symbol ───────────────────────────────────────────────────────── */}
-      <Section icon="symbol" label="Symbol" accent="green">
+      <Section icon="symbol" label="Symbol" accent="sky">
         {/* A dropdown was fine at five symbols. Schwab offers twenty-one across
             five asset classes, which is a list you hunt rather than scan --
             hence a searchable dialog with the same row markup inside. */}
@@ -200,7 +200,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe" accent="blue">
+      <Section icon="timeframe" label="Timeframe" accent="iris">
         <Select value={cfg.timeframe} onValueChange={(v) => cfg.setField("timeframe", v)}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -221,7 +221,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}
-      <Section icon="strategy" label="Strategy" accent="blue">
+      <Section icon="strategy" label="Strategy" accent="iris">
         <Select
           value={cfg.strategyId}
           onValueChange={(v) => {
@@ -248,7 +248,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── strategy parameters ──────────────────────────────────────────── */}
       {currentStrategy && currentStrategy.params.length > 0 && (
-        <Section icon="params" label="Strategy Parameters" accent="violet">
+        <Section icon="params" label="Strategy Parameters" accent="lavender">
           <Panel>
             {currentStrategy.params.map((p) => (
               <SliderField
@@ -271,7 +271,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       )}
 
       {/* ── capital & risk ───────────────────────────────────────────────── */}
-      <Section icon="capital" label="Capital & Risk" accent="violet">
+      <Section icon="capital" label="Capital & Risk" accent="lavender">
         <Panel>
           <FieldRow icon={<Wallet className="h-4 w-4 text-violet-300" />} label="Initial Capital ($)">
             <Input type="number" step={10000} value={cfg.initialCapital}
@@ -289,7 +289,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── date range ───────────────────────────────────────────────────── */}
-      <Section icon="dates" label="Date Range" accent="cyan">
+      <Section icon="dates" label="Date Range" accent="periwinkle">
         <Panel>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -347,7 +347,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── session hours ────────────────────────────────────────────────── */}
-      <Section icon="session" label="Session Hours (EST)" accent="amber">
+      <Section icon="session" label="Session Hours (EST)" accent="indigo">
         <Panel>
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
@@ -376,7 +376,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── zigzag ───────────────────────────────────────────────────────── */}
-      <Section icon="zigzag" label="ZigZag Swings" accent="amber">
+      <Section icon="zigzag" label="ZigZag Swings" accent="indigo">
         <Panel>
           {/* The dots match the chart's dotted lines exactly -- #f0c040 for the
               3-leg series and #2196f3 for the 10-leg -- so it is clear which

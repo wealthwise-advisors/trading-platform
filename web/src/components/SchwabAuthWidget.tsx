@@ -70,7 +70,7 @@ export function SchwabAuthWidget() {
       )}
 
       {showAuthFlow && (
-        <div className="space-y-2 border border-white/6 rounded-lg p-3 bg-[#0e1424]">
+        <div className="space-y-2 border border-white/6 rounded-lg p-3 bg-[#1a1c24]">
           <p className="text-xs text-muted-foreground">
             <b>Step 1:</b>{" "}
             {authUrlQ.data ? (

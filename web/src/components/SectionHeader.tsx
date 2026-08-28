@@ -46,7 +46,7 @@ export function SectionHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5
-                    border-b border-white/8 bg-[#0a1020]">
+                    border-b border-white/8 bg-[#131419]">
       <h3 className="text-[13px] font-bold uppercase tracking-[0.09em]
                      text-violet-300 whitespace-nowrap">
         {title}

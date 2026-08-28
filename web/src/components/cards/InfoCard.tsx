@@ -17,7 +17,7 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
 
 export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#2f80ff" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "#7c6cf5" }}>
       <div className="info-title">📊 Performance Summary</div>
       <Row icon="🏆" label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
       <Row icon="🔢" label="Total Trades" value={String(s.total_trades)} />
@@ -32,7 +32,7 @@ export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
 
 export function BacktestDetailsCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#8b5cf6" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "#9b8afb" }}>
       <div className="info-title">🗂️ Backtest Details</div>
       <Row icon="📅" label="Date Range" value={`${s.start_date} → ${s.end_date}`} />
       <Row icon="⏱️" label="Timeframe" value={s.timeframe} />
@@ -56,7 +56,7 @@ export function QuickInsightsCard({ s }: { s: BacktestSummary }) {
 
 export function AiInsightCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#8b5cf6" }}>
+    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#9b8afb" }}>
       <span className="ai-insight-badge">BETA</span>
       <span className="ai-insight-brain" aria-hidden>🧠</span>
       <div className="info-title relative z-10">
@@ -68,8 +68,8 @@ export function AiInsightCard({ s }: { s: BacktestSummary }) {
               fill="url(#ai-wave-gradient)" />
         <defs>
           <linearGradient id="ai-wave-gradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#2f80ff" />
-            <stop offset="100%" stopColor="#8b5cf6" />
+            <stop offset="0%" stopColor="#7c6cf5" />
+            <stop offset="100%" stopColor="#9b8afb" />
           </linearGradient>
         </defs>
       </svg>

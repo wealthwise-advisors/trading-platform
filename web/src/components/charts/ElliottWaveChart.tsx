@@ -31,7 +31,7 @@ import type { ElliottWaveResponse, EWWave, OHLCVRecord } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { LoadingBlock } from "@/components/ui/loader"
 
-const BG = "#0b1120"
+const BG = "#14151c"
 const GRID = "#1a2340"
 
 // A native <select> inherits the app's light-on-dark text, but the popup list
@@ -41,7 +41,7 @@ const GRID = "#1a2340"
 // Both the control and the options therefore need explicit colours.
 const SELECT_CLS =
   "bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
-const OPTION_CLS = "bg-[#0b1120] text-[#e6edf3]"
+const OPTION_CLS = "bg-[#14151c] text-[#e6edf3]"
 const UP = "#2dd4bf"
 const DOWN = "#f0576b"
 
@@ -235,7 +235,7 @@ export function ElliottWaveChart({
           arrowcolor: color, opacity: undecided ? 0.55 : 1,
           ax: 0, ay: up ? -(26 - depth * 6) : (26 - depth * 6),
           font: { color, size: depth === 0 ? 12 : 10, family: "Arial" },
-          bgcolor: "rgba(11,17,32,0.72)", borderpad: 1,
+          bgcolor: "rgba(20,21,28,0.72)", borderpad: 1,
         })
         labelled++
 
@@ -257,7 +257,7 @@ export function ElliottWaveChart({
           showarrow: true, arrowhead: 0, arrowwidth: 1, arrowcolor: C_PARENT,
           ax: 22, ay: 0,
           font: { color: C_PARENT, size: 11, family: "Arial" },
-          bgcolor: "rgba(11,17,32,0.72)", borderpad: 1,
+          bgcolor: "rgba(20,21,28,0.72)", borderpad: 1,
         })
       }
     }
@@ -302,10 +302,10 @@ export function ElliottWaveChart({
   const layout: Partial<Layout> = {
     title: {
       text: `${symbol} — ${strategyName} · Elliott Wave (engine ${data.engine_version})`,
-      font: { size: 14, color: "#cdd6f4" },
+      font: { size: 14, color: "#d4d6e4" },
     },
     paper_bgcolor: BG, plot_bgcolor: BG,
-    font: { color: "#cdd6f4", size: 11 },
+    font: { color: "#d4d6e4", size: 11 },
     dragmode: "pan", hovermode: "closest",
     margin: { l: 58, r: 12, t: 44, b: 40 },
     annotations: built.annotations,
@@ -324,8 +324,8 @@ export function ElliottWaveChart({
           { count: 1, label: "1M", step: "month", stepmode: "backward" },
           { step: "all", label: "All" },
         ],
-        bgcolor: BG, activecolor: "#3d3d5c",
-        font: { color: "#cdd6f4", size: 11 }, x: 0, y: 1.02, xanchor: "left",
+        bgcolor: BG, activecolor: "#3a3a48",
+        font: { color: "#d4d6e4", size: 11 }, x: 0, y: 1.02, xanchor: "left",
       },
     },
     yaxis: initialY
@@ -396,7 +396,7 @@ export function ElliottWaveChart({
           {built.roots.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="pointer-events-auto max-w-md rounded-lg border border-white/10
-                              bg-[#0b1120]/92 px-5 py-4 text-center shadow-lg">
+                              bg-[#14151c]/92 px-5 py-4 text-center shadow-lg">
                 {data.counts.structures === 0 ? (
                   <>
                     <p className="text-sm font-semibold text-foreground">

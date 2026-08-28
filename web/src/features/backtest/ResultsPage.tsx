@@ -109,9 +109,25 @@ export function ResultsPage() {
     enabled: !!backtestId,
   })
   if (!backtestId) {
+    // A panel, not a filter.
+    //
+    // This line is the only text in the application that sits directly on the
+    // background image, and over bright candles it was hard to read. The fix
+    // belongs here rather than as a tint over the whole picture: one small
+    // dark surface gives this sentence its own ground, and leaves the
+    // photograph exactly as it is.
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground p-8">
-        <p>Configure your backtest in the sidebar and click <b>▶ Run Backtest</b>.</p>
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="flex items-center gap-3 rounded-xl border px-6 py-4
+                        backdrop-blur-md shadow-lg"
+             style={{ background: "rgba(16, 17, 23, 0.82)",
+                      borderColor: "rgba(190, 190, 214, 0.14)" }}>
+          <span className="text-lg leading-none" style={{ color: "#9b8afb" }}>▶</span>
+          <p className="text-sm text-foreground">
+            Configure your backtest in the sidebar, then click{" "}
+            <b style={{ color: "#9b8afb" }}>Run Backtest</b>.
+          </p>
+        </div>
       </div>
     )
   }

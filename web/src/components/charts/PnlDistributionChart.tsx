@@ -6,7 +6,7 @@ import type { Data, Layout } from "plotly.js"
 import type { TradeRecord } from "@/lib/types"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
 
-const BG = "#0b1120"
+const BG = "#14151c"
 const GRID = "#1a2340"
 const NBINS = 30
 
@@ -37,8 +37,8 @@ export function PnlDistributionChart({ trades }: { trades: TradeRecord[] }) {
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: "Trade P&L Distribution", font: { size: 14, color: "#cdd6f4" } },
-    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#cdd6f4" },
+    title: { text: "Trade P&L Distribution", font: { size: 14, color: "#d4d6e4" } },
+    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#d4d6e4" },
     dragmode: "zoom", showlegend: false,
     margin: { l: 55, r: 20, t: 55, b: 45 },
     height: 380, autosize: true,

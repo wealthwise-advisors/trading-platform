@@ -93,7 +93,7 @@ const DISC: Record<string, string> = {
   MES: "#0d9488",
   MNQ: "#0ea5e9",
   MYM: "#a16207",
-  M2K: "#8b5cf6",
+  M2K: "#9b8afb",
   // Energy
   CL:  "#1e293b",   // crude: near-black, as the barrel is
   NG:  "#3b82f6",

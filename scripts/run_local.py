@@ -46,12 +46,17 @@ def find_pages() -> Path:
     site = ROOT / "data" / "local-site"
     site.mkdir(parents=True, exist_ok=True)
     found = []
-    for name in ("autotrader_signin.html", "autotrader_signup.html"):
-        for src in (DESKTOP / name, ROOT / "web" / "public" / name):
-            if src.is_file():
-                (site / name).write_bytes(src.read_bytes())
-                found.append(name)
-                break
+
+    # ORDER MATTERS: the dashboard bundle goes down FIRST, the sign-in pages
+    # on top of it.
+    #
+    # Vite copies web/public/ verbatim into web/dist/, so a stale local build
+    # carries its own copy of both pages. Copying dist last therefore
+    # overwrote the fresh pages with whatever the last `npm run build`
+    # happened to contain -- and web/dist is gitignored, so it can be weeks
+    # old while everything else is current. The rig then served a version of
+    # the sign-in page that existed nowhere else, which reads as "my change
+    # did not work" and is impossible to explain by looking at the files.
     dist = ROOT / "web" / "dist"
     if dist.is_dir():
         import shutil
@@ -63,6 +68,13 @@ def find_pages() -> Path:
             else:
                 shutil.copy2(item, dest)
         found.append("dashboard (web/dist)")
+
+    for name in ("autotrader_signin.html", "autotrader_signup.html"):
+        for src in (DESKTOP / name, ROOT / "web" / "public" / name):
+            if src.is_file():
+                (site / name).write_bytes(src.read_bytes())
+                found.append(name)
+                break
     return site, found
 
 

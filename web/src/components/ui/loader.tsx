@@ -11,7 +11,7 @@
 // by the strict CSP the app is served under.
 //
 // Colours come from the existing theme tokens rather than new constants:
-// --primary (#2f80ff) into --accent (#8b5cf6), the same pair used by the
+// --primary (#7c6cf5) into --accent (#9b8afb), the same pair used by the
 // buttons and badges.
 
 import { useId } from "react"

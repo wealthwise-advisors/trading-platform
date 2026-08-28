@@ -78,7 +78,7 @@ export function OptimizerPanel() {
           </p>
           <div className="overflow-x-auto rounded-lg border border-white/6">
             <table className="w-full text-sm">
-              <thead className="bg-[#0e1424] text-muted-foreground">
+              <thead className="bg-[#1a1c24] text-muted-foreground">
                 <tr>
                   <th className="text-left p-2 font-medium">#</th>
                   <th className="text-left p-2 font-medium">Parameters</th>
@@ -92,7 +92,7 @@ export function OptimizerPanel() {
               </thead>
               <tbody>
                 {result.results.map((c, i) => (
-                  <tr key={i} className="border-t border-white/6" style={{ background: i === 0 ? "color-mix(in srgb, #8b5cf6 10%, transparent)" : undefined }}>
+                  <tr key={i} className="border-t border-white/6" style={{ background: i === 0 ? "color-mix(in srgb, #9b8afb 10%, transparent)" : undefined }}>
                     <td className="p-2">{i === 0 ? "🏆" : i + 1}</td>
                     <td className="p-2 text-xs text-muted-foreground">
                       {Object.entries(c.params).map(([k, v]) => `${k}=${v}`).join(", ") || "(no params)"}

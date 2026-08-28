@@ -23,15 +23,29 @@ import {
   CalendarRange, Sunrise, Activity, Info,
 } from "lucide-react"
 
-/** The accent a section is drawn in. Grouped by what the settings affect. */
-export type Accent = "blue" | "green" | "violet" | "amber" | "cyan"
+/**
+ * The accent a section is drawn in, so the panel can be scanned by colour
+ * before it is read.
+ *
+ * These are named for the HUE, not for what the section is about. The previous
+ * set was named by topic -- and had rotted into `amber: "text-[#3b82f6]"` and
+ * `cyan: "text-[#3b82f6]"`, two keys promising colours the file did not draw.
+ * A name that lies about its own value is worse than no name: it is the one
+ * thing a reader will not think to check.
+ *
+ * All five are cool. The panel sits over a warm gold photograph, and the whole
+ * point of the interface palette is to be the OTHER thing on screen -- an
+ * amber heading would have dissolved straight into the background.
+ */
+export type Accent =
+  "iris" | "sky" | "lavender" | "periwinkle" | "indigo"
 
 const ACCENT: Record<Accent, string> = {
-  blue:   "text-[#3b82f6]",
-  green:  "text-emerald-400",
-  violet: "text-violet-400",
-  amber:  "text-[#3b82f6]",
-  cyan:   "text-[#3b82f6]",
+  iris:       "text-[#7c6cf5]",   // the primary. Structure: source, timing, strategy.
+  sky:        "text-[#56b6e8]",   // the one cool blue. Reserved for the instrument.
+  lavender:   "text-[#b4a6ff]",   // the numbers you tune.
+  periwinkle: "text-[#8fa6ff]",   // the window being tested.
+  indigo:     "text-[#6b78e8]",   // filters applied on top of the data.
 }
 
 export const SECTION_ICON = {
@@ -59,7 +73,7 @@ interface SectionProps {
  * One labelled group. The heading is the only place a section name is styled, so
  * they cannot diverge.
  */
-export function Section({ icon, label, accent = "blue", children, aside }: SectionProps) {
+export function Section({ icon, label, accent = "iris", children, aside }: SectionProps) {
   const Icon = SECTION_ICON[icon]
   return (
     <section className="space-y-2.5">

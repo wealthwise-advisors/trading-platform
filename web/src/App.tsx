@@ -11,6 +11,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { api, auth, SIGN_IN_PAGE } from "@/lib/api"
+// Drawn, not typed: an emoji brings its own colour from the system font
+// and cannot be themed. These are strokes in currentColor.
+import { BarChart3, Zap, Upload, Download, Rocket } from "lucide-react"
 
 const REPORT_FORMATS = [
   { id: "html", label: "HTML" },
@@ -46,7 +49,7 @@ function App() {
     <div className="app-shell h-screen text-foreground flex flex-col md:flex-row overflow-hidden">
       {page === "backtest" && configOpen && (
         <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
-               style={{ background: "linear-gradient(180deg, #0b1325 0%, #060b18 100%)" }}>
+               style={{ background: "linear-gradient(180deg, #16171f 0%, #0d0e13 100%)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
@@ -103,7 +106,7 @@ function App() {
               </Button>
             )}
             <Button size="sm" variant={page === "backtest" ? "default" : "secondary"} onClick={() => setPage("backtest")}>
-              📊 Backtest
+              <BarChart3 className="h-3.5 w-3.5" aria-hidden /> Backtest
             </Button>
             {/* Market Grid: single visible button (a second one used to live in
                 ResultsPage's toolbar, calling this exact same setPage("replay") --
@@ -113,10 +116,10 @@ function App() {
                 the page serves live data and replay both, so "Replay" alone
                 undersold it. Route id, folder and API path stay "replay". */}
             <Button size="sm" variant={page === "replay" ? "default" : "secondary"} onClick={() => setPage("replay")}>
-              ⚡ Market Grid
+              <Zap className="h-3.5 w-3.5" aria-hidden /> Market Grid
             </Button>
             <Button size="sm" variant={page === "export" ? "default" : "secondary"} onClick={() => setPage("export")}>
-              📤 Export Data
+              <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
             {backtestId && (
               <div className="flex items-center gap-1">
@@ -127,7 +130,7 @@ function App() {
                   </SelectContent>
                 </Select>
                 <Button asChild size="sm" variant="default">
-                  <a href={api.reportUrl(backtestId, reportFormat)} download>⬇ Export Report</a>
+                  <a href={api.reportUrl(backtestId, reportFormat)} download><Download className="h-3.5 w-3.5" aria-hidden /> Export Report</a>
                 </Button>
               </div>
             )}
@@ -135,7 +138,7 @@ function App() {
                 still a stub) -- disabled rather than pretending this does
                 something, styled to match the reference's premium look. */}
             <Button size="sm" disabled title="Live trading deployment isn't implemented yet">
-              🚀 Deploy
+              <Rocket className="h-3.5 w-3.5" aria-hidden /> Deploy
             </Button>
           </div>
         </header>

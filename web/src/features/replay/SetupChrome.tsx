@@ -80,8 +80,8 @@ function Constellation({ active }: { active: boolean }) {
          className="absolute inset-0 h-full w-full">
       <defs>
         <linearGradient id="cst" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#2f80ff" stopOpacity="0.15" />
-          <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.55" />
+          <stop offset="0%" stopColor="#7c6cf5" stopOpacity="0.15" />
+          <stop offset="50%" stopColor="#9b8afb" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.15" />
         </linearGradient>
       </defs>
@@ -97,7 +97,7 @@ function Constellation({ active }: { active: boolean }) {
           vectorEffect="non-scaling-stroke"
         />
         {pts.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="0.7" fill="#8b5cf6"
+          <circle key={i} cx={x} cy={y} r="0.7" fill="#9b8afb"
                   opacity={0.35 + (i % 3) * 0.2} vectorEffect="non-scaling-stroke" />
         ))}
       </motion.g>

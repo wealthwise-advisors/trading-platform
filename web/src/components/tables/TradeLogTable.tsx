@@ -24,7 +24,7 @@ export function TradeLogTable({ trades }: { trades: TradeRecord[] }) {
       )}
       <div className="overflow-x-auto rounded-lg border border-white/6">
         <table className="w-full text-sm">
-          <thead className="bg-[#0e1424] text-muted-foreground">
+          <thead className="bg-[#1a1c24] text-muted-foreground">
             <tr>
               <th className="text-left p-2 font-medium">#</th>
               <th className="text-left p-2 font-medium">Direction</th>

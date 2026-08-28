@@ -25,7 +25,7 @@ export function ChartPatternsTable({ patterns }: { patterns: ChartPatternRecord[
     <div>
       <div className="overflow-x-auto rounded-lg border border-white/6 max-h-[480px] overflow-y-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[#0e1424] text-muted-foreground sticky top-0">
+          <thead className="bg-[#1a1c24] text-muted-foreground sticky top-0">
             <tr>
               <th className="text-left p-2 font-medium">Pattern</th>
               <th className="text-left p-2 font-medium">Direction</th>

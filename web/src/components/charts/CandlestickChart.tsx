@@ -16,7 +16,7 @@ import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
-const BG = "#0b1120"
+const BG = "#14151c"
 const GRID = "#1a2340"
 const SWING_COLORS = ["#ffd23f", "#c77dff", "#4cc9f0", "#7ee787"]
 
@@ -955,7 +955,7 @@ export function CandlestickChart({
         y: lv.value, yref: "y", yanchor: "middle",
         text: lv.label, showarrow: false,
         font: { size: 9, color: lv.color },
-        bgcolor: "rgba(11,17,32,0.75)", borderpad: 2,
+        bgcolor: "rgba(20,21,28,0.75)", borderpad: 2,
       } as Partial<Annotations>)
     }
   }
@@ -997,7 +997,7 @@ export function CandlestickChart({
                 { count: 6, label: "6M", step: "month", stepmode: "backward" },
                 { step: "all", label: "All" },
               ],
-              bgcolor: BG, activecolor: "#3d3d5c", font: { color: "#cdd6f4", size: 11 },
+              bgcolor: BG, activecolor: "#3a3a48", font: { color: "#d4d6e4", size: 11 },
               x: 0, y: rangeSelectorY, xanchor: "left",
             },
             range: xRange,
@@ -1060,7 +1060,7 @@ export function CandlestickChart({
     title: { text: `${symbol} — ${strategyName} · ${dateLabel}` + (
       vpOn && vpShowStudy && vpShowInputNames
         ? `<br><span style="font-size:10px;color:#7dd3fc">VolumeProfile(${vpRowMode}, ${vpRowHeight}, ${vpTimePer}, ${vpMultiplier}, ${vpOnExpansion ? "Yes" : "No"}, ${vpMaxProfiles}, ${vpShow.poc ? "Yes" : "No"}, ${(vpShow.vah || vpShow.val) ? "Yes" : "No"}, ${vpValueArea}, ${vpOpacity})</span>`
-        : ""), font: { size: 14, color: "#cdd6f4" },
+        : ""), font: { size: 14, color: "#d4d6e4" },
              xref: "paper", yref: "paper", x: 0.5, xanchor: "center",
              // Gap above the header base (1.015) widened 0.06 -> 0.11
              // (2026-08-02, full-audit): both title and headers scale by the
@@ -1071,7 +1071,7 @@ export function CandlestickChart({
              // the title visually collides with the tallest stacked row.
              y: (hasSwingHeaders ? 1.125 : 1.05) + extraHeaderRows * HEADER_LEVEL_HEIGHT, yanchor: "bottom" },
     paper_bgcolor: BG, plot_bgcolor: BG,
-    font: { color: "#cdd6f4" },
+    font: { color: "#d4d6e4" },
     dragmode: "pan", hovermode: "x unified",
     // Plotly's own NATIVE legend, on -- matches api/report/charts.py's
     // _base_layout exactly (same bgcolor/borderwidth, default position, no
@@ -1172,7 +1172,7 @@ export function CandlestickChart({
 
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-white/12
-                          bg-[#0b1120] p-3 shadow-xl space-y-3">
+                          bg-[#14151c] p-3 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">VolumeProfile Customizing</span>
               <button type="button" className="text-muted-foreground hover:text-foreground"
@@ -1211,7 +1211,7 @@ export function CandlestickChart({
                       className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
                                  text-foreground">
                 {["AUTOMATIC", "MANUAL"].map((m) => (
-                  <option key={m} value={m} className="bg-[#0b1120] text-[#e6edf3]">{m}</option>
+                  <option key={m} value={m} className="bg-[#14151c] text-[#e6edf3]">{m}</option>
                 ))}
               </select>
             </label>
@@ -1240,7 +1240,7 @@ export function CandlestickChart({
                         className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
                                    text-foreground">
                   {["CHART", "DAY", "WEEK"].map((m) => (
-                    <option key={m} value={m} className="bg-[#0b1120] text-[#e6edf3]">{m}</option>
+                    <option key={m} value={m} className="bg-[#14151c] text-[#e6edf3]">{m}</option>
                   ))}
                 </select>
               </label>
@@ -1309,7 +1309,7 @@ export function CandlestickChart({
 
         {vwapPanelOpen && vwapOn && (
           <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-white/12
-                          bg-[#0b1120] p-3 shadow-xl space-y-3">
+                          bg-[#14151c] p-3 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">VWAP settings</span>
               <button type="button" className="text-muted-foreground hover:text-foreground"
@@ -1339,7 +1339,7 @@ export function CandlestickChart({
                       className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
                                  text-foreground disabled:opacity-60"
                       aria-label="VWAP timeframe">
-                <option className="bg-[#0b1120] text-[#e6edf3]" value="DAY">DAY</option>
+                <option className="bg-[#14151c] text-[#e6edf3]" value="DAY">DAY</option>
               </select>
             </label>
 
@@ -1370,7 +1370,7 @@ export function CandlestickChart({
                     aria-label={`${label} width`}
                   >
                     {[1, 1.5, 2, 2.5, 3, 4].map((w) => (
-                      <option key={w} value={w} className="bg-[#0b1120] text-[#e6edf3]">
+                      <option key={w} value={w} className="bg-[#14151c] text-[#e6edf3]">
                         {w}px
                       </option>
                     ))}
@@ -1385,7 +1385,7 @@ export function CandlestickChart({
                     aria-label={`${label} style`}
                   >
                     {["solid", "dash", "dot"].map((d) => (
-                      <option key={d} value={d} className="bg-[#0b1120] text-[#e6edf3]">
+                      <option key={d} value={d} className="bg-[#14151c] text-[#e6edf3]">
                         {d}
                       </option>
                     ))}

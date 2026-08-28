@@ -5,9 +5,9 @@ import Plot from "react-plotly.js"
 import type { Data, Layout } from "plotly.js"
 import type { EquityPoint } from "@/lib/types"
 
-const BLUE = "#2f80ff"
+const BLUE = "#7c6cf5"
 const RED = "#f0576b"
-const BG = "#0b1120"
+const BG = "#14151c"
 const GRID = "#1a2340"
 
 interface EquityChartProps {
@@ -23,7 +23,7 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
   const data: Data[] = [
     {
       type: "scatter", mode: "lines", x: t, y: equity, name: "Portfolio Value",
-      line: { color: BLUE, width: 2 }, fill: "tozeroy", fillcolor: "rgba(47,128,255,0.12)",
+      line: { color: BLUE, width: 2 }, fill: "tozeroy", fillcolor: "rgba(124,108,245,0.12)",
       xaxis: "x", yaxis: "y",
     } as Data,
     {
@@ -34,8 +34,8 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: "Equity Curve & Drawdown", font: { size: 14, color: "#cdd6f4" } },
-    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#cdd6f4" },
+    title: { text: "Equity Curve & Drawdown", font: { size: 14, color: "#d4d6e4" } },
+    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#d4d6e4" },
     dragmode: "pan", hovermode: "x unified",
     legend: { bgcolor: "rgba(0,0,0,0.3)", borderwidth: 0 },
     margin: { l: 55, r: 20, t: 45, b: 55 },

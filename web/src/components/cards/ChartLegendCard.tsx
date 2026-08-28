@@ -61,7 +61,7 @@ function Swatch({ item }: { item: LegendItem }) {
 // banner running down the price panel.
 export function ChartLegendCard() {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#2f80ff" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "#7c6cf5" }}>
       <div className="info-title text-[0.55rem] mb-1">Legend</div>
       <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
         {ITEMS.map((item) => (

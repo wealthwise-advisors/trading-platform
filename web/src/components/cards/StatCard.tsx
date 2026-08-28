@@ -3,10 +3,10 @@
 // ACCENTS[2] (Max Drawdown's card border) is the palette's orange; CRITICAL
 // stays a true red since it's the general "loss/negative" status color used
 // everywhere else (trade tables, P&L bars, exit markers).
-export const ACCENTS = ["#2F80FF", "#8B5CF6", "#F97316", "#22C55E", "#e0a72e", "#f0699a"]
+export const ACCENTS = ["#7c6cf5", "#9b8afb", "#F97316", "#22C55E", "#e0a72e", "#f0699a"]
 export const GOOD = "#22C55E"
 export const CRITICAL = "#EF4444"
-export const NEUTRAL = "#e2e8ff"
+export const NEUTRAL = "#e8e9f2"
 export const CYAN = "#14E0D4"
 
 interface StatCardProps {
