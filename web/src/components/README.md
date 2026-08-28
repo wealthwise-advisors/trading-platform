@@ -21,6 +21,24 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   used on ONE screen  ──► features/<that screen>/
+   used on TWO or more ──► components/          ◄── you are here
+   no JSX at all       ──► lib/
+
+   components/
+     ├── ui/      shadcn primitives  ── everything is built from these
+     ├── cards/   one number, framed
+     ├── charts/  Plotly wrappers
+     ├── tables/  rows of results
+     └── motion/  shared timings
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -51,6 +69,13 @@
 | [`motion/`](motion) | ✨ Shared animation helpers |
 | [`tables/`](tables) | 📋 Trade log, patterns, optimiser |
 | [`ui/`](ui) | 🧱 shadcn/ui primitives — button, input, slider, tabs, dialog |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **The rule is a count, not a feeling:** used by two or more screens, it belongs here; used by one, it belongs in that feature folder.
 
 
 ---

@@ -22,6 +22,17 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   tools/make_*.py  ──run──►  *.svg  ──embedded in──►  README.md · docs/*.md
+        ▲                       │
+        └── edit HERE           └── ╳ editing this by hand is lost work
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

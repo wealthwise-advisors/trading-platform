@@ -1141,31 +1141,56 @@ frees the ports first and pins the right Python.
 
 ## 🧪 Testing & Quality
 
-```bash
-py -3.12 -m pytest              # 1,568 Python tests
-cd web && npm test              #   296 web tests
-cd web && npm run build         # tsc -b — the real typecheck
-py -3.12 -m ruff check .        # lint
-
-py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
-```
-
 <div align="center">
 
-| Suite | Count | Covers |
-|:---|---:|:---|
-| 🐍 **Python** | **1,568** | engine, analysis, API, providers, replay |
-| ⚛️ **Web** | **296** | pure logic in [`web/src/lib`](web/src/lib) |
-| **Total** | **1,864** | |
-| 📊 **Coverage** | **77%** | `src/` and `api/`, measured on every push |
+![tests](https://img.shields.io/badge/tests-2%2C026-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-1%2C730-3776AB?style=flat-square&logo=python&logoColor=white)
+![web](https://img.shields.io/badge/web-296-61DAFB?style=flat-square&logo=react&logoColor=white)
+![coverage](https://img.shields.io/badge/coverage-78.2%25-0ea5e9?style=flat-square)
+![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 
 </div>
 
-**➜** Gated at **70%**, deliberately below the current 77% — a threshold pinned to today's number gets lowered the first time it fails
+<br>
 
-**➜** Excludes the vendored Schwab client, as [`ruff`](pyproject.toml) and `mypy` already do
+### ◆ Commands
 
-**➜** Runs in the same CI step as the tests
+Four checks. Each answers a different question, and none substitutes for another.
+
+| ▶ Command | ➜ Answers |
+|:---|:---|
+| `py -3.12 -m pytest` | Does the engine still compute what it computed before? |
+| `cd web && npm test` | Does the pure frontend logic still hold? |
+| `cd web && npm run build` | Does it actually typecheck? **This one, not `tsc --noEmit`** |
+| `py -3.12 -m ruff check .` | Is the style and the import graph clean? |
+| `py -3.12 -m pytest --cov=src --cov=api --cov-report=term` | How much of it is exercised? |
+
+> [!WARNING]
+> **`npx tsc --noEmit` reports success on broken JSX.** The root `tsconfig.json` is a
+> solution file carrying project references only, so there is nothing for it to check.
+> **`npm run build` (`tsc -b`) is the real typecheck** — it is the only command that
+> will fail on a type error.
+
+<br>
+
+### ◆ What is covered
+
+<div align="center">
+
+| Suite | Count | ➜ Covers |
+|:---|---:|:---|
+| 🐍 **Python** | **1,730** | Engine · analysis · API · providers · replay · accounts |
+| ⚛️ **Web** | **296** | Pure logic in [`web/src/lib`](web/src/lib) |
+| 📦 **Total** | **2,026** | |
+| 📊 **Coverage** | **78.2%** | `src/` and `api/`, measured on every push |
+
+</div>
+
+- ➜ **Gated at 70%**, deliberately below the current 78.2% — a threshold pinned to today's number gets lowered the first time it fails
+- ➜ **Excludes the vendored Schwab client**, as [`ruff`](pyproject.toml) and `mypy` already do — it is third-party code nobody here will change
+- ➜ **Runs in the same CI step as the tests**, so coverage cannot silently stop being measured
+
+<br>
 
 ### ◆ Three kinds of test, three meanings of red
 
@@ -1173,37 +1198,48 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 <img src="docs/assets/test-topology.svg" alt="The suite splits into three kinds: unit tests where a failure means a mechanism broke, behavioural matrices where a failure means a rule about what you are shown broke, and confirmed baselines where a failure means something already verified has changed" width="100%">
 </div>
 
-| Kind | A failure means |
-|:---|:---|
-| **Unit** | a mechanism broke |
-| **Behavioural matrix** | a rule about what you are shown broke |
-| **Confirmed baseline** | something already verified has changed |
+| Kind | ➜ A failure means | ➜ So you should |
+|:---|:---|:---|
+| 🔧 **Unit** | A mechanism broke | Fix the mechanism |
+| 🧭 **Behavioural matrix** | A rule about what you are shown broke | Decide which rule is right |
+| 📌 **Confirmed baseline** | Something already verified has changed | Ask whether you meant it |
 
 > [!IMPORTANT]
 > Baseline values were confirmed against real backtests and a reference trading
-> platform. A failure asks **did I mean to change this** — never *update the
-> numbers to match*.
+> platform. A failure asks **"did I mean to change this?"** — never *"update the
+> numbers to match."* Rewriting a baseline to match new output deletes the only
+> evidence that the old output was ever right.
+
+<br>
 
 ### ◆ What the tests defend
 
-- ➜ **Follow-live across every timeframe** — all eleven, every position within a bar, seven combinations, five dates including both DST switches and a leap day
-- ➜ **Bar aggregation** — one aggregator, session-anchored, so no two paths can disagree about what a bar is
-- ➜ **Determinism** — a session grown bar by bar must be byte-identical to one handed all the data at once
-- ➜ **Elliott Wave rules** — a count that breaks a rule must be rejected
-- ➜ **Error messages** — a bad request must name the field to change, not return a 500
+| Area | ➜ The guarantee |
+|:---|:---|
+| 📡 **Follow-live** | All **eleven** timeframes · every position within a bar · seven combinations · five dates, including both DST switches and a leap day |
+| ⏱ **Bar aggregation** | **One** aggregator, session-anchored — so no two code paths can disagree about what a bar is |
+| 🔁 **Determinism** | A session grown bar by bar is **byte-identical** to one handed all the data at once |
+| 🌊 **Elliott Wave** | A count that breaks a rule is **rejected**, not drawn |
+| 🚧 **Isolation** | One account cannot reach another's data — routes swept from the app's own OpenAPI schema |
+| ⚠️ **Error messages** | A bad request **names the field to change**. It never returns a 500 |
 
-### ◆ A test earns its place by being able to fail
+<br>
 
-**➜** [Follow-live matrix](tests/test_follow_live_matrix.py) — written after a bug that only appeared above 1m
+### ◆ How a test earns its place
 
-**➜** **67 of its 107 cases fail** against the commit that shipped that bug
+A test that cannot fail defends nothing. Each one here was written against a bug that
+had already shipped, and checked against the commit that shipped it.
 
-**➜** A test that passes either way defends nothing
+| Evidence | Detail |
+|:---|:---|
+| 🐛 **The bug** | Follow-live worked at 1m and broke above it |
+| 🧪 **The test** | [`test_follow_live_matrix.py`](tests/test_follow_live_matrix.py) — 107 cases |
+| 🔴 **Proof it bites** | **67 of 107 fail** against the commit that shipped the bug |
+| ✅ **Proof it passes** | All 107 pass against the fix |
 
-> [!WARNING]
-> `npx tsc --noEmit` reports **success on broken JSX**, because the root tsconfig is a
-> solution file with project references only. **`npm run build` (`tsc -b`) is the real
-> typecheck.**
+> [!TIP]
+> Before trusting a new test, revert the fix and watch it fail. A test written after the
+> fix, never run against the bug, is an assumption with a green tick beside it.
 
 <br>
 
@@ -1212,13 +1248,7 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 ## 📦 Deployment
 
 <div align="center">
-<img src="docs/assets/deploy.svg" alt="Pull request, CI, merge to master, deploy workflow and AWS EC2; the run then checks whether the served commit equals github.sha, confirming the deployment only if it does and failing otherwise" width="100%">
 
-<br>
-
-<!-- The real marks, served by shields rather than redrawn and committed -- the
-     diagram above uses drawn glyphs for the same reason SymbolMark.tsx does not
-     fetch logos. -->
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/wealthwise-advisors/trading-platform)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows)
 [![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
@@ -1227,16 +1257,66 @@ py -3.12 -m pytest --cov=src --cov=api --cov-report=term    # coverage
 
 </div>
 
-Every deploy asks the running server which commit it is serving and **fails the run
-unless it matches**. A deploy that quietly leaves the old build running is the exact
-failure this exists to catch.
+<br>
 
-| Item | Details |
-|---|---|
-| 🔐 **Auth** | GitHub App installation token, minted per run and revoked when the job ends |
-| 🛡️ **Firewall** | The SSH rule is opened for the run and **always** revoked, even if the run fails |
+### ◆ The pipeline
+
+<div align="center">
+<img src="docs/assets/deploy.svg" alt="Pull request, CI, merge to master, deploy workflow and AWS EC2; the run then checks whether the served commit equals github.sha, confirming the deployment only if it does and failing otherwise" width="100%">
+</div>
+
+```
+   push to master
+        │
+        ▼
+   ┌──────────┐   green   ┌──────────┐   ┌──────────────┐   ┌─────────────┐
+   │    CI    │ ────────► │  build   │ ─►│  ship to EC2 │ ─►│   VERIFY    │
+   │  tests   │           │  images  │   │  compose up  │   │  which sha? │
+   └──────────┘           └──────────┘   └──────────────┘   └──────┬──────┘
+                                                                   │
+                                    ┌──────────────────────────────┴───────┐
+                                    ▼                                      ▼
+                        sha == github.sha                        sha != github.sha
+                        ✅ CONFIRMED                              ❌ RUN FAILS
+```
+
+### ◆ What each stage guarantees
+
+| Stage | ➜ Guarantee |
+|:---|:---|
+| 🧪 **CI** | Nothing reaches the server unless every test passed on that exact commit |
+| 🐳 **Build** | Images are built from the checked-out tree, not from a cache of a previous one |
+| 🚢 **Ship** | `docker compose up` with pinned volumes, so data survives the replacement |
+| 🔍 **Verify** | The running server is **asked which commit it serves** |
+
+<br>
+
+### ◆ Safety properties
+
+| Item | ➜ Detail |
+|:---|:---|
+| 🔐 **Auth** | GitHub App installation token, minted per run and revoked when the job ends — no long-lived key sits in the repository |
+| 🛡️ **Firewall** | The SSH rule is opened for the runner's IP alone and **always** revoked, in an `always()` step, so it closes even when the run fails |
 | 🔑 **Tokens** | Schwab tokens follow **newer-wins**, so a container's own refresh is never clobbered by a redeploy |
-| ✅ **Proof** | `CONFIRMED: port 80 is served by <sha>` appears in the log, or the run goes red |
+| 📁 **Volumes** | Pinned by path, so the database is not recreated underneath the new containers |
+| 📄 **Read bits** | Repaired after checkout — a leaked `umask` once made every new file mode 600, and nginx could not read them |
+
+<br>
+
+### ◆ The proof
+
+> [!IMPORTANT]
+> **Every deploy asks the running server which commit it is serving, and fails the run
+> unless it matches `github.sha`.**
+>
+> ```
+> CONFIRMED: port 80 is served by 104bb20...
+> ```
+>
+> A deploy that quietly leaves the old build running — because a container failed to
+> restart, or an image was cached — is the exact failure this exists to catch. Without
+> this check a deploy is green when nothing was deployed, which is the most expensive
+> kind of green there is.
 
 <br>
 
@@ -1248,26 +1328,43 @@ failure this exists to catch.
 <img src="docs/assets/ecosystem.svg" alt="Five retired repositories converge through a redaction step into trading-platform, which reads full market history from the data repository" width="100%">
 </div>
 
-| Repository | Purpose | |
-|---|---|---|
-| **trading-platform** | This repository — the platform | *you are here* |
-| **data** | Full market history in Git LFS, including an **18-year 1-minute ES series** too large for an ordinary repository | [Open ↗](https://github.com/wealthwise-advisors/data) |
+<br>
 
-**Five predecessor repositories were retired** — `trading-strategy`,
-`trading-web`, `Wealthwise`, `backtest` and `Project_work`. This platform is a
-**rebuild**, not a merge: none of their code runs here.
+### ◆ The two live repositories
+
+| Repository | ➜ Holds | ➜ Why separate | |
+|:---|:---|:---|:---|
+| 🏗 **trading-platform** | The application — engine, API, frontend, tests | *you are here* | — |
+| 📊 **data** | Full market history in Git LFS, including an **18-year 1-minute ES series** | A single 335 MB file exceeds GitHub's 100 MB limit, so it cannot live in an ordinary repository | [Open ↗](https://github.com/wealthwise-advisors/data) |
+
+- ➜ **The code repository stays small.** Cloning this one does not pull 433 MB of bars
+- ➜ **Docker images stay lean.** None of the market data enters a build
+- ➜ **[`data/sample/`](data/sample) is enough to run everything** — 5,000-row slices ship with the code, so the tests and a first run need no download
+
+<br>
+
+### ◆ What was retired
+
+**Five predecessor repositories** — `trading-strategy`, `trading-web`, `Wealthwise`,
+`backtest` and `Project_work`.
+
+| Fact | ➜ Detail |
+|:---|:---|
+| 🔄 **Relationship** | This platform is a **rebuild**, not a merge. None of their code runs here |
+| 🗑 **Their GitHub originals** | **Deleted.** All four were removed from the organisation |
+| 📦 **Their 519 files** | Archived here, then removed from the working tree to keep it clean |
+| 💾 **Recoverable** | **Yes, permanently** — they remain in git history, pinned by a tag |
+| 🔒 **Credentials** | Hardcoded secrets were stripped on the way in, and every one was rotated |
 
 > [!NOTE]
-> Their 519 files were archived in this repository and have now been removed from
-> the working tree, which is what keeps it clean. **Nothing was lost** — they
-> remain in git history, pinned by a tag:
+> **Nothing was lost when `legacy/` was removed.** Deleting a folder from the working
+> tree does not delete it from git history, and a tag pins the commit that still holds
+> all 519 files:
 >
 > ```bash
-> git show archive/legacy-2026-08-28:legacy/README.md      # read it
-> git checkout archive/legacy-2026-08-28 -- legacy/        # restore it
+> git show archive/legacy-2026-08-28:legacy/README.md      # read it, without restoring
+> git checkout archive/legacy-2026-08-28 -- legacy/        # restore the whole folder
 > ```
->
-> Hardcoded credentials were stripped on the way in and every one was rotated.
 
 <br>
 
@@ -1314,17 +1411,44 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 ## ⚠️ Disclaimer
 
+> [!CAUTION]
+> **This is analysis software. It is not investment advice, and it does not manage
+> money or place orders on your behalf.**
+
+<br>
+
+### ◆ What a backtest is, and is not
+
+| ✅ It is | ❌ It is not |
+|:---|:---|
+| A record of what a rule **would have done** on bars that already printed | A prediction of what it **will** do |
+| Reproducible — the same inputs give the same numbers | Free of hindsight; the data was chosen knowing how it ended |
+| Charged for commission, slippage and tick rounding | Able to model every real cost — partial fills, gaps, outages, rejected orders |
+
+<br>
+
+### ◆ The risks, stated plainly
+
+- ➜ **Futures trading carries substantial risk of loss** and is not suitable for every investor
+- ➜ **You can lose more than you deposit.** Leverage works in both directions
+- ➜ **Past performance does not indicate future results** — this is true of every backtest ever run, including the ones in this repository
+- ➜ **Market data can be delayed, incomplete or wrong.** It comes from third parties
+
+<br>
+
+### ◆ What is production-ready, and what is not
+
+| Capability | Status |
+|:---|:---|
+| 📊 **Backtesting & analysis** | ✅ Production-ready |
+| 📡 **Live market data** | ✅ Production-ready |
+| 🔐 **Accounts & access control** | ✅ Production-ready |
+| 🚀 **Live order execution** | ⚠️ **Deliberately unwired.** [`src/live/trader.py`](src/live/trader.py) is a stub, and the Deploy button is disabled to match |
+
 > [!WARNING]
-> **For research and education. Not investment advice.**
->
-> Futures trading carries substantial risk of loss and is not suitable for every
-> investor. Backtested results are hypothetical: they benefit from hindsight, cannot
-> account for every market condition, and **do not predict future performance**.
->
-> **Live data is production-ready; live execution is deliberately experimental and unwired.**
->
-> Nothing here should be traded with real money without independent validation and your
-> own understanding of the risk.
+> **Nothing here should be traded with real money** without independent validation and
+> your own understanding of the risk. A half-built order path that *looked* finished
+> would be far more dangerous than an honest gap, which is why the stub stays a stub.
 
 <br>
 

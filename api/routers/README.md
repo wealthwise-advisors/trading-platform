@@ -22,6 +22,29 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   HTTP request
+        │
+        ▼
+   ┌──────────────┐  no session   ┌──────────┐
+   │  the guard   │ ────────────► │   401    │
+   │  (api/auth)  │               └──────────┘
+   └──────┬───────┘
+          │ user
+          ▼
+   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+   │  schemas/    │ ─► │  this router │ ─► │    src/      │
+   │  validate in │    │  no logic    │    │  the engine  │
+   └──────────────┘    └──────┬───────┘    └──────────────┘
+                              ▼
+                        serializers ──► JSON
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

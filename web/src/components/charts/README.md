@@ -22,6 +22,24 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   backtest result ──► serialisers ──► JSON ──► these components ──► Plotly
+
+   CandlestickChart   price · VWAP · volume profile · swings · trades
+   ElliottWaveChart   structures drawn over price
+   EquityChart        equity + drawdown
+   PnlDistribution    where the trades landed
+   MonthlyReturns     returns by month
+   WinLossDonut       the split
+
+   colour rule: chrome is cool · red and green are kept for MEANING
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -32,6 +50,13 @@
 | [`PnlDistributionChart.tsx`](PnlDistributionChart.tsx) | 📊 Trade P&L distribution. | 55 |
 | [`MonthlyReturnsHeatmap.tsx`](MonthlyReturnsHeatmap.tsx) | 📅 Returns by month. | 61 |
 | [`WinLossDonut.tsx`](WinLossDonut.tsx) | 🍩 Win/loss split. | 30 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Red and green are reserved for meaning** — a loss and a gain. Recolouring them to match the theme would delete information from the chart.
 
 
 ---

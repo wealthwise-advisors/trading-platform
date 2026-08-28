@@ -24,6 +24,21 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   web/public/*  ──copied VERBATIM──►  web/dist/*  ──► nginx
+
+   these pages never load index.css. Styles are inline, so
+   app theming cannot reach them -- and cannot break them.
+
+   ⚠️ run_local.py prefers the DESKTOP copies of the sign-in pages.
+      Edit both, or the local rig shows you a stale page.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

@@ -25,6 +25,20 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   src/data/schwab_provider.py
+        │  uses
+        ▼
+   schwabdev/  ◄── vendored copy of a third-party SDK
+        │
+        └── ╳ do not edit. Local changes diverge from upstream in silence.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -32,6 +46,14 @@
 | [`api.py`](api.py) | The Schwab REST client. | 728 |
 | [`stream.py`](stream.py) | The streaming client. | 181 |
 | [`LICENSE.txt`](LICENSE.txt) | 📄 Upstream licence. Keep it with the code. | 21 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Vendored, not a dependency.** It is copied in because the build cannot fetch it — which also means no automated update will ever touch it.
+- ➜ **Keep [`LICENSE.txt`](LICENSE.txt) beside the code.** It is upstream's licence, and removing it would strip the terms the code is used under.
 
 
 ---

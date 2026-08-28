@@ -22,6 +22,23 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   base_strategy.py  (the interface)
+        ▲
+        ├── ma_crossover      ┐
+        ├── rsi_divergence    │  any of these can be
+        ├── rsi_mean_reversion├─ dropped into a run
+        ├── breakout          │  without the engine
+        └── regime_adaptive   ┘  knowing which it got
+
+   parameters declared in api/strategy_registry.py ──► the optimiser sweeps them
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -32,6 +49,14 @@
 | [`rsi_mean_reversion.py`](rsi_mean_reversion.py) | ↩️ Fade the extreme. | 99 |
 | [`ma_crossover.py`](ma_crossover.py) | ✂️ Fast MA crosses slow MA. | 65 |
 | [`base_strategy.py`](base_strategy.py) | The interface every strategy implements. | 45 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Any strategy can be swapped for any other** because the engine only knows [`base_strategy.py`](base_strategy.py). Adding one means implementing that interface — no engine change.
+- ➜ **Declare parameters in [`api/strategy_registry.py`](../../api/strategy_registry.py)** or the optimiser cannot sweep them, and the UI cannot draw the sliders.
 
 
 ---

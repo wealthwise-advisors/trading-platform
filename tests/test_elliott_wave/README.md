@@ -22,6 +22,25 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   docs/ELLIOTT_WAVE_RULES.md   (the specification)
+        │  is enforced by
+        ▼
+   test_guards.py ──► a structure that breaks a rule is REJECTED
+        │
+   test_pivots ► test_structures ► test_impulse_rules ► test_triangle
+                                                      ► test_flat_subtype
+                                                      ► test_combination
+        │
+        ▼
+   test_pipeline_and_api.py ──► end to end, plus the route-count guard
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -36,6 +55,14 @@
 | [`test_flat_subtype.py`](test_flat_subtype.py) | ➖ Regular, expanded and running flats. | 200 |
 | [`test_pivots.py`](test_pivots.py) | 📍 The pivot set everything is built from. | 161 |
 | [`conftest.py`](conftest.py) | ⚙️ Shared fixtures and synthetic wave data. | 132 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **The rules document is the specification.** A structure that breaks a rule must be rejected, not drawn with a caveat.
+- ➜ **[`test_pipeline_and_api.py`](test_pipeline_and_api.py) asserts an exact route count**, so a new endpoint cannot appear unnoticed.
 
 
 ---

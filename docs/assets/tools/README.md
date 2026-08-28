@@ -22,6 +22,21 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   py -3.12 make_<name>_svg.py
+        │
+        ▼
+   ../<name>.svg   ──►  referenced by the README and the docs
+
+   why scripts and not drawings: a diagram that must stay in step
+   with the code has to be rebuildable when the code moves.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -34,6 +49,13 @@
 | [`make_ecosystem_svg.py`](make_ecosystem_svg.py) | 🌍 The repository ecosystem map. | 226 |
 | [`make_deploy_svg.py`](make_deploy_svg.py) | 🚀 The deployment diagram. | 210 |
 | [`make_test_topology_svg.py`](make_test_topology_svg.py) | 🧪 The test topology. | 199 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **A diagram that must stay in step with the code has to be rebuildable.** That is why these are scripts rather than drawings.
 
 
 ---

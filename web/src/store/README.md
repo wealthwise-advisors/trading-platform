@@ -22,11 +22,34 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   configStore (Zustand)          React Query (lib/api.ts)
+   ┌────────────────────┐         ┌────────────────────┐
+   │ what YOU chose     │         │ what the SERVER    │
+   │ symbol, timeframe  │         │ returned           │
+   │ strategy, dates    │         │ bars, trades       │
+   └────────────────────┘         └────────────────────┘
+        client state                   server state
+        ╳ do not put server data here -- it will go stale
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`configStore.ts`](configStore.ts) | ⚙️ Symbol, timeframe, strategy, dates, capital — and the active page. | 131 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Client state only.** Server data belongs to React Query in [`lib/api.ts`](../lib/api.ts) — duplicating it here guarantees the two go out of step.
 
 
 ---

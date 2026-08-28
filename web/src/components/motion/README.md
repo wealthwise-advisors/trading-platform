@@ -21,11 +21,33 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   primitives.tsx ──► fade · slide · stagger ──► used by every screen
+
+   one place for durations and easings, so two components
+   cannot disagree about how fast "fast" is.
+
+   ╳ motion explains a change. It never loops for decoration.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`primitives.tsx`](primitives.tsx) | Fade, slide and stagger helpers. | 102 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **One place for durations and easings**, so two components cannot disagree about how fast "fast" is.
+- ➜ **Motion explains a change.** Looping animation with nothing to explain is attention-seeking that never stops.
 
 
 ---

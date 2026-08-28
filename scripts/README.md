@@ -22,6 +22,19 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   run_local.py      ──► API :8801 + pages ──► ONE origin on :8800
+                          (matches production's shape, which is the point)
+
+   manage_users.py   ──► the database directly, no HTTP
+   run_backtest.py   ──► src/ directly, no server, no browser
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

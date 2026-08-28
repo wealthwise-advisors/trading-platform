@@ -21,12 +21,33 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+                    ┌──► CSV    formats.py
+   BacktestResults ─┼──► XLSX   formats.py
+   (already final)  ├──► PDF    report_export.py
+                    └──► DOCX   report_export.py
+
+   ╳ no writer recomputes a number. It formats what it was given.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`formats.py`](formats.py) | The writers themselves, one per format. | 117 |
 | [`report_export.py`](report_export.py) | Wraps a rendered report into a downloadable file. | 54 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **A writer formats, it never calculates.** Four formats reading one result object is the only way they cannot disagree with each other.
 
 
 ---

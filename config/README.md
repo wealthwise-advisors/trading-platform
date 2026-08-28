@@ -24,6 +24,20 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   settings.yaml ────────► src/config.py ──► the whole app
+   (committed, safe)
+
+   credentials.yaml ─────┐
+   schwab_tokens.json ───┴► gitignored ──► ╳ NEVER committed
+                                            ╳ NEVER in an image
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

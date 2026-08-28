@@ -21,6 +21,20 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   import bg from "@/assets/app-background.jpg"
+        │
+        ▼  Vite hashes it, inlines the small ones
+   dist/assets/app-background-a1b2c3.jpg
+
+   vs web/public/ ──► copied verbatim, keeps its name, never hashed
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -31,6 +45,13 @@
 | [`brand-favicon.png`](brand-favicon.png) | 🔖 Tab icon. | 51 |
 | [`hero.png`](hero.png) | 🖼 Hero image. | 98 |
 | [`vite.svg`](vite.svg) | Vite's default logo. | 1 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Imported, so Vite hashes them** — a changed image gets a new filename and cannot be served stale from a cache. Files in [`public/`](../../public) keep their names and do not get this.
 
 
 ---

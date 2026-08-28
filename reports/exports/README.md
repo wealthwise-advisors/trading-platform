@@ -21,12 +21,30 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   GET /api/data/export ──► api/export/formats.py ──► a file here ──► download
+
+   ╳ nothing reads these back in. Deleting them loses nothing.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`CL_1m_2026-07-14_2026-07-17.csv`](CL_1m_2026-07-14_2026-07-17.csv) | — | 5,126 |
 | [`CL_5m_2026-07-14_2026-07-17.csv`](CL_5m_2026-07-14_2026-07-17.csv) | — | 1,033 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Nothing reads these back in.** They exist only to be downloaded.
 
 
 ---

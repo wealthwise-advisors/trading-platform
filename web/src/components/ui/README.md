@@ -24,6 +24,20 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   shadcn/ui generator ──► these files ──► themed HERE, by hand
+                                              │
+   ⚠️ re-running the generator OVERWRITES that theming.
+
+   colours come from tokens in web/src/index.css,
+   so a theme change reaches all sixteen at once.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -44,6 +58,14 @@
 | [`badge.tsx`](badge.tsx) | 🔖 Small status pill. | 49 |
 | [`separator.tsx`](separator.tsx) | ➖ Divider. | 26 |
 | [`time-field.test.ts`](time-field.test.ts) | 🧪 Tests for `time-field.tsx`. | 118 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Re-running the shadcn generator overwrites the local theming here.** These files have been edited by hand since they were generated.
+- ➜ **Colour comes from tokens** in [`index.css`](../../index.css), so one token change reaches all sixteen components at once.
 
 
 ---

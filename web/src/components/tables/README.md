@@ -19,6 +19,20 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   result data ──► one <thead> treatment ──► every table looks like the others
+
+   TradeLogTable              every trade the run produced
+   OptimizerPanel             ranked sweeps, best first
+   CandlestickPatternsTable   detected candle patterns
+   ChartPatternsTable         detected chart patterns
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -27,6 +41,13 @@
 | [`OptimizerPanel.tsx`](OptimizerPanel.tsx) | 🎯 Ranked parameter sweeps — best first. | 118 |
 | [`CandlestickPatternsTable.tsx`](CandlestickPatternsTable.tsx) | 🕯 Detected candlestick patterns. | 74 |
 | [`ChartPatternsTable.tsx`](ChartPatternsTable.tsx) | 📐 Detected chart patterns. | 64 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **One header treatment across all four**, so a screen showing two of them reads as one interface rather than two.
 
 
 ---

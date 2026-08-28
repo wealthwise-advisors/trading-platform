@@ -22,6 +22,21 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   data/sample/     5,000 rows   ships with the code   ──► tests · first run
+   data/historical/ full archive gitignored            ──► real backtests
+        ▲
+        └── wealthwise-advisors/data  (433 MB, Git LFS)
+
+   autotrader.db ──► accounts · sessions · saved runs
+   local-site/   ──► ASSEMBLED by run_local.py, never edited by hand
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |

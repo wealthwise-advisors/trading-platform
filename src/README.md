@@ -62,6 +62,14 @@
 
 ---
 
+## 💡 Worth knowing
+
+- ➜ **Nothing in here imports FastAPI, React or a session.** That is what lets a strategy be run from a script, a notebook or a test with no server anywhere.
+- ➜ **The boundary is one-way.** [`api/`](../api) imports `src/`; `src/` never imports `api/`. A circular import here would make the engine untestable in isolation.
+
+
+---
+
 <div align="center">
 
 <sub>⬅ <a href="../README.md">Project README</a></sub>

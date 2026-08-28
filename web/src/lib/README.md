@@ -24,6 +24,22 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   api.ts ──► every backend call, in one module
+   types.ts ──► MIRRORS api/schemas ──► ⚠️ change one, change the other
+
+   pure functions, each with an X.test.ts beside it:
+     clock · dayRange · resample · rangebreaks · chartAxis
+     followLive · deviationColors · volumeProfile · priceFormat
+
+   ╳ no JSX here. If it renders, it is a component.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -58,6 +74,14 @@
 | [`rangebreaks.test.ts`](rangebreaks.test.ts) | 🧪 Tests for [`rangebreaks.ts`](rangebreaks.ts). | 88 |
 | [`resample.test.ts`](resample.test.ts) | 🧪 Tests for [`resample.ts`](resample.ts). | 234 |
 | [`volumeProfileShapes.test.ts`](volumeProfileShapes.test.ts) | 🧪 Tests for [`volumeProfileShapes.ts`](volumeProfileShapes.ts). | 122 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **No JSX here.** If it renders, it is a component — that separation is what makes every file in this folder unit-testable without a DOM.
+- ➜ **[`types.ts`](types.ts) mirrors [`api/schemas`](../../../api/schemas).** They are two halves of one contract, and nothing enforces it but attention.
 
 
 ---

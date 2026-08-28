@@ -25,6 +25,24 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   ┌── unit ──────────────► a mechanism broke
+   ├── behavioural matrix ► a rule about what you are shown broke
+   └── confirmed baseline ► something already verified has changed
+                                   │
+   ╳ never "update the numbers to match" ──┘
+
+   conftest.py: _SECURITY_SUITES
+        │
+        └── a refusal test NOT listed there runs with require_user
+            overridden, and passes without ever reaching the guard.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -61,6 +79,15 @@
 |:--|:--|
 | [`fixtures/`](fixtures) | 📎 Pinned data the tests read |
 | [`test_elliott_wave/`](test_elliott_wave) | 🌊 The wave engine's own suite |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **A refusal test not listed in `_SECURITY_SUITES` passes without reaching the guard.** [`conftest.py`](conftest.py) overrides `require_user` for every other suite.
+- ➜ **Adding an API route fails two tests on purpose** — the OpenAPI guard sweep and an exact route count. Raise them deliberately, never by reflex.
+- ➜ **A test that cannot fail defends nothing.** Run a new test against the commit that had the bug before trusting it.
 
 
 ---

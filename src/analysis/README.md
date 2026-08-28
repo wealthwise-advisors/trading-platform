@@ -22,6 +22,24 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   bars
+    │
+    ├──► indicators.py ──────► RSI · Stochastic
+    ├──► swing_identification ──► pivots ──┬──► chart_patterns.py
+    │                                      └──► elliott_wave/
+    ├──► zigzag.py ─────────► labelled swings (1.1, 1.2 …)
+    ├──► candlestick_patterns ► Doji · Hammer · Engulfing
+    └──► regime.py ─────────► trending up · down · choppy
+
+   every one is a pure function of a frame. No I/O, no state.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
@@ -41,6 +59,14 @@
 | Folder | ➜ What lives there |
 |:--|:--|
 | [`elliott_wave/`](elliott_wave) | 🌊 The full Elliott Wave engine — 13 modules |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Every function here is pure.** Same frame in, same numbers out — which is what makes [`tests/test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) able to pin them at all.
+- ➜ **Swing pivots are shared, not recomputed.** Chart patterns and the wave engine both build on `swing_identification`, so they cannot disagree about where a swing is.
 
 
 ---

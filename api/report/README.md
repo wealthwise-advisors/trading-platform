@@ -21,12 +21,34 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   BacktestResults
+        │
+        ▼
+   charts.py ──► figures ──┐
+                           ├──► report.py ──► one self-contained .html
+   summary · trades ───────┘                  (opens anywhere, same look)
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`report.py`](report.py) | Assembles the full HTML report — sections, tables, verdicts. | 1,168 |
 | [`charts.py`](charts.py) | Draws the figures the report embeds. | 648 |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Rendered on the server, on purpose.** A report is shared, and it has to look the same wherever it is opened — not depend on the reader's browser or fonts.
+- ➜ **The report never recomputes.** It formats a finished `BacktestResults`; if a number here disagreed with the screen, one of them would be lying.
 
 
 ---

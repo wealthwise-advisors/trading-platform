@@ -20,11 +20,31 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   api/report  ──┐
+                 ├──► reports/exports/  ──► the browser downloads it
+   api/export  ──┘
+
+   gitignored · regenerates · safe to delete at any time
+```
+
+
+---
+
 ## 🗃 Subfolders
 
 | Folder | ➜ What lives there |
 |:--|:--|
 | [`exports/`](exports) | 📤 CSV · XLSX · PDF · DOCX written on request |
+
+
+---
+
+## 💡 Worth knowing
+
+- ➜ **Output only, and gitignored.** Deleting the whole folder loses nothing — it regenerates on the next export.
 
 
 ---

@@ -22,6 +22,24 @@
 
 ---
 
+## 🔄 How it fits together
+
+```
+   main.tsx ──► App.tsx ──┬──► features/backtest   the screens
+                          ├──► features/replay
+                          └──► features/export
+                                    │
+                                    ├──► components/   shared UI
+                                    ├──► lib/          pure logic, tested
+                                    └──► store/        client state
+
+   index.css holds the theme TOKENS. A component should not
+   hard-code a hex; change the token and everything follows.
+```
+
+
+---
+
 ## 📂 Files
 
 | File | ➜ What it does | Lines |
