@@ -624,16 +624,27 @@ input:focus-visible {
   overflow: hidden;
 }
 
+/* The bar belongs to the DIAL, not to the app chrome.
+ *
+ * It used to inherit --primary and --accent, so when those moved from blue and
+ * purple to violet and lavender, the bar followed -- and the lavender end came
+ * out close enough to white to read as an unstyled default. It also stopped
+ * matching the gauge sitting immediately to its left, which is the real fault:
+ * the dial and the bar are ONE instrument showing ONE number.
+ *
+ * So it takes the gauge's own ramp, deliberately warm, and is no longer wired
+ * to the theme tokens. The surrounding interface stays graphite and violet;
+ * this readout is an instrument face and is allowed to look like one. */
 .tickbar-fill {
   position: relative;
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg,
-    color-mix(in srgb, var(--primary) 78%, #14151c) 0%,
-    var(--primary) 55%,
-    var(--accent) 100%);
+    #ea580c 0%,
+    #f97316 55%,
+    #fbbf24 100%);
   box-shadow:
-    0 0 10px -1px color-mix(in srgb, var(--primary) 75%, transparent),
+    0 0 10px -1px rgba(249, 115, 22, 0.75),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
   /* Width comes from React. Eased so a tick reads as motion rather than a
      jump, but kept short: at 0.05s per tick a long transition would visibly
@@ -650,9 +661,9 @@ input:focus-visible {
   right: 0;
   width: 2px;
   height: 100%;
-  background: #ffffff;
-  opacity: 0.85;
-  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 90%, transparent);
+  background: #fff7ed;
+  opacity: 0.9;
+  box-shadow: 0 0 8px 1px rgba(251, 191, 36, 0.9);
 }
 
 .tickbar-track[data-playing="true"] .tickbar-fill::before {

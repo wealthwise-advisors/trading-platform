@@ -83,19 +83,17 @@ export function Gauge({ value, size = 132, label, sub, className = "" }: GaugePr
          aria-valuenow={Math.round(pct)} aria-label={sub ?? "Progress"}>
       <svg viewBox="0 0 100 100" width={size} height={size}>
         <defs>
-          {/* Deep indigo at rest, brightening to lavender toward full -- the same
-              ramp the bars use, so arc and scale agree about how far along you
-              are. It was an orange-to-amber ramp, which put the single most
-              saturated warm object in the app directly on a gold background. */}
+          {/* Deep orange at rest, brightening toward full -- the same warm ramp
+              the bars use, so arc and scale agree about how far along you are. */}
           <linearGradient id={arcG} x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0%" stopColor="#4c3fc4" />
-            <stop offset="50%" stopColor="#7c6cf5" />
-            <stop offset="100%" stopColor="#b4a6ff" />
+            <stop offset="0%" stopColor="#ea580c" />
+            <stop offset="50%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#fbbf24" />
           </linearGradient>
           <radialGradient id={knobG}>
-            <stop offset="0%" stopColor="#f5f3ff" />
-            <stop offset="45%" stopColor="#c4b5fd" />
-            <stop offset="100%" stopColor="#7c6cf5" />
+            <stop offset="0%" stopColor="#fff7ed" />
+            <stop offset="45%" stopColor="#fdba74" />
+            <stop offset="100%" stopColor="#f97316" />
           </radialGradient>
           <filter id={glow} x="-70%" y="-70%" width="240%" height="240%">
             <feGaussianBlur stdDeviation="1.5" result="b" />
@@ -117,7 +115,7 @@ export function Gauge({ value, size = 132, label, sub, className = "" }: GaugePr
           const c = polar(b.major ? R_BAR_OUT + 1.5 : R_BAR_OUT, b.deg)
           return (
             <line key={i} x1={a.x} y1={a.y} x2={c.x} y2={c.y}
-                  stroke={b.lit ? (b.major ? "#b4a6ff" : "#8b7cf0") : "#2c2a45"}
+                  stroke={b.lit ? (b.major ? "#fbbf24" : "#fb923c") : "#78350f"}
                   strokeOpacity={b.lit ? 1 : b.major ? 0.55 : 0.38}
                   strokeWidth={b.major ? 3.2 : 2.1}
                   strokeLinecap="butt"
@@ -172,7 +170,7 @@ export function Gauge({ value, size = 132, label, sub, className = "" }: GaugePr
              style={{ top: -size * 0.585 }}>
           <span className="font-bold leading-none tabular-nums"
                 style={{ fontSize: size * 0.152, letterSpacing: "-0.02em",
-                         color: "#b4a6ff", textShadow: "0 0 14px rgba(124,108,245,0.55)" }}>
+                         color: "#fb923c", textShadow: "0 0 14px rgba(249,115,22,0.55)" }}>
             {label ?? `${Math.round(pct)}%`}
           </span>
           {sub && (

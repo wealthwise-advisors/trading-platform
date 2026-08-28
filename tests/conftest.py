@@ -71,7 +71,13 @@ def _signed_in_for_the_session():
 #: clients resolve to the same TEST_USER, so every assertion would pass while
 #: testing nothing at all.
 _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
-                    "test_reset_auth"}
+                    "test_reset_auth",
+                    # Asserts that a RESTORED database still refuses an
+                    # anonymous caller. Without this entry that assertion runs
+                    # against the override below, which can never produce a
+                    # 401 -- so it would pass while testing nothing, which is
+                    # the exact failure this set exists to prevent.
+                    "test_backup_restore"}
 
 
 @pytest.fixture(autouse=True)

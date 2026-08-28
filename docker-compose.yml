@@ -15,6 +15,27 @@
 # and replay all work with zero external credentials; see
 # docs/CONFIGURATION.md.
 
+# ── log rotation ─────────────────────────────────────────────────────────────
+#
+# Docker's json-file driver has NO size limit by default, so container logs grow
+# until the disk is full -- and a full disk on this instance takes down SQLite
+# writes and nginx with it, not just logging.
+#
+# That went from theoretical to likely on 2026-08-28, when api/main.py started
+# configuring logging at INFO. Before that the application emitted almost
+# nothing; every log.info() was dropped on the floor for want of a handler. The
+# fix that made the app debuggable is the same change that made this urgent.
+#
+# 10 MB x 3 files x 3 services = 90 MB worst case, bounded and predictable.
+#
+# Defined once as an anchor rather than copied three times: three copies of a
+# rotation policy is how one service quietly ends up unbounded.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   api:
     build:
@@ -22,6 +43,7 @@ services:
       dockerfile: Dockerfile
     image: autotrader-api:1.0.0
     restart: unless-stopped
+    logging: *default-logging
     environment:
       AUTOTRADER_CORS_ORIGINS: "${AUTOTRADER_CORS_ORIGINS:-http://localhost:8080}"
       # Surfaced by /api/version so a deploy can prove the container answering
@@ -87,6 +109,7 @@ services:
       dockerfile: Dockerfile
     image: autotrader-web:1.0.0
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       api:
         condition: service_healthy
@@ -127,6 +150,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       - web
     volumes:
