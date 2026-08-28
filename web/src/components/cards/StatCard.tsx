@@ -1,9 +1,14 @@
 // Fixed categorical order — card N always gets slot N, regardless of value.
-// Exact hex values pinned to the reference palette (blue/purple/orange/green).
-// ACCENTS[2] (Max Drawdown's card border) is the palette's orange; CRITICAL
-// stays a true red since it's the general "loss/negative" status color used
-// everywhere else (trade tables, P&L bars, exit markers).
-export const ACCENTS = ["#7c6cf5", "#9b8afb", "#F97316", "#22C55E", "#e0a72e", "#f0699a"]
+// CRITICAL stays a true red: it is the general "loss/negative" status colour
+// used everywhere else (trade tables, P&L bars, exit markers), and unlike
+// these six it carries meaning rather than just telling cards apart.
+// All six are cool. Two were not: [2] was #F97316 (orange) and [4]
+// #e0a72e (amber), left over from the reference palette. They mark a
+// CATEGORY, not a status, so cooling them loses no meaning -- while GOOD
+// and CRITICAL below stay green and red, because those two are meaning.
+import type { ReactNode } from "react"
+
+export const ACCENTS = ["#7c6cf5", "#9b8afb", "#56b6e8", "#22C55E", "#8fa6ff", "#c084fc"]
 export const GOOD = "#22C55E"
 export const CRITICAL = "#EF4444"
 export const NEUTRAL = "#e8e9f2"
@@ -13,7 +18,9 @@ interface StatCardProps {
   label: string
   value: string
   accent: string
-  icon?: string
+  /** A drawn icon. Not a string: an emoji would carry its own colour
+   *  and could not follow the theme. */
+  icon?: ReactNode
   valueColor?: string
   sub?: string
 }

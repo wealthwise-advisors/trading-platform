@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terms of Service · AutoTrader</title>
+<style>
+  /* Same palette as the sign-in card, deliberately: this is the same product,
+     and a legal page that looks like a different site reads as a phishing one.
+     No inlined photograph here though -- these must open instantly. */
+  :root{
+    --em:#10b981; --em2:#34d399;
+    --bg:#0a1018; --panel:rgba(13,20,30,.86); --line:rgba(255,255,255,.10);
+    --ink:#eef3fa; --dim:#9aa7bd; --r:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:
+      radial-gradient(1100px 620px at 15% -10%, rgba(16,185,129,.10), transparent 60%),
+      radial-gradient(900px 560px at 105% 8%, rgba(52,211,153,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink); line-height:1.68;
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:40px 22px 80px}
+  .top{display:flex; align-items:center; gap:14px; margin-bottom:34px; flex-wrap:wrap}
+  .brand{font-weight:800; letter-spacing:.4px; font-size:18px}
+  .brand span{color:var(--em)}
+  .back{
+    margin-left:auto; color:var(--dim); text-decoration:none; font-size:14px;
+    border:1px solid var(--line); padding:8px 14px; border-radius:10px;
+    transition:border-color .15s, color .15s;
+  }
+  .back:hover{color:var(--ink); border-color:rgba(255,255,255,.28)}
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--r); padding:34px 32px;
+    backdrop-filter:blur(10px);
+  }
+  h1{margin:0 0 6px; font-size:29px; letter-spacing:-.4px}
+  .upd{color:var(--dim); font-size:13.5px; margin:0 0 26px}
+  h2{
+    font-size:14px; text-transform:uppercase; letter-spacing:.13em;
+    color:var(--em2); margin:32px 0 10px; font-weight:700;
+  }
+  p,li{color:#cfd8e6; font-size:15px}
+  ul{padding-left:20px} li{margin:6px 0}
+  a{color:var(--em2)}
+  strong{color:var(--ink)}
+  .note{
+    border:1px solid rgba(16,185,129,.32); background:rgba(16,185,129,.08);
+    border-radius:12px; padding:15px 17px; margin:22px 0;
+  }
+  .warn{
+    border:1px solid rgba(239,68,68,.34); background:rgba(239,68,68,.09);
+    border-radius:12px; padding:15px 17px; margin:22px 0;
+  }
+  .warn strong{color:#fca5a5}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14.5px}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{color:var(--dim); font-weight:600; font-size:12.5px;
+      text-transform:uppercase; letter-spacing:.08em}
+  td:first-child{color:var(--ink); white-space:nowrap; padding-right:18px}
+  .foot{margin-top:30px; color:var(--dim); font-size:13.5px; text-align:center}
+  .foot a{margin:0 9px}
+  @media(max-width:620px){
+    .card{padding:24px 19px} h1{font-size:24px}
+    td:first-child{white-space:normal}
+  }
+</style></head><body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">AUTO<span>TRADER</span></div>
+    <a class="back" href="autotrader_signin.html">&larr; Back to sign in</a>
+  </div>
+  <div class="card">
+    <h1>Terms of Service</h1>
+    <p class="upd">Last updated 28 August 2026</p>
+
+    <div class="warn">
+      <strong>This is not financial advice.</strong> AutoTrader is analysis
+      software. It does not recommend trades, manage money, or place orders on
+      your behalf. Every decision you make with it is yours.
+    </div>
+
+    <h2>1. What this service is</h2>
+    <p>AutoTrader is a private platform for <strong>backtesting and analysing
+    futures and equities strategies</strong> against historical market data. It
+    charts price, runs strategies over past bars, and reports what those rules
+    would have done.</p>
+
+    <h2>2. Backtests are hypothetical</h2>
+    <p>A backtest applies rules to data that has already happened, with perfect
+    knowledge of the bars and no real money at risk. Results are
+    <strong>hypothetical and not a prediction</strong>.</p>
+    <ul>
+      <li><strong>Past performance does not indicate future results.</strong></li>
+      <li>Real trading carries costs a simulation cannot fully model —
+          slippage, partial fills, gaps, outages and rejected orders.</li>
+      <li>Trading futures involves substantial risk of loss and is not suitable
+          for every investor. <strong>You can lose more than you deposit.</strong></li>
+    </ul>
+
+    <h2>3. Your account</h2>
+    <p>You are responsible for your credentials and for what is done through
+    your account. Use a password you use nowhere else, and tell us promptly if
+    you believe someone else has access.</p>
+    <div class="note">
+      <strong>An account does not reach any brokerage.</strong> This is a
+      property of the database, not a promise: <code>is_owner</code> defaults to
+      <code>0</code>, the function that creates accounts has no parameter for
+      it, and no route in the application can set it. Any live brokerage
+      connection belongs to the operator alone and is never exposed by signing
+      in.
+    </div>
+
+    <h2>4. What you may not do</h2>
+    <ul>
+      <li>Attempt to reach another person's account or data.</li>
+      <li>Probe, scan, or attempt to bypass authentication or rate limits.</li>
+      <li>Automate account creation, or register on someone else's behalf.</li>
+      <li>Redistribute market data obtained through this service where its
+          original provider forbids it.</li>
+    </ul>
+
+    <h2>5. Availability</h2>
+    <p>The service is provided <strong>as is</strong>, without a warranty or an
+    uptime guarantee. It may be unavailable for maintenance, and features may
+    change or be withdrawn. Market data is supplied by third parties and may be
+    delayed, incomplete, or wrong.</p>
+
+    <h2>6. Limitation of liability</h2>
+    <p>To the fullest extent the law allows, the operator is not liable for
+    trading losses, lost profits, or any indirect or consequential damage
+    arising from your use of this service or from reliance on anything it
+    displays.</p>
+
+    <h2>7. Ending your account</h2>
+    <p>You may ask for your account to be closed at any time — see the
+    <a href="privacy.html">Privacy Policy</a> for what is then deleted. Accounts
+    may be suspended where these terms are broken or where activity threatens
+    the service or its other users.</p>
+
+    <h2>8. Changes</h2>
+    <p>These terms may be updated. The date above always reflects the current
+    version, and material changes will be signalled on the sign-in page.</p>
+
+    <h2>9. Contact</h2>
+    <p>Questions about these terms: <a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a></p>
+
+  </div>
+  <div class="foot">
+    <a href="terms.html">Terms of Service</a>·
+    <a href="privacy.html">Privacy Policy</a>·
+    <a href="help.html">Help Center</a>
+  </div>
+</div>
+</body></html>

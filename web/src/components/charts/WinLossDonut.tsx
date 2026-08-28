@@ -1,4 +1,5 @@
 import { ACCENTS } from "@/components/cards/StatCard"
+import { RefreshCw } from "lucide-react"
 
 interface WinLossDonutProps {
   wins: number
@@ -20,7 +21,7 @@ export function WinLossDonut({ wins, losses, winRate }: WinLossDonutProps) {
               background: `color-mix(in srgb, ${ACCENTS[4]} 22%, transparent)`,
               boxShadow: `0 0 0 1px color-mix(in srgb, ${ACCENTS[4]} 45%, transparent)`,
             }}>
-        🔄
+        <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
       </span>
       <div className="stat-label">Win % / Loss %</div>
       <div className="stat-value">{winRate.toFixed(0)}% / {lossRate.toFixed(0)}%</div>

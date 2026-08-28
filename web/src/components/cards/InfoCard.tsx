@@ -5,11 +5,18 @@
 
 import type { BacktestSummary } from "@/lib/types"
 import { generateInsights, generateAiInsight } from "@/lib/insights"
+import type { ReactNode } from "react"
+import {
+  BarChart3, Trophy, Hash, Scale, ArrowUpRight, ArrowDownRight,
+  TrendingDown, TrendingUp, Layers, CalendarRange, Timer, Clock,
+  Plug, Target, Lightbulb, Check, Sparkles,
+} from "lucide-react"
 
-function Row({ icon, label, value }: { icon: string; label: string; value: string }) {
+function Row({ icon, label, value }:
+             { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="info-row">
-      <span>{icon} {label}</span>
+      <span className="flex items-center gap-1.5">{icon} {label}</span>
       <span className="v">{value}</span>
     </div>
   )
@@ -18,14 +25,15 @@ function Row({ icon, label, value }: { icon: string; label: string; value: strin
 export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
   return (
     <div className="info-card" style={{ ["--info-accent" as string]: "#7c6cf5" }}>
-      <div className="info-title">📊 Performance Summary</div>
-      <Row icon="🏆" label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
-      <Row icon="🔢" label="Total Trades" value={String(s.total_trades)} />
-      <Row icon="⚖️" label="Profit Factor" value={s.profit_factor.toFixed(2)} />
-      <Row icon="💰" label="Average Win" value={`$${s.avg_win.toFixed(2)}`} />
-      <Row icon="🔻" label="Average Loss" value={`$${s.avg_loss.toFixed(2)}`} />
-      <Row icon="📉" label="Max Drawdown" value={`${s.max_drawdown_pct.toFixed(1)}%`} />
-      <Row icon="📈" label="Total Return" value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`} />
+      <div className="info-title flex items-center gap-2">
+        <BarChart3 className="h-4 w-4" aria-hidden /> Performance Summary</div>
+      <Row icon={<Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
+      <Row icon={<Hash className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Total Trades" value={String(s.total_trades)} />
+      <Row icon={<Scale className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Profit Factor" value={s.profit_factor.toFixed(2)} />
+      <Row icon={<ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Average Win" value={`$${s.avg_win.toFixed(2)}`} />
+      <Row icon={<ArrowDownRight className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Average Loss" value={`$${s.avg_loss.toFixed(2)}`} />
+      <Row icon={<TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Max Drawdown" value={`${s.max_drawdown_pct.toFixed(1)}%`} />
+      <Row icon={<TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Total Return" value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`} />
     </div>
   )
 }
@@ -33,12 +41,13 @@ export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
 export function BacktestDetailsCard({ s }: { s: BacktestSummary }) {
   return (
     <div className="info-card" style={{ ["--info-accent" as string]: "#9b8afb" }}>
-      <div className="info-title">🗂️ Backtest Details</div>
-      <Row icon="📅" label="Date Range" value={`${s.start_date} → ${s.end_date}`} />
-      <Row icon="⏱️" label="Timeframe" value={s.timeframe} />
-      <Row icon="🕐" label="Session Hours" value={`${s.session_start}–${s.session_end} EST`} />
-      <Row icon="🔌" label="Data Source" value={s.data_source} />
-      <Row icon="🧠" label="Strategy" value={s.strategy_name} />
+      <div className="info-title flex items-center gap-2">
+        <Layers className="h-4 w-4" aria-hidden /> Backtest Details</div>
+      <Row icon={<CalendarRange className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Date Range" value={`${s.start_date} → ${s.end_date}`} />
+      <Row icon={<Timer className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Timeframe" value={s.timeframe} />
+      <Row icon={<Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Session Hours" value={`${s.session_start}–${s.session_end} EST`} />
+      <Row icon={<Plug className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Data Source" value={s.data_source} />
+      <Row icon={<Target className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Strategy" value={s.strategy_name} />
     </div>
   )
 }
@@ -46,9 +55,11 @@ export function BacktestDetailsCard({ s }: { s: BacktestSummary }) {
 export function QuickInsightsCard({ s }: { s: BacktestSummary }) {
   return (
     <div className="info-card" style={{ ["--info-accent" as string]: "#22d3a8" }}>
-      <div className="info-title">💡 Quick Insights</div>
+      <div className="info-title flex items-center gap-2">
+        <Lightbulb className="h-4 w-4" aria-hidden /> Quick Insights</div>
       {generateInsights(s).map((text, i) => (
-        <div key={i} className="insight-item">✅ {text}</div>
+        <div key={i} className="insight-item flex items-start gap-1.5">
+          <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden /> {text}</div>
       ))}
     </div>
   )
@@ -58,9 +69,9 @@ export function AiInsightCard({ s }: { s: BacktestSummary }) {
   return (
     <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#9b8afb" }}>
       <span className="ai-insight-badge">BETA</span>
-      <span className="ai-insight-brain" aria-hidden>🧠</span>
+      <span className="ai-insight-brain" aria-hidden><Sparkles className="h-full w-full" /></span>
       <div className="info-title relative z-10">
-        🧠 AI Insight <span className="text-[0.65rem] opacity-70">(rule-based, free — no API call)</span>
+        <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4" aria-hidden /> AI Insight</span> <span className="text-[0.65rem] opacity-70">(rule-based, free — no API call)</span>
       </div>
       <div className="insight-item relative z-10">{generateAiInsight(s)}</div>
       <svg className="ai-insight-wave" viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden>

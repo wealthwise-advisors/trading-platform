@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Help Center · AutoTrader</title>
+<style>
+  /* Same palette as the sign-in card, deliberately: this is the same product,
+     and a legal page that looks like a different site reads as a phishing one.
+     No inlined photograph here though -- these must open instantly. */
+  :root{
+    --em:#10b981; --em2:#34d399;
+    --bg:#0a1018; --panel:rgba(13,20,30,.86); --line:rgba(255,255,255,.10);
+    --ink:#eef3fa; --dim:#9aa7bd; --r:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:
+      radial-gradient(1100px 620px at 15% -10%, rgba(16,185,129,.10), transparent 60%),
+      radial-gradient(900px 560px at 105% 8%, rgba(52,211,153,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink); line-height:1.68;
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:40px 22px 80px}
+  .top{display:flex; align-items:center; gap:14px; margin-bottom:34px; flex-wrap:wrap}
+  .brand{font-weight:800; letter-spacing:.4px; font-size:18px}
+  .brand span{color:var(--em)}
+  .back{
+    margin-left:auto; color:var(--dim); text-decoration:none; font-size:14px;
+    border:1px solid var(--line); padding:8px 14px; border-radius:10px;
+    transition:border-color .15s, color .15s;
+  }
+  .back:hover{color:var(--ink); border-color:rgba(255,255,255,.28)}
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--r); padding:34px 32px;
+    backdrop-filter:blur(10px);
+  }
+  h1{margin:0 0 6px; font-size:29px; letter-spacing:-.4px}
+  .upd{color:var(--dim); font-size:13.5px; margin:0 0 26px}
+  h2{
+    font-size:14px; text-transform:uppercase; letter-spacing:.13em;
+    color:var(--em2); margin:32px 0 10px; font-weight:700;
+  }
+  p,li{color:#cfd8e6; font-size:15px}
+  ul{padding-left:20px} li{margin:6px 0}
+  a{color:var(--em2)}
+  strong{color:var(--ink)}
+  .note{
+    border:1px solid rgba(16,185,129,.32); background:rgba(16,185,129,.08);
+    border-radius:12px; padding:15px 17px; margin:22px 0;
+  }
+  .warn{
+    border:1px solid rgba(239,68,68,.34); background:rgba(239,68,68,.09);
+    border-radius:12px; padding:15px 17px; margin:22px 0;
+  }
+  .warn strong{color:#fca5a5}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14.5px}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{color:var(--dim); font-weight:600; font-size:12.5px;
+      text-transform:uppercase; letter-spacing:.08em}
+  td:first-child{color:var(--ink); white-space:nowrap; padding-right:18px}
+  .foot{margin-top:30px; color:var(--dim); font-size:13.5px; text-align:center}
+  .foot a{margin:0 9px}
+  @media(max-width:620px){
+    .card{padding:24px 19px} h1{font-size:24px}
+    td:first-child{white-space:normal}
+  }
+</style></head><body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">AUTO<span>TRADER</span></div>
+    <a class="back" href="autotrader_signin.html">&larr; Back to sign in</a>
+  </div>
+  <div class="card">
+    <h1>Help Center</h1>
+    <p class="upd">Last updated 28 August 2026</p>
+
+    <h2>Signing in</h2>
+    <p>Use your username and password, or one of the four provider buttons.</p>
+    <div class="note">
+      <strong>Signing in with X (Twitter) has one extra step.</strong> X does
+      not share an email address at any scope, so after you authorise the app it
+      asks you to choose a username and give an address. Finish that form and
+      you are in — it is the last step, not an error. The link it hands you is
+      single-use and expires after twenty minutes, so complete it in one go.
+    </div>
+
+    <h2>Forgotten password</h2>
+    <p>Use <strong>Forgot password?</strong> on the sign-in page. A reset link
+    is sent to the address on the account. It works once and expires; request
+    another if it lapses.</p>
+
+    <h2>Forgotten username</h2>
+    <p>Use <strong>Forgot username?</strong>. Your username is sent to the
+    address on the account.</p>
+    <p>Neither form ever reveals whether an address is registered. That is
+    deliberate — an honest answer there would let anyone test which addresses
+    hold accounts.</p>
+
+    <h2>No email arriving</h2>
+    <ul>
+      <li>Check the spam folder first.</li>
+      <li>Confirm the address is the one the account was created with.</li>
+      <li>Provider sign-ins (Google, LinkedIn, GitHub) have no password, so
+          there is nothing to reset — use the button instead.</li>
+    </ul>
+
+    <h2>A provider button says it is not connected</h2>
+    <p>That provider has no credentials configured on the server. Use your
+    username and password, or another button.</p>
+
+    <h2>Running a backtest</h2>
+    <p>Set the data source, symbol, timeframe and strategy in the left panel,
+    then press <strong>Run Backtest</strong>. Results open beside it: equity
+    curve, trade log, P&amp;L distribution and pattern analysis.</p>
+    <div class="warn">
+      <strong>Results are hypothetical.</strong> A backtest replays rules over
+      bars that have already happened. It is not a prediction, and it is not
+      advice. See the <a href="terms.html">Terms of Service</a>.
+    </div>
+
+    <h2>Still stuck</h2>
+    <p><a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a></p>
+
+  </div>
+  <div class="foot">
+    <a href="terms.html">Terms of Service</a>·
+    <a href="privacy.html">Privacy Policy</a>·
+    <a href="help.html">Help Center</a>
+  </div>
+</div>
+</body></html>

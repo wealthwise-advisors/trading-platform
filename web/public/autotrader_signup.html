@@ -544,6 +544,14 @@ body.completing .brandline p::after{ opacity:.7 }
  * property, and never whether a human could SEE the state change.
  */
 .terms input:checked + .box{ background:var(--em); border-color:var(--em) }
+/* The consent links open in a new tab, and their click never reaches the
+   label. The row IS the label, so without this, opening the Terms would toggle
+   the very box it is explaining -- and un-ticking it silently is the worse
+   half: the reader comes back and the form refuses to submit with nothing on
+   screen to say why. */
+.terms .tlink{ color:var(--em2); text-decoration:underline;
+               text-underline-offset:2px; position:relative; z-index:2 }
+.terms .tlink:hover{ color:var(--em) }
 .terms input:checked + .box svg{ opacity:1; transform:none }
 
 </style>
@@ -692,7 +700,7 @@ body.completing .brandline p::after{ opacity:.7 }
     <label class="terms"><input type="checkbox"><span class="box">
       <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
            stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
-    </span><span>I agree to the <b>Terms of Service</b> and <b>Privacy Policy</b></span></label>
+    </span><span>I agree to the <a class="tlink" href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a class="tlink" href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span></label>
 
     <button class="go" type="submit">Create Account
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
@@ -708,9 +716,9 @@ body.completing .brandline p::after{ opacity:.7 }
     </div>
 
     <div class="legal">
-      <a href="#">Terms of Service</a><i>|</i>
-      <a href="#">Privacy Policy</a><i>|</i>
-      <a href="#">Help Center</a>
+      <a href="terms.html">Terms of Service</a><i>|</i>
+      <a href="privacy.html">Privacy Policy</a><i>|</i>
+      <a href="help.html">Help Center</a>
     </div>
   </form>
 </main>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { Save, FolderOpen, Trash2 } from "lucide-react"
 
 export function SavedConfigsPanel() {
   const getSnapshot = useConfigStore((s) => s.getSnapshot)
@@ -43,7 +44,7 @@ export function SavedConfigsPanel() {
         <Input placeholder="Config name…" value={name} onChange={(e) => setName(e.target.value)}
                onKeyDown={(e) => e.key === "Enter" && handleSave()} />
         <Button variant="secondary" size="default" disabled={!name.trim()} onClick={handleSave}>
-          💾 Save
+          <Save className="h-3.5 w-3.5 shrink-0" aria-hidden /> Save
         </Button>
       </div>
       {justSaved && <p className="text-xs text-green-400">Configuration saved.</p>}
@@ -56,8 +57,8 @@ export function SavedConfigsPanel() {
               {saved.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="secondary" size="default" disabled={!selected} onClick={handleLoad}>📂</Button>
-          <Button variant="secondary" size="default" disabled={!selected} onClick={handleDelete}>🗑</Button>
+          <Button variant="secondary" size="default" disabled={!selected} onClick={handleLoad} aria-label="Load"><FolderOpen className="h-3.5 w-3.5 shrink-0" /></Button>
+          <Button variant="secondary" size="default" disabled={!selected} onClick={handleDelete} aria-label="Delete"><Trash2 className="h-3.5 w-3.5 shrink-0" /></Button>
         </div>
       )}
     </div>

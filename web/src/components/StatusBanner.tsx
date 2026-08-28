@@ -1,5 +1,6 @@
 import type { BacktestSummary } from "@/lib/types"
 import { GOOD } from "@/components/cards/StatCard"
+import { CheckCircle2 } from "lucide-react"
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—"
@@ -15,7 +16,7 @@ export function StatusBanner({ s, lastRunAt }: { s: BacktestSummary; lastRunAt: 
          style={{ borderColor: `color-mix(in srgb, ${GOOD} 35%, transparent)`,
                   background: `color-mix(in srgb, ${GOOD} 10%, transparent)` }}>
       <div className="flex items-center gap-2 text-sm">
-        <span style={{ color: GOOD }}>✅</span>
+        <span style={{ color: GOOD }}><CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden /></span>
         <span className="font-medium">Backtest complete!</span>
         <span className="text-muted-foreground">{message}</span>
       </div>

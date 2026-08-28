@@ -14,6 +14,12 @@ import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
+import {
+  TrendingUp, TrendingDown, Trophy, Gauge, LineChart,
+  // The page already imports a CandlestickChart component; alias the icon.
+  CandlestickChart as CandlestickIcon,
+  ClipboardList, BarChart3, CalendarDays, Activity, Shapes, Sparkles, Waves,
+} from "lucide-react"
 
 /**
  * The four Plotly charts are split out of the main bundle.
@@ -164,13 +170,13 @@ export function ResultsPage() {
            label+value sitting at the top with dead space below; each card
            now takes only its own natural (tiny) height instead. ── */}
       <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-start">
-        <StatCard label="Total Return" icon="📈" accent={ACCENTS[0]}
+        <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
                   valueColor={retColor} />
-        <StatCard label="Sharpe Ratio" icon="🎯" accent={ACCENTS[1]} value={s.sharpe_ratio.toFixed(2)} />
-        <StatCard label="Max Drawdown" icon="📉" accent={ACCENTS[2]}
+        <StatCard label="Sharpe Ratio" icon={<Gauge className="h-4 w-4" />} accent={ACCENTS[1]} value={s.sharpe_ratio.toFixed(2)} />
+        <StatCard label="Max Drawdown" icon={<TrendingDown className="h-4 w-4" />} accent={ACCENTS[2]}
                   value={`${s.max_drawdown_pct.toFixed(1)}%`} valueColor={CRITICAL} />
-        <StatCard label="Win Rate" icon="🏆" accent={ACCENTS[3]}
+        <StatCard label="Win Rate" icon={<Trophy className="h-4 w-4" />} accent={ACCENTS[3]}
                   value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor} />
         <WinLossDonut wins={winLossQ.data?.wins ?? 0} losses={winLossQ.data?.losses ?? 0}
                       winRate={winLossQ.data?.win_rate ?? 0} />
@@ -183,15 +189,15 @@ export function ResultsPage() {
              entry points; same setPage("replay")/reportUrl() calls either way. ── */}
         <div className="shrink-0 flex flex-wrap items-center gap-2">
           <TabsList className="tabs-scroll">
-            <TabsTrigger value="price">📊 Price & Trades</TabsTrigger>
-            <TabsTrigger value="equity">📈 Equity Curve</TabsTrigger>
-            <TabsTrigger value="trades">📋 Trade Log</TabsTrigger>
-            <TabsTrigger value="pnl">📈 P&L Analysis</TabsTrigger>
-            <TabsTrigger value="monthly">📅 Monthly Returns</TabsTrigger>
-            <TabsTrigger value="candles">🕯️ Candlestick Patterns</TabsTrigger>
-            <TabsTrigger value="chartpatterns">📐 Chart Patterns</TabsTrigger>
-            <TabsTrigger value="optimizer">✨ Strategy Optimizer</TabsTrigger>
-            <TabsTrigger value="elliottwave">🌊 Elliott Wave</TabsTrigger>
+            <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Price &amp; Trades</TabsTrigger>
+            <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
+            <TabsTrigger value="trades"><ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trade Log</TabsTrigger>
+            <TabsTrigger value="pnl"><BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> P&amp;L Analysis</TabsTrigger>
+            <TabsTrigger value="monthly"><CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> Monthly Returns</TabsTrigger>
+            <TabsTrigger value="candles"><Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> Candlestick Patterns</TabsTrigger>
+            <TabsTrigger value="chartpatterns"><Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart Patterns</TabsTrigger>
+            <TabsTrigger value="optimizer"><Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> Strategy Optimizer</TabsTrigger>
+            <TabsTrigger value="elliottwave"><Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> Elliott Wave</TabsTrigger>
           </TabsList>
         </div>
 

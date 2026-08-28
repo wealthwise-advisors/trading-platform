@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select"
 import type { OptimizeResponse } from "@/lib/types"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
+import { Trophy } from "lucide-react"
 
 const METRICS = [
   { value: "sharpe_ratio", label: "Sharpe Ratio" },
@@ -62,10 +63,10 @@ export function OptimizerPanel() {
           </SelectContent>
         </Select>
         <Button onClick={runOptimizer} disabled={status === "running"}>
-          {status === "running" ? "Sweeping parameters…" : "✨ Run Optimizer"}
+          {status === "running" ? "Sweeping parameters…" : "Run Optimizer"}
         </Button>
         {result?.best_backtest_id && (
-          <Button variant="secondary" onClick={viewWinner}>📊 View Winning Backtest</Button>
+          <Button variant="secondary" onClick={viewWinner}>View Winning Backtest</Button>
         )}
       </div>
 
@@ -93,7 +94,7 @@ export function OptimizerPanel() {
               <tbody>
                 {result.results.map((c, i) => (
                   <tr key={i} className="border-t border-white/6" style={{ background: i === 0 ? "color-mix(in srgb, #9b8afb 10%, transparent)" : undefined }}>
-                    <td className="p-2">{i === 0 ? "🏆" : i + 1}</td>
+                    <td className="p-2">{i === 0 ? <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden /> : i + 1}</td>
                     <td className="p-2 text-xs text-muted-foreground">
                       {Object.entries(c.params).map(([k, v]) => `${k}=${v}`).join(", ") || "(no params)"}
                     </td>

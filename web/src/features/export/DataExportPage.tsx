@@ -12,12 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { FileText, FileSpreadsheet, FileType, FileCode, Download } from "lucide-react"
 
 const FORMATS = [
-  { id: "csv", label: "CSV", icon: "📄" },
-  { id: "xlsx", label: "Excel", icon: "📊" },
-  { id: "pdf", label: "PDF", icon: "📕" },
-  { id: "docx", label: "Word", icon: "📘" },
+  { id: "csv", label: "CSV", icon: <FileText className="h-3.5 w-3.5 shrink-0" /> },
+  { id: "xlsx", label: "Excel", icon: <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" /> },
+  { id: "pdf", label: "PDF", icon: <FileType className="h-3.5 w-3.5 shrink-0" /> },
+  { id: "docx", label: "Word", icon: <FileCode className="h-3.5 w-3.5 shrink-0" /> },
 ]
 
 const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h"]
@@ -64,7 +65,8 @@ export function DataExportPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4">
       <div>
-        <h2 className="text-lg font-bold flex items-center gap-2">📤 Export Data</h2>
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <Download className="h-4 w-4" aria-hidden /> Export Data</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Download raw OHLC price data for any symbol and date range — no backtest needed.
         </p>
