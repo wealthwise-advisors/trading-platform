@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Holds** | Reports written by [`api/report`](../api/report) and [`api/export`](../api/export) |
 | 🚫 **Gitignored** | Safe to delete at any time — it regenerates |
+| 📁 **Path** | `reports/` |
 
 
 ---

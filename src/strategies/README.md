@@ -16,6 +16,7 @@
 | 🎯 **Does** | Bars + indicators ➜ buy, sell or hold |
 | 🔌 **Interface** | Implement [`base_strategy.py`](base_strategy.py) and the engine can run it |
 | 🎛 **Parameters** | Declared in [`api/strategy_registry.py`](../../api/strategy_registry.py) so the optimiser can sweep them |
+| 📁 **Path** | `src/strategies/` |
 | 📦 **Holds** | `6` files · `727` lines |
 
 

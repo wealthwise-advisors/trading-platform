@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Does** | CSV · XLSX · PDF · DOCX from the same result object |
 | 📐 **Rule** | A writer formats. It never re-computes a number |
+| 📁 **Path** | `api/export/` |
 | 📦 **Holds** | `2` files · `171` lines |
 
 

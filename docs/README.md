@@ -16,6 +16,7 @@
 | 🚀 **New here?** | [`QUICKSTART.md`](QUICKSTART.md) ➜ [`INSTALLATION.md`](INSTALLATION.md) ➜ [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) |
 | 🌊 **Elliott Wave** | Four documents, ~3,500 lines — the rules are the specification |
 | 🔒 **Security** | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) |
+| 📁 **Path** | `docs/` |
 | 📦 **Holds** | `19` files · `5,898` lines · `1` subfolders |
 
 

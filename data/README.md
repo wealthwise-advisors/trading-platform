@@ -16,6 +16,7 @@
 | 🎯 **Holds** | The SQLite database, the CSV archive, and saved runs |
 | 🚫 **Gitignored** | The `.db` files and `historical/` — they are machine state, not source |
 | 📦 **Full archive** | [`wealthwise-advisors/data`](https://github.com/wealthwise-advisors/data) — 433 MB, Git LFS |
+| 📁 **Path** | `data/` |
 | 📦 **Holds** | `2` files · `950` lines · `4` subfolders |
 
 

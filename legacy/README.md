@@ -19,6 +19,7 @@
 | 🚫 **Not built · not tested · not imported · not deployed** | Nothing here is on any code path |
 | 🔄 **Relationship to `src/`** | This platform is a **rebuild**, not a merge — none of this code was carried over |
 | 🛡 **Dependabot** | Alerts raised here are dismissed as `not_used` |
+| 📁 **Path** | `legacy/` |
 | 📦 **Holds** | `1` files · `71` lines · `5` subfolders |
 
 

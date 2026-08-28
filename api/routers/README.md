@@ -16,6 +16,7 @@
 | 🎯 **Does** | Validate input ➜ call [`src/`](../../src) ➜ serialise the answer |
 | 🔐 **Guarded** | All of these except `auth.py`, `oauth.py` and `meta.py` |
 | 📐 **Rule** | Business logic belongs in `src/`, not in a route |
+| 📁 **Path** | `api/routers/` |
 | 📦 **Holds** | `8` files · `2,275` lines |
 
 

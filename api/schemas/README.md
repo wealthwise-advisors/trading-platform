@@ -16,6 +16,7 @@
 | 🎯 **Does** | Pydantic models — validation in, serialisation out |
 | 🔗 **Mirrored by** | [`web/src/lib/types.ts`](../../web/src/lib/types.ts) |
 | ⚠️ **Watch for** | Change a field here ➜ change it there, or the UI silently drops it |
+| 📁 **Path** | `api/schemas/` |
 | 📦 **Holds** | `5` files · `298` lines |
 
 

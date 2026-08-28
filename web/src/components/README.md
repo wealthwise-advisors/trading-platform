@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features/`](../features) |
 | 🎨 **Base kit** | shadcn/ui in [`ui/`](ui) — do not edit those by hand |
+| 📁 **Path** | `web/src/components/` |
 | 📦 **Holds** | `13` files · `1,593` lines · `5` subfolders |
 
 

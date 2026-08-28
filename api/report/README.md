@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Does** | Renders a finished backtest into a shareable report |
 | 🖼 **Why server-side** | A report must look identical wherever it is opened |
+| 📁 **Path** | `api/report/` |
 | 📦 **Holds** | `2` files · `1,816` lines |
 
 

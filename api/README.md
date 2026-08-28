@@ -18,6 +18,7 @@
 | 🎯 **Does** | Turns HTTP requests into calls on [`src/`](../src), and answers **who is asking** |
 | 🔐 **Guards** | Every route except sign-in, OAuth and health needs a session |
 | 🧩 **Owns nothing** | No strategy or indicator logic lives here — it is a thin consumer |
+| 📁 **Path** | `api/` |
 | 📦 **Holds** | `11` files · `2,143` lines · `4` subfolders |
 
 

@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Rule** | Used by two screens? It belongs in [`components/`](../components) |
 | 🧭 **Routing** | These are tabs within one document, switched in [`App.tsx`](../App.tsx) |
+| 📁 **Path** | `web/src/features/` |
 
 
 ---

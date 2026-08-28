@@ -18,6 +18,7 @@
 | 🎯 **Does** | Persists results and people, behind a small module boundary |
 | 🔑 **Never stores a secret in the clear** | Passwords are argon2id; sessions and links are stored as their SHA-256 |
 | 📐 **Rule** | No repository function takes a default `user_id` — a forgotten argument is a `TypeError`, not a leak |
+| 📁 **Path** | `db/` |
 | 📦 **Holds** | `4` files · `1,409` lines |
 
 

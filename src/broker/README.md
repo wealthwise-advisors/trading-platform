@@ -16,6 +16,7 @@
 | 🎯 **Does** | Charges every trade so the result is a plausible fill, not an ideal one |
 | 💸 **Charges** | Commission per contract per side · slippage in ticks · tick rounding |
 | 📊 **Tracks** | Position, realised and unrealised P&L, and completed trades — cumulatively |
+| 📁 **Path** | `src/broker/` |
 | 📦 **Holds** | `3` files · `268` lines |
 
 

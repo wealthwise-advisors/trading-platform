@@ -19,6 +19,7 @@
 | 📦 **Build** | `npm run build` ➜ `dist/` |
 | 🎨 **Theme** | Graphite + violet-blue. Warm colours are reserved for **meaning** — red for a loss |
 | 📄 **`public/` is copied verbatim** | The sign-in pages live there and never load `index.css` |
+| 📁 **Path** | `web/` |
 | 📦 **Holds** | `9` files · `495` lines · `2` subfolders |
 
 

@@ -15,6 +15,7 @@
 |:--|:--|
 | 🎯 **Status** | ⚠️ **Not implemented.** The Deploy button is disabled to match |
 | 🤔 **Why a stub** | A half-built order path that looks finished is worse than an honest gap |
+| 📁 **Path** | `src/live/` |
 | 📦 **Holds** | `1` files · `96` lines |
 
 

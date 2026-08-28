@@ -18,6 +18,7 @@
 | 🎯 **Rule** | No JSX here. If it renders, it is a component |
 | 🧪 **Testing** | Each `X.ts` has an `X.test.ts` beside it |
 | ⚠️ **`types.ts` is a mirror** | It must match [`api/schemas`](../../../api/schemas) or the UI drops fields silently |
+| 📁 **Path** | `web/src/lib/` |
 | 📦 **Holds** | `30` files · `4,379` lines |
 
 

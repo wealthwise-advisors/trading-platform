@@ -19,6 +19,7 @@
 | 🔐 **Security suite** | `test_auth` · `test_reset_auth` · `test_oauth_auth` · `test_isolation` |
 | 🚨 **Adding a refusal test?** | Add the module to `_SECURITY_SUITES` in [`conftest.py`](conftest.py) — or it passes **without reaching the guard** |
 | 🚨 **Adding a route?** | Two guards fail on purpose: the OpenAPI sweep and an exact route count |
+| 📁 **Path** | `tests/` |
 | 📦 **Holds** | `22` files · `7,244` lines · `2` subfolders |
 
 

@@ -18,6 +18,7 @@
 | 🎯 **Does** | Holds every tunable, and the broker credentials |
 | 🚨 **Never commit** | `credentials.yaml` · `schwab_tokens.json` — both gitignored, and they stay that way |
 | ✅ **Safe to commit** | `settings.yaml` · `credentials.yaml.example` |
+| 📁 **Path** | `config/` |
 | 📦 **Holds** | `6` files · `219` lines |
 
 

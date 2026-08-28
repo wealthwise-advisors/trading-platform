@@ -18,6 +18,7 @@
 | 🎯 **Does** | Pivots ➜ candidate structures ➜ rule gates ➜ measurements |
 | 🔄 **Lifecycle** | `ENUMERATED` ➜ `GATED` ➜ `MEASURED` |
 | 📘 **Specification** | [`docs/ELLIOTT_WAVE_RULES.md`](../../../docs/ELLIOTT_WAVE_RULES.md) · [`ELLIOTT_WAVE_IMPLEMENTATION.md`](../../../docs/ELLIOTT_WAVE_IMPLEMENTATION.md) |
+| 📁 **Path** | `src/analysis/elliott_wave/` |
 | 📦 **Holds** | `12` files · `2,267` lines |
 
 

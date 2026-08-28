@@ -16,6 +16,7 @@
 | 🎯 **Does** | One interface, five sources |
 | 📐 **Rule** | Every provider returns the same frame: `Datetime · Open · High · Low · Close · Volume` |
 | ⏱ **Stored at** | 1-minute. Everything coarser is resampled at read time |
+| 📁 **Path** | `src/data/` |
 | 📦 **Holds** | `7` files · `1,363` lines · `1` subfolders |
 
 

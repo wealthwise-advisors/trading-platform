@@ -16,6 +16,7 @@
 | ▶️ **Run the app locally** | `py -3.12 scripts/run_local.py` ➜ one origin on `:8800` |
 | 👤 **Manage accounts** | `py -3.12 scripts/manage_users.py list` |
 | 🐍 **Python** | **Must be 3.12.** 3.14 breaks `pandas_ta` and fakes a test failure |
+| 📁 **Path** | `scripts/` |
 | 📦 **Holds** | `6` files · `771` lines |
 
 

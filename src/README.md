@@ -18,6 +18,7 @@
 | 🎯 **Does** | Data ➜ indicators ➜ strategy ➜ fills ➜ metrics |
 | 🚫 **Knows nothing about** | FastAPI, React, sessions or users |
 | ✅ **Why that matters** | It can be imported from a script, a notebook or a test with no server running |
+| 📁 **Path** | `src/` |
 | 📦 **Holds** | `1` files · `71` lines · `6` subfolders |
 
 
