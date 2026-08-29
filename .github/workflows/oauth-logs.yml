@@ -29,6 +29,12 @@ jobs:
   logs:
     runs-on: ubuntu-latest
     steps:
+      # The box only pulls during a DEPLOY, so a script added since the
+      # last deploy is not there yet. Carry it from the runner rather than
+      # assuming the server is current -- that assumption is why the first
+      # run of this printed "could not run the doctor".
+      - uses: actions/checkout@v4
+
       - name: Resolve this runner's public IP
         id: ip
         run: echo "addr=$(curl -fsS --max-time 15 https://checkip.amazonaws.com | tr -d '\n')" >> "$GITHUB_OUTPUT"
@@ -53,6 +59,12 @@ jobs:
           printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Send the diagnostic script up
+        run: |
+          scp -o BatchMode=yes -o ConnectTimeout=20 \
+              scripts/schwab_token_doctor.py \
+              ec2-user@"${{ secrets.EC2_HOST }}":/tmp/schwab_token_doctor.py
 
       - name: What did the callback actually decide?
         run: |
@@ -104,7 +116,7 @@ jobs:
             # multi-line Python cannot live in a YAML block scalar, because the
             # interpreter needs column 0 and the YAML needs indentation.
             ls -l --time-style=long-iso                /opt/wealthwise/repo/config/schwab_tokens.json 2>&1               | sed 's/^/  host: /' || echo "  host: no such file"
-            docker cp /opt/wealthwise/repo/scripts/schwab_token_doctor.py                       repo-api-1:/tmp/_doctor.py >/dev/null 2>&1               && docker exec repo-api-1 python /tmp/_doctor.py 2>&1 | sed 's/^/  /'               || echo "  (could not run the doctor)"
+            docker cp /tmp/schwab_token_doctor.py                       repo-api-1:/tmp/_doctor.py >/dev/null 2>&1               && docker exec repo-api-1 python /tmp/_doctor.py 2>&1 | sed 's/^/  /'               || echo "  (could not run the doctor)"
             docker exec repo-api-1 rm -f /tmp/_doctor.py 2>/dev/null || true
 
             echo
