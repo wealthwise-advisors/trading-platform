@@ -94,6 +94,20 @@ jobs:
               || echo "  (could not query users)"
 
             echo
+            echo "===== Schwab token: shape only, never values ====="
+            # The provider swallows the reason in a bare except, so the UI can
+            # only ever say "Not authenticated" -- the same sentence for a
+            # missing file, a malformed one, the right data under the wrong
+            # keys, and a genuinely expired token. This tells them apart.
+            #
+            # Shipped as a real script and copied in, rather than inlined:
+            # multi-line Python cannot live in a YAML block scalar, because the
+            # interpreter needs column 0 and the YAML needs indentation.
+            ls -l --time-style=long-iso                /opt/wealthwise/repo/config/schwab_tokens.json 2>&1               | sed 's/^/  host: /' || echo "  host: no such file"
+            docker cp /opt/wealthwise/repo/scripts/schwab_token_doctor.py                       repo-api-1:/tmp/_doctor.py >/dev/null 2>&1               && docker exec repo-api-1 python /tmp/_doctor.py 2>&1 | sed 's/^/  /'               || echo "  (could not run the doctor)"
+            docker exec repo-api-1 rm -f /tmp/_doctor.py 2>/dev/null || true
+
+            echo
             echo "===== are the X credentials actually IN the container? ====="
             # Length and a short hash only. A length is enough to catch the
             # classic faults -- an empty value, or a key pasted with a trailing
