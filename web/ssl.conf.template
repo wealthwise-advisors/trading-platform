@@ -62,7 +62,9 @@ server {
     # control to HTTPS-only in every browser on earth.
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
-    location /api/ {
+    # ^~ so the extension rule further down cannot capture an API path
+    # that happens to end .json -- see the note there.
+    location ^~ /api/ {
         proxy_pass http://api:8000/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -108,7 +110,9 @@ server {
     # nginx.conf; see the longer note there. Split on the file extension so the
     # SPA catch-all above keeps every extension-less path.
     location ~ \.(html|css|js|json|txt|xml|svg|png|jpg|jpeg|webp|woff2?)$ {
-        try_files $uri /404.html =404;
+        # =404 and nothing else. Naming /404.html here would serve it
+        # with a 200; error_page below renders it under the real status.
+        try_files $uri =404;
         include /etc/nginx/security-headers.conf;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
