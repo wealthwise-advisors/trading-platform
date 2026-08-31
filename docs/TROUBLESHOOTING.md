@@ -46,7 +46,7 @@ you deploy the API and frontend as genuinely separate origins.
 
 By design — `src/live/trader.py` and `src/broker/rithmic_broker.py` are a
 documented stub, not part of the v1.0.0 certified scope. See
-[RELEASE_AUDIT.md](RELEASE_AUDIT.md) "Known limitations."
+[RELEASE.md](RELEASE.md#audit) "Known limitations."
 
 ## Rithmic import fails / `pyrithmic` not installed
 

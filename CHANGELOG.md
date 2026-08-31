@@ -35,7 +35,7 @@ commits — this is the first release with a formal changelog process.
   and the `ElliottWaveResponse` / `ElliottWaveStructure` / `ScoringEvidence` /
   `TargetZoneRecord` TypeScript interfaces), its 196-test suite
   (`tests/test_elliott_wave_*.py`, 7 files), and its design documentation
-  (`docs/ELLIOTT_WAVE_ARCHITECTURE.md`, `docs/ELLIOTT_WAVE_SRS.md`,
+  (`docs/ELLIOTT_WAVE.md`, `docs/ELLIOTT_WAVE.md`,
   `docs/ELLIOTT_WAVE_V1_RELEASE.md`). No replacement was built.
 - Dead `COPY cli/ benchmark/ validation/` lines dropped from the
   `Dockerfile` — all three directories were Elliott-only and had already
@@ -53,7 +53,7 @@ Full production release audit: repository/code-quality audit, packaging
 `/api/version`, fixed a Schwab-availability bug, added CORS), the
 `elliott` production CLI, Docker deployment assets, GitHub Actions CI/CD,
 a full documentation set, a performance audit, and a security audit. Full
-detail: [docs/RELEASE_AUDIT.md](docs/RELEASE_AUDIT.md).
+detail: [docs/RELEASE.md](docs/RELEASE.md#audit).
 
 ### Added
 - `pyproject.toml`, corrected `requirements.txt`, `.env.example`

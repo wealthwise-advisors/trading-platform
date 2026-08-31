@@ -21,7 +21,7 @@ from .models import AnalysisResult, LifecycleState, Wave
 
 
 # Every rule this build deliberately does not evaluate, with the Open Question
-# responsible. Traced to docs/ELLIOTT_WAVE_RULES.md.
+# responsible. Traced to docs/ELLIOTT_WAVE.md.
 BLOCKED_RULES: tuple[dict, ...] = (
     # 14 rules, not 16. FLE-F02 and FLU-F02 were dropped 2026-08-10: the
     # reference states those two as RANGES ("123.6% - 161.8%", "61.8% - 100%"),

@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Covers** | [`src/analysis/elliott_wave`](../../src/analysis/elliott_wave) — all 13 modules |
-| 📘 **Specification** | [`docs/ELLIOTT_WAVE_RULES.md`](../../docs/ELLIOTT_WAVE_RULES.md) |
+| 📘 **Specification** | [`docs/ELLIOTT_WAVE.md`](../../docs/ELLIOTT_WAVE.md#rules) |
 | 🚨 **Route count** | [`test_pipeline_and_api.py`](test_pipeline_and_api.py) asserts an exact API route count — it fails on purpose when a route is added |
 | 📁 **Path** | `tests/test_elliott_wave/` |
 | 📦 **Holds** | `10` files · `2,509` lines |
@@ -25,7 +25,7 @@
 ## 🔄 How it fits together
 
 ```
-   docs/ELLIOTT_WAVE_RULES.md   (the specification)
+   docs/ELLIOTT_WAVE.md   (the specification)
         │  is enforced by
         ▼
    test_guards.py ──► a structure that breaks a rule is REJECTED

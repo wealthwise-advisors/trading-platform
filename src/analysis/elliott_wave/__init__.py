@@ -3,9 +3,9 @@ Elliott Wave analysis engine (v1 core).
 
 Built from scratch against a single approved reference,
 https://elliottwave-forecast.com/elliott-wave-theory/, whose rules are
-inventoried in docs/ELLIOTT_WAVE_RULES.md and specified in
-docs/ELLIOTT_WAVE_SRS.md. Module layout follows
-docs/ELLIOTT_WAVE_ARCHITECTURE.md.
+inventoried in docs/ELLIOTT_WAVE.md and specified in
+docs/ELLIOTT_WAVE.md. Module layout follows
+docs/ELLIOTT_WAVE.md.
 
 WHAT THIS ENGINE SUPPORTS
 -------------------------

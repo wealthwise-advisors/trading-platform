@@ -17,7 +17,7 @@ touches `src/analysis/`, `src/strategies/`, or `src/backtesting/`.
    ```bash
    pytest tests/ -v
    ruff check .
-   mypy src/analysis --ignore-missing-imports   # informational, see docs/RELEASE_AUDIT.md
+   mypy src/analysis --ignore-missing-imports   # informational, see docs/RELEASE.md
    ```
    The `ruff check .` line is also enforced by a pre-commit hook, so it
    runs whether or not you remember to. Enable it once per clone:
@@ -36,7 +36,7 @@ touches `src/analysis/`, `src/strategies/`, or `src/backtesting/`.
   `black` for formatting.
 - Type hints are encouraged for new code but not enforced repo-wide yet
   (`mypy` currently runs informationally in CI — see
-  `docs/RELEASE_AUDIT.md`'s Code Quality Audit for the baseline).
+  `docs/RELEASE.md`'s Code Quality Audit for the baseline).
 - Don't add abstractions, config flags, or error handling for scenarios
   that can't happen — this codebase favors direct, readable code over
   defensive layering.

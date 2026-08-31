@@ -3,7 +3,7 @@
 **Product:** AutoTrader
 **Owner:** WealthWise Advisors
 **Version:** 1.0.0
-**Status:** Released — see [RELEASE_NOTES.md](RELEASE_NOTES.md)
+**Status:** Released — see [RELEASE.md](RELEASE.md#notes)
 
 > [!NOTE]
 > This document describes what the product is for and what it must do.

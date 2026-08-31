@@ -74,7 +74,7 @@ smoke test), uncomment the `ports:` mapping under `api` in
 > environment this release audit ran in, so `docker compose up --build`
 > itself has **not** been executed end-to-end. Run it once before relying
 > on it in production and report back if anything doesn't match this doc
-> — see [RELEASE_AUDIT.md](RELEASE_AUDIT.md) for the full list of what was
+> — see [RELEASE.md](RELEASE.md#audit) for the full list of what was
 > and wasn't independently verified.
 
 ### Configuration in Docker

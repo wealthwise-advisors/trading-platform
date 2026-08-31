@@ -8,8 +8,8 @@
 
 > [!NOTE]
 > **This document was newly created on 2026-08-31.** The repository had no
-> project-wide implementation plan: [`ELLIOTT_WAVE_IMPLEMENTATION.md`](ELLIOTT_WAVE_IMPLEMENTATION.md)
-> is a retrospective record of one feature, and [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md)
+> project-wide implementation plan: [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#implementation)
+> is a retrospective record of one feature, and [`RELEASE.md`](RELEASE.md#audit)
 > and [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) are audits of work
 > already done. None of them plans forward.
 >
@@ -104,16 +104,23 @@ the confirmation link, and read by no route.
 
 ### Phase 7 — Email deliverability 🔴 Blocked
 
-**The only remaining hard blocker.** While `AUTOTRADER_MAIL_FROM` is on
-`resend.dev`, Resend delivers only to the account owner. Every other recipient
-is dropped after a `200 OK`, so password reset silently fails for every real
-user on a site with open registration.
+**The last blocker, and it no longer needs a domain.** While
+`AUTOTRADER_MAIL_FROM` is on `resend.dev`, Resend delivers only to the account
+owner — every other recipient is dropped after a `200 OK`, so password reset
+silently fails for real users on a site with open registration.
+
+Resend's way out is verifying a domain, which needs DNS control this project
+does not have (`3-218-23-37.sslip.io` is a free IP-to-hostname service). So
+`api/verification.py` gained an SMTP transport: any ordinary mailbox relays to
+any recipient with no domain and no DNS.
 
 | | |
 |---|---|
-| **Depends on** | nothing in code — **the code is complete** |
-| **Blocked by** | DNS and Resend dashboard access |
-| **Steps** | 1. Verify a domain in Resend → 2. add DKIM/SPF records → 3. set the `AUTOTRADER_MAIL_FROM` secret → 4. redeploy → 5. **run `manage_users.py verify <owner>` before the gate activates** → 6. send a real verification and reset email to a **non-owner** address → 7. confirm both arrive |
+| **Depends on** | nothing in code — **the code is complete, both transports** |
+| **Blocked by** | one mailbox credential |
+| **Route A (no domain needed)** | set `AUTOTRADER_SMTP_HOST` / `_USER` / `_PASSWORD` and `AUTOTRADER_MAIL_FROM` → redeploy |
+| **Route B (owns a domain)** | verify it in Resend → add DKIM/SPF → set `AUTOTRADER_MAIL_FROM` → redeploy |
+| **Then, either route** | `manage_users.py verify <owner>` before the gate activates, or keep `AUTOTRADER_REQUIRE_VERIFIED_EMAIL=0` |
 | **Complete when** | someone who is not the operator resets their password successfully |
 
 > Step 5 is not optional. Phase 2's gate switches itself on the moment a

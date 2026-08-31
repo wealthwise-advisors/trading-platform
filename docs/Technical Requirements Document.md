@@ -7,7 +7,7 @@
 > [!NOTE]
 > This covers the platform: engines, brokers, data, API, UI.
 > The Elliott Wave subsystem has its own, deeper specification in
-> [ELLIOTT_WAVE_SRS.md](ELLIOTT_WAVE_SRS.md) — this document does not
+> [ELLIOTT_WAVE.md](ELLIOTT_WAVE.md#requirements) — this document does not
 > restate it.
 
 Requirements are written to be checkable. Where a requirement is already

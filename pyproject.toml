@@ -110,7 +110,7 @@ exclude = ["src/data/schwabdev"]             # vendored client
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 # E741 (ambiguous 1-char names) and E731 (lambda-assign) are pre-existing,
-# individually audited findings -- see docs/RELEASE_AUDIT.md. Suppressed
+# individually audited findings -- see docs/RELEASE.md. Suppressed
 # repo-wide since both are purely stylistic (never indicate a real bug the
 # way an unused import/variable can).
 ignore = ["E741", "E731"]
@@ -119,7 +119,7 @@ ignore = ["E741", "E731"]
 # F401/F841 (unused import / unused local) are NOT repo-wide-ignored --
 # unlike E741/E731 these catch real mistakes, so the check stays live for
 # every file except an already-audited, intentional exception (see
-# docs/RELEASE_AUDIT.md).
+# docs/RELEASE.md#audit).
 "src/strategies/rsi_divergence.py" = ["F841"]
 
 [tool.mypy]

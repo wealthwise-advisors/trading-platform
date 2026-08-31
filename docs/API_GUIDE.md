@@ -54,7 +54,7 @@ the raw data-export endpoint and the backtest report export. **Was
 missing `fastapi`, `openpyxl`, `reportlab`, and `python-docx` from
 `requirements.txt` prior to the Task 10 audit** — a fresh install could
 not have served these endpoints. Fixed; see
-[RELEASE_AUDIT.md](RELEASE_AUDIT.md).
+[RELEASE.md](RELEASE.md#audit).
 
 ## CORS
 
@@ -85,7 +85,7 @@ Most endpoints (`backtests`, `data_export`) return raw
 dicts rather than typed Pydantic `response_model`s — request bodies ARE
 typed (`api/schemas/`), but response shapes aren't fully reflected in the
 generated OpenAPI schema for those routes. Documented as a known
-limitation in [RELEASE_AUDIT.md](RELEASE_AUDIT.md) rather than retrofitted
+limitation in [RELEASE.md](RELEASE.md#audit) rather than retrofitted
 here — it's a documentation-completeness gap, not a correctness bug, and
 fixing it properly means new schema classes for several complex nested
 result types (out of scope for a release audit).

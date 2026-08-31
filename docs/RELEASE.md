@@ -1,4 +1,119 @@
-# Task 10 — Production Release Audit (v1.0.0)
+# Release
+
+What shipped, and the evidence behind it. This was two files — the notes
+said what changed, the audit showed the checks that let it ship — and they
+were always read together.
+
+> Merged 2026-08-31. No content was removed.
+
+## Contents
+
+1. [Release Notes — v1.0.0](#notes) — was `RELEASE_NOTES.md`
+2. [Task 10 — Production Release Audit (v1.0.0)](#audit) — was `RELEASE_AUDIT.md`
+
+---
+
+<a id="notes"></a>
+
+## Part 1 — Release Notes — v1.0.0
+
+**Certified scope**: backtesting engine, bar-by-bar replay, the Elliott
+Wave analysis engine, the FastAPI + React platform around them, and the
+tooling to run/validate/package/deploy all of the above.
+
+**Not in this release**: live order placement (`src/live/`,
+`src/broker/rithmic_broker.py` remain an intentional stub — see "Known
+limitations" in [RELEASE_AUDIT.md](#audit)).
+
+> [!IMPORTANT]
+> **Historical record — accurate for 2026-07-18, not for today.** The Elliott
+> Wave engine described below was removed in full and rebuilt from scratch in
+> `c74fcf1` (2026-08-10), so its test count, its 80% coverage figure and its
+> benchmark no longer describe anything in this repository. The current engine
+> lives in [`src/analysis/elliott_wave/`](../src/analysis/elliott_wave) and is
+> documented in [ELLIOTT_WAVE.md](ELLIOTT_WAVE.md#implementation)
+> and [ELLIOTT_WAVE.md](ELLIOTT_WAVE.md#rules). Everything outside the
+> Elliott Wave section — the backtesting engine, replay, the platform — still
+> stands.
+
+### Highlights
+
+#### Elliott Wave engine
+
+- Full pattern coverage: impulses, all four correction variants (zigzag,
+  regular/expanded/running flat), contracting/expanding triangles,
+  double/triple-three complex corrections, leading/ending diagonals.
+- Hard-rule enforcement (Wave 2/3/4 rules) with soft Fibonacci confidence
+  scoring layered on top, never as a gate.
+- Recursive structural verification and unified cross-pattern
+  classification (impulse/correction/triangle/complex-correction/diagonal
+  scored together, not in separate silos).
+- 56-test automated regression suite, 80% coverage on `src/analysis/`.
+- Expert chart-validation framework (369 real chart reviews across 5
+  markets × 5 timeframes).
+- Independent industry benchmark: 473 cases, 95% confidence intervals,
+  Cohen's Kappa, a documented five-way disagreement taxonomy, and a 100%
+  reproducibility result across repeated runs. The full report lived at
+  `benchmark/TASK9_IMPROVEMENT_REPORT.md`; it was removed in `c74fcf1` together
+  with the implementation it measured, and is recoverable from that commit's
+  parent.
+
+#### Platform
+
+- FastAPI backend + React/TypeScript frontend (the original Streamlit UI
+  was fully retired 2026-07-15).
+- `elliott` production CLI: `analyze`, `benchmark`, `validate`, `export`,
+  `version`, `config`.
+- Docker deployment (API + nginx-served frontend, reverse-proxied).
+- GitHub Actions CI: lint, type-check, unit tests, regression suite,
+  benchmark regression gate, security scan, package build.
+- `pyproject.toml` packaging with a corrected, audited dependency list.
+
+### Fixed in this release (Task 10 audit)
+
+- `requirements.txt` was missing `fastapi`, `uvicorn`, `pydantic`,
+  `openpyxl`, `reportlab`, and `python-docx` despite all six being
+  actively used — a fresh install could not have run the API or served
+  its export endpoints.
+- `streamlit` and `scipy` were listed as dependencies with zero remaining
+  imports anywhere in the codebase — removed.
+- `Pillow` pinned to `>=12.3.0` — the transitively-installed 12.2.0
+  carried 8 known CVEs (pip-audit).
+- `GET /api/data-sources` reported Schwab as always available regardless
+  of whether it was actually configured (a no-op `try` block) — now
+  performs the same real check the other three data sources already did.
+- No CORS policy existed — added, configurable via
+  `AUTOTRADER_CORS_ORIGINS`, needed for any deployment topology where the
+  frontend isn't reverse-proxied to the same origin as the API.
+- No `/api/version` endpoint existed — added.
+- 24 unused imports removed (outside the protected `src/analysis/`
+  Elliott engine and the vendored `src/data/schwabdev/` client, neither of
+  which was touched — see below).
+
+### Explicitly not changed
+
+Per this task's instructions: no Elliott Wave detection logic, scoring,
+recursive verification, or DP candidate selection was modified. Findings
+inside `src/analysis/` (7 unused imports, 12 ambiguous single-letter
+variable names, 2 lambda-assignments, 2 unused locals, 36 mypy type
+errors, 1 dead-code loop in a `__main__` demo block) are documented in
+[RELEASE_AUDIT.md](#audit) rather than fixed. The vendored
+`src/data/schwabdev/` Schwab API client (third-party, kept close to
+upstream) was likewise left as-is beyond documentation, including a
+systemic missing-timeout pattern across 23 `requests.*` calls flagged by
+`bandit`.
+
+### Versioning
+
+This project follows [Semantic Versioning](https://semver.org/). v1.0.0 is
+the first version with a formal release process; see
+[CHANGELOG.md](../CHANGELOG.md) for what preceded it.
+
+---
+
+<a id="audit"></a>
+
+## Part 2 — Task 10 — Production Release Audit (v1.0.0)
 
 Full audit backing the v1.0.0 release. Every number below comes from an
 actual tool run or a measured execution — see the command shown, re-run
@@ -7,7 +122,7 @@ assumed. Per this task's explicit instructions, **no Elliott Wave
 detection logic, scoring, recursive verification, or DP selection was
 modified** — findings inside `src/analysis/` are documented, not fixed.
 
-## 1. Repository audit
+### 1. Repository audit
 
 **Tooling**: `ruff check`, `vulture`, `grep` for TODO/FIXME/XXX/HACK,
 manual cross-reference of every `src/analysis/` module's importers.
@@ -87,7 +202,7 @@ manual cross-reference of every `src/analysis/` module's importers.
   confirmation, committed as part of this release (see the final commit
   in this task).
 
-## 2. Code quality audit
+### 2. Code quality audit
 
 **Tooling**: `ruff` (PEP8/style — see repository audit above for the
 itemized counts), `mypy` (type hints), manual review (exception handling,
@@ -129,7 +244,7 @@ logging, config handling, input validation).
   malformed CSV during CLI testing, got a clean `error:` message and exit
   code 1, not a traceback).
 
-## 3. Packaging
+### 3. Packaging
 
 - `pyproject.toml` created: `name="autotrader"`, `version="1.0.0"`,
   `requires-python=">=3.12"`, proprietary license metadata, `elliott`
@@ -137,7 +252,7 @@ logging, config handling, input validation).
 - Dependency list **rebuilt from an AST-based scan of every actual
   `import` statement** across `src/`, `api/`, `benchmark/`, `validation/`,
   `scripts/` — not copied from the prior `requirements.txt`. See "Fixed"
-  items in [RELEASE_NOTES.md](RELEASE_NOTES.md).
+  items in [RELEASE_NOTES.md](#notes).
 - **Verified, not assumed**:
   - `pip install -e .` succeeded in a brand-new, isolated virtual
     environment (`python -m venv`) with no prior state.
@@ -152,7 +267,7 @@ logging, config handling, input validation).
   - The `elliott` console script itself (not just `python -m cli.main`)
     was confirmed working end-to-end.
 
-## 4. API audit
+### 4. API audit
 
 - **Endpoints**: 24 documented paths (`GET /openapi.json`, counted).
   Covers meta/health/version, backtests, replay (WebSocket), Schwab OAuth,
@@ -175,7 +290,7 @@ logging, config handling, input validation).
   gap with no correctness impact; out of scope for this audit, tracked as
   a roadmap item.
 
-## 5. CLI
+### 5. CLI
 
 `elliott` — argparse-based (no new dependency), six subcommands, every one
 calling real, unmodified production code (no reimplemented logic). All
@@ -191,7 +306,7 @@ installed console script (not just `python -m cli.main`):
 | `elliott version [-v]` | Correct package version from installed metadata |
 | `elliott config [--show]` | Loaded real `settings.yaml`/`credentials.yaml`, correctly redacted secrets (spot-checked: `password`→`(not set)`, `credentials_path`→`***SET***`) |
 
-## 6. Docker
+### 6. Docker
 
 Created: `Dockerfile` (API, multi-stage-free but layer-cached, non-root
 user, healthcheck, no `--reload`), `web/Dockerfile` (Node build → nginx
@@ -207,7 +322,7 @@ Docker (see Packaging above), but this is the one release-readiness item
 in this whole audit that remains unverified by actual execution — flagged
 explicitly rather than claimed complete. See "Remaining issues" below.
 
-## 7. CI/CD
+### 7. CI/CD
 
 `.github/workflows/ci.yml` — 7 jobs: `lint` (ruff), `typecheck` (mypy,
 informational), `unit-tests`, `regression-tests` (Elliott suite + coverage
@@ -219,7 +334,7 @@ workflow expects — the workflow itself has not been run inside GitHub
 Actions (no push/PR was made), so treat it as reviewed-and-consistent
 rather than CI-verified until the first real run.
 
-## 8. Documentation
+### 8. Documentation
 
 Created: `README.md` (rewritten), `docs/INSTALLATION.md`,
 `docs/QUICKSTART.md`, `docs/Design Document.md`, `docs/DEVELOPER_GUIDE.md`,
@@ -231,7 +346,7 @@ Created: `README.md` (rewritten), `docs/INSTALLATION.md`,
 proprietary/all-rights-reserved was chosen (not inferred) given this is
 internal trading IP for a named organization.
 
-## 9. Performance audit
+### 9. Performance audit
 
 All measured on the audit machine (Windows, Python 3.12.10), not
 estimated. Re-run any of these yourself — commands shown.
@@ -252,13 +367,13 @@ not optimize unless profiling proves a bottleneck." Nothing measured here
 crossed a threshold that would justify one; all numbers are reported as a
 baseline for future comparison.
 
-## 10. Security audit
+### 10. Security audit
 
 See [SECURITY_AUDIT.md](SECURITY_AUDIT.md) for the full writeup
 (dependencies, secrets, input validation, error exposure, unsafe
 defaults).
 
-## 11. Remaining issues
+### 11. Remaining issues
 
 Ranked by what actually matters for a v1.0.0 decision:
 
@@ -284,7 +399,7 @@ Ranked by what actually matters for a v1.0.0 decision:
 6. **Live trading remains a stub** — by design, not a defect; this
    release doesn't claim otherwise.
 
-## 12. Future roadmap (not commitments, just documented directions)
+### 12. Future roadmap (not commitments, just documented directions)
 
 - Wire `RithmicBroker`/`LiveTrader` to real order placement (currently
   `NotImplementedError`).
@@ -299,7 +414,7 @@ Ranked by what actually matters for a v1.0.0 decision:
 - Consider a stricter `mypy` baseline for `src/analysis/` as its own,
   dedicated, evidence-gated task — not bundled into a release audit.
 
-## 13. Production readiness score
+### 13. Production readiness score
 
 **8.5 / 10** for the certified scope (backtesting, replay, Elliott Wave
 engine, FastAPI + React platform, CLI, packaging, CI). Deductions: −1 for
@@ -308,7 +423,7 @@ item 1-2 above), −0.5 for the documented-but-real vendored-dependency
 timeout gap. Not scored against live trading, which was never in scope
 for this release.
 
-## 14. Final recommendation
+### 14. Final recommendation
 
 **Ready for Version 1.0 Release**, for the scope this audit certifies:
 backtesting, bar-by-bar replay, the Elliott Wave analysis engine, the

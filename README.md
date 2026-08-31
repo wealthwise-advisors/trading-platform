@@ -221,7 +221,7 @@ commit it claims**
 > <ol type="I">
 > <li><p>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</p></li>
 > <li><p>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</p></li>
-> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/Technical Requirements Document.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</p></li>
+> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/Technical Requirements Document.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE.md">Elliott Wave rule inventory</a>.</p></li>
 > </ol>
 
 <br>
@@ -1044,8 +1044,8 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |- - - ▶  <a href="docs/Design Document.md">Design Document.md</a>
 |               |- - - ▶  <a href="docs/CONFIGURATION.md">CONFIGURATION.md</a>
 |               |- - - ▶  <a href="docs/DEVELOPER_GUIDE.md">DEVELOPER_GUIDE.md</a>
-|               |- - - ▶  <a href="docs/ELLIOTT_WAVE_ARCHITECTURE.md">ELLIOTT_WAVE_ARCHITECTURE.md</a>
-|               |- - - ▶  <a href="docs/ELLIOTT_WAVE_IMPLEMENTATION.md">ELLIOTT_WAVE_IMPLEMENTATION.md</a>
+|               |- - - ▶  <a href="docs/ELLIOTT_WAVE.md">ELLIOTT_WAVE.md</a>
+|               |- - - ▶  <a href="docs/ELLIOTT_WAVE.md">ELLIOTT_WAVE.md</a>
 |               └- - - ▶  <i>+10 more</i>
 |------------▶  <a href="config">config/</a>   <i>settings and credential templates</i>  <b>3</b>
 |               |- - - ▶  <a href="config/credentials.yaml.example">credentials.yaml.example</a>
@@ -1394,9 +1394,9 @@ had already shipped, and checked against the commit that shipped it.
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - 🎨 [UI / UX](docs/UI_UX.md)
 - 🔌 [API Guide](docs/API_GUIDE.md)
-- 🌊 Elliott Wave — [rules](docs/ELLIOTT_WAVE_RULES.md) · [architecture](docs/ELLIOTT_WAVE_ARCHITECTURE.md) · [implementation](docs/ELLIOTT_WAVE_IMPLEMENTATION.md) · [SRS](docs/ELLIOTT_WAVE_SRS.md)
+- 🌊 Elliott Wave — [rules](docs/ELLIOTT_WAVE.md#rules) · [architecture](docs/ELLIOTT_WAVE.md#architecture) · [implementation](docs/ELLIOTT_WAVE.md#implementation) · [SRS](docs/ELLIOTT_WAVE.md#requirements)
 - 🔒 [Security Audit](docs/SECURITY_AUDIT.md)
-- 📋 [Release Notes](docs/RELEASE_NOTES.md) · [Audit](docs/RELEASE_AUDIT.md)
+- 📋 [Release Notes](docs/RELEASE.md#notes) · [Audit](docs/RELEASE.md#audit)
 
 </td></tr>
 </table>

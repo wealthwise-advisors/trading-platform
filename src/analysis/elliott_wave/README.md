@@ -17,7 +17,7 @@
 |:--|:--|
 | 🎯 **Does** | Pivots ➜ candidate structures ➜ rule gates ➜ measurements |
 | 🔄 **Lifecycle** | `ENUMERATED` ➜ `GATED` ➜ `MEASURED` |
-| 📘 **Specification** | [`docs/ELLIOTT_WAVE_RULES.md`](../../../docs/ELLIOTT_WAVE_RULES.md) · [`ELLIOTT_WAVE_IMPLEMENTATION.md`](../../../docs/ELLIOTT_WAVE_IMPLEMENTATION.md) |
+| 📘 **Specification** | [`docs/ELLIOTT_WAVE.md`](../../../docs/ELLIOTT_WAVE.md#rules) · [`ELLIOTT_WAVE.md`](../../../docs/ELLIOTT_WAVE.md#implementation) |
 | 📁 **Path** | `src/analysis/elliott_wave/` |
 | 📦 **Holds** | `12` files · `2,267` lines |
 
@@ -60,7 +60,7 @@
 
 ## 💡 Worth knowing
 
-- ➜ **A structure that breaks a rule is rejected, not drawn with a caveat.** [`validation.py`](validation.py) is the gate, and [`docs/ELLIOTT_WAVE_RULES.md`](../../../docs/ELLIOTT_WAVE_RULES.md) is what it enforces.
+- ➜ **A structure that breaks a rule is rejected, not drawn with a caveat.** [`validation.py`](validation.py) is the gate, and [`docs/ELLIOTT_WAVE.md`](../../../docs/ELLIOTT_WAVE.md#rules) is what it enforces.
 - ➜ **The lifecycle is three explicit stages** — `ENUMERATED` ➜ `GATED` ➜ `MEASURED`. A candidate that has only been enumerated is not a wave, and the type keeps the two from being confused.
 - ➜ **Measurements come last, on purpose.** Computing ratios for a structure that has not passed the gates would produce numbers for something that is not there.
 

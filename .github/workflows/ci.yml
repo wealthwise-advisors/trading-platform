@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: pip install -e ".[dev]"
-      # Informational for now -- see docs/RELEASE_AUDIT.md ("Code Quality
+      # Informational for now -- see docs/RELEASE.md ("Code Quality
       # Audit"): 36 pre-existing type errors were found in src/analysis/
       # and are not fixed here. continue-on-error keeps this job visible
       # in the CI summary without blocking merges until that's addressed
@@ -63,7 +63,7 @@ jobs:
       - run: pip install -e ".[dev]"
       # Full suite: engine smoke tests + the swing/zigzag regression baseline
       # + the Elliott Wave suite, including every TR-2 blocked-rule guard.
-      # See docs/ELLIOTT_WAVE_SRS.md TR-11 (D-05).
+      # See docs/ELLIOTT_WAVE.md TR-11 (D-05).
       #
       # Coverage runs here rather than in a job of its own: it needs the same
       # install and the same full suite, so a second job would pay for both

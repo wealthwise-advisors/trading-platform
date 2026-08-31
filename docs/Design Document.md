@@ -59,7 +59,7 @@ indicators.py, zigzag.py     Supporting/independent utilities
   same series.
 
 The Elliott Wave engine is a layered subsystem documented separately:
-[ELLIOTT_WAVE_ARCHITECTURE.md](ELLIOTT_WAVE_ARCHITECTURE.md).
+[ELLIOTT_WAVE.md](ELLIOTT_WAVE.md#architecture).
 
 ## Two engines, one strategy interface
 

@@ -155,7 +155,7 @@ calling an indicator or overlay fixed:
 
 ```bash
 ruff check .        # lint (config in pyproject.toml's [tool.ruff])
-mypy src/analysis    # type check (informational on src/analysis -- see RELEASE_AUDIT.md)
+mypy src/analysis    # type check (informational on src/analysis -- see RELEASE.md#audit)
 vulture src api      # dead-code scan
 bandit -r src api -ll   # security scan
 pip-audit             # dependency CVE scan
