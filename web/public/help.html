@@ -68,6 +68,35 @@
     .card{padding:24px 19px} h1{font-size:24px}
     td:first-child{white-space:normal}
   }
+  /* Collapsible help sections.
+     <details>, not a JS accordion: it is keyboard-operable, screen-reader
+     announced and Ctrl+F-searchable for free, and it still works on a page
+     served with a strict CSP and no script at all. */
+  .faq{
+    border:1px solid var(--line); border-radius:12px;
+    background:rgba(255,255,255,.02); margin:10px 0; overflow:hidden;
+  }
+  .faq summary{
+    cursor:pointer; padding:14px 17px; font-weight:650; color:var(--ink);
+    list-style:none; display:flex; align-items:center; gap:10px;
+    transition:background .15s;
+  }
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::before{
+    content:""; width:7px; height:7px; flex:none;
+    border-right:2px solid var(--em); border-bottom:2px solid var(--em);
+    transform:rotate(-45deg); transition:transform .18s;
+  }
+  .faq[open] summary::before{transform:rotate(45deg)}
+  .faq summary:hover{background:rgba(255,255,255,.04)}
+  .faq summary:focus-visible{
+    outline:2px solid var(--em); outline-offset:-2px;
+  }
+  .faq-body{padding:0 17px 15px}
+  .faq-body > :first-child{margin-top:0}
+  @media(prefers-reduced-motion:reduce){
+    .faq summary,.faq summary::before{transition:none}
+  }
 </style></head><body>
 <div class="wrap">
   <div class="top">
@@ -78,8 +107,10 @@
     <h1>Help Center</h1>
     <p class="upd">Last updated 28 August 2026</p>
 
-    <h2>Signing in</h2>
-    <p>Use your username and password, or one of the four provider buttons.</p>
+        <details class="faq" open>
+      <summary>Signing in</summary>
+      <div class="faq-body">
+<p>Use your username and password, or one of the four provider buttons.</p>
     <div class="note">
       <strong>Signing in with X (Twitter) has one extra step.</strong> X does
       not share an email address at any scope, so after you authorise the app it
@@ -87,33 +118,48 @@
       you are in — it is the last step, not an error. The link it hands you is
       single-use and expires after twenty minutes, so complete it in one go.
     </div>
-
-    <h2>Forgotten password</h2>
-    <p>Use <strong>Forgot password?</strong> on the sign-in page. A reset link
+      </div>
+    </details>
+    <details class="faq">
+      <summary>Forgotten password</summary>
+      <div class="faq-body">
+<p>Use <strong>Forgot password?</strong> on the sign-in page. A reset link
     is sent to the address on the account. It works once and expires; request
     another if it lapses.</p>
-
-    <h2>Forgotten username</h2>
-    <p>Use <strong>Forgot username?</strong>. Your username is sent to the
+      </div>
+    </details>
+    <details class="faq">
+      <summary>Forgotten username</summary>
+      <div class="faq-body">
+<p>Use <strong>Forgot username?</strong>. Your username is sent to the
     address on the account.</p>
     <p>Neither form ever reveals whether an address is registered. That is
     deliberate — an honest answer there would let anyone test which addresses
     hold accounts.</p>
-
-    <h2>No email arriving</h2>
-    <ul>
+      </div>
+    </details>
+    <details class="faq">
+      <summary>No email arriving</summary>
+      <div class="faq-body">
+<ul>
       <li>Check the spam folder first.</li>
       <li>Confirm the address is the one the account was created with.</li>
       <li>Provider sign-ins (Google, LinkedIn, GitHub) have no password, so
           there is nothing to reset — use the button instead.</li>
     </ul>
-
-    <h2>A provider button says it is not connected</h2>
-    <p>That provider has no credentials configured on the server. Use your
+      </div>
+    </details>
+    <details class="faq">
+      <summary>A provider button says it is not connected</summary>
+      <div class="faq-body">
+<p>That provider has no credentials configured on the server. Use your
     username and password, or another button.</p>
-
-    <h2>Running a backtest</h2>
-    <p>Set the data source, symbol, timeframe and strategy in the left panel,
+      </div>
+    </details>
+    <details class="faq">
+      <summary>Running a backtest</summary>
+      <div class="faq-body">
+<p>Set the data source, symbol, timeframe and strategy in the left panel,
     then press <strong>Run Backtest</strong>. Results open beside it: equity
     curve, trade log, P&amp;L distribution and pattern analysis.</p>
     <div class="warn">
@@ -121,11 +167,16 @@
       bars that have already happened. It is not a prediction, and it is not
       advice. See the <a href="terms.html">Terms of Service</a>.
     </div>
-
-    <h2>Still stuck</h2>
-    <p><a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a></p>
+      </div>
+    </details>
+    <details class="faq">
+      <summary>Still stuck</summary>
+      <div class="faq-body">
+<p><a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a></p>
 
   </div>
+      </div>
+    </details>
   <div class="foot">
     <a href="terms.html">Terms of Service</a>·
     <a href="privacy.html">Privacy Policy</a>·

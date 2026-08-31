@@ -49,6 +49,11 @@ function App({ user }: { user: Me }) {
     // resolve to "fill remaining viewport space" instead of an arbitrary
     // fixed pixel guess.
     <div className="app-shell h-screen text-foreground flex flex-col md:flex-row overflow-hidden">
+      {/* First focusable thing on the page, and invisible until it is focused.
+          Without it a keyboard or screen-reader user tabs through the entire
+          config sidebar -- every input, slider and dropdown -- before reaching
+          the results they came for, on every single page load. */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       {page === "backtest" && configOpen && (
         <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
                style={{ background: "linear-gradient(180deg, #16171f 0%, #0d0e13 100%)" }}>
@@ -155,7 +160,12 @@ function App({ user }: { user: Me }) {
             resolved height. An extra div in between has auto height, h-full
             collapses to content, and the chart loses its flex-1 chain -- which
             is exactly the empty space that appeared under it. */}
-        <div key={page} className="flex-1 min-h-0 overflow-y-auto page-swap">
+        {/* tabIndex -1 so the skip link can actually move focus here. Without
+            it the browser scrolls to the anchor but leaves focus at the top of
+            the document, and the next Tab goes straight back into the sidebar
+            the link existed to skip. */}
+        <div id="main-content" tabIndex={-1} key={page}
+             className="flex-1 min-h-0 overflow-y-auto page-swap">
           {page === "backtest" && <ResultsPage />}
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}

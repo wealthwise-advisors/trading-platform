@@ -34,6 +34,7 @@ import { ErrorBoundary } from "./ErrorBoundary"
 import { VerifyEmailNotice } from "./VerifyEmailNotice"
 import { Onboarding } from "./Onboarding"
 import { OfflineBanner } from "./OfflineBanner"
+import { CopyButton } from "./ui/copy-button"
 import type { Me } from "@/lib/api"
 
 afterEach(cleanup)
@@ -101,9 +102,30 @@ describe("accessibility (axe-core)", () => {
     const { container } = render(<OfflineBanner />)
     expect(await violationsIn(container)).toEqual([])
   })
+
+  it("the copy button has no violations", async () => {
+    const { container } = render(<CopyButton value="https://example.test/x" />)
+    expect(await violationsIn(container)).toEqual([])
+  })
 })
 
 describe("keyboard and screen-reader affordances", () => {
+  it("the icon-only copy button still has an accessible name", () => {
+    // It renders an icon and no text, so without aria-label a screen reader
+    // announces it as "button" and nothing else.
+    const { container } = render(<CopyButton value="x" label="Copy the export URL" />)
+    const btn = container.querySelector("button")
+    expect(btn?.getAttribute("aria-label")).toBe("Copy the export URL")
+  })
+
+  it("the copy button carries a live region for its confirmation", () => {
+    // The tick replacing the clipboard icon is invisible to a screen reader;
+    // the polite live region is the only feedback it gets.
+    const { container } = render(<CopyButton value="x" />)
+    const status = container.querySelector('[role="status"]')
+    expect(status?.getAttribute("aria-live")).toBe("polite")
+  })
+
   it("every control on the verify screen has an accessible name", () => {
     const { container } = render(<VerifyEmailNotice user={USER} />)
     // A button whose only content is an icon reads as "button" and nothing

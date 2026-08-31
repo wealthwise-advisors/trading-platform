@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -167,10 +168,17 @@ export function DataExportPage() {
         </CardContent>
       </Card>
 
-      {/* Debug/preview helper -- shows the exact request URL that'll be hit */}
-      <p className="text-xs text-muted-foreground break-all">
-        {valid ? url : ""}
-      </p>
+      {/* The exact request URL, with a way to take it away.
+          This is the one string on the page worth copying: it is what somebody
+          pastes into curl, a script, or a bug report. Selecting a wrapped URL
+          by hand is exactly the fiddly job a copy button exists for -- which is
+          also why there is only one on this page and not one per field. */}
+      {valid && (
+        <div className="flex items-start gap-2">
+          <p className="text-xs text-muted-foreground break-all min-w-0 flex-1">{url}</p>
+          <CopyButton value={url} label="Copy the export URL" />
+        </div>
+      )}
     </div>
   )
 }

@@ -1733,6 +1733,36 @@ button, [role="button"] {
  * those are routes inside one document, so it is set once rather than per
  * page.
  */
+/* Skip link.
+ *
+ * Off-screen rather than display:none or visibility:hidden -- both of those
+ * remove an element from the focus order entirely, which would make a skip
+ * link that cannot be reached by the key it exists for. It returns to the
+ * viewport on :focus-visible and nowhere else.
+ */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 140ms ease-out;
+}
+.skip-link:focus-visible {
+  top: 12px;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-link { transition: none; }
+}
+
 .app-shell {
   /* The image, at full strength. No tint, no scrim, no filter.
    *
