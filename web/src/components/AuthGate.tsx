@@ -35,9 +35,15 @@ export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
       .then((user) => {
         if (!alive) return
         if (user) {
+          // ?tour=1 replays the introduction for someone who has already
+          // finished or skipped it. The flag lives on the account, so without
+          // this the only way back to that screen is a new account -- and it
+          // is a screen worth being able to re-read rather than a gate that
+          // has to stay shut once passed.
+          const replay = new URLSearchParams(window.location.search).get("tour") === "1"
           setState(
             user.verification_required ? { phase: "unverified", user }
-            : !user.onboarded ? { phase: "onboarding", user }
+            : (replay || !user.onboarded) ? { phase: "onboarding", user }
             : { phase: "in", user })
         } else {
           setState({ phase: "out" })
@@ -84,7 +90,14 @@ export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
     return (
       <Onboarding
         user={state.user}
-        onDone={() => setState({ phase: "in", user: state.user })}
+        onDone={() => {
+          // Drop ?tour=1 on the way out, so a refresh does not reopen it and
+          // the URL someone copies is not a permanent tour link.
+          if (window.location.search.includes("tour=")) {
+            window.history.replaceState({}, "", window.location.pathname)
+          }
+          setState({ phase: "in", user: state.user })
+        }}
       />
     )
   }
