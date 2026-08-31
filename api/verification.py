@@ -39,6 +39,7 @@ import secrets
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from db import users as repo
 
@@ -218,6 +219,70 @@ def _deliver_resend(to: str, subject: str, body: str) -> bool:
         return 200 <= resp.status < 300
 
 
+#: A local development sink: write the message to a FILE instead of sending it.
+#:
+#: WHY THIS EXISTS
+#: Running the app on a laptop meant confirmation links and sign-in codes went
+#: nowhere -- correctly, because no transport was configured -- which made every
+#: email-dependent flow untestable locally without putting a real mailbox
+#: credential on the machine. That is a poor trade for looking at a screen.
+#:
+#: WHY IT CANNOT LEAK INTO PRODUCTION
+#: Two locks, and both must be open:
+#:
+#:   1. It is OPT-IN by an explicit path. Nothing defaults it on, the deploy
+#:      never sets it, and there is no value of any other variable that turns
+#:      it on by accident.
+#:   2. It REFUSES to run when a real transport exists. The deployed stack has
+#:      SMTP configured, so even if this variable were somehow set there, the
+#:      check below hands the message to SMTP and never to the file.
+#:
+#: The file is a full copy of the message, tokens included, so it must be
+#: treated as a mailbox: the launcher puts it outside the git repository.
+DEV_SINK_ENV = "AUTOTRADER_DEV_MAIL_SINK"
+
+
+def _dev_sink_path() -> str:
+    """The sink path, or "" when it must not be used.
+
+    Empty whenever a real transport is available, so this can never take
+    precedence over actually sending.
+    """
+    if _smtp_configured() or _api_key():
+        return ""
+    return os.environ.get(DEV_SINK_ENV, "").strip()
+
+
+def dev_sink_active() -> bool:
+    return bool(_dev_sink_path())
+
+
+def _deliver_dev_sink(to: str, subject: str, body: str) -> bool:
+    """Append the whole message to a local file, and log where to look.
+
+    The PATH is logged, never the contents -- a token in a log line is a
+    working link in a file that gets shipped and read by more people than a
+    mailbox is.
+    """
+    path = _dev_sink_path()
+    stamp = datetime.now().isoformat(timespec="seconds")
+    entry = (f"{'=' * 72}\n"
+             f"{stamp}   to: {to}\n"
+             f"Subject: {subject}\n"
+             f"{'-' * 72}\n{body}\n")
+    try:
+        p = Path(path)
+        if p.parent and not p.parent.exists():
+            p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("a", encoding="utf-8") as fh:
+            fh.write(entry)
+    except OSError as exc:
+        log.warning("could not write the dev mail sink at %s: %s", path, exc)
+        return False
+    log.info("DEV MAIL SINK: message written to %s -- open that file to read it", path)
+    return True
+
+
 def _deliver(to: str, subject: str, body: str, what: str) -> bool:
     """Send one message by whichever transport is configured.
 
@@ -225,12 +290,17 @@ def _deliver(to: str, subject: str, body: str, what: str) -> bool:
     transport does not mean editing three near-identical blocks and missing one.
     """
     try:
-        ok = (_deliver_smtp(to, subject, body) if _smtp_configured()
-              else _deliver_resend(to, subject, body))
+        if _smtp_configured():
+            ok, via = _deliver_smtp(to, subject, body), "SMTP"
+        elif _api_key():
+            ok, via = _deliver_resend(to, subject, body), "Resend"
+        else:
+            # Only reachable when neither real transport exists -- see
+            # _dev_sink_path, which returns "" the moment one does.
+            ok, via = _deliver_dev_sink(to, subject, body), "the dev sink"
         if ok:
             _remember("")
-            log.info("%s sent to %s via %s", what, _redact(to),
-                     "SMTP" if _smtp_configured() else "Resend")
+            log.info("%s sent to %s via %s", what, _redact(to), via)
         return ok
     except Exception as exc:            # noqa: BLE001 -- see below
         # Deliberately broad. smtplib raises a family of its own exceptions
@@ -256,6 +326,11 @@ def configured() -> bool:
     useless, and a sender the domain does not authorise is silently dropped by
     the recipient's provider rather than bounced.
     """
+    if dev_sink_active():
+        # The sink can always "deliver", so the flows behave locally exactly as
+        # they do in production instead of stopping at "mail is dormant" -- the
+        # whole point of having it.
+        return bool(_sender() and _base_url())
     return bool((_smtp_configured() or _api_key()) and _sender() and _base_url())
 
 
@@ -278,6 +353,11 @@ def sandboxed() -> bool:
     # matters beyond the label: api/auth.py's verification gate stays OFF while
     # this is True, so without this line an SMTP deployment that CAN reach
     # everyone would still refuse to enforce the confirmation it can now send.
+    if dev_sink_active():
+        # Reaches nobody at all, so it must read as sandboxed -- otherwise the
+        # confirmation gate would switch on locally and lock out an account
+        # whose "email" only ever lands in a text file.
+        return True
     if _smtp_configured():
         return False
     sender = _sender()
@@ -293,6 +373,10 @@ def transport_name() -> str:
 def describe() -> str:
     """One line for the startup log."""
     if configured():
+        if dev_sink_active():
+            return (f"Email: DEV SINK -- nothing is actually sent. Messages are "
+                    f"written to {_dev_sink_path()}; open that file to read the "
+                    f"code or link.")
         if _smtp_configured():
             return (f"Email: ACTIVE via {transport_name()} (from {_sender()}) "
                     f"-- delivers to any recipient.")

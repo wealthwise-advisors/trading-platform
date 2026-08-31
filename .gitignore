@@ -97,3 +97,9 @@ Screenshot*.png
 # sessions and argon2 hashes was sitting STAGED for commit to a repository.
 # The suffix is what has to be matched, not the base name.
 *.bak-*
+
+# Local dev mail sink -- a full copy of every message, tokens included.
+# The launcher writes it OUTSIDE this repo, but ignore it here too in case
+# anyone points AUTOTRADER_DEV_MAIL_SINK at the working tree.
+local-mail.txt
+*.mailbox

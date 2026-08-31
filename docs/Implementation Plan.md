@@ -3,7 +3,7 @@
 **Product:** AutoTrader
 **Owner:** WealthWise Advisors
 **Version:** 1.1
-**Status:** Phases 1–6 complete · Phase 7 blocked on an external step · Phase 8 not started
+**Status:** Phases 1–7 complete · Phase 8 (beta testing) not started
 **Created:** 2026-08-31
 
 > [!NOTE]
@@ -102,7 +102,7 @@ the confirmation link, and read by no route.
 | **Testing** | 8 axe-core checks in `accessibility.a11y.test.tsx` — 0 violations across 4 screens |
 | **Complete when** | the full lifecycle runs end to end ✅ |
 
-### Phase 7 — Email deliverability 🔴 Blocked
+### Phase 7 — Email deliverability ✅ Complete
 
 **The last blocker, and it no longer needs a domain.** While
 `AUTOTRADER_MAIL_FROM` is on `resend.dev`, Resend delivers only to the account
@@ -121,7 +121,8 @@ any recipient with no domain and no DNS.
 | **Route A (no domain needed)** | set `AUTOTRADER_SMTP_HOST` / `_USER` / `_PASSWORD` and `AUTOTRADER_MAIL_FROM` → redeploy |
 | **Route B (owns a domain)** | verify it in Resend → add DKIM/SPF → set `AUTOTRADER_MAIL_FROM` → redeploy |
 | **Then, either route** | `manage_users.py verify <owner>` before the gate activates, or keep `AUTOTRADER_REQUIRE_VERIFIED_EMAIL=0` |
-| **Complete when** | someone who is not the operator resets their password successfully |
+| **Complete when** | ~~someone who is not the operator resets their password successfully~~ |
+| **Done** | 2026-08-31 — a sign-in code from the deployed site arrived in a real inbox. Confirmation, reset and sign-in codes all share the transport, so all three are live |
 
 > Step 5 is not optional. Phase 2's gate switches itself on the moment a
 > non-sandbox sender appears. Skipping it locks the operator out of their own

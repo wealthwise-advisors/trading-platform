@@ -160,7 +160,7 @@ re-reporting them.
 
 | Issue | Severity | Status |
 |---|---|---|
-| Real inbox delivery has never been confirmed by a recipient who is not the operator | S2 | SMTP is configured and the full chain is verified over a real socket; only an actual inbox is unproven. **Flows 1, 2 and 5 confirm it** |
+| ~~Real inbox delivery unconfirmed~~ | — | **RESOLVED 2026-08-31.** A sign-in code sent from the deployed site arrived in a real inbox. Email delivery works; password reset and confirmation ride the same transport |
 | Crash reporting is dormant until an endpoint is configured | S4 | Code complete, needs `VITE_AUTOTRADER_ERROR_DSN` |
 | Charts have no screen-reader alternative | S3 | Trade data is reachable in the trade log table |
 | CSP keeps `'unsafe-inline'` for scripts | S3 | Known and accepted — see below |
