@@ -491,6 +491,22 @@ def signup_config():
         "captcha": {"provider": "turnstile", "site_key": captcha.site_key()},
         "email_verification": verification.configured(),
         "min_password_length": auth.MIN_PASSWORD_LENGTH,
+        # Whether registration is on the confirm-first path: no session until a
+        # link in the mailbox is clicked, and one identical answer whether or
+        # not the address is already taken.
+        #
+        # Published because it was otherwise UNKNOWABLE from outside. It is set
+        # by mail being deliverable AND by an operator escape-hatch env var, and
+        # a deployment could sit with the gate quietly off -- enumeration live,
+        # unconfirmed accounts usable -- with nothing anywhere to say so short of
+        # shell access on the box. That is exactly the shape of a security
+        # control that fails silently.
+        #
+        # Not a disclosure. It describes the DEPLOYMENT, never an account, so it
+        # carries no membership signal; and anyone can observe the same fact by
+        # registering once. The sign-up page uses it to say whether a
+        # confirmation email is coming.
+        "confirm_required": auth.verification_enforced(),
     }
 
 
