@@ -1463,7 +1463,13 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 <br>
 
-<a href="https://github.com/akxyverse"><img src="docs/assets/legal-developed.svg" alt="Developed By — Developer: Akash Yadav. Email: akashyadav110502@gmail.com. GitHub: github.com/akxyverse" width="100%"></a>
+<a href="https://github.com/akxyverse"><img src="docs/assets/legal-developed.svg" alt="Developed By — Developer: Akash Yadav. Email: akashyadav110502@gmail.com. Contact: +91 70053 63923. GitHub: github.com/akxyverse. LinkedIn: linkedin.com/in/akash-yadav-122a75288" width="100%"></a>
+
+<sub>
+
+**[Email ↗](mailto:akashyadav110502@gmail.com)** &nbsp;·&nbsp; **[GitHub ↗](https://github.com/akxyverse)** &nbsp;·&nbsp; **[LinkedIn ↗](https://www.linkedin.com/in/akash-yadav-122a75288/)** &nbsp;·&nbsp; `+91 70053 63923`
+
+</sub>
 
 <br>
 

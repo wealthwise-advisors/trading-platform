@@ -77,9 +77,9 @@ OWNERSHIP = [
 DEVELOPED = [
     ("Developer", "Akash Yadav", "person", BLUE_L),
     ("Email", "akashyadav110502@gmail.com", "mail", BLUE_L),
-    ("Contact", None, "phone", INK),
+    ("Contact", "+91 70053 63923", "phone", INK),
     ("GitHub", "github.com/akxyverse", "branch", VIOLET_L),
-    ("LinkedIn", None, "badge", VIOLET_L),
+    ("LinkedIn", "linkedin.com/in/akash-yadav-122a75288", "badge", VIOLET_L),
 ]
 
 # label, shown text, accent
@@ -177,24 +177,71 @@ def tile(key, x, y, size):
                    size * 0.56 / 24, sw=1.9))
 
 
+MIN_ONE_LINE = 15.0   # under this, one line is too small to be worth keeping
+
+
+def wrap(value, width, size):
+    """One line, or two split after a separator.
+
+    Wrapping is a last resort: the test is against MIN_ONE_LINE, not against
+    the target size, so "github.com/akxyverse" stays on one line at 16px
+    instead of being split when it did not need to be.
+
+    When it is needed, the break goes after a "/" or an "@" so each line still
+    reads as part of one address -- "linkedin.com/in/" over the profile id,
+    the way the reference design sets it, and "akashyadav110502@" over
+    "gmail.com", which on a single line had been squeezed to 13px.
+    """
+    if len(value) * 0.52 * MIN_ONE_LINE <= width:
+        return [value]
+    # +2 on the bound: rfind's end is EXCLUSIVE, and the "@" in this email
+    # sits at exactly 0.62 of its length, so the search window stopped one
+    # character short of the only separator it had and never split at all.
+    cut = max(value.rfind(c, 0, int(len(value) * 0.62) + 2) for c in "/@")
+    if cut <= 0:
+        return [value]
+    return [value[:cut + 1], value[cut + 1:]]
+
+
 def columns(o, items, x0, x1, y, label_size=19, value_size=19):
-    """A row of labelled fields, evenly divided, hairline between each."""
+    """A row of labelled fields, hairline between each.
+
+    Column widths follow the length of what is in them. Equal fifths would put
+    "Akash Yadav" (11 characters) and a 37-character URL in the same box.
+    """
     live = [it for it in items if it[1]]
     if not live:
         return
-    cw = (x1 - x0) / len(live)
+    span = x1 - x0
+    # +8 so a short field keeps enough room for its own label and icon.
+    # A column has to hold its LABEL as well as its value. Weighted on the
+    # value alone, "Developer" over "Akash Yadav" got a box its own heading
+    # ran out of, straight into the next column's icon.
+    # Weighted on what each column will actually hold once wrapped, measured
+    # against an even share first. Passing the whole span meant nothing ever
+    # looked like it would wrap, so the email was weighted as 26 characters,
+    # given a column too narrow for 26 characters, and shrunk to 13px.
+    nominal = span / len(live) - 22
+    wrapped = [wrap(it[1], nominal, value_size) for it in live]
+    weights = [max(len(it[0]) * 0.85 + 4, *(len(w) for w in ws)) + 6
+               for it, ws in zip(live, wrapped)]
+    total = sum(weights)
+    cx = x0
     for i, (label, value, key, accent) in enumerate(live):
-        cx = x0 + i * cw
+        cw = span * weights[i] / total
         if i:
-            o.append(f'<line x1="{cx-14:.1f}" y1="{y-24}" x2="{cx-14:.1f}" y2="{y+34}" '
+            o.append(f'<line x1="{cx-12:.1f}" y1="{y-24}" x2="{cx-12:.1f}" y2="{y+40}" '
                      f'stroke="{EDGE}" stroke-width="1.2"/>')
         o.append(icon(key, accent, cx, y - 15, 0.86, sw=1.8))
         o.append(f'<text x="{cx+30:.1f}" y="{y}" font-family="{FONT}" '
-                 f'font-size="{label_size}" font-weight="600" fill="{accent}">'
-                 f'{esc(label)}</text>')
-        o.append(f'<text x="{cx:.1f}" y="{y+34}" font-family="{FONT}" '
-                 f'font-size="{fits(value, cw-24, value_size):.1f}" fill="{VAL}">'
-                 f'{esc(value)}</text>')
+                 f'font-size="{fits(label, cw-38, label_size):.1f}" font-weight="600" '
+                 f'fill="{accent}">{esc(label)}</text>')
+        lines = wrap(value, cw - 22, value_size)
+        size = min(fits(w, cw - 22, value_size) for w in lines)
+        for j, line in enumerate(lines):
+            o.append(f'<text x="{cx:.1f}" y="{y+34+j*22}" font-family="{FONT}" '
+                     f'font-size="{size:.1f}" fill="{VAL}">{esc(line)}</text>')
+        cx += cw
 
 
 # ── the four cards ───────────────────────────────────────────────────────────
@@ -223,7 +270,8 @@ def license_card():
 
 
 def party_card(title, subtitle, key, items, label):
-    H = 250
+    # 272: a wrapped value sets a second line under the first.
+    H = 272
     o = [head(H, label)]
     o.append(tile(key, PAD + 6, 38, 92))
     tx = PAD + 126
