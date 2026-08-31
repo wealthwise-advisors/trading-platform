@@ -1718,11 +1718,15 @@ button, [role="button"] {
  * element with this class. Their background is untouched.
  *
  * NO OVERLAY. An earlier version put a dark gradient over the image for
- * readability and the result was a flat grey-blue wash -- the gold gone, the
- * candles and the world map barely legible, the photograph no longer reading
- * as one. Contrast is the panels' job: the sidebar and every card already
- * paint their own opaque background, so text has its ground without dimming
- * what sits behind it.
+ * readability and the result was a flat wash -- the candles and the world map
+ * barely legible, the artwork no longer reading as one. Contrast is the
+ * panels' job: the sidebar and every card already paint their own opaque
+ * background, so text has its ground without dimming what sits behind it.
+ *
+ * The image is the supplied blue/purple market visual, used as given: same
+ * pixels, same 1672x941 framing, no crop, no recolour, no filter. It is stored
+ * as .jpg purely as a delivery container -- keeping the existing filename is
+ * what lets this stylesheet stay unchanged.
  *
  * `fixed` makes it a backdrop rather than something that scrolls with the
  * content, and it holds across Backtest, Market Grid and every other tab --
@@ -1732,11 +1736,9 @@ button, [role="button"] {
 .app-shell {
   /* The image, at full strength. No tint, no scrim, no filter.
    *
-   * There was a dark overlay here and it was wrong: it washed the gold out to
-   * a flat grey-blue and the photograph stopped being visible as a
-   * photograph. Readability comes from the panels instead -- the sidebar and
-   * every card carry their own opaque background, so the text that needs
-   * contrast already has it without dimming what sits behind them. */
+   * The gradient beneath it is a fallback ground for the moment before the
+   * image decodes, and for the letterboxed edges on an aspect ratio `cover`
+   * cannot fill -- not a tint. It never paints over the image. */
   background:
     url("./assets/app-background.jpg") center / cover no-repeat fixed,
     linear-gradient(180deg, #0d0e13 0%, #131419 100%);
