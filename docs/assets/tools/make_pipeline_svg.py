@@ -3,7 +3,7 @@ Generate docs/assets/pipeline.svg -- the six-stage pipeline in the README.
 
 WHAT THIS IS
 ------------
-Six stages, left to right, each a card carrying its own name, what it does and
+Six stages, left to right, each a card carrying its number, its name and
 what it produces. Straight connectors between them, and one small dot per
 connector that travels once when that hand-off happens.
 
@@ -23,7 +23,7 @@ communicates flow, and no decorative rotation, particles or glow.
 
 WHAT WAS KEPT, EXACTLY
 ----------------------
-Every stage name, both description lines, every badge, every accent colour and
+Every stage name, every badge, every accent colour and
 all six icon glyphs are unchanged -- they are the content. Only the drawing of
 a node changed. STAGES and icon() below were spliced from the previous file
 rather than retyped, so none of it could drift in the rewrite.
@@ -57,7 +57,7 @@ PAD = 26
 GAP = 24
 COLS = 6
 CARD_W = (W - 2 * PAD - GAP * (COLS - 1)) // COLS
-CARD_H = 156
+CARD_H = 123          # 156 held two description lines that are no longer drawn
 CARD_Y = 34
 H = CARD_Y + CARD_H + 34
 
@@ -74,15 +74,33 @@ STEP = 1.15
 CYCLE = COLS * STEP
 
 
+# title, badge, accent, icon key.
+#
+# The two description lines each card used to carry ("Raw bars from your /
+# chosen source") are gone. They were a sentence about the stage set inside the
+# stage, which is README prose drawn as an image -- and they were what forced
+# the card to 156px tall.
+#
+# Two badges were also longer than any card can hold. A 184px card leaves the
+# chip 158px, which is about 15 monospace characters at a readable size;
+# "Schwab · Rithmic · CSV" is 22 and needed 224px, and "Sharpe · Drawdown" 17.
+# Both used to overflow their own chip. "3 sources" makes the claim without
+# listing them -- architecture.svg names all three, with the room to do it.
 STAGES = [
-    # title, desc line 1, desc line 2, badge, accent, icon key
-    ("Market Data",   "Raw bars from your",  "chosen source",     "Schwab · Rithmic · CSV", "#22d3ee", "stream"),
-    ("Resample",      "Normalise & align",   "across timeframes", "One aggregator",         "#2dd4bf", "aggregate"),
-    ("Analysis",      "Extract structure &", "market context",    "Waves · VWAP",           "#3b82f6", "analyse"),
-    ("Strategy",      "Apply rules &",       "generate signals",  "Signal",                 "#a855f7", "strategy"),
-    ("Paper Broker",  "Simulate fills,",     "slippage & costs",  "Fills · Costs",          "#f97316", "order"),
-    ("Scored Result", "Objective metrics",   "you can check",     "Sharpe · Drawdown",      "#22c55e", "score"),
+    ("Market Data",   "3 sources",        "#22d3ee", "stream"),
+    ("Resample",      "One aggregator",   "#2dd4bf", "aggregate"),
+    ("Analysis",      "Waves · VWAP",     "#3b82f6", "analyse"),
+    ("Strategy",      "Signal",           "#a855f7", "strategy"),
+    ("Paper Broker",  "Fills · Costs",    "#f97316", "order"),
+    ("Scored Result", "Sharpe · MaxDD",   "#22c55e", "score"),
 ]
+
+
+def fits(text, width, want, advance=0.60, floor=12.0):
+    """The largest size at or below `want` that keeps `text` inside `width`."""
+    if not text:
+        return want
+    return max(floor, min(want, (width - 12) / (len(text) * advance)))
 
 
 def icon(key: str, ink: str) -> list[str]:
@@ -189,7 +207,7 @@ def build() -> str:
         # the hand-off: one dot, once, in stage order
         begin = i * STEP
         o.append(f'<circle cx="{x1+3}" cy="{mid}" r="3.2" '
-                 f'fill="{STAGES[i][4]}" opacity="0">'
+                 f'fill="{STAGES[i][2]}" opacity="0">'
                  f'<animate attributeName="cx" values="{x1+3};{x2-6}" '
                  f'begin="{begin:.2f}s" dur="0.72s" calcMode="linear" '
                  f'repeatCount="indefinite" />'
@@ -198,7 +216,7 @@ def build() -> str:
                  f'repeatCount="indefinite"/></circle>')
 
     # ── the six stages ────────────────────────────────────────────────────
-    for i, (title, d1, d2, badge, accent, key) in enumerate(STAGES):
+    for i, (title, badge, accent, key) in enumerate(STAGES):
         x = card_x(i)
         cx = x + CARD_W / 2
         arrive = max(0.0, i * STEP - 0.12)
@@ -231,21 +249,15 @@ def build() -> str:
         o.append(f'<text x="{cx:.1f}" y="{CARD_Y+76}" text-anchor="middle" '
                  f'font-family="{FONT}" font-size="19.9" font-weight="700" '
                  f'fill="{INK}">{esc(title)}</text>')
-        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+94}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="17" fill="{DIM}">{esc(d1)}</text>')
-        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+108}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="17" fill="{DIM}">{esc(d2)}</text>')
-
         bw = CARD_W - 26
-        o.append(f'<rect x="{x+13}" y="{CARD_Y+120}" width="{bw}" height="21" rx="6" '
+        o.append(f'<rect x="{x+13}" y="{CARD_Y+88}" width="{bw}" height="21" rx="6" '
                  f'fill="{accent}" fill-opacity="0.10"/>')
-        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+134.5}" text-anchor="middle" '
-                 # 10px, not 9. Nine was the smallest text in docs/assets and the
-                 # only value under the 10px floor the other six diagrams keep.
-                 # The longest badge, "Schwab · Rithmic · CSV", measures ~136px
-                 # at 10px inside a 158px chip, so every badge still fits.
-                 f'font-family="{MONO}" font-size="17" letter-spacing="0.2" '
-                 f'fill="{accent}">{esc(badge)}</text>')
+        o.append(f'<text x="{cx:.1f}" y="{CARD_Y+102.5}" text-anchor="middle" '
+                 # Measured against the chip rather than fixed, so a reworded
+                 # badge shrinks instead of being drawn through its own edge --
+                 # which is what the two long ones used to do.
+                 f'font-family="{MONO}" font-size="{fits(badge, bw, 17):.1f}" '
+                 f'letter-spacing="0.2" fill="{accent}">{esc(badge)}</text>')
 
     o.append("</svg>")
     return "".join(o)
