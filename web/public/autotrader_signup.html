@@ -933,8 +933,23 @@ body.finishing{
       });
       var body = await res.json().catch(function () { return {}; });
       if (res.ok) {
-        /* Registration signs you in, so go straight to the app rather than
-           sending someone who is already authenticated to a login form. */
+        /* TWO shapes, and the difference is not "did it work".
+
+           202 + confirm_required is the confirm-first path: the server answers
+           identically whether or not the address was already taken -- that is
+           what stops this form reporting who has an account here -- so it never
+           signs anyone in and there is nothing to redirect to. The message has
+           to be the server's own, unchanged, or this page would reintroduce the
+           distinction the server just removed.
+
+           200/201 is the fallback, used only where mail cannot reach a
+           stranger. There, registration really does sign you in. */
+        if (res.status === 202 || body.confirm_required) {
+          say(body.detail || "Check your email to finish setting up the account.",
+              "info");
+          form.reset();
+          return;
+        }
         say("Account created. Taking you in…", "info");
         window.location.assign("/");
         return;

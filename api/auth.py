@@ -140,6 +140,17 @@ class Throttle:
             max_fails=self.IP_MAX_FAILS, block_seconds=self.BLOCK_SECONDS,
             window_seconds=self.IP_WINDOW)
 
+    def failures_for(self, ip: str, username: str) -> int:
+        """How many times this pair has failed inside the current budget.
+
+        Read-only, and it exists so the login route can raise a CAPTCHA before
+        the ceiling is reached rather than only blocking at it. Counts reset on
+        a success, and the row is spent when a block is issued, so this returns
+        0 again after a lockout expires -- which is correct: the block was the
+        punishment, and the challenge is for the run-up to the next one.
+        """
+        return repo.throttle_failures(self._pair_key(ip, username))
+
     def record_success(self, ip: str, username: str) -> None:
         # The pair budget only. The per-IP ceiling deliberately survives a
         # success: one correct password among thirty wrong ones is what a
@@ -376,6 +387,12 @@ def _unauthorised() -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                          detail="Authentication required.")
 
+
+#: Failures on one (ip, username) pair before a sign-in must also pass a
+#: CAPTCHA. Below MAX_FAILS on purpose: the challenge is the step BEFORE the
+#: lockout, so an automated attacker meets it while a person who mistyped once
+#: never does.
+CAPTCHA_AFTER_FAILURES = 3
 
 #: Set to 0/false to let unverified addresses through even once mail works.
 #: An escape hatch for the operator, not a default -- see verification_enforced.

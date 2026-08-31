@@ -424,6 +424,38 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
         return False
 
 
+def send_registration_collision(email: str, username: str) -> bool:
+    """Tell an address that somebody tried to register with it.
+
+    The counterpart to registration answering identically whether or not an
+    address is taken. The caller learns nothing; the person who actually owns
+    the address learns everything -- that someone tried, that no second account
+    was made, and what to do if it was not them.
+
+    Carries no token and no link to spend, so it is safe to send unprompted to
+    an address that did not ask for it. It names the existing username because
+    the message goes only to the mailbox that already holds that account --
+    the same reasoning that lets /forgot-username send a username at all.
+    """
+    if not email or not configured():
+        return False
+    return _deliver(
+        email,
+        "Someone tried to register with your AutoTrader address",
+        (f"Hello,\n\n"
+         f"Someone just tried to create an AutoTrader account using this email "
+         f"address. We did not create one -- an account already exists here, "
+         f"with the username:\n\n"
+         f"    {username}\n\n"
+         f"If that was you, sign in with the account you already have, or use "
+         f"'Forgot password' if you cannot get in.\n\n"
+         f"If it was not you, no action is needed. Nothing was created, nothing "
+         f"about your account changed, and this message contains no links to "
+         f"click. Your password still works and nobody has gained access.\n\n"
+         f"Sign in at {_base_url()}/autotrader_signin.html\n"),
+        "registration collision notice")
+
+
 def send_username(email: str, username: str) -> bool:
     """Remind someone of their own username. False when unconfigured or failed.
 

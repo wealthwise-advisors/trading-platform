@@ -28,6 +28,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=256)
+    #: Turnstile's result. Only demanded once this (ip, username) pair has
+    #: already failed repeatedly -- see the challenge check in login().
+    captcha_token: str = Field(default="", max_length=4096)
     #: The "Remember me" box. True keeps the cookie for SESSION_TTL; false
     #: makes it a session cookie the browser drops when it closes.
     #:
@@ -127,6 +130,27 @@ def login(body: LoginRequest, request: Request, response: Response):
             detail="Too many attempts. Try again shortly.",
             headers={"Retry-After": str(wait)},
         )
+
+    # CAPTCHA fallback: demanded only after this pair has failed repeatedly.
+    #
+    # The throttle alone blocks a burst from one place; it does nothing about a
+    # patient attacker who stays under the ceiling, or a botnet that spreads
+    # attempts across addresses. A challenge after a few failures costs a real
+    # person nothing -- they have already typed a wrong password and are about
+    # to try again -- and costs an automated one the whole attack.
+    #
+    # It is NOT demanded on the first attempt. Putting a challenge in front of
+    # every sign-in taxes everybody for the behaviour of nobody, and Turnstile
+    # is dormant on a deployment that has not configured it, in which case
+    # captcha.verify returns True and this is a no-op.
+    if auth.throttle.failures_for(ip, body.username) >= auth.CAPTCHA_AFTER_FAILURES:
+        if not captcha.verify(body.captcha_token, ip):
+            auth.throttle.record_failure(ip, body.username)
+            log.warning("login challenge failed for %r from %s", body.username, ip)
+            # The SAME message as a wrong password. A distinct one would say
+            # "this username has failed before", which is a membership signal.
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Invalid username or password.")
 
     user = repo.get_user(body.username)
 
@@ -298,7 +322,8 @@ def finish_onboarding(request: Request):
 
 
 @router.post("/register", response_model=Me, status_code=status.HTTP_201_CREATED)
-def register(body: RegisterRequest, request: Request, response: Response):
+def register(body: RegisterRequest, request: Request, response: Response,
+             background: BackgroundTasks):
     """Create an account, and sign the new person in.
 
     Open to anyone. What that does NOT grant is the broker: `is_owner` is not a
@@ -350,28 +375,89 @@ def register(body: RegisterRequest, request: Request, response: Response):
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "Please accept the Terms of Service and Privacy Policy.")
 
+    # The password is hashed HERE, before either branch, and the digest is used
+    # in only one of them. That is deliberate waste: argon2id at 64 MiB is by
+    # far the most expensive thing this route does, and hashing only on the
+    # success path would make a collision reply measurably sooner. Both paths
+    # now pay the same cost whatever the answer.
+    password_hash = auth.hash_password(body.password)
+
+    # ── the confirm-first path ──────────────────────────────────────────────
+    #
+    # Registration used to answer 201 for a free address and 409 for a taken
+    # one. That is a membership oracle: point it at a list of addresses with a
+    # fresh username each time and it reports, precisely, which of those people
+    # hold accounts here. The wording was already careful -- "that username OR
+    # email" -- but the STATUS CODE gave it away regardless, and so did the
+    # presence of a Set-Cookie header on one branch and not the other.
+    #
+    # So neither branch signs anyone in, and both return the identical body.
+    # A free address gets an account plus a confirmation link; a taken one gets
+    # no account at all and a note to the person who already owns it, telling
+    # them somebody tried. Nothing an unauthenticated caller can observe --
+    # status, body, headers, or timing -- differs between the two.
+    #
+    # This is also what makes ownership a precondition rather than a formality:
+    # no session exists until the link in the mailbox is clicked, so an account
+    # cannot be used by whoever merely typed the address.
+    #
+    # It requires mail that reaches strangers. Where that is not true the old
+    # behaviour stands, because the alternative is a registration form nobody
+    # can complete -- see the fallback below, and auth.verification_enforced().
+    if auth.verification_enforced():
+        existing = repo.get_user_by_email(email) or repo.get_user(username)
+        if existing is None:
+            user_id = repo.create_user(
+                username, password_hash,
+                full_name=(body.full_name or "").strip(),
+                email=email, country=(body.country or "").strip(),
+                phone=(body.phone or "").strip(),
+                email_verified=False,
+            )
+            log.info("registered (unconfirmed): %s from %s", username, ip)
+            background.add_task(verification.send_if_configured,
+                                user_id, email, username)
+        else:
+            # No account, no hint. The person who owns the address is told, so
+            # a real collision is still actionable by the only party entitled
+            # to know about it.
+            log.info("registration collision from %s for %r", ip, username)
+            background.add_task(verification.send_registration_collision,
+                                email, existing.username)
+        # 202, not 201: nothing was necessarily created, and saying "created"
+        # would be a lie on one of the two branches.
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={"ok": True, "confirm_required": True,
+                     "detail": ("Check your email. If that address can be used "
+                                "here, we have sent a link to finish setting up "
+                                "the account.")},
+        )
+
+    # ── fallback: mail cannot reach a stranger ──────────────────────────────
+    #
+    # Confirm-first is impossible without deliverable mail -- the link never
+    # arrives and the account can never be finished. So this keeps the previous
+    # behaviour, INCLUDING its enumeration exposure, which is a smaller harm
+    # than a signup form that cannot be completed by anyone. Configuring a
+    # sending domain or SMTP closes it automatically; nothing else has to be
+    # remembered.
     try:
         user_id = repo.create_user(
-            username, auth.hash_password(body.password),
+            username, password_hash,
             full_name=(body.full_name or "").strip(),
             email=email, country=(body.country or "").strip(),
             phone=(body.phone or "").strip(),
             email_verified=False,
         )
     except sqlite3.IntegrityError:
-        # UNIQUE on username, and from v5 on a non-empty email. Which of the
-        # two collided is not disclosed: saying "that email is taken" tells an
-        # unauthenticated caller who already has an account here.
+        # Which of username or email collided is still not disclosed.
         log.info("registration collision from %s for %r", ip, username)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="That username or email is already registered.",
         )
 
-    # Signed in immediately. The alternative -- make them verify first -- puts
-    # a wall in front of a product they cannot see yet, and it depends on mail
-    # delivery that may not be configured. Verification gates what needs
-    # verifying; it does not gate the front door.
     token = repo.new_session(user_id, ip=ip,
                              user_agent=request.headers.get("user-agent", ""))
     auth.set_session_cookie(response, token)
@@ -409,7 +495,7 @@ def signup_config():
 
 
 @router.get("/verify-email")
-def verify_email(token: str = ""):
+def verify_email(request: Request, token: str = ""):
     """Spend a verification link.
 
     A GET because it is reached by clicking a link in an email, and a browser
@@ -421,6 +507,20 @@ def verify_email(token: str = ""):
     Answers with a redirect to the sign-in page rather than JSON: whoever
     follows this link is a person looking at a browser, not a script.
     """
+    # Rate-limited like every other token-consuming route. The token is 32
+    # random bytes so guessing one is not a real threat, but an endpoint that
+    # will hit the database as fast as it is asked is a free denial-of-service
+    # lever, and this was the only auth route with no ceiling at all. Keyed on
+    # IP alone -- there is no account to key on until the token resolves.
+    ip = auth.client_ip(request)
+    if wait := auth.verify_throttle.retry_after(ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+    auth.verify_throttle.record(ip)
+
     user_id = verification.consume(token)
     reason = "verified" if user_id else "verify_failed"
     if user_id:

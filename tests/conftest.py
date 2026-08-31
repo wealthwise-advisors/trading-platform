@@ -85,7 +85,10 @@ _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
                     "test_account_deletion", "test_verification_gate",
                     # Signs in as two different people and asserts
                     # neither can reach the other's saved configs.
-                    "test_account_data"}
+                    "test_account_data",
+                    # Asserts that registration, login and recovery all
+                    # refuse IDENTICALLY whether or not an account exists.
+                    "test_enumeration"}
 
 
 @pytest.fixture(autouse=True)

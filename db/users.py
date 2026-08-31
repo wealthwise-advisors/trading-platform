@@ -910,6 +910,17 @@ def throttle_record_failure(scope_key: str, *, max_fails: int,
         conn.close()
 
 
+def throttle_failures(scope_key: str, db: Path | None = None) -> int:
+    """Failures recorded against this key, or 0. Never raises."""
+    conn = connect(db)
+    try:
+        r = conn.execute("SELECT fails FROM login_attempts WHERE scope_key = ?",
+                         (scope_key,)).fetchone()
+    finally:
+        conn.close()
+    return int(r["fails"]) if r else 0
+
+
 def throttle_clear(scope_key: str, db: Path | None = None) -> None:
     conn = connect(db)
     try:
