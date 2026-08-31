@@ -91,6 +91,24 @@ class Throttle:
     dressed up as a security control. An attacker changing IP gets a fresh
     budget, but they also lose the one they had -- and a per-IP ceiling still
     applies underneath.
+
+    WHERE THE COUNTERS LIVE
+    -----------------------
+    In the database, not in this process. They were a dict, which meant a
+    restart cleared them -- and a deploy is a restart, so anyone being slowed
+    down got a fresh budget every time the app shipped. It also meant a second
+    uvicorn worker would have counted independently, each allowing the full
+    quota. The deployment runs one worker today (see the Dockerfile CMD), so
+    that half was latent rather than live, but the restart half was real.
+
+    SQLite rather than Redis: the database is already here, already shared, and
+    already backed up, and this is two integers per key. Adding an in-memory
+    store to a single-container deployment would be new infrastructure to
+    operate for no property this does not already have.
+
+    The security properties are unchanged: same pair keying, same ceilings, same
+    block. Only the per-IP window became fixed rather than sliding -- see
+    repo.throttle_record_failure.
     """
 
     MAX_FAILS = 6
@@ -98,34 +116,35 @@ class Throttle:
     IP_MAX_FAILS = 30
     IP_WINDOW = 900
 
-    def __init__(self) -> None:
-        self._pairs: dict[tuple[str, str], _Bucket] = {}
-        self._ips: dict[str, _Bucket] = {}
+    @staticmethod
+    def _pair_key(ip: str, username: str) -> str:
+        return f"pair:{ip}|{username.lower()}"
+
+    @staticmethod
+    def _ip_key(ip: str) -> str:
+        return f"ip:{ip}"
 
     def retry_after(self, ip: str, username: str) -> int:
-        now = time.monotonic()
-        for b in (self._pairs.get((ip, username.lower())), self._ips.get(ip)):
-            if b and b.blocked_until > now:
-                return int(b.blocked_until - now) + 1
+        for key in (self._pair_key(ip, username), self._ip_key(ip)):
+            wait = repo.throttle_blocked_for(key)
+            if wait:
+                return wait
         return 0
 
     def record_failure(self, ip: str, username: str) -> None:
-        now = time.monotonic()
-        b = self._pairs.setdefault((ip, username.lower()), _Bucket())
-        b.fails += 1
-        if b.fails >= self.MAX_FAILS:
-            b.blocked_until = now + self.BLOCK_SECONDS
-            b.fails = 0
-
-        ib = self._ips.setdefault(ip, _Bucket())
-        ib.seen = [t for t in ib.seen if now - t < self.IP_WINDOW]
-        ib.seen.append(now)
-        if len(ib.seen) >= self.IP_MAX_FAILS:
-            ib.blocked_until = now + self.BLOCK_SECONDS
-            ib.seen.clear()
+        repo.throttle_record_failure(
+            self._pair_key(ip, username),
+            max_fails=self.MAX_FAILS, block_seconds=self.BLOCK_SECONDS)
+        repo.throttle_record_failure(
+            self._ip_key(ip),
+            max_fails=self.IP_MAX_FAILS, block_seconds=self.BLOCK_SECONDS,
+            window_seconds=self.IP_WINDOW)
 
     def record_success(self, ip: str, username: str) -> None:
-        self._pairs.pop((ip, username.lower()), None)
+        # The pair budget only. The per-IP ceiling deliberately survives a
+        # success: one correct password among thirty wrong ones is what a
+        # spraying attack looks like when it lands.
+        repo.throttle_clear(self._pair_key(ip, username))
 
 
 throttle = Throttle()
@@ -358,6 +377,69 @@ def _unauthorised() -> HTTPException:
                          detail="Authentication required.")
 
 
+#: Set to 0/false to let unverified addresses through even once mail works.
+#: An escape hatch for the operator, not a default -- see verification_enforced.
+REQUIRE_VERIFIED_ENV = "AUTOTRADER_REQUIRE_VERIFIED_EMAIL"
+
+
+def verification_enforced() -> bool:
+    """Whether an unproved address blocks the app AT ALL right now.
+
+    Tied to whether mail actually works, and that coupling is the point. If
+    this returned True unconditionally, then every deployment without a Resend
+    key -- a laptop, a test run, and this product's own production host until
+    its sending domain is verified -- would lock every account out of the
+    application behind a confirmation email that is never sent. A gate whose
+    key cannot be delivered is not a security control, it is an outage.
+
+    So the gate switches itself on when the means of passing it exists.
+    Verifying the sending domain is what turns it on; nothing else has to be
+    remembered at the same time.
+
+    Configured is NOT sufficient, and this is the case that would have caused
+    the outage. This product's live host has a Resend key, a sender and a base
+    URL -- configured() is already True there -- but the sender is on Resend's
+    shared sandbox domain, which delivers only to the account owner. Enforcing
+    on configured() alone would have locked every user out of an application
+    they could not unlock, because the confirmation mail they were told to look
+    for is dropped before it reaches them. So the gate additionally requires a
+    sender that can actually reach a stranger.
+    """
+    flag = os.environ.get(REQUIRE_VERIFIED_ENV, "").strip().lower()
+    if flag in {"0", "false", "no", "off"}:
+        return False
+    # Imported here, not at module scope: api.verification imports db.users,
+    # and this module is imported by db-adjacent code early in startup.
+    from api import verification
+    return verification.configured() and not verification.sandboxed()
+
+
+def verification_blocks(user) -> bool:
+    """True when THIS account is currently held back by an unproved address.
+
+    Three accounts are deliberately NOT blocked:
+
+    * one whose address a provider already vouched for -- Google, LinkedIn and
+      GitHub report a verified address, and oauth.py only accepts it when they
+      positively say so, so it is proved by a stronger means than our own link;
+    * one with no address at all -- an X sign-in reports none at any scope, and
+      there is nothing to send a link to. Blocking it would be a lockout with
+      no exit;
+    * every account, while mail is unconfigured. See verification_enforced.
+    """
+    if not verification_enforced():
+        return False
+    if not getattr(user, "email", ""):
+        return False
+    return not bool(getattr(user, "email_verified", False))
+
+
+#: Sent with the 403 so the dashboard can tell "confirm your address" apart
+#: from a genuine authorisation refusal without parsing prose.
+UNVERIFIED_HEADER = "X-Auth-Reason"
+UNVERIFIED_REASON = "email_unverified"
+
+
 async def require_user(request: Request):
     """Every protected route depends on this. Returns the signed-in user.
 
@@ -383,6 +465,24 @@ async def require_user(request: Request):
                             request.method, request.url.path, origin)
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                     detail="Cross-origin request refused.")
+
+    # The address gate sits AFTER the session is resolved and after the
+    # cross-origin check, and returns 403 rather than 401 on purpose. 401 means
+    # "we do not know who you are" and web/src/lib/api.ts bounces it to the
+    # sign-in page -- which would send a signed-in person to a login form they
+    # would pass, landing them right back here. 403 says "we know who you are
+    # and this is not allowed yet", which is the truth and which the client
+    # already surfaces instead of redirecting.
+    if verification_blocks(user):
+        log.info("unverified address blocked %s on %s", user.username,
+                 request.url.path)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Confirm your email address to continue. "
+                   "We sent a link when you registered.",
+            headers={UNVERIFIED_HEADER: UNVERIFIED_REASON},
+        )
+
     request.state.user = user
     return user
 
@@ -397,8 +497,16 @@ async def user_for_websocket(websocket) -> object | None:
     A WebSocket upgrade carries cookies like any other request, but it does NOT
     pass through the HTTP dependency chain -- protecting the routers does
     nothing for it, which is the usual way a socket is left open.
+
+    The address gate applies here too, for the same reason the session check
+    does: the replay socket streams the same data the HTTP routes serve, so a
+    rule enforced only on the HTTP half is a rule with a documented way round
+    it. Returning None is the existing "refuse the handshake" signal.
     """
-    return repo.resolve_session(websocket.cookies.get(COOKIE, ""))
+    user = repo.resolve_session(websocket.cookies.get(COOKIE, ""))
+    if user is None or verification_blocks(user):
+        return None
+    return user
 
 
 def set_session_cookie(response, raw_token: str, remember: bool = True) -> None:

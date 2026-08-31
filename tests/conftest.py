@@ -77,7 +77,15 @@ _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
                     # against the override below, which can never produce a
                     # 401 -- so it would pass while testing nothing, which is
                     # the exact failure this set exists to prevent.
-                    "test_backup_restore"}
+                    "test_backup_restore",
+                    # Both assert refusals: the delete route must turn away an
+                    # anonymous caller and a wrong password, and the gate suite
+                    # exists precisely to watch require_user refuse an unproved
+                    # address. Under the override neither reaches the guard.
+                    "test_account_deletion", "test_verification_gate",
+                    # Signs in as two different people and asserts
+                    # neither can reach the other's saved configs.
+                    "test_account_data"}
 
 
 @pytest.fixture(autouse=True)

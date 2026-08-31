@@ -76,7 +76,7 @@
   </div>
   <div class="card">
     <h1>Privacy Policy</h1>
-    <p class="upd">Last updated 28 August 2026</p>
+    <p class="upd">Last updated 31 August 2026</p>
 
     <div class="note">
       <strong>The short version.</strong> Only what an account needs is
@@ -94,6 +94,7 @@
       <tr><td>IP address</td><td>Rate limiting. Without it, one machine could exhaust sign-in or reset attempts for everybody.</td></tr>
       <tr><td>Browser user-agent</td><td>Recorded with a session so you can recognise your own sign-ins.</td></tr>
       <tr><td>Your backtests and settings</td><td>The work you create here. Only ever visible to you.</td></tr>
+      <tr><td>Saved configurations</td><td>The named sidebar setups you save, stored against your account so they follow you between devices. They are deleted with the account.</td></tr>
     </table>
 
     <h2>2. How it is stored</h2>
@@ -131,20 +132,41 @@
           <td>A bot check on the registration form. It sees the challenge, not
               your form.</td></tr>
     </table>
-    <p><strong>There is no analytics provider, no error-reporting service, no
-    advertising network and no tracking pixel</strong> in this application.</p>
+    <p><strong>There is no analytics provider, no advertising network and no
+    tracking pixel</strong> in this application. Nothing here follows you
+    between sites, and nothing you do is measured for marketing.</p>
+    <p><strong>Crash reporting is built in but switched off.</strong> The
+    application can send a report when a page fails to render, so that a fault
+    can be found and fixed rather than waiting for somebody to describe it. It
+    is dormant unless a reporting endpoint is configured, and when it is, a
+    report carries only: the error message and its stack, the page path you
+    were on, your browser's user-agent string, the release, and the time. It
+    never carries your username, your email address, your password, your
+    session cookie, the contents of any request, or the query part of a URL —
+    that last one deliberately, because reset and confirmation links carry
+    their token there.</p>
 
     <h2>5. How long it is kept</h2>
     <ul>
-      <li><strong>Account details</strong> — until you ask for the account to be closed.</li>
+      <li><strong>Account details</strong> — until the account is closed, which you can do yourself at any time.</li>
       <li><strong>Sessions</strong> — until they expire, or immediately when you sign out. Changing your password destroys every session at once.</li>
       <li><strong>Reset and confirmation links</strong> — single use, and short-lived whether used or not.</li>
       <li><strong>Pending sign-in handles</strong> — twenty minutes.</li>
     </ul>
 
     <h2>6. What you can ask for</h2>
-    <p>Write to <a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a> to obtain a copy of
-    your data, correct it, or have your account and its contents deleted.</p>
+    <p><b>You can close your account yourself</b>, at any time, from
+    <b>Account &rarr; Close account</b> once you are signed in. It removes the
+    account, every backtest and trade recorded under it, and signs you out
+    everywhere. It happens immediately and cannot be undone.</p>
+    <p><b>You can download a copy of your data yourself</b>, from
+    <b>Account &rarr; Download my data</b>. It is a JSON file containing your
+    account details, your saved configurations, your backtests and their
+    trades, and the record of where your account has been signed in. Passwords
+    and session keys are never included — they are credentials, not information
+    about you.</p>
+    <p>Write to <a href="mailto:snandepu9@gmail.com">snandepu9@gmail.com</a> if you would
+    rather we did either of those for you, or to have anything corrected.</p>
 
     <h2>7. Children</h2>
     <p>This service is not intended for anyone under 18, and accounts are not

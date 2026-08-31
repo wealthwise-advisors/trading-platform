@@ -282,4 +282,20 @@ class TestExistingApiUnchanged:
         # This count is a guard against a route appearing unnoticed, so it
         # is restated rather than removed.
         # +1 for /api/auth/forgot-username.
-        assert len(paths) == 38, sorted(paths)
+        # +4 for the production-readiness pass, raised deliberately:
+        #   /api/auth/export      a copy of the caller's own account data,
+        #                         which web/public/privacy.html §6 promises and
+        #                         nothing could previously produce;
+        #   /api/auth/onboarded   records that the introduction has been seen,
+        #                         server-side rather than in localStorage;
+        #   /api/account/configs and /api/account/configs/{name}
+        #                         saved sidebar setups, moved off the browser so
+        #                         they survive a cleared cache, follow a person
+        #                         between devices, and can be exported and
+        #                         deleted with the account.
+        # DELETE /api/auth/me added no path -- it is a method on an existing
+        # one -- which is why closing an account did not move this number.
+        # All four refuse an anonymous caller; tests/test_auth.py's sweep is
+        # what proves that, and tests/test_account_data.py proves the config
+        # routes are scoped per owner.
+        assert len(paths) == 42, sorted(paths)

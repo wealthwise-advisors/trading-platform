@@ -156,7 +156,12 @@ export function InstrumentPicker({
         )}
 
         {/* table */}
-        <div className="flex-1 min-h-0 overflow-y-auto border-y border-white/8">
+        {/* overflow-x-auto as well as -y. Two of this table's columns are fixed
+            at 150px and 110px, and the dialog is width:min(64rem, 100vw - 2rem)
+            -- so on a 320px phone the columns are wider than the panel. Without
+            a horizontal scroller the app shell's own overflow-hidden CLIPS
+            them, which loses the content rather than letting anyone reach it. */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto border-y border-white/8">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-[#0d1526] text-slate-400">
               <tr>

@@ -7,12 +7,22 @@
  * out they need to log in. Removing it would leak no data.
  */
 import { auth, SIGN_IN_PAGE, type Me } from "@/lib/api"
+import { VerifyEmailNotice } from "@/components/VerifyEmailNotice"
+import { Onboarding } from "@/components/Onboarding"
 import { useEffect, useState, type ReactNode } from "react"
 
 type State =
   | { phase: "checking" }
   | { phase: "in"; user: Me }
   | { phase: "out" }
+  // Signed in, but the address is unproved AND the server is actually
+  // enforcing that. Distinct from "out": bouncing this person to the sign-in
+  // page would send them to a form they would pass, landing them back here.
+  | { phase: "unverified"; user: Me }
+  // Signed in and confirmed, but has never been shown the introduction. After
+  // the verification check, deliberately: welcoming someone to a product they
+  // cannot use yet would be the wrong order.
+  | { phase: "onboarding"; user: Me }
   | { phase: "error"; message: string }
 
 export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
@@ -25,7 +35,10 @@ export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
       .then((user) => {
         if (!alive) return
         if (user) {
-          setState({ phase: "in", user })
+          setState(
+            user.verification_required ? { phase: "unverified", user }
+            : !user.onboarded ? { phase: "onboarding", user }
+            : { phase: "in", user })
         } else {
           setState({ phase: "out" })
           // Do not bounce if we are ALREADY on the sign-in page. Without this
@@ -60,6 +73,19 @@ export function AuthGate({ children }: { children: (user: Me) => ReactNode }) {
           {state.phase === "checking" ? "Checking your session…" : "Redirecting to sign in…"}
         </div>
       </div>
+    )
+  }
+
+  if (state.phase === "unverified") {
+    return <VerifyEmailNotice user={state.user} />
+  }
+
+  if (state.phase === "onboarding") {
+    return (
+      <Onboarding
+        user={state.user}
+        onDone={() => setState({ phase: "in", user: state.user })}
+      />
     )
   }
 

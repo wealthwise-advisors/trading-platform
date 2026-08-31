@@ -261,3 +261,20 @@ def delete(backtest_id: str, user_id: int, db: Path | None = None) -> bool:
     if d.is_dir():
         shutil.rmtree(d, ignore_errors=True)
     return True
+
+
+def purge_blobs(backtest_ids) -> int:
+    """Delete the Parquet sidecars for ids whose rows are already gone.
+
+    Separate from delete() because closing an account removes the rows in one
+    transaction and only then has a list of ids to clean up on disk. Best
+    effort by design: a sidecar that cannot be removed must not turn a
+    completed account deletion into an error the person sees.
+    """
+    gone = 0
+    for backtest_id in backtest_ids:
+        d = _blob_dir(backtest_id)
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+            gone += 1
+    return gone

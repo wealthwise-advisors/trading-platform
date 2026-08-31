@@ -67,6 +67,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api import auth          # noqa: E402
 from api import oauth         # noqa: E402
+from db import backtests      # noqa: E402
 from db import users as repo  # noqa: E402
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9._-]{3,32}$")
@@ -151,13 +152,57 @@ def cmd_enable(a) -> int:
 
 
 def cmd_delete(a) -> int:
-    if input(f"  delete {a.username!r} and all its sessions? [y/N] ").lower() != "y":
-        print("  cancelled")
-        return 1
-    if not repo.delete_user(a.username):
+    """Close an account. Its backtests go with it unless --keep-results says otherwise.
+
+    This used to call repo.delete_user, which deletes the users row and nothing
+    else -- and SQLite refused it outright for anyone who had ever run a
+    backtest, because backtests.user_id references that row with no ON DELETE
+    action. The command therefore worked only on accounts that had not used the
+    product. It now goes through repo.delete_account, which deals with the
+    dependents first.
+    """
+    user = repo.get_user(a.username)
+    if not user:
         print(f"  no such account: {a.username!r}")
         return 1
-    print(f"  deleted {a.username!r}")
+
+    owned = len(backtests.list_ids(user.id))
+    fate = ("kept, detached from the account" if a.keep_results
+            else "DELETED along with their trades")
+    print(f"  {a.username!r} owns {owned} backtest(s) -- they will be {fate}.")
+    if input(f"  close {a.username!r}? [y/N] ").lower() != "y":
+        print("  cancelled")
+        return 1
+
+    removed = repo.delete_account(user.id, keep_results=a.keep_results)
+    if removed is None:
+        print(f"  no such account: {a.username!r}")
+        return 1
+
+    backtests.purge_blobs(removed["backtest_ids"])
+    print(f"  closed {a.username!r} "
+          f"(backtests removed={removed['backtests']} "
+          f"detached={removed['backtests_detached']} "
+          f"trades={removed['trades']} sessions={removed['sessions']})")
+    return 0
+
+
+def cmd_verify(a) -> int:
+    """Mark an address as proved, or take that back.
+
+    The operator's way past the confirmation gate -- for the founding account,
+    for anyone whose confirmation mail cannot be delivered, and for restoring a
+    working state if a sending domain lapses.
+    """
+    user = repo.get_user(a.username)
+    if not user:
+        print(f"  no such account: {a.username!r}")
+        return 1
+    if not repo.set_email_verified(user.id, not a.undo):
+        print("  nothing changed")
+        return 1
+    print(f"  {a.username!r} address marked "
+          f"{'UNVERIFIED' if a.undo else 'verified'}")
     return 0
 
 
@@ -273,12 +318,24 @@ def main() -> int:
         ("passwd", cmd_passwd, "change a password"),
         ("disable", cmd_disable, "disable an account and sign it out"),
         ("enable", cmd_enable, "re-enable an account"),
-        ("delete", cmd_delete, "delete an account"),
         ("logout-all", cmd_logout_all, "sign an account out everywhere"),
     ]:
         sp = sub.add_parser(name, help=helptext)
         sp.add_argument("username")
         sp.set_defaults(fn=fn)
+
+    dl = sub.add_parser("delete", help="close an account and remove its data")
+    dl.add_argument("username")
+    dl.add_argument("--keep-results", action="store_true",
+                    help="detach the backtests instead of deleting them "
+                         "(they become unreachable -- every read is scoped by "
+                         "owner -- but the rows survive for the operator)")
+    dl.set_defaults(fn=cmd_delete)
+
+    vf = sub.add_parser("verify", help="mark an account's address as proved")
+    vf.add_argument("username")
+    vf.add_argument("--undo", action="store_true", help="mark it unverified again")
+    vf.set_defaults(fn=cmd_verify)
 
     lk = sub.add_parser("link", help="link a provider account to a local account")
     lk.add_argument("username")

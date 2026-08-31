@@ -152,9 +152,33 @@ def configured() -> bool:
     return bool(_api_key() and _sender() and _base_url())
 
 
+#: Resend's shared sandbox sender. Mail from it is accepted by the API and then
+#: delivered ONLY to the address that owns the Resend account -- every other
+#: recipient is dropped silently, with a 200 on the way in and nothing in the
+#: inbox. Nothing in the response distinguishes that from a successful send.
+SANDBOX_SENDER = "resend.dev"
+
+
+def sandboxed() -> bool:
+    """True when the sender is Resend's shared domain rather than a verified one.
+
+    Worth a name of its own because the failure it describes is invisible:
+    every send "succeeds", the log agrees, and only the recipients notice. It
+    is the difference between password reset working for the operator and
+    working for users.
+    """
+    sender = _sender()
+    return bool(sender) and sender.rsplit("@", 1)[-1].lower().endswith(SANDBOX_SENDER)
+
+
 def describe() -> str:
     """One line for the startup log."""
     if configured():
+        if sandboxed():
+            return (f"Email verification: ACTIVE but SANDBOXED (from {_sender()}) "
+                    f"-- Resend delivers this sender only to the account owner, "
+                    f"so nobody else receives confirmation or reset mail. "
+                    f"Verify a domain and set {FROM_ENV} to an address on it.")
         return f"Email verification: ACTIVE (from {_sender()})"
     missing = [n for n, v in ((API_KEY_ENV, _api_key()), (FROM_ENV, _sender()),
                               (BASE_URL_ENV, _base_url())) if not v]

@@ -89,3 +89,11 @@ Thumbs.db
 image.png
 screenshot*.png
 Screenshot*.png
+
+# Timestamped backups made before a migration or an asset swap.
+#
+# data/autotrader.db is ignored, but "autotrader.db.bak-20260830-131314" does
+# not match that bare filename -- so a database backup carrying real accounts,
+# sessions and argon2 hashes was sitting STAGED for commit to a repository.
+# The suffix is what has to be matched, not the base name.
+*.bak-*

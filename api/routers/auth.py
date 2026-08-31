@@ -14,10 +14,11 @@ import sqlite3
 
 from fastapi import (APIRouter, BackgroundTasks, HTTPException, Request,
                      Response, status)
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from api import auth, captcha, verification
+from db import backtests as backtest_blobs
 from db import users as repo
 
 log = logging.getLogger(__name__)
@@ -68,6 +69,49 @@ class Me(BaseModel):
     full_name: str
     email: str
     country: str
+    #: Whether the address has been proved. The dashboard needs it to decide
+    #: between rendering and showing the "confirm your address" screen, so it
+    #: travels with the identity rather than needing a second round trip.
+    #: Defaults to False so any construction that predates it stays valid.
+    email_verified: bool = False
+    #: Whether an unverified address actually blocks anything right now. False
+    #: while mail is unconfigured -- see api/auth.py's verification gate. The
+    #: page must not tell someone to check an inbox that will never receive
+    #: anything.
+    verification_required: bool = False
+    #: Whether this person has already been shown the introduction. Travels
+    #: with the identity for the same reason email_verified does -- the shell
+    #: branches on it on first render.
+    onboarded: bool = True
+
+
+class DeleteAccountRequest(BaseModel):
+    """What the Close Account form sends.
+
+    `password` is a re-authentication, not an identifier: the session already
+    says who this is. It is required for accounts that have a password, so a
+    borrowed unlocked browser cannot close somebody's account in two clicks.
+
+    `confirm` must be the account's own username, typed. An OAuth-only account
+    has no password to re-enter, and this is what stands in its place.
+    """
+
+    password: str = Field(default="", max_length=256)
+    confirm: str = Field(default="", max_length=64)
+
+
+def _identity(user) -> Me:
+    """The Me payload for a resolved account, in one place.
+
+    Three routes returned this shape by hand and a fourth was about to; adding
+    a field meant remembering all of them, and the one that got forgotten would
+    have reported every account as unverified.
+    """
+    return Me(username=user.username, full_name=user.full_name,
+              email=user.email, country=user.country,
+              email_verified=bool(user.email_verified),
+              verification_required=auth.verification_blocks(user),
+              onboarded=repo.is_onboarded(user.id))
 
 
 @router.post("/login", response_model=Me)
@@ -109,8 +153,7 @@ def login(body: LoginRequest, request: Request, response: Response):
     auth.set_session_cookie(response, token, remember=body.remember)
     repo.touch_login(user.id)
     log.info("login: %s from %s (remember=%s)", user.username, ip, body.remember)
-    return Me(username=user.username, full_name=user.full_name,
-              email=user.email, country=user.country)
+    return _identity(user)
 
 
 @router.post("/logout")
@@ -130,8 +173,128 @@ def me(request: Request):
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Authentication required.")
-    return Me(username=user.username, full_name=user.full_name,
-              email=user.email, country=user.country)
+    return _identity(user)
+
+
+@router.delete("/me")
+def close_account(body: DeleteAccountRequest, request: Request, response: Response):
+    """Close the signed-in account and remove what belongs to it.
+
+    Deliberately NOT behind `Depends(auth.require_user)`, and the reason is the
+    same one that makes /me exempt: require_user now refuses an account whose
+    address is unproved. Routing this through it would mean someone who
+    registered with a typo'd address -- the person with the strongest reason to
+    want the account gone -- could not close it. The session check is done here
+    instead, identically.
+
+    The identity comes from the session and nothing else. There is no username
+    or id in the request body, so there is no parameter to tamper with and no
+    way to aim this at another account; the audit's "attempt to delete another
+    user" case is unrepresentable rather than merely rejected.
+    """
+    user = repo.resolve_session(request.cookies.get(auth.COOKIE, ""))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Authentication required.")
+
+    ip = auth.client_ip(request)
+    wait = auth.throttle.retry_after(ip, user.username)
+    if wait:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+
+    # Typing the username is the deliberate act. It is what stands between a
+    # misread dialog and an irreversible one, and it is the only confirmation
+    # an OAuth-only account can give.
+    if (body.confirm or "").strip().lower() != user.username.lower():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            f"Type {user.username} to confirm.")
+
+    # Re-authentication, on the same throttle as the login route so this cannot
+    # become a quieter way to guess a password.
+    if user.has_password:
+        if not auth.verify_password(user.password_hash, body.password or ""):
+            auth.throttle.record_failure(ip, user.username)
+            log.warning("failed close-account password for %s from %s",
+                        user.username, ip)
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED,
+                                "That password is not correct.")
+        auth.throttle.record_success(ip, user.username)
+
+    removed = repo.delete_account(user.id)
+    if removed is None:
+        # Two requests raced and the other one won. The account is gone, which
+        # is what was asked for, so this is not an error.
+        auth.clear_session_cookie(response)
+        return {"ok": True, "backtests": 0, "trades": 0}
+
+    # Sidecars last, and outside the transaction: the rows are already gone, so
+    # a file that will not delete leaves orphaned bytes on disk rather than an
+    # account the person was told was closed and was not.
+    try:
+        backtest_blobs.purge_blobs(removed["backtest_ids"])
+    except Exception:
+        log.exception("could not purge Parquet sidecars for %s", removed["username"])
+
+    auth.clear_session_cookie(response)
+    log.info("account closed by its owner: %s from %s", removed["username"], ip)
+    return {"ok": True,
+            "backtests": removed["backtests"],
+            "trades": removed["trades"]}
+
+
+@router.get("/export")
+def export_my_data(request: Request):
+    """A copy of everything this account holds, as a JSON download.
+
+    web/public/privacy.html §6 has offered "a copy of your data" since the
+    policy was written, and nothing could produce one -- the operator would
+    have had to hand-write SQL against production. This is that copy, and it is
+    the reason the sentence is now true.
+
+    Session-resolved rather than behind require_user, like the delete route:
+    getting your own data out must not depend on having confirmed an address,
+    least of all for someone who registered with an address they cannot reach.
+
+    Credentials are excluded -- see repo.export_account. The password hash and
+    the session/token hashes are keys, not facts about a person, and a data
+    export is a file people forward to themselves.
+    """
+    user = repo.resolve_session(request.cookies.get(auth.COOKIE, ""))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Authentication required.")
+
+    data = repo.export_account(user.id)
+    if data is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Account not found.")
+
+    stamp = data["exported_at"].replace(":", "").replace("-", "")
+    filename = f"autotrader-{user.username}-{stamp}.json"
+    return JSONResponse(
+        content=data,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/onboarded")
+def finish_onboarding(request: Request):
+    """Record that this person has seen the introduction.
+
+    Server-side, not localStorage: in the browser the welcome screen reappears
+    on every new machine and disappears for good the moment site data is
+    cleared, and neither of those is what the flag means. Idempotent, so a
+    double-click or a retry cannot rewrite the date.
+    """
+    user = repo.resolve_session(request.cookies.get(auth.COOKIE, ""))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Authentication required.")
+    repo.mark_onboarded(user.id)
+    return {"ok": True, "onboarded": True}
 
 
 @router.post("/register", response_model=Me, status_code=status.HTTP_201_CREATED)
@@ -217,6 +380,13 @@ def register(body: RegisterRequest, request: Request, response: Response):
 
     verification.send_if_configured(user_id, email, username)
 
+    # Read back rather than echoing the request, so the new account's
+    # verification state comes from the row that was actually written. The page
+    # branches on it immediately -- a hand-built optimistic answer here is how
+    # a freshly registered person gets told they are verified when they are not.
+    created = repo.get_user_by_id(user_id)
+    if created is not None:
+        return _identity(created)
     return Me(username=username, full_name=(body.full_name or "").strip(),
               email=email, country=(body.country or "").strip())
 
@@ -452,8 +622,7 @@ def reset_password(body: ResetRequest, request: Request, response: Response):
                                  user_agent=request.headers.get("user-agent", ""))
     auth.set_session_cookie(response, token_raw)
     repo.touch_login(user_id)
-    return Me(username=user.username, full_name=user.full_name,
-              email=user.email, country=user.country)
+    return _identity(user)
 
 
 class ForgotUsernameRequest(BaseModel):

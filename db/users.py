@@ -195,12 +195,99 @@ def set_active(username: str, active: bool, db: Path | None = None) -> bool:
 
 
 def delete_user(username: str, db: Path | None = None) -> bool:
+    """Remove the account row only.
+
+    Kept as it was, and it still RAISES sqlite3.IntegrityError when the person
+    owns a backtest -- `backtests.user_id` references this row with no ON
+    DELETE action, so SQLite refuses. That refusal is the correct answer for a
+    bare row delete: the alternative is a dangling user_id. Callers that mean
+    "close this account" want delete_account() below, which deals with the
+    dependents first.
+    """
     conn = connect(db)
     try:
         cur = conn.execute("DELETE FROM users WHERE username = ?", (username,))
         return cur.rowcount > 0
     finally:
         conn.close()
+
+
+def delete_account(user_id: int, *, keep_results: bool = False,
+                   db: Path | None = None) -> dict | None:
+    """Close an account for good. Returns what was removed, or None if no such id.
+
+    WHY THIS IS DELETION AND NOT ANONYMISATION
+    ------------------------------------------
+    schema.sql declines ON DELETE CASCADE on `backtests.user_id`, reasoning
+    that removing a person should not silently destroy the record of what was
+    run. That reasoning holds for the SILENT part, and this function keeps it:
+    the removal is explicit, counted and logged.
+
+    It does not hold for keeping the rows. Every read path is scoped by
+    user_id -- api/routers/backtests.py routes everything through
+    _get_or_404(id, user) -- so a backtest whose owner is gone is reachable by
+    nobody. Retaining it stores a person's trading history, plus its Parquet
+    sidecars, in a form that serves no reader and that web/public/privacy.html
+    §6 promises to delete on request. Dead data is not a safer default than no
+    data.
+
+    `keep_results=True` is the operator's escape hatch for the case the schema
+    comment had in mind -- a run whose record must outlive the account. It
+    detaches the rows (user_id NULL) instead of removing them, and is reachable
+    only from scripts/manage_users.py, never from an HTTP route.
+
+    Sessions, email tokens and OAuth identities are ON DELETE CASCADE already,
+    so they go with the user row. Backtests and trades are not, and are dealt
+    with here, before it.
+    """
+    conn = connect(db)
+    try:
+        row = conn.execute("SELECT username FROM users WHERE id = ?",
+                           (user_id,)).fetchone()
+        if row is None:
+            return None
+        username = row["username"]
+
+        ids = [r["id"] for r in conn.execute(
+            "SELECT id FROM backtests WHERE user_id = ?", (user_id,))]
+
+        # One transaction: a half-deleted account is worse than a failed
+        # delete, because the caller is told it worked.
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            sessions = conn.execute(
+                "SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?",
+                (user_id,)).fetchone()["n"]
+            if keep_results:
+                conn.execute("UPDATE trades    SET user_id = NULL WHERE user_id = ?",
+                             (user_id,))
+                conn.execute("UPDATE backtests SET user_id = NULL WHERE user_id = ?",
+                             (user_id,))
+                trades = 0
+            else:
+                trades = conn.execute("DELETE FROM trades WHERE user_id = ?",
+                                      (user_id,)).rowcount
+                conn.execute("DELETE FROM backtests WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()
+
+    removed = {
+        "username": username,
+        "backtests": 0 if keep_results else len(ids),
+        "backtests_detached": len(ids) if keep_results else 0,
+        "trades": trades,
+        "sessions": sessions,
+        "backtest_ids": [] if keep_results else ids,
+    }
+    log.info("account closed: %s (backtests=%s detached=%s trades=%s sessions=%s)",
+             username, removed["backtests"], removed["backtests_detached"],
+             removed["trades"], removed["sessions"])
+    return removed
 
 
 def touch_login(user_id: int, db: Path | None = None) -> None:
@@ -599,3 +686,247 @@ def create_oauth_user(username: str, *, full_name: str = "", email: str = "",
     unusable = hash_password(_secrets.token_urlsafe(32))
     return create_user(username, unusable, full_name=full_name, email=email,
                        email_verified=email_verified, has_password=False, db=db)
+
+
+# ── saved backtest configurations (v8) ───────────────────────────────────────
+#
+# Every function here takes user_id and no default, matching the rule the rest
+# of this module follows: a forgotten owner is a TypeError, never a leak.
+
+def list_configs(user_id: int, db: Path | None = None) -> list[dict]:
+    conn = connect(db)
+    try:
+        return [{"name": r["name"], "saved_at": r["saved_at"],
+                 "payload": r["payload"]}
+                for r in conn.execute(
+                    "SELECT name, saved_at, payload FROM user_configs "
+                    "WHERE user_id = ? ORDER BY saved_at DESC", (user_id,))]
+    finally:
+        conn.close()
+
+
+def save_config(user_id: int, name: str, payload: str,
+                db: Path | None = None) -> str:
+    """Create or replace one named config. Returns its saved_at.
+
+    UPSERT rather than delete-then-insert: saving over a name that already
+    exists is the common case (adjust a knob, save again), and the two-step
+    version leaves a window where the config exists nowhere.
+    """
+    now = _now()
+    conn = connect(db)
+    try:
+        conn.execute(
+            "INSERT INTO user_configs (user_id, name, payload, saved_at) "
+            "VALUES (?,?,?,?) "
+            "ON CONFLICT(user_id, name) DO UPDATE SET "
+            "payload = excluded.payload, saved_at = excluded.saved_at",
+            (user_id, name, payload, now))
+        return now
+    finally:
+        conn.close()
+
+
+def delete_config(user_id: int, name: str, db: Path | None = None) -> bool:
+    """Remove one of THIS user's configs. False if they do not have it.
+
+    Scoped by user_id in the WHERE clause, not checked afterwards: the delete
+    simply cannot reach a row belonging to somebody else, so there is no
+    ordering of checks that could get it wrong.
+    """
+    conn = connect(db)
+    try:
+        cur = conn.execute(
+            "DELETE FROM user_configs WHERE user_id = ? AND name = ?",
+            (user_id, name))
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+# ── onboarding (v8) ──────────────────────────────────────────────────────────
+
+def mark_onboarded(user_id: int, db: Path | None = None) -> bool:
+    """Record that this person has seen the introduction. Idempotent.
+
+    Only ever sets the timestamp if it is NULL, so pressing Skip twice -- or a
+    duplicate request -- does not move the date and cannot be used to make an
+    old account look new.
+    """
+    conn = connect(db)
+    try:
+        cur = conn.execute(
+            "UPDATE users SET onboarded_at = ? "
+            "WHERE id = ? AND onboarded_at IS NULL", (_now(), user_id))
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def is_onboarded(user_id: int, db: Path | None = None) -> bool:
+    conn = connect(db)
+    try:
+        r = conn.execute("SELECT onboarded_at FROM users WHERE id = ?",
+                         (user_id,)).fetchone()
+    finally:
+        conn.close()
+    return bool(r and r["onboarded_at"])
+
+
+# ── the account's own data, for export (v8) ──────────────────────────────────
+
+def export_account(user_id: int, db: Path | None = None) -> dict | None:
+    """Everything this account holds, as plain data. None if no such id.
+
+    web/public/privacy.html §6 offers "a copy of your data" and there was no
+    code that could produce one; the operator would have had to hand-write SQL.
+    This is that copy.
+
+    What is deliberately NOT in it:
+
+    * `password_hash` -- an argon2 digest is a credential, not information
+      about you. Handing it out in a file someone may email to themselves is a
+      downgrade in security for no gain.
+    * session and email token hashes -- same reasoning; they are keys.
+
+    Session METADATA is included (when, from where, which browser), because
+    "where has my account been signed in" is exactly the kind of question a
+    data export exists to answer.
+    """
+    conn = connect(db)
+    try:
+        u = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if u is None:
+            return None
+
+        def rows(sql, *args):
+            return [dict(r) for r in conn.execute(sql, args)]
+
+        account = {k: u[k] for k in u.keys()
+                   if k not in {"password_hash", "id"}}
+        return {
+            "exported_at": _now(),
+            "account": account,
+            "sessions": rows(
+                "SELECT created_at, expires_at, last_seen_at, ip, user_agent "
+                "FROM sessions WHERE user_id = ? ORDER BY created_at", user_id),
+            "oauth_identities": rows(
+                "SELECT provider, email, linked_at FROM oauth_identities "
+                "WHERE user_id = ? ORDER BY linked_at", user_id),
+            "saved_configs": rows(
+                "SELECT name, saved_at, payload FROM user_configs "
+                "WHERE user_id = ? ORDER BY saved_at", user_id),
+            "backtests": rows(
+                "SELECT * FROM backtests WHERE user_id = ? ORDER BY created_at",
+                user_id),
+            "trades": rows(
+                "SELECT * FROM trades WHERE user_id = ? "
+                "ORDER BY backtest_id, seq", user_id),
+        }
+    finally:
+        conn.close()
+
+
+# ── login throttle state (v8) ────────────────────────────────────────────────
+#
+# The counters used to live in a process-local dict, so every restart -- and a
+# deploy is a restart -- handed an attacker a fresh budget. These four
+# functions are the same buckets, kept where they survive that.
+
+def _parse(ts: str | None) -> datetime | None:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts)
+    except ValueError:
+        return None
+
+
+def throttle_blocked_for(scope_key: str, db: Path | None = None) -> int:
+    """Seconds still to wait on this key, or 0."""
+    conn = connect(db)
+    try:
+        r = conn.execute(
+            "SELECT blocked_until FROM login_attempts WHERE scope_key = ?",
+            (scope_key,)).fetchone()
+    finally:
+        conn.close()
+    until = _parse(r["blocked_until"]) if r else None
+    if until is None:
+        return 0
+    remaining = (until - datetime.now()).total_seconds()
+    return int(remaining) + 1 if remaining > 0 else 0
+
+
+def throttle_record_failure(scope_key: str, *, max_fails: int,
+                            block_seconds: int, window_seconds: int | None = None,
+                            db: Path | None = None) -> None:
+    """Count one failure against this key, blocking it once it hits max_fails.
+
+    `window_seconds` gives the per-IP ceiling its budget back after a quiet
+    period. It is a FIXED window rather than the sliding one the in-memory
+    version used -- that kept a timestamp per failure, which is a list to store
+    and prune per row for no protective gain. The property that matters is
+    unchanged: N failures inside the window blocks the key.
+    """
+    now = datetime.now()
+    now_iso = now.isoformat(timespec="seconds")
+    conn = connect(db)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            r = conn.execute(
+                "SELECT fails, first_seen_at FROM login_attempts WHERE scope_key = ?",
+                (scope_key,)).fetchone()
+
+            fails = (r["fails"] if r else 0) + 1
+            first = _parse(r["first_seen_at"]) if r else None
+            if window_seconds and first and (now - first).total_seconds() > window_seconds:
+                fails, first = 1, now          # the window rolled over
+
+            blocked_until = None
+            if fails >= max_fails:
+                blocked_until = (now + timedelta(seconds=block_seconds)
+                                 ).isoformat(timespec="seconds")
+                fails = 0                      # spent, as in the original
+
+            conn.execute(
+                "INSERT INTO login_attempts "
+                "(scope_key, fails, blocked_until, first_seen_at, last_seen_at) "
+                "VALUES (?,?,?,?,?) "
+                "ON CONFLICT(scope_key) DO UPDATE SET "
+                "fails = excluded.fails, "
+                # COALESCE so a fresh block never shortens one already running.
+                "blocked_until = COALESCE(excluded.blocked_until, login_attempts.blocked_until), "
+                "first_seen_at = excluded.first_seen_at, "
+                "last_seen_at = excluded.last_seen_at",
+                (scope_key, fails, blocked_until,
+                 (first or now).isoformat(timespec="seconds"), now_iso))
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()
+
+
+def throttle_clear(scope_key: str, db: Path | None = None) -> None:
+    conn = connect(db)
+    try:
+        conn.execute("DELETE FROM login_attempts WHERE scope_key = ?", (scope_key,))
+    finally:
+        conn.close()
+
+
+def purge_login_attempts(db: Path | None = None) -> int:
+    """Drop rows that can no longer block anything."""
+    cutoff = (datetime.now() - timedelta(hours=24)).isoformat(timespec="seconds")
+    conn = connect(db)
+    try:
+        cur = conn.execute(
+            "DELETE FROM login_attempts WHERE last_seen_at < ? "
+            "AND (blocked_until IS NULL OR blocked_until < ?)",
+            (cutoff, datetime.now().isoformat(timespec="seconds")))
+        return cur.rowcount
+    finally:
+        conn.close()

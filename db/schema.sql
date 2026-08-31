@@ -307,3 +307,53 @@ CREATE TABLE IF NOT EXISTS oauth_states (
 );
 
 CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
+
+-- ── saved backtest configurations (schema v8) ───────────────────────────────
+--
+-- These lived in the browser's localStorage, which made them look persistent
+-- and made them nothing of the sort: clearing site data destroyed them, they
+-- never followed anyone to a second machine, and -- the part that mattered for
+-- the privacy policy -- they sat outside every server-side guarantee it makes.
+-- Closing an account could not remove them because the server had never seen
+-- them.
+--
+-- ON DELETE CASCADE here, unlike backtests. A saved config is form state a
+-- person named, not a record of something that happened; there is no reason to
+-- keep one whose owner is gone, and every reason not to.
+CREATE TABLE IF NOT EXISTS user_configs (
+    user_id     INTEGER NOT NULL,
+    name        TEXT    NOT NULL,
+    -- The ConfigSnapshot, verbatim, as JSON. Deliberately opaque to SQL: the
+    -- sidebar's field set changes with the product, and a column per field
+    -- would turn every new knob into a migration. Nothing here is queried by
+    -- content -- it is fetched whole, by owner.
+    payload     TEXT    NOT NULL,
+    saved_at    TEXT    NOT NULL,
+
+    PRIMARY KEY (user_id, name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ── login throttle state (schema v8) ────────────────────────────────────────
+--
+-- The throttle counted failures in a process-local dict, so a restart handed
+-- every attacker a fresh budget -- and a deploy is a restart. Keeping the
+-- counters here makes them survive that, and makes them shared if a second
+-- worker is ever added, without introducing Redis for two integers.
+--
+-- Rows are disposable: purge_login_attempts() clears anything past its window.
+-- Losing this table costs a throttle reset, nothing more.
+CREATE TABLE IF NOT EXISTS login_attempts (
+    -- "pair:<ip>|<username>" or "ip:<ip>". One table, two scopes, because they
+    -- expire and are purged identically.
+    scope_key      TEXT    PRIMARY KEY,
+    fails          INTEGER NOT NULL DEFAULT 0,
+    -- Wall-clock ISO, not monotonic: monotonic time is meaningless once it has
+    -- to outlive the process that read it.
+    blocked_until  TEXT,
+    first_seen_at  TEXT    NOT NULL,
+    last_seen_at   TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_attempts_blocked
+    ON login_attempts(blocked_until);

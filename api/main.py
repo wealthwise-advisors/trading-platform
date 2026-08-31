@@ -15,6 +15,7 @@ import logging
 import os
 import sys
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -25,9 +26,12 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
+from api import auth as auth_mod
+from api import captcha, verification
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, oauth as oauth_router)
+                         schwab, optimize, data_export, account,
+                         oauth as oauth_router)
 
 try:
     _version = _pkg_version("autotrader")
@@ -60,7 +64,38 @@ logging.basicConfig(
     force=True,
 )
 
-app = FastAPI(title="AutoTrader API", version=_version)
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Say what mail and CAPTCHA are actually doing, once, at startup.
+
+    Both modules have had a describe() for a while and NOTHING CALLED EITHER --
+    the one line that says whether confirmation mail can leave the building was
+    computed by a function no code path reached. That matters more than it
+    sounds: `verification.describe()` is what reports the sandbox sender, the
+    state in which every send succeeds and only the recipients notice it did
+    not arrive. Silence there is indistinguishable from working.
+
+    It also reports whether the address gate is live, because the gate switches
+    itself on from mail's own configuration and an operator should not have to
+    infer that from two other lines.
+
+    A lifespan handler rather than @app.on_event("startup"): on_event is
+    deprecated and warns, and adding a warning to a clean build to carry a log
+    line is a poor trade.
+    """
+    logger.info(verification.describe())
+    logger.info(captcha.describe())
+    # An f-string, not %s with an argument: this is loguru's logger, which
+    # formats with str.format and would silently drop a %-style argument,
+    # printing the placeholder itself.
+    gate = ("ENFORCED -- unconfirmed addresses cannot use the app"
+            if auth_mod.verification_enforced()
+            else "off -- unconfirmed addresses are allowed through")
+    logger.info(f"Email gate: {gate}")
+    yield
+
+
+app = FastAPI(title="AutoTrader API", version=_version, lifespan=_lifespan)
 
 # Task 10 API audit: no CORS policy existed at all. In dev this is masked
 # by Vite's proxy (browser sees same-origin), but a production deployment
@@ -142,3 +177,6 @@ app.include_router(replay.ws_router, prefix="/api")
 app.include_router(schwab.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(optimize.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(data_export.router, prefix="/api", dependencies=[PROTECTED])
+# The account's own saved configurations. Under PROTECTED like the rest, and
+# every handler additionally scopes its query by the resolved user's id.
+app.include_router(account.router, prefix="/api", dependencies=[PROTECTED])

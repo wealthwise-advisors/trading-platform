@@ -141,14 +141,26 @@ export function DataExportPage() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {FORMATS.map((f) => (
-              <Button key={f.id} asChild variant="secondary" disabled={!valid}>
-                <a
-                  href={api.dataExportUrl({ symbol, timeframe, start: startDate, end: endDate, dataSource, format: f.id })}
-                  download
-                >
+              // Two renderings, not one with `disabled`. An anchor cannot BE
+              // disabled -- `<Button asChild disabled>` puts the attribute on
+              // an <a>, where HTML ignores it -- so the control looked dimmed
+              // and stayed fully clickable, sending an incomplete request. A
+              // real <button disabled> is both unclickable and announced as
+              // disabled by a screen reader, which the styled anchor was not.
+              !valid ? (
+                <Button key={f.id} variant="secondary" disabled>
                   {f.icon} {f.label}
-                </a>
-              </Button>
+                </Button>
+              ) : (
+                <Button key={f.id} asChild variant="secondary">
+                  <a
+                    href={api.dataExportUrl({ symbol, timeframe, start: startDate, end: endDate, dataSource, format: f.id })}
+                    download
+                  >
+                    {f.icon} {f.label}
+                  </a>
+                </Button>
+              )
             ))}
           </div>
           {!valid && <p className="text-xs text-muted-foreground mt-2">Fill in every field above to enable downloads.</p>}

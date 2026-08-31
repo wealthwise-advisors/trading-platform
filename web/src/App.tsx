@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { api, auth, SIGN_IN_PAGE } from "@/lib/api"
+import { api, auth, SIGN_IN_PAGE, type Me } from "@/lib/api"
+import { AccountSettings } from "@/components/AccountSettings"
+import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
 import { BarChart3, Zap, Upload, Download, Rocket } from "lucide-react"
@@ -23,7 +25,7 @@ const REPORT_FORMATS = [
   { id: "docx", label: "Word" },
 ]
 
-function App() {
+function App({ user }: { user: Me }) {
   const page = useConfigStore((s) => s.page)
   // Display-only: whether the config panel is showing. Hiding it changes nothing
   // about the configuration or the request -- the same store backs the form
@@ -54,6 +56,10 @@ function App() {
         </aside>
       )}
       <main className="flex-1 min-w-0 h-screen flex flex-col overflow-hidden">
+        {/* Above the header and shrink-0, so losing the network pushes the app
+            down by one strip rather than covering any of it. It renders
+            nothing at all while the connection is fine. */}
+        <div className="shrink-0"><OfflineBanner /></div>
         <header className="p-3 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
           {/* The brand artwork rather than the name in text. The monogram and the
               wordmark are separate crops of the same poster: dropping the whole
@@ -87,6 +93,7 @@ function App() {
                 button on the app". It was there the whole time and did not look
                 like it. The only way out of a signed-in app is not the place to
                 be subtle. */}
+            <AccountSettings user={user} />
             <Button
               size="sm"
               variant="outline"
