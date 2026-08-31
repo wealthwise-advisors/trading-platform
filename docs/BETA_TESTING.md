@@ -49,7 +49,7 @@ Fifteen. Each is pass/fail, and a failure needs the report in §3.
 
 | # | Flow | Passes when |
 |---|---|---|
-| 1 | Registration | Account created, signed in, confirmation email arrives |
+| 1 | Registration | Confirmation email arrives. You are **not** signed in — confirm-first means no session exists until the link is clicked. The same answer comes back whether or not the address is already registered |
 | 2 | Email verification | The link works once; a second click is refused; an expired one explains itself |
 | 3 | Login | Correct password in; wrong password gives one generic message; six wrong ones throttle |
 | 4 | Logout | Session revoked server-side — the back button does not restore the dashboard |
@@ -73,10 +73,15 @@ Fifteen. Each is pass/fail, and a failure needs the report in §3.
 - **13 (network)** is tested with DevTools → Network → Offline, not by unplugging
   a router. The one thing that must never happen is being bounced to the
   sign-in page: that is a false logout and it is a bug.
-- **2 and 5 depend on a verified sending domain.** While `AUTOTRADER_MAIL_FROM`
-  is on `resend.dev`, mail reaches only the Resend account owner — so
-  `beta.unverified` and `beta.verified` cannot be tested by anyone else. The
-  startup log says which state the server is in.
+- **1, 2 and 5 are the ones that prove email.** The app now sends over SMTP,
+  which relays to any recipient, and `confirm_required` reports `true` on the
+  live site — so registration issues no session until a link is clicked. What
+  has never been observed is a message arriving in somebody else's inbox.
+  A tester who is not the operator completing flows 1, 2 and 5 is exactly the
+  evidence that is missing.
+- **`beta.unverified` is now genuinely blocked**, not merely flagged: the gate
+  is live, so that account should meet the confirm-your-address screen and be
+  refused the dashboard.
 
 ---
 
@@ -155,11 +160,11 @@ re-reporting them.
 
 | Issue | Severity | Status |
 |---|---|---|
-| Mail sends only to the Resend account owner while the sender is on `resend.dev` | S2 | Awaiting domain verification — blocks flows 2 and 5 for everyone else |
-| The confirmation gate stays off until that is fixed | — | By design; it would otherwise be a lockout |
+| Real inbox delivery has never been confirmed by a recipient who is not the operator | S2 | SMTP is configured and the full chain is verified over a real socket; only an actual inbox is unproven. **Flows 1, 2 and 5 confirm it** |
 | Crash reporting is dormant until an endpoint is configured | S4 | Code complete, needs `VITE_AUTOTRADER_ERROR_DSN` |
 | Charts have no screen-reader alternative | S3 | Trade data is reachable in the trade log table |
-| Responsive behaviour below 768px is unverified | S3 | No browser testing has been performed |
+| CSP keeps `'unsafe-inline'` for scripts | S3 | Known and accepted — see below |
+| White on the primary gradient button is 2.83:1 at the light stop | S3 | WCAG AA needs 4.5:1. Fixing it requires darkening the brand gradient ~10%; not changed unilaterally |
 
 ---
 
@@ -172,3 +177,35 @@ re-reporting them.
 | — | — | — | — | — | — | — | — |
 
 Do not mark the product beta-tested until this table has a row in it.
+
+---
+
+## 8. Why the CSP still allows inline script
+
+Checked deliberately, not overlooked.
+
+The policy is otherwise tight — `default-src 'self'`, `frame-ancestors 'none'`,
+`form-action 'self'`, `base-uri 'self'`, `object-src 'none'`, `connect-src 'self'`
+— and every one of those is live and doing work. What it keeps is
+`script-src 'unsafe-inline'`.
+
+**Why it cannot simply be removed.** The sign-in, sign-up, help, legal and 404
+pages are single self-contained HTML files, each carrying its own `<script>` and
+`<style>` inline. They are served by nginx straight off disk. Dropping
+`'unsafe-inline'` stops every one of those blocks executing, which breaks
+sign-in — so removing the directive without doing the work first takes the site
+down rather than hardening it.
+
+**The correct fix, when it is done.** Per-request nonces: nginx generates a
+random nonce per response, injects it into every `<script nonce="…">`, and emits
+it in the header. That requires a template step in front of files that are
+currently static — `ngx_http_sub_module` at minimum, or moving those pages into
+a renderer. Hashes (`'sha256-…'`) are the alternative and are worse here: every
+edit to any inline block changes its hash, so the policy silently breaks the
+page the next time someone fixes a typo.
+
+**What was verified instead:** nothing more dangerous was introduced. There is
+no `'unsafe-eval'`, no `*` source, no `data:` in `script-src`, and no
+`unsafe-inline` in `frame-ancestors`, `form-action`, `base-uri` or `object-src`
+— the directives that actually stop clickjacking, form hijacking and
+exfiltration all hold without it.
