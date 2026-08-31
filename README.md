@@ -1459,7 +1459,13 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 <br>
 
-<a href="https://github.com/wealthwise-advisors"><img src="docs/assets/legal-ownership.svg" alt="Ownership — Owner: WealthWise Advisors. GitHub: github.com/wealthwise-advisors" width="100%"></a>
+<a href="https://github.com/wealthwise-advisors"><img src="docs/assets/legal-ownership.svg" alt="Ownership — Owner: Sriram Nandepu. Organization: WealthWise Advisors. Owner GitHub: github.com/snandepu. Org GitHub: github.com/wealthwise-advisors" width="100%"></a>
+
+<sub>
+
+**[Organization ↗](https://github.com/wealthwise-advisors)** &nbsp;·&nbsp; **[Owner ↗](https://github.com/snandepu)**
+
+</sub>
 
 <br>
 

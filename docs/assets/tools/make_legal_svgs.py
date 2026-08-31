@@ -66,12 +66,18 @@ PAD = 34
 # see the module docstring. The two phone numbers and the LinkedIn URLs in the
 # reference design were sample values and have no counterpart here, so there
 # are no columns for them.
+# Name, organisation and the two public GitHub profiles -- and deliberately
+# nothing else. There is no Email or Contact column here because this
+# repository is PUBLIC: a personal address or phone number committed to it is
+# scraped within hours, stays in git history through every clone and fork, and
+# cannot be withdrawn. A collapsed <details>, faint text or an SVG comment
+# would hide it from nobody. If the organisation needs a published contact
+# route, add a role address it controls -- not a person's own.
 OWNERSHIP = [
-    ("Owner", "WealthWise Advisors", "org", BLUE_L),
-    ("Email", None, "mail", BLUE_L),
-    ("Contact", None, "phone", INK),
-    ("GitHub", "github.com/wealthwise-advisors", "branch", VIOLET_L),
-    ("LinkedIn", None, "badge", VIOLET_L),
+    ("Owner", "Sriram Nandepu", "person", BLUE_L),
+    ("Organization", "WealthWise Advisors", "org", BLUE_L),
+    ("Owner GitHub", "github.com/snandepu", "branch", VIOLET_L),
+    ("Org GitHub", "github.com/wealthwise-advisors", "branch", VIOLET_L),
 ]
 
 DEVELOPED = [
