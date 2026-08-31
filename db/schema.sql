@@ -126,6 +126,17 @@ CREATE TABLE IF NOT EXISTS users (
     email         TEXT    NOT NULL DEFAULT '' COLLATE NOCASE,
     country       TEXT    NOT NULL DEFAULT '',
     phone         TEXT    NOT NULL DEFAULT '',
+
+    -- Has this NUMBER been proved to belong to whoever is using the
+    -- account (schema v10)? Exactly the same distinction email_verified
+    -- draws, and it exists for the same reason: `phone` above is a
+    -- string somebody typed at sign-up and nothing has ever checked it.
+    --
+    -- Nothing may be DELIVERED to a number until this is 1. A sign-in
+    -- code texted to an unproved number hands account access to whoever
+    -- happens to hold it -- including the stranger who owns the number
+    -- that was mistyped at registration.
+    phone_verified INTEGER NOT NULL DEFAULT 0,
     is_active     INTEGER NOT NULL DEFAULT 1,
 
     -- The Schwab entitlement (schema v4).

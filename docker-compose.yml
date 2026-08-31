@@ -83,6 +83,16 @@ services:
       AUTOTRADER_SMTP_PORT: "${AUTOTRADER_SMTP_PORT:-}"
       AUTOTRADER_SMTP_USER: "${AUTOTRADER_SMTP_USER:-}"
       AUTOTRADER_SMTP_PASSWORD: "${AUTOTRADER_SMTP_PASSWORD:-}"
+      # SMS, dormant until a provider and its credentials exist. See
+      # api/sms.py -- the blockers are DLT registration and a paid
+      # account, not code.
+      AUTOTRADER_SMS_PROVIDER: "${AUTOTRADER_SMS_PROVIDER:-}"
+      AUTOTRADER_TWILIO_ACCOUNT_SID: "${AUTOTRADER_TWILIO_ACCOUNT_SID:-}"
+      AUTOTRADER_TWILIO_AUTH_TOKEN: "${AUTOTRADER_TWILIO_AUTH_TOKEN:-}"
+      AUTOTRADER_TWILIO_FROM: "${AUTOTRADER_TWILIO_FROM:-}"
+      AUTOTRADER_MSG91_AUTH_KEY: "${AUTOTRADER_MSG91_AUTH_KEY:-}"
+      AUTOTRADER_MSG91_SENDER_ID: "${AUTOTRADER_MSG91_SENDER_ID:-}"
+      AUTOTRADER_MSG91_TEMPLATE_ID: "${AUTOTRADER_MSG91_TEMPLATE_ID:-}"
       # Escape hatch for the confirm-your-address gate. The gate turns itself
       # ON as soon as mail can reach a stranger (a verified sending domain),
       # which is the right default but a surprising one to meet mid-deploy.

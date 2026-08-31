@@ -49,6 +49,9 @@ class User:
     #: Whether the address has been PROVED to belong to the holder, as opposed
     #: to merely typed in. What makes email-matched OAuth safe.
     email_verified: bool = False
+    #: The same distinction for the phone number. Nothing is ever texted to a
+    #: number where this is False -- see db/schema.sql.
+    phone_verified: bool = False
 
 
 def _now() -> str:
@@ -151,7 +154,9 @@ def _row_to_user(r) -> User | None:
                 has_password=(bool(r["has_password"])
                               if "has_password" in cols else True),
                 email_verified=(bool(r["email_verified"])
-                                if "email_verified" in cols else False))
+                                if "email_verified" in cols else False),
+                phone_verified=(bool(r["phone_verified"])
+                                if "phone_verified" in cols else False))
 
 
 def list_users(db: Path | None = None) -> list[dict]:
@@ -943,9 +948,15 @@ def purge_login_attempts(db: Path | None = None) -> int:
         conn.close()
 
 
-def take_login_code(user_id: int, code: str, max_attempts: int,
+def take_phone_code(user_id: int, code: str, max_attempts: int,
                     db: Path | None = None) -> bool:
-    """Spend a sign-in code. True only for the right one, once.
+    """Spend a phone-verification code. Same rules as a sign-in code."""
+    return _take_code(user_id, code, max_attempts, "phone", db)
+
+
+def _take_code(user_id: int, code: str, max_attempts: int, purpose: str,
+               db: Path | None = None) -> bool:
+    """Spend a six-digit code of the given purpose. True only for the right one, once.
 
     Looked up by OWNER rather than by the code's hash, which is the whole
     reason a wrong guess can be counted at all: a lookup keyed on the hash
@@ -963,7 +974,7 @@ def take_login_code(user_id: int, code: str, max_attempts: int,
         try:
             r = conn.execute(
                 "SELECT token_hash, expires_at, used_at, attempts FROM email_tokens "
-                "WHERE user_id = ? AND purpose = 'login'", (user_id,)).fetchone()
+                "WHERE user_id = ? AND purpose = ?", (user_id, purpose)).fetchone()
             if r is None or r["used_at"]:
                 conn.execute("COMMIT")
                 return False
@@ -979,8 +990,8 @@ def take_login_code(user_id: int, code: str, max_attempts: int,
                 if spent >= max_attempts:
                     conn.execute("DELETE FROM email_tokens WHERE token_hash = ?",
                                  (r["token_hash"],))
-                    log.warning("sign-in code destroyed after %d wrong attempts "
-                                "for user %s", spent, user_id)
+                    log.warning("%s code destroyed after %d wrong attempts "
+                                "for user %s", purpose, spent, user_id)
                 else:
                     conn.execute("UPDATE email_tokens SET attempts = ? "
                                  "WHERE token_hash = ?", (spent, r["token_hash"]))
@@ -1000,3 +1011,46 @@ def take_login_code(user_id: int, code: str, max_attempts: int,
             raise
     finally:
         conn.close()
+
+
+def set_phone(user_id: int, phone: str, verified: bool = False,
+              db: Path | None = None) -> bool:
+    """Record a phone number, and whether it has been proved.
+
+    Setting a NEW number always clears the proof -- a number is verified, not
+    an account, so changing it must start the process over. Passing
+    verified=True on the same number is how confirmation lands.
+    """
+    conn = connect(db)
+    try:
+        cur = conn.execute(
+            "UPDATE users SET phone = ?, phone_verified = ? WHERE id = ?",
+            (phone, 1 if verified else 0, user_id))
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def phone_taken_by_other(phone: str, user_id: int, db: Path | None = None) -> bool:
+    """True when another account already PROVED this number.
+
+    Only proved ones count. An unverified duplicate is two people who each
+    typed the same digits, and at most one of them can go on to prove it;
+    blocking on that would let anyone reserve a number they do not hold.
+    """
+    if not phone:
+        return False
+    conn = connect(db)
+    try:
+        r = conn.execute(
+            "SELECT 1 FROM users WHERE phone = ? AND phone_verified = 1 "
+            "AND id != ? LIMIT 1", (phone, user_id)).fetchone()
+    finally:
+        conn.close()
+    return r is not None
+
+
+def take_login_code(user_id: int, code: str, max_attempts: int,
+                    db: Path | None = None) -> bool:
+    """Spend a sign-in code. True only for the right one, once."""
+    return _take_code(user_id, code, max_attempts, "login", db)

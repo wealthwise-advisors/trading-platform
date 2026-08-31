@@ -92,7 +92,11 @@ _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
                     # Code sign-in: asserts the code dies after five wrong
                     # guesses and that neither route reveals whether an
                     # address has an account.
-                    "test_login_code"}
+                    "test_login_code",
+                    # Asserts both phone routes refuse an anonymous
+                    # caller with 401 rather than 422, and that a number
+                    # proved by one account cannot be claimed by another.
+                    "test_phone_verification"}
 
 
 @pytest.fixture(autouse=True)

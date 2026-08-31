@@ -305,4 +305,11 @@ class TestExistingApiUnchanged:
         # not. Both are PUBLIC by necessity and both answer identically whether
         # or not the address has an account -- tests/test_login_code.py is what
         # holds that.
-        assert len(paths) == 44, sorted(paths)
+        # +2 for phone verification: /api/auth/phone attaches a number and
+        # texts it a code, /api/auth/phone/confirm proves it. Both need a
+        # session -- this is an account-settings action, not a way in -- and
+        # neither is public. The column they set, users.phone_verified, is the
+        # prerequisite for ever DELIVERING anything to a number: `users.phone`
+        # has always been a string somebody typed at sign-up that nothing
+        # checked. See tests/test_phone_verification.py.
+        assert len(paths) == 46, sorted(paths)

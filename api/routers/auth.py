@@ -17,7 +17,7 @@ from fastapi import (APIRouter, BackgroundTasks, HTTPException, Request,
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from api import auth, captcha, verification
+from api import auth, captcha, sms, verification
 from db import backtests as backtest_blobs
 from db import users as repo
 
@@ -86,10 +86,22 @@ class Me(BaseModel):
     #: with the identity for the same reason email_verified does -- the shell
     #: branches on it on first render.
     onboarded: bool = True
+    #: The number on file, already redacted -- the full one never needs to
+    #: leave the server for a settings screen to show its state.
+    phone: str = ""
+    phone_verified: bool = False
+    #: Whether this deployment can text at all. The UI must not offer to send
+    #: a code that no provider exists to deliver.
+    sms_available: bool = False
 
 
 class RequestCodeRequest(BaseModel):
     email: str = Field(min_length=1, max_length=254)
+    #: "email" or "sms". SMS is honoured only when this deployment can text AND
+    #: the account's number has been PROVED -- otherwise it silently falls back
+    #: to email rather than refusing, because saying "that account has no
+    #: verified phone" would be a membership signal.
+    channel: str = Field(default="email", max_length=8)
 
 
 class VerifyCodeRequest(BaseModel):
@@ -124,7 +136,10 @@ def _identity(user) -> Me:
               email=user.email, country=user.country,
               email_verified=bool(user.email_verified),
               verification_required=auth.verification_blocks(user),
-              onboarded=repo.is_onboarded(user.id))
+              onboarded=repo.is_onboarded(user.id),
+              phone=sms.redact(user.phone) if user.phone else "",
+              phone_verified=bool(getattr(user, "phone_verified", False)),
+              sms_available=sms.configured())
 
 
 @router.post("/login", response_model=Me)
@@ -314,9 +329,21 @@ def request_code(body: RequestCodeRequest, request: Request,
     user = repo.get_user_by_email(email) if email else None
     if user and user.is_active and user.email_verified:
         code = verification.new_login_code(user.id)
-        background.add_task(verification.send_login_code,
-                            user.email, user.username, code)
-        log.info("sign-in code issued for %s from %s", user.username, ip)
+        # SMS only where the number was PROVED. An unverified number is a
+        # string somebody typed at sign-up, and texting a code to it hands a
+        # way in to whoever actually holds it. Falls back to email rather than
+        # refusing: an error saying "that account has no confirmed phone" would
+        # answer a question about somebody else's account.
+        by_sms = (body.channel or "").strip().lower() == "sms"
+        wants_sms = (by_sms and sms.configured()
+                     and getattr(user, "phone_verified", False) and user.phone)
+        if wants_sms:
+            background.add_task(sms.send_code, user.phone, code, "sign-in")
+            log.info("sign-in code texted for %s from %s", user.username, ip)
+        else:
+            background.add_task(verification.send_login_code,
+                                user.email, user.username, code)
+            log.info("sign-in code emailed for %s from %s", user.username, ip)
     else:
         log.info("sign-in code requested for an unusable address from %s", ip)
 
@@ -366,6 +393,116 @@ def verify_code(body: VerifyCodeRequest, request: Request, response: Response):
     auth.set_session_cookie(response, token, remember=body.remember)
     log.info("code sign-in: %s from %s", user.username, ip)
     return _identity(user)
+
+
+class PhoneRequest(BaseModel):
+    """A number to prove. Country code is used only when the number is local.
+
+    Every field is OPTIONAL and emptiness is checked in the handler, which
+    looks like sloppiness and is not. FastAPI validates the body BEFORE the
+    route body runs, so a required field makes an anonymous caller receive 422
+    -- "your input was wrong" -- instead of 401. That confirms the endpoint
+    exists and what it expects, to someone who should learn neither, and
+    tests/test_auth.py's sweep fails on exactly this.
+    """
+
+    phone: str = Field(default="", max_length=40)
+    country_code: str = Field(default="", max_length=6)
+
+
+class PhoneConfirmRequest(BaseModel):
+    #: Optional for the same reason as PhoneRequest above: the guard has to be
+    #: able to answer 401 before anything looks at the body.
+    code: str = Field(default="", max_length=12)
+
+
+@router.post("/phone")
+def start_phone_verification(body: PhoneRequest, request: Request,
+                             background: BackgroundTasks):
+    """Attach a phone number to the signed-in account and text it a code.
+
+    The number is stored UNVERIFIED and stays that way until the code comes
+    back. Nothing is ever delivered to it in the meantime -- that is the whole
+    point of the column: `users.phone` has always been a string somebody typed
+    at sign-up, and until now nothing had ever checked it.
+
+    Session-resolved rather than behind require_user, like the other
+    account-lifecycle routes: someone still confirming their address should be
+    able to add a phone, not be told to finish one proof before starting
+    another.
+    """
+    user = repo.resolve_session(request.cookies.get(auth.COOKIE, ""))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Authentication required.")
+
+    ip = auth.client_ip(request)
+    if wait := auth.verify_throttle.retry_after(ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+    auth.verify_throttle.record(ip)
+
+    number = sms.normalise(body.phone, body.country_code or user.country)
+    if not (body.phone or "").strip() or not number:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "That does not look like a phone number we can text. Include the "
+            "country code, for example +91 98765 43210.")
+
+    # A number ALREADY PROVED by someone else cannot be claimed. Unverified
+    # duplicates are allowed -- see repo.phone_taken_by_other.
+    if repo.phone_taken_by_other(number, user.id):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "That number is already confirmed on another account.")
+
+    if not sms.configured():
+        # Honest refusal rather than a stored number that can never be proved.
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Text messages are not switched on for this deployment yet, so a "
+            "number cannot be confirmed. Nothing has been saved.")
+
+    repo.set_phone(user.id, number, verified=False)
+    code = verification.new_phone_code(user.id)
+    background.add_task(sms.send_code, number, code, "verification")
+    log.info("phone verification started for %s to %s",
+             user.username, sms.redact(number))
+    return {"ok": True, "phone": sms.redact(number),
+            "detail": "We texted a six-digit code. It expires in 10 minutes."}
+
+
+@router.post("/phone/confirm", response_model=Me)
+def confirm_phone(body: PhoneConfirmRequest, request: Request):
+    """Prove the number with the code that was texted to it."""
+    user = repo.resolve_session(request.cookies.get(auth.COOKIE, ""))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Authentication required.")
+
+    ip = auth.client_ip(request)
+    if wait := auth.throttle.retry_after(ip, f"phone:{user.username}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+
+    code = (body.code or "").strip()
+    if not code or not repo.take_phone_code(
+            user.id, code, verification.LOGIN_CODE_MAX_ATTEMPTS):
+        auth.throttle.record_failure(ip, f"phone:{user.username}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="That code is not valid. It may have "
+                                   "expired or already been used.")
+
+    auth.throttle.record_success(ip, f"phone:{user.username}")
+    repo.set_phone(user.id, user.phone, verified=True)
+    log.info("phone confirmed for %s", user.username)
+    return _identity(repo.get_user_by_id(user.id))
 
 
 @router.get("/export")

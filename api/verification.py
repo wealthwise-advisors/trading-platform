@@ -454,6 +454,20 @@ def new_login_code(user_id: int) -> str:
     return code
 
 
+def new_phone_code(user_id: int) -> str:
+    """A six-digit code for proving a phone number.
+
+    The same shape and the same defences as a sign-in code -- ten minutes, five
+    attempts, hashed against the owner -- under its own purpose so requesting
+    one does not destroy a sign-in code the same person is mid-way through.
+    """
+    code = f"{secrets.randbelow(10 ** LOGIN_CODE_DIGITS):0{LOGIN_CODE_DIGITS}d}"
+    expires = (datetime.now() + LOGIN_CODE_TTL).isoformat(timespec="seconds")
+    repo.new_email_token(user_id, repo.hash_token(f"{user_id}:{code}"),
+                         expires, purpose="phone")
+    return code
+
+
 def send_login_code(email: str, username: str, code: str) -> bool:
     """Email a sign-in code. False when unconfigured or the send failed."""
     if not email or not configured():
