@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page not found · AutoTrader</title>
+<style>
+  /* The same palette as the sign-in card and the legal pages, deliberately.
+     A 404 that looks like a different site reads as a hijack, which is exactly
+     the wrong impression to give somebody who already followed a bad link. */
+  :root{
+    --em:#10b981; --em2:#34d399;
+    --bg:#0a1018; --panel:rgba(13,20,30,.86); --line:rgba(255,255,255,.10);
+    --ink:#eef3fa; --dim:#9aa7bd; --r:18px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    background:
+      radial-gradient(1100px 620px at 15% -10%, rgba(16,185,129,.10), transparent 60%),
+      radial-gradient(900px 560px at 105% 8%, rgba(52,211,153,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink); line-height:1.68;
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:24px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--r); padding:38px 34px; max-width:520px; width:100%;
+    backdrop-filter:blur(10px); text-align:center;
+  }
+  .brand{font-weight:800; letter-spacing:.4px; font-size:17px; margin-bottom:22px}
+  .brand span{color:var(--em)}
+  .code{
+    font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--em2); font-weight:700; margin-bottom:8px;
+  }
+  h1{margin:0 0 10px; font-size:26px; letter-spacing:-.4px}
+  p{color:#cfd8e6; font-size:15px; margin:0 0 8px}
+  .dim{color:var(--dim); font-size:13.5px}
+  .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:26px}
+  a.btn{
+    text-decoration:none; font-size:14px; font-weight:600; padding:10px 18px;
+    border-radius:11px; border:1px solid var(--line); color:var(--ink);
+    transition:border-color .15s, background .15s;
+  }
+  a.btn:hover{border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.05)}
+  a.btn.primary{background:var(--em); border-color:var(--em); color:#052e22}
+  a.btn.primary:hover{background:var(--em2); border-color:var(--em2)}
+  a.btn:focus-visible{outline:2px solid var(--em2); outline-offset:2px}
+  .foot{margin-top:24px; font-size:13px}
+  .foot a{color:var(--em2); margin:0 8px}
+  @media(max-width:520px){ .card{padding:28px 20px} h1{font-size:22px} }
+</style></head><body>
+  <main class="card">
+    <div class="brand">AUTO<span>TRADER</span></div>
+    <div class="code">Error 404</div>
+    <h1>That page does not exist</h1>
+    <p>The address you followed does not match anything here.</p>
+    <p class="dim">
+      Usually a typo, or a link from somewhere that has since moved. Nothing is
+      wrong with your account, and you are still signed in if you were before.
+    </p>
+    <div class="row">
+      <a class="btn primary" href="/">Go to AutoTrader</a>
+      <a class="btn" href="/autotrader_signin.html">Sign in</a>
+      <a class="btn" href="/help.html">Help Center</a>
+    </div>
+    <p class="foot">
+      <a href="/terms.html">Terms of Service</a>·<a href="/privacy.html">Privacy Policy</a>
+    </p>
+  </main>
+</body></html>

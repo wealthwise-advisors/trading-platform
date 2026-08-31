@@ -882,7 +882,7 @@ body.finishing{
   btn.insertAdjacentElement("afterend", msg);
 
   function say(text, kind) {
-    msg.innerHTML = text;
+    msg.textContent = text;
     msg.className = "msg show " + (kind || "err");
   }
 

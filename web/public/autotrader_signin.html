@@ -810,7 +810,7 @@ body.recovery .hide-in-recovery{ display:none !important }
     btn.insertAdjacentElement("afterend", msg);
   }
   function say(text, kind) {
-    msg.innerHTML = text;
+    msg.textContent = text;
     msg.className = "msg show " + (kind || "err");
   }
 
@@ -972,7 +972,7 @@ body.recovery .hide-in-recovery{ display:none !important }
     msg.setAttribute("role", "status");
     btn.insertAdjacentElement("afterend", msg);
   }
-  function say(t, kind) { msg.innerHTML = t; msg.className = "msg show " + (kind || "err"); }
+  function say(t, kind) { msg.textContent = t; msg.className = "msg show " + (kind || "err"); }
 
   [".tabs", ".or", ".soc", ".socmsg", ".row"].forEach(function (sel) {
     var el = form.querySelector(sel) || document.querySelector(sel);

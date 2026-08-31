@@ -31,6 +31,8 @@ export function SavedConfigsPanel() {
   const [busy, setBusy] = useState<Busy>("loading")
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
+  //: Armed by the first press of Delete, spent by the second.
+  const [confirming, setConfirming] = useState(false)
 
   const refresh = useCallback(async () => {
     const rows = await listSavedConfigs()
@@ -86,6 +88,16 @@ export function SavedConfigsPanel() {
 
   async function handleDelete() {
     if (busy || !selected) return
+    // Two presses, not one. This used to delete on a single click of an
+    // icon-only button sitting next to Load -- and now that configs live on the
+    // account rather than in this browser, the click destroys something that
+    // followed the person between devices and cannot be recovered. The button
+    // says what it will do before it does it.
+    if (!confirming) {
+      setConfirming(true)
+      return
+    }
+    setConfirming(false)
     setBusy("deleting")
     setError("")
     try {
@@ -139,7 +151,8 @@ export function SavedConfigsPanel() {
         )
       ) : (
         <div className="flex gap-2">
-          <Select value={selected} onValueChange={setSelected}>
+          <Select value={selected}
+                  onValueChange={(v) => { setSelected(v); setConfirming(false) }}>
             <SelectTrigger className="w-full" aria-label="Saved configurations">
               <SelectValue placeholder="Load saved config…" />
             </SelectTrigger>
@@ -151,9 +164,18 @@ export function SavedConfigsPanel() {
                   onClick={handleLoad} aria-label="Load">
             <FolderOpen className="h-3.5 w-3.5 shrink-0" />
           </Button>
-          <Button variant="secondary" size="default" disabled={!selected || busy !== null}
-                  onClick={handleDelete} aria-label="Delete">
+          <Button
+            variant={confirming ? "destructive" : "secondary"}
+            size="default"
+            disabled={!selected || busy !== null}
+            onClick={handleDelete}
+            onBlur={() => setConfirming(false)}
+            aria-label={confirming
+              ? `Confirm deleting ${selected}` : `Delete ${selected || "configuration"}`}
+            title={confirming ? "Press again to delete permanently" : "Delete"}
+          >
             <Trash2 className="h-3.5 w-3.5 shrink-0" />
+            {confirming && <span className="ml-1 text-xs">Sure?</span>}
           </Button>
         </div>
       )}

@@ -223,6 +223,9 @@ export const auth = {
 
 export const api = {
   health: () => request<{ status: string }>("/health"),
+  // Served since v1.0 and never shown to anyone. It is what turns
+  // "it broke" into a report somebody can act on.
+  version: () => request<{ version: string; api: string; commit: string }>("/version"),
   strategies: () => request<StrategyMeta[]>("/strategies"),
   dataSources: () => request<DataSourceMeta[]>("/data-sources"),
   contracts: () => request<Record<string, unknown>>("/contracts"),
