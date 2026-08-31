@@ -46,7 +46,7 @@ git config core.hooksPath .githooks
 | `config/` | Settings and (gitignored) credentials |
 
 The one structural rule: **`src/` never imports from `api/` or `web/`.** See
-[ARCHITECTURE.md](ARCHITECTURE.md#the-dependency-rule) for why.
+[Design Document.md](Design Document.md#the-dependency-rule) for why.
 
 ## Writing a new strategy
 

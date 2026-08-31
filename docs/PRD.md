@@ -7,8 +7,8 @@
 
 > [!NOTE]
 > This document describes what the product is for and what it must do.
-> How it is built is [ARCHITECTURE.md](ARCHITECTURE.md); the testable
-> requirement statements are [SRS.md](SRS.md).
+> How it is built is [Design Document.md](Design%20Document.md); the testable
+> requirement statements are [Technical Requirements Document.md](Technical%20Requirements%20Document.md).
 
 ---
 
@@ -75,7 +75,7 @@ signal fired?"
 When replay reaches the live edge of the data it begins **following live** —
 polling for new bars and extending the tape on its own. The rules that make
 this trustworthy rather than merely animated are in
-[SRS.md §4.3](SRS.md#43-follow-live).
+[Technical Requirements Document.md §4.3](Technical Requirements Document.md#43-follow-live).
 
 ### 4.3 Live trading
 

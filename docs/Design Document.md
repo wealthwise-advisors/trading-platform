@@ -1,7 +1,7 @@
 # Architecture
 
 How the pieces fit and, where it matters, why they are arranged this way.
-Requirements are in [SRS.md](SRS.md); the interface is in [UI_UX.md](UI_UX.md).
+Requirements are in [Technical Requirements Document.md](Technical%20Requirements%20Document.md); the interface is in [UI_UX.md](UI_UX.md).
 
 ## Layers
 
@@ -213,7 +213,7 @@ web  ══WS /api/replay/{id}══▶  ReplayEngine.load()
 ```
 
 Follow-live's rules — closed bars only, never silent, pauses respected, gaps
-named — are specified in [SRS.md §4.3](SRS.md#43-follow-live). They are
+named — are specified in [Technical Requirements Document.md §4.3](Technical Requirements Document.md#43-follow-live). They are
 behavioural requirements, not implementation detail, because each one exists
 to prevent a specific way of showing the trader something untrue.
 

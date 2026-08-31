@@ -5,7 +5,7 @@ WHAT THIS IS
 ------------
 The suite is not one undifferentiated pile of 1,853 assertions. It contains
 three kinds of test, and what a failure MEANS is different in each. That
-distinction lives in docs/ARCHITECTURE.md but has never been in the README,
+distinction lives in docs/Design Document.md but has never been in the README,
 where it matters most: a contributor reading a red baseline test needs to know
 that re-baselining it throws away the verification that made it worth having.
 

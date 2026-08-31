@@ -36,6 +36,6 @@ pytest tests/ -v
 ## Where to go next
 
 - Writing your own strategy: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
-- How the platform is layered: [ARCHITECTURE.md](ARCHITECTURE.md)
+- How the platform is layered: [Design Document.md](Design%20Document.md)
 - Setting up Schwab/Rithmic for real data: [CONFIGURATION.md](CONFIGURATION.md)
 - Something not working: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)

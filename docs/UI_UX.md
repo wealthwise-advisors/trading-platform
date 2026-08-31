@@ -5,7 +5,7 @@
 
 > [!NOTE]
 > This describes how the interface behaves and why. Component APIs live in
-> the code; requirements live in [SRS.md §9](SRS.md#9-user-interface).
+> the code; requirements live in [Technical Requirements Document.md §9](Technical Requirements Document.md#9-user-interface).
 
 ---
 

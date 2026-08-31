@@ -15,9 +15,10 @@
 |:--|:--|
 | 🚀 **New here?** | [`QUICKSTART.md`](QUICKSTART.md) ➜ [`INSTALLATION.md`](INSTALLATION.md) ➜ [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) |
 | 🌊 **Elliott Wave** | Four documents, ~3,500 lines — the rules are the specification |
+| 📋 **Planning** | [`PRD.md`](PRD.md) ➜ [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) ➜ [`Design Document.md`](Design%20Document.md) ➜ [`Implementation Plan.md`](Implementation%20Plan.md) |
 | 🔒 **Security** | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) |
 | 📁 **Path** | `docs/` |
-| 📦 **Holds** | `19` files · `5,898` lines · `1` subfolders |
+| 📦 **Holds** | `22` files · `6,528` lines · `1` subfolders |
 
 
 ---
@@ -27,9 +28,9 @@
 ```
    new here ──► QUICKSTART ──► INSTALLATION ──► DEVELOPER_GUIDE
                                                       │
-   going deeper ──► ARCHITECTURE ──► API_GUIDE ───────┤
+   going deeper ──► DESIGN DOCUMENT ──► API_GUIDE ───┤
                                                       ▼
-   Elliott Wave ──► RULES (the specification) ──► SRS ──► ARCHITECTURE
+   Elliott Wave ──► RULES (the specification) ──► EW SRS ──► EW ARCHITECTURE
                          │                                    │
                          └──► IMPLEMENTATION ◄────────────────┘
 ```
@@ -44,18 +45,20 @@
 | [`QUICKSTART.md`](QUICKSTART.md) | 🚀 Running in five minutes. | 41 |
 | [`INSTALLATION.md`](INSTALLATION.md) | 📦 Full setup, including Python 3.12. | 92 |
 | [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | 🛠 How to work in this codebase. | 233 |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 🏗 How the pieces fit. | 293 |
+| [`Design Document.md`](Design%20Document.md) | 🏗 How the pieces fit. | 293 |
 | [`CONFIGURATION.md`](CONFIGURATION.md) | ⚙️ Every setting explained. | 133 |
 | [`API_GUIDE.md`](API_GUIDE.md) | 🔌 The endpoints. | 91 |
 | [`ELLIOTT_WAVE_RULES.md`](ELLIOTT_WAVE_RULES.md) | 🌊 **The specification.** Every rule a structure must satisfy. | 1,152 |
 | [`ELLIOTT_WAVE_SRS.md`](ELLIOTT_WAVE_SRS.md) | 🌊 Requirements for the wave engine. | 1,251 |
 | [`ELLIOTT_WAVE_ARCHITECTURE.md`](ELLIOTT_WAVE_ARCHITECTURE.md) | 🌊 How the 13 modules interlock. | 639 |
 | [`ELLIOTT_WAVE_IMPLEMENTATION.md`](ELLIOTT_WAVE_IMPLEMENTATION.md) | 🌊 The build baseline. | 456 |
-| [`SRS.md`](SRS.md) | 📋 System requirements. | 279 |
+| [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) | 📋 System requirements. | 279 |
 | [`PRD.md`](PRD.md) | 📋 Product requirements. | 169 |
+| [`Implementation Plan.md`](Implementation%20Plan.md) | 📋 Phases, dependencies and what is left. | 221 |
 | [`UI_UX.md`](UI_UX.md) | 🎨 Interface decisions. | 198 |
 | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) | 🔒 Findings and what was done. | 138 |
 | [`RELEASE_AUDIT.md`](RELEASE_AUDIT.md) | ✅ Pre-release checks. | 320 |
+| [`BETA_TESTING.md`](BETA_TESTING.md) | 🧪 Test accounts, critical flows, bug reporting. | 174 |
 | [`RELEASE_NOTES.md`](RELEASE_NOTES.md) | 📝 What changed. | 93 |
 | [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) | 🔬 Correctness evidence. | 235 |
 | [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | 🔧 When it will not start. | 63 |

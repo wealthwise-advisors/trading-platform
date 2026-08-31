@@ -208,7 +208,7 @@ commit it claims**
 <li><p>Start with <a href="src"><code>src/</code></a>.</p></li>
 <li><p><a href="src"><code>src/</code></a> is the whole engine and imports nothing from <code>api/</code> or <code>web/</code>.</p></li>
 <li><p>It runs from a test, a script or a server unchanged.</p></li>
-<li><p><a href="docs/ARCHITECTURE.md">Architecture</a> explains the seams.</p></li>
+<li><p><a href="docs/Design Document.md">Architecture</a> explains the seams.</p></li>
 <li><p><a href="src/analysis"><code>src/analysis/</code></a> is where the market reading lives.</p></li>
 </ol>
 
@@ -221,7 +221,7 @@ commit it claims**
 > <ol type="I">
 > <li><p>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</p></li>
 > <li><p>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</p></li>
-> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/SRS.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</p></li>
+> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/Technical Requirements Document.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE_RULES.md">Elliott Wave rule inventory</a>.</p></li>
 > </ol>
 
 <br>
@@ -1041,7 +1041,7 @@ See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               └- - - ▶  <i>+7 more</i>
 |------------▶  <a href="docs">docs/</a>   <i>architecture, rules and guides</i>  <b>22</b>
 |               |- - - ▶  <a href="docs/API_GUIDE.md">API_GUIDE.md</a>
-|               |- - - ▶  <a href="docs/ARCHITECTURE.md">ARCHITECTURE.md</a>
+|               |- - - ▶  <a href="docs/Design Document.md">Design Document.md</a>
 |               |- - - ▶  <a href="docs/CONFIGURATION.md">CONFIGURATION.md</a>
 |               |- - - ▶  <a href="docs/DEVELOPER_GUIDE.md">DEVELOPER_GUIDE.md</a>
 |               |- - - ▶  <a href="docs/ELLIOTT_WAVE_ARCHITECTURE.md">ELLIOTT_WAVE_ARCHITECTURE.md</a>
@@ -1384,12 +1384,12 @@ had already shipped, and checked against the commit that shipped it.
 
 ### ◆ What it is meant to do
 - 🎯 [Product Requirements](docs/PRD.md)
-- 📐 [Software Requirements](docs/SRS.md)
+- 📐 [Software Requirements](docs/Technical%20Requirements%20Document.md)
 
 </td><td valign="top" width="50%">
 
 ### ◆ Going deeper
-- 🏛 [Architecture](docs/ARCHITECTURE.md)
+- 🏛 [Architecture](docs/Design%20Document.md)
 - 🗄️ [Database](db/README.md)
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - 🎨 [UI / UX](docs/UI_UX.md)

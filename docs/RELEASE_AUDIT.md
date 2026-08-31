@@ -222,7 +222,7 @@ rather than CI-verified until the first real run.
 ## 8. Documentation
 
 Created: `README.md` (rewritten), `docs/INSTALLATION.md`,
-`docs/QUICKSTART.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPER_GUIDE.md`,
+`docs/QUICKSTART.md`, `docs/Design Document.md`, `docs/DEVELOPER_GUIDE.md`,
 `docs/API_GUIDE.md`, `docs/CONFIGURATION.md`, `docs/TROUBLESHOOTING.md`,
 `docs/FAQ.md`, `docs/RELEASE_NOTES.md`, `CHANGELOG.md`, `LICENSE`,
 `CONTRIBUTING.md`, this file, `SECURITY_AUDIT.md`.
