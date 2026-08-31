@@ -1413,43 +1413,16 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 ## ⚠️ Disclaimer
 
 > [!CAUTION]
-> **This is analysis software. It is not investment advice, and it does not manage
-> money or place orders on your behalf.**
+> **This is analysis software. It is not investment advice, it does not manage money, and it does not place orders on your behalf.**
 
-<br>
-
-### ◆ What a backtest is, and is not
-
-| ✅ It is | ❌ It is not |
-|:---|:---|
-| A record of what a rule **would have done** on bars that already printed | A prediction of what it **will** do |
-| Reproducible — the same inputs give the same numbers | Free of hindsight; the data was chosen knowing how it ended |
-| Charged for commission, slippage and tick rounding | Able to model every real cost — partial fills, gaps, outages, rejected orders |
-
-<br>
-
-### ◆ The risks, stated plainly
-
+- ➜ **A backtest is a record, not a prediction** — it shows what a rule *would have done* on bars that already printed, over a period chosen in hindsight, knowing how it ended
+- ➜ **Past performance does not indicate future results** — true of every backtest ever run, including every one in this repository
 - ➜ **Futures trading carries substantial risk of loss** and is not suitable for every investor
-- ➜ **You can lose more than you deposit.** Leverage works in both directions
-- ➜ **Past performance does not indicate future results** — this is true of every backtest ever run, including the ones in this repository
-- ➜ **Market data can be delayed, incomplete or wrong.** It comes from third parties
-
-<br>
-
-### ◆ What is production-ready, and what is not
-
-| Capability | Status |
-|:---|:---|
-| 📊 **Backtesting & analysis** | ✅ Production-ready |
-| 📡 **Live market data** | ✅ Production-ready |
-| 🔐 **Accounts & access control** | ✅ Production-ready |
-| 🚀 **Live order execution** | ⚠️ **Deliberately unwired.** [`src/live/trader.py`](src/live/trader.py) is a stub, and the Deploy button is disabled to match |
-
-> [!WARNING]
-> **Nothing here should be traded with real money** without independent validation and
-> your own understanding of the risk. A half-built order path that *looked* finished
-> would be far more dangerous than an honest gap, which is why the stub stays a stub.
+- ➜ **You can lose more than you deposit** — leverage works in both directions
+- ➜ **Costs are modelled, not complete** — commission, slippage and tick rounding are charged; partial fills, gaps, outages and rejected orders are not
+- ➜ **Market data can be delayed, incomplete or wrong** — it arrives from third parties
+- ➜ **Live order execution is not wired** — the live trading path is a deliberate stub and the Deploy button is disabled to match. A half-built order path that *looked* finished would be more dangerous than an honest gap
+- ➜ **Nothing here should be traded with real money** without independent validation and your own understanding of the risk
 
 <br>
 
