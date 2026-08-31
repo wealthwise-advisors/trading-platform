@@ -1469,7 +1469,7 @@ Proprietary
 
 | <img src="docs/assets/legal-i-owner.svg" alt="" height="14" align="absmiddle">&nbsp;Owner | <img src="docs/assets/legal-i-org.svg" alt="" height="14" align="absmiddle">&nbsp;Organization | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
 |:--|:--|:--|
-| Sriram&nbsp;Nandepu | WealthWise&nbsp;Advisors | <img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;[snandepu](https://github.com/snandepu)<br><img src="docs/assets/legal-i-github.svg" alt="Organization GitHub" height="14" align="absmiddle">&nbsp;[wealthwise-advisors](https://github.com/wealthwise-advisors) |
+| Sriram&nbsp;Nandepu | WealthWise&nbsp;Advisors | <img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;**GitHub Repo** — [snandepu](https://github.com/snandepu)<br><img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;**Organization GitHub Repo** — [wealthwise-advisors](https://github.com/wealthwise-advisors) |
 
 ---
 
@@ -1477,7 +1477,7 @@ Proprietary
 
 | <img src="docs/assets/legal-i-dev.svg" alt="" height="14" align="absmiddle">&nbsp;Developer | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
 |:--|:--|
-| Akash&nbsp;Yadav | <img src="docs/assets/legal-i-gmail.svg" alt="Gmail" height="14" align="absmiddle">&nbsp;[akashyadav110502@gmail.com](mailto:akashyadav110502@gmail.com)<br><img src="docs/assets/legal-i-phone.svg" alt="Phone" height="14" align="absmiddle">&nbsp;+91&nbsp;70053&nbsp;63923<br><img src="docs/assets/legal-i-linkedin.svg" alt="LinkedIn" height="14" align="absmiddle">&nbsp;[akash-yadav-122a75288](https://www.linkedin.com/in/akash-yadav-122a75288/)<br><img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;[akxyverse](https://github.com/akxyverse) |
+| Akash&nbsp;Yadav | <img src="docs/assets/legal-i-gmail.svg" alt="Gmail" height="14" align="absmiddle">&nbsp;**Gmail** — [akashyadav110502@gmail.com](mailto:akashyadav110502@gmail.com)<br><img src="docs/assets/legal-i-phone.svg" alt="Phone" height="14" align="absmiddle">&nbsp;**Phone** — +91&nbsp;70053&nbsp;63923<br><img src="docs/assets/legal-i-linkedin.svg" alt="LinkedIn" height="14" align="absmiddle">&nbsp;**LinkedIn** — [akash-yadav-122a75288](https://www.linkedin.com/in/akash-yadav-122a75288/)<br><img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;**GitHub Repo** — [akxyverse](https://github.com/akxyverse) |
 
 ---
 
