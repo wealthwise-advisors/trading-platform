@@ -91,20 +91,6 @@ ICONS = {
 }
 
 
-def heading_icon(key):
-    """One 26x26 line-art icon, transparent behind, to sit beside a heading."""
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
-            'width="26" height="26" role="img" aria-label="" fill="none" '
-            f'stroke="{INK}" stroke-width="1.7" stroke-linecap="round" '
-            f'stroke-linejoin="round">{"".join(ICONS[key])}</svg>\n')
-
-
-FILES = {
-    "legal-license.svg": "license",
-    "legal-ownership.svg": "org",
-    "legal-developed.svg": "code",
-    "legal-project.svg": "globe",
-}
 
 
 # ── small icons for the table headings ───────────────────────────────────────
@@ -112,7 +98,6 @@ HEAD_ICONS = {
     "legal-i-owner.svg": "person",
     "legal-i-org.svg": "org",
     "legal-i-dev.svg": "person",
-    "legal-i-mail.svg": "mail",
     "legal-i-phone.svg": "phone",
     "legal-i-contact.svg": "contact",
 }
@@ -161,10 +146,9 @@ def button(text):
 if __name__ == "__main__":
     out = pathlib.Path(__file__).resolve().parents[1]
     made = 0
-    for group, fn in ((FILES, heading_icon), (HEAD_ICONS, small_icon)):
-        for name, key in group.items():
-            (out / name).write_text(fn(key), encoding="utf-8")
-            made += 1
+    for name, key in HEAD_ICONS.items():
+        (out / name).write_text(small_icon(key), encoding="utf-8")
+        made += 1
     for name, text in BUTTONS.items():
         (out / name).write_text(button(text), encoding="utf-8")
         made += 1

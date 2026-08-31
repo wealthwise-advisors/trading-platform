@@ -1428,7 +1428,7 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 ---
 
-### <img src="docs/assets/legal-license.svg" alt="" height="24" align="absmiddle">&nbsp;License
+## 📄 License
 
 Proprietary
 
@@ -1438,7 +1438,7 @@ Proprietary
 
 ---
 
-### <img src="docs/assets/legal-ownership.svg" alt="" height="24" align="absmiddle">&nbsp;Ownership
+## 🏛 Ownership
 
 | <img src="docs/assets/legal-i-owner.svg" alt="" height="14" align="absmiddle">&nbsp;Owner | <img src="docs/assets/legal-i-org.svg" alt="" height="14" align="absmiddle">&nbsp;Organization | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
 |:--|:--|:--|
@@ -1446,7 +1446,7 @@ Proprietary
 
 ---
 
-### <img src="docs/assets/legal-developed.svg" alt="" height="24" align="absmiddle">&nbsp;Developed By
+## 💻 Developed By
 
 | <img src="docs/assets/legal-i-dev.svg" alt="" height="14" align="absmiddle">&nbsp;Developer | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
 |:--|:--|
@@ -1454,7 +1454,7 @@ Proprietary
 
 ---
 
-### <img src="docs/assets/legal-project.svg" alt="" height="24" align="absmiddle">&nbsp;Project Info
+## 🌐 Project Info
 
 **Project Repo**
 
