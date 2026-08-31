@@ -88,13 +88,15 @@ DEVELOPED = [
     ("LinkedIn", "linkedin.com/in/akash-yadav-122a75288", "badge", VIOLET_L),
 ]
 
-# label, shown text, accent
+# Same shape as the two cards above: label, value, icon, accent. These were
+# bordered buttons in three different colours, which drew a box around each
+# address and implied one mattered more than another. They are three addresses;
+# they look like three addresses.
 PROJECT = [
-    # The "github.com/" prefix is dropped: the label already says Repository,
-    # and those eleven characters were a third of the button.
-    ("Repository", "wealthwise-advisors/trading-platform", BLUE_L),
-    ("Live app", "3-218-23-37.sslip.io", VIOLET_L),
-    ("Local", "localhost:5173", DIM),
+    # The "github.com/" prefix is dropped: the label already says Repository.
+    ("Repository", "wealthwise-advisors/trading-platform", "branch", BLUE_L),
+    ("Live app", "3-218-23-37.sslip.io", "globe", BLUE_L),
+    ("Local", "localhost:5173", "code", BLUE_L),
 ]
 
 
@@ -293,38 +295,18 @@ def party_card(title, subtitle, key, items, label):
 
 
 def project_card():
-    H = 224
+    H = 246
     o = [head(H, "Project links: the repository, the deployed app and the "
                  "local development address")]
-    o.append(tile("globe", PAD + 6, 30, 84))
-    tx = PAD + 118
-    o.append(f'<text x="{tx}" y="66" font-family="{FONT}" font-size="34" '
+    o.append(tile("globe", PAD + 6, 38, 92))
+    tx = PAD + 126
+    o.append(f'<text x="{tx}" y="78" font-family="{FONT}" font-size="34" '
              f'font-weight="700" fill="{INK}">Project Link</text>')
-    o.append(f'<text x="{tx}" y="98" font-family="{FONT}" font-size="20" '
+    o.append(f'<text x="{tx}" y="112" font-family="{FONT}" font-size="20" '
              f'fill="{DIM}">Where the code lives, and where it runs.</text>')
-
-    # Buttons are sized to what is in them, not cut into equal thirds. The
-    # repository URL is more than twice the length of "localhost:5173", so equal
-    # widths shrank it to 12px while leaving the short one half empty. The +12
-    # stops a very short label collapsing to nothing but its own padding.
-    x0, x1 = PAD + 6, W - PAD - 6
-    gap = 14
-    room = (x1 - x0) - gap * (len(PROJECT) - 1)
-    weights = [len(v) + 12 for _, v, _ in PROJECT]
-    total = sum(weights)
-    bx = x0
-    for i, (label, value, accent) in enumerate(PROJECT):
-        bw = room * weights[i] / total
-        o.append(f'<rect x="{bx:.1f}" y="132" width="{bw:.1f}" height="62" rx="11" '
-                 f'fill="{accent}" fill-opacity="0.06" stroke="{accent}" '
-                 f'stroke-opacity="0.42"/>')
-        o.append(icon("out", accent, bx + 18, 145, 0.72, sw=2.0))
-        o.append(f'<text x="{bx+46:.1f}" y="158" font-family="{FONT}" font-size="17" '
-                 f'font-weight="600" fill="{accent}">{esc(label)}</text>')
-        o.append(f'<text x="{bx+18:.1f}" y="182" font-family="{FONT}" '
-                 f'font-size="{fits(value, bw-32, 18):.1f}" fill="{VAL}">'
-                 f'{esc(value)}</text>')
-        bx += bw + gap
+    o.append(f'<line x1="{PAD+6}" y1="152" x2="{W-PAD-6}" y2="152" '
+             f'stroke="{EDGE}" stroke-width="1.2"/>')
+    columns(o, PROJECT, PAD + 6, W - PAD - 6, 194)
     o.append("</svg>")
     return "".join(o)
 

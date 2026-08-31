@@ -1461,31 +1461,16 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 <a href="https://github.com/wealthwise-advisors"><img src="docs/assets/legal-ownership.svg" alt="Ownership — Owner: Sriram Nandepu. Organization: WealthWise Advisors. Owner GitHub: github.com/snandepu. Org GitHub: github.com/wealthwise-advisors" width="100%"></a>
 
-<sub>
-
-**[Organization ↗](https://github.com/wealthwise-advisors)** &nbsp;·&nbsp; **[Owner ↗](https://github.com/snandepu)**
-
-</sub>
 
 <br>
 
 <a href="https://github.com/akxyverse"><img src="docs/assets/legal-developed.svg" alt="Developed By — Developer: Akash Yadav. Email: akashyadav110502@gmail.com. Contact: +91 70053 63923. GitHub: github.com/akxyverse. LinkedIn: linkedin.com/in/akash-yadav-122a75288" width="100%"></a>
 
-<sub>
-
-**[Email ↗](mailto:akashyadav110502@gmail.com)** &nbsp;·&nbsp; **[GitHub ↗](https://github.com/akxyverse)** &nbsp;·&nbsp; **[LinkedIn ↗](https://www.linkedin.com/in/akash-yadav-122a75288/)** &nbsp;·&nbsp; `+91 70053 63923`
-
-</sub>
 
 <br>
 
-<img src="docs/assets/legal-project.svg" alt="Project Link — Repository: wealthwise-advisors/trading-platform. Live app: 3-218-23-37.sslip.io. Local: localhost:5173" width="100%">
+<a href="https://github.com/wealthwise-advisors/trading-platform"><img src="docs/assets/legal-project.svg" alt="Project Link — Repository: wealthwise-advisors/trading-platform. Live app: 3-218-23-37.sslip.io. Local: localhost:5173" width="100%"></a>
 
-<sub>
-
-**[Repository ↗](https://github.com/wealthwise-advisors/trading-platform)** &nbsp;·&nbsp; **[Live app ↗](https://3-218-23-37.sslip.io)** &nbsp;·&nbsp; `http://localhost:5173`
-
-</sub>
 
 ---
 
