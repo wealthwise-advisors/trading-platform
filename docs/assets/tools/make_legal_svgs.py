@@ -37,12 +37,19 @@ which GitHub colours itself.
 theme -- but GitHub serves README images through its camo proxy as standalone
 files, where there is no inherited colour to follow.
 
-NO BRAND MARKS
---------------
-The reference has GitHub's and LinkedIn's logos in it. They are not reproduced,
-for the reason components/SymbolMark.tsx gives for not fetching logos:
-redistributing another company's trademarked artwork inside a commercial
-product is a different thing from linking to them.
+BRAND MARKS ARE VENDORED, NOT GENERATED
+---------------------------------------
+GitHub, Gmail and LinkedIn each have their own mark beside them, and none of
+the three is drawn by this file -- they sit in docs/assets as legal-i-github,
+legal-i-gmail and legal-i-linkedin. Each identifies the service a link points
+at, which is what a brand mark is for; SymbolMark.tsx draws the same line
+between naming a service and redistributing its artwork as decoration.
+
+Every one carries an explicit width and height. GitHub injects
+style="max-width:100%; height:auto; max-height:14px" onto every README image,
+and a mark that ships with only a viewBox has nothing for "height:auto" to
+resolve against -- it fills the whole table cell and pushes its own label onto
+the next line.
 """
 
 import pathlib
@@ -74,6 +81,10 @@ ICONS = {
     "badge":   ['<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="3.2"/>',
                 '<path d="M8 10.6v6.2"/>', '<circle cx="8" cy="7.6" r="1.1"/>',
                 '<path d="M12.2 16.8v-6.2M12.2 13.4c0-1.6 1.1-2.9 2.5-2.9s2.5 1.3 2.5 2.9v3.4"/>'],
+    "contact": ['<rect x="2.8" y="4.4" width="18.4" height="15.2" rx="2.6"/>',
+                '<circle cx="8.6" cy="10.4" r="2.2"/>',
+                '<path d="M5 16.2c0-1.9 1.6-3.2 3.6-3.2s3.6 1.3 3.6 3.2"/>',
+                '<path d="M15 9.6h4M15 12.8h4M15 16h2.6"/>'],
     "globe":   ['<circle cx="12" cy="12" r="8.6"/>', '<path d="M3.4 12h17.2"/>',
                 '<path d="M12 3.4c2.2 2.3 3.4 5.4 3.4 8.6S14.2 18.3 12 20.6"/>',
                 '<path d="M12 3.4C9.8 5.7 8.6 8.8 8.6 12s1.2 6.3 3.4 8.6"/>'],
@@ -103,12 +114,7 @@ HEAD_ICONS = {
     "legal-i-dev.svg": "person",
     "legal-i-mail.svg": "mail",
     "legal-i-phone.svg": "phone",
-    # LinkedIn's own mark is deliberately NOT drawn here. It was withdrawn from
-    # simple-icons at LinkedIn's request and shields.io serves that badge with
-    # no glyph at all, so there is no source that may supply it -- and drawing
-    # a lookalike is the exact thing the request was about. GitHub's mark IS
-    # published for this use and the README links to it directly.
-    "legal-i-linkedin.svg": "badge",
+    "legal-i-contact.svg": "contact",
 }
 
 

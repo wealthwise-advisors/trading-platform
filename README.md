@@ -1455,7 +1455,7 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 ---
 
-### <img src="docs/assets/legal-license.svg" alt="" height="24" align="absmiddle"> &nbsp;License
+### <img src="docs/assets/legal-license.svg" alt="" height="24" align="absmiddle">&nbsp;License
 
 Proprietary
 
@@ -1465,25 +1465,29 @@ Proprietary
 
 ---
 
-### <img src="docs/assets/legal-ownership.svg" alt="" height="24" align="absmiddle"> &nbsp;Ownership
+### <img src="docs/assets/legal-ownership.svg" alt="" height="24" align="absmiddle">&nbsp;Ownership
 
-| <img src="docs/assets/legal-i-owner.svg" alt="" height="14" align="absmiddle">&nbsp;Owner | <img src="docs/assets/legal-i-org.svg" alt="" height="14" align="absmiddle">&nbsp;Organization | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;GitHub | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;Org GitHub |
-|:--|:--|:--|:--|
-| Sriram&nbsp;Nandepu | WealthWise&nbsp;Advisors | [snandepu](https://github.com/snandepu) | [wealthwise-advisors](https://github.com/wealthwise-advisors) |
-
----
-
-### <img src="docs/assets/legal-developed.svg" alt="" height="24" align="absmiddle"> &nbsp;Developed By
-
-| <img src="docs/assets/legal-i-dev.svg" alt="" height="14" align="absmiddle">&nbsp;Developer | <img src="docs/assets/legal-i-mail.svg" alt="" height="14" align="absmiddle">&nbsp;Email | <img src="docs/assets/legal-i-phone.svg" alt="" height="14" align="absmiddle">&nbsp;Contact | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;GitHub | <img src="docs/assets/legal-i-linkedin.svg" alt="" height="14" align="absmiddle">&nbsp;LinkedIn |
-|:--|:--|:--|:--|:--|
-| Akash&nbsp;Yadav | [akashyadav110502@gmail.com](mailto:akashyadav110502@gmail.com) | +91&nbsp;70053&nbsp;63923 | [akxyverse](https://github.com/akxyverse) | [akash-yadav-122a75288](https://www.linkedin.com/in/akash-yadav-122a75288/) |
+| <img src="docs/assets/legal-i-owner.svg" alt="" height="14" align="absmiddle">&nbsp;Owner | <img src="docs/assets/legal-i-org.svg" alt="" height="14" align="absmiddle">&nbsp;Organization | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
+|:--|:--|:--|
+| Sriram&nbsp;Nandepu | WealthWise&nbsp;Advisors | <img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;[snandepu](https://github.com/snandepu)<br><img src="docs/assets/legal-i-github.svg" alt="Organization GitHub" height="14" align="absmiddle">&nbsp;[wealthwise-advisors](https://github.com/wealthwise-advisors) |
 
 ---
 
-### <img src="docs/assets/legal-project.svg" alt="" height="24" align="absmiddle"> &nbsp;Project Link
+### <img src="docs/assets/legal-developed.svg" alt="" height="24" align="absmiddle">&nbsp;Developed By
+
+| <img src="docs/assets/legal-i-dev.svg" alt="" height="14" align="absmiddle">&nbsp;Developer | <img src="docs/assets/legal-i-contact.svg" alt="" height="14" align="absmiddle">&nbsp;Contact Info |
+|:--|:--|
+| Akash&nbsp;Yadav | <img src="docs/assets/legal-i-gmail.svg" alt="Gmail" height="14" align="absmiddle">&nbsp;[akashyadav110502@gmail.com](mailto:akashyadav110502@gmail.com)<br><img src="docs/assets/legal-i-phone.svg" alt="Phone" height="14" align="absmiddle">&nbsp;+91&nbsp;70053&nbsp;63923<br><img src="docs/assets/legal-i-linkedin.svg" alt="LinkedIn" height="14" align="absmiddle">&nbsp;[akash-yadav-122a75288](https://www.linkedin.com/in/akash-yadav-122a75288/)<br><img src="docs/assets/legal-i-github.svg" alt="GitHub" height="14" align="absmiddle">&nbsp;[akxyverse](https://github.com/akxyverse) |
+
+---
+
+### <img src="docs/assets/legal-project.svg" alt="" height="24" align="absmiddle">&nbsp;Project Info
+
+**Project Repo**
 
 [<img src="docs/assets/legal-btn-repo.svg" alt="github.com/wealthwise-advisors/trading-platform" height="44">](https://github.com/wealthwise-advisors/trading-platform)
+
+**Project Link**
 
 [<img src="docs/assets/legal-btn-live.svg" alt="3-218-23-37.sslip.io" height="44">](https://3-218-23-37.sslip.io)
 
