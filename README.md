@@ -1461,15 +1461,13 @@ Proprietary
 
 © **WealthWise Advisors.** All rights reserved.
 
-**[↗ View License](LICENSE)**
+[<img src="docs/assets/legal-btn-license.svg" alt="View License" height="44">](LICENSE)
 
 ---
 
 ### <img src="docs/assets/legal-ownership.svg" alt="" height="24" align="absmiddle"> &nbsp;Ownership
 
-The organization that owns this project.
-
-| Owner | Organization | GitHub | Organization GitHub |
+| <img src="docs/assets/legal-i-owner.svg" alt="" height="14" align="absmiddle">&nbsp;Owner | <img src="docs/assets/legal-i-org.svg" alt="" height="14" align="absmiddle">&nbsp;Organization | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;GitHub | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;Org GitHub |
 |:--|:--|:--|:--|
 | Sriram&nbsp;Nandepu | WealthWise&nbsp;Advisors | [snandepu](https://github.com/snandepu) | [wealthwise-advisors](https://github.com/wealthwise-advisors) |
 
@@ -1477,9 +1475,7 @@ The organization that owns this project.
 
 ### <img src="docs/assets/legal-developed.svg" alt="" height="24" align="absmiddle"> &nbsp;Developed By
 
-The developer who built this project.
-
-| Developer | Email | Contact | GitHub | LinkedIn |
+| <img src="docs/assets/legal-i-dev.svg" alt="" height="14" align="absmiddle">&nbsp;Developer | <img src="docs/assets/legal-i-mail.svg" alt="" height="14" align="absmiddle">&nbsp;Email | <img src="docs/assets/legal-i-phone.svg" alt="" height="14" align="absmiddle">&nbsp;Contact | <img src="docs/assets/legal-i-github.svg" alt="" height="14" align="absmiddle">&nbsp;GitHub | <img src="docs/assets/legal-i-linkedin.svg" alt="" height="14" align="absmiddle">&nbsp;LinkedIn |
 |:--|:--|:--|:--|:--|
 | Akash&nbsp;Yadav | [akashyadav110502@gmail.com](mailto:akashyadav110502@gmail.com) | +91&nbsp;70053&nbsp;63923 | [akxyverse](https://github.com/akxyverse) | [akash-yadav-122a75288](https://www.linkedin.com/in/akash-yadav-122a75288/) |
 
@@ -1487,11 +1483,9 @@ The developer who built this project.
 
 ### <img src="docs/assets/legal-project.svg" alt="" height="24" align="absmiddle"> &nbsp;Project Link
 
-Where the code lives, and where it runs.
+[<img src="docs/assets/legal-btn-repo.svg" alt="github.com/wealthwise-advisors/trading-platform" height="44">](https://github.com/wealthwise-advisors/trading-platform)
 
-| Repository | Live app | Local |
-|:--|:--|:--|
-| [github.com/wealthwise-advisors/trading-platform](https://github.com/wealthwise-advisors/trading-platform) | [3-218-23-37.sslip.io](https://3-218-23-37.sslip.io) | `http://localhost:5173` |
+[<img src="docs/assets/legal-btn-live.svg" alt="3-218-23-37.sslip.io" height="44">](https://3-218-23-37.sslip.io)
 
 ---
 
