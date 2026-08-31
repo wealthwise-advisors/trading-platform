@@ -368,6 +368,47 @@ body{overflow-x:hidden;overflow-y:auto}
 .soc{ grid-template-columns:repeat(4,1fr) }
 
 
+
+/* Six-digit sign-in code.
+   Same tokens as every other field on this card -- this is the sign-in card in
+   another mode, not a second design. The only additions are per-box focus and
+   a filled state, because a row of identical squares gives no feedback at all
+   about which one is live or how far along you are. */
+.otp{ display:flex; gap:9px; justify-content:center; margin:4px 0 2px }
+.otp input{
+  width:46px; height:56px; text-align:center; font-size:23px; font-weight:700;
+  color:var(--ink); background:rgba(255,255,255,.04);
+  border:1px solid var(--line); border-radius:12px;
+  caret-color:var(--em2); transition:border-color .16s, box-shadow .16s,
+                                     background .16s, transform .16s;
+  -moz-appearance:textfield;
+}
+.otp input::-webkit-outer-spin-button,
+.otp input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+.otp input:focus{
+  outline:none; border-color:var(--em);
+  background:rgba(16,185,129,.07);
+  box-shadow:0 0 0 3px rgba(16,185,129,.16);
+  transform:translateY(-1px);
+}
+.otp input.filled{ border-color:rgba(16,185,129,.45); background:rgba(16,185,129,.05) }
+/* A wrong code shakes the row rather than only printing a sentence -- the
+   message is below the fold on a short screen and gets missed. */
+.otp.wrong input{ border-color:rgba(239,68,68,.55) }
+.otp.wrong{ animation:otpshake .38s cubic-bezier(.36,.07,.19,.97) }
+@keyframes otpshake{
+  10%,90%{ transform:translateX(-2px) } 20%,80%{ transform:translateX(4px) }
+  30%,50%,70%{ transform:translateX(-7px) } 40%,60%{ transform:translateX(7px) }
+}
+.otp-hint{ text-align:center; font-size:13px; color:#8c9ab2; margin:2px 0 0 }
+.otp-hint b{ color:var(--ink) }
+@media(max-width:400px){
+  .otp{ gap:6px } .otp input{ width:40px; height:50px; font-size:20px }
+}
+@media(prefers-reduced-motion:reduce){
+  .otp input{ transition:none } .otp.wrong{ animation:none }
+}
+
 /* Forgot-password / set-new-password modes. */
 body.recovery .hide-in-recovery{ display:none !important }
 .backlink{
@@ -471,7 +512,7 @@ body.recovery .hide-in-recovery{ display:none !important }
         <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="3.4"
              stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
       </span>Remember me</label>
-      <a href="autotrader_signin.html?forgot=1">Forgot password?</a><span class="sep">&middot;</span><a href="autotrader_signin.html?forgotuser=1">Forgot username?</a>
+      <a href="autotrader_signin.html?forgot=1">Forgot password?</a><span class="sep">&middot;</span><a href="autotrader_signin.html?forgotuser=1">Forgot username?</a><span class="sep">&middot;</span><a href="autotrader_signin.html?code=1">Sign in with a code</a>
     </div>
 
     <button class="go" type="submit">Sign In
@@ -1036,4 +1077,262 @@ body.recovery .hide-in-recovery{ display:none !important }
   });
   form.addEventListener("submit", function (e) { e.preventDefault(); fresh.click(); });
 })();
+
+/* ---------------------------------------------------------------------------
+   Sign in with an emailed six-digit code.
+
+     ?code=1   ask for an address, then for the code that arrives
+
+   A fourth mode of this same card, for the same reason the recovery modes are:
+   a separate page would mean another copy of the inlined photograph and flag
+   font -- roughly 650 KB -- to show one row of boxes.
+
+   Six inputs rather than one, because a single field says nothing about how
+   many digits are wanted or how far along you are. Most of the code below is
+   the consequence of that choice: paste, backspace and the arrow keys all have
+   to keep behaving the way they do in a normal field.
+--------------------------------------------------------------------------- */
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  if (!q.get("code")) return;
+
+  var form = document.querySelector("form.card");
+  if (!form) return;
+  document.body.classList.add("recovery");
+
+  var head = document.querySelector(".hello h2");
+  var sub = document.querySelector(".hello p");
+  var btn = form.querySelector(".go");
+  var LEN = 6;
+
+  [".tabs", ".or", ".soc", ".socmsg", ".row"].forEach(function (sel) {
+    var el = form.querySelector(sel) || document.querySelector(sel);
+    if (el) el.classList.add("hide-in-recovery");
+  });
+
+  var msg = form.querySelector(".msg:not(.socmsg)");
+  if (!msg) {
+    msg = document.createElement("div");
+    msg.className = "msg";
+    msg.setAttribute("role", "status");
+    btn.insertAdjacentElement("afterend", msg);
+  }
+  function say(t, kind) {
+    msg.textContent = t;
+    msg.className = "msg show " + (kind || "err");
+  }
+
+  /* The password field has no part in this mode, and the username field is
+     REUSED as the address field rather than a new one being built -- so the
+     icon, the spacing and the focus ring are the card's own rather than a
+     second set that has to be kept in step. */
+  var pwField = form.querySelector("#p");
+  if (pwField && pwField.parentElement) {
+    pwField.parentElement.classList.add("hide-in-recovery");
+  }
+  var emailInput = form.querySelector("#u");
+  if (emailInput) {
+    emailInput.type = "email";
+    emailInput.name = "email";
+    emailInput.placeholder = "Email address";
+    emailInput.setAttribute("autocomplete", "email");
+  }
+
+  var back = document.createElement("a");
+  back.className = "backlink";
+  back.href = "autotrader_signin.html";
+  back.textContent = "Back to sign in";
+  form.appendChild(back);
+
+  function label(text) {
+    var el = btn.querySelector("span");
+    if (el) { el.textContent = text; } else { btn.textContent = text; }
+  }
+  function busy(on) {
+    if (on) { btn.setAttribute("aria-busy", "true"); }
+    else { btn.removeAttribute("aria-busy"); }
+  }
+  async function post(path, payload) {
+    /* fetch REJECTS on a dead network rather than returning a status, and an
+       unhandled rejection here would leave the button spinning with aria-busy
+       set and nothing said -- the exact failure the dashboard's request layer
+       was given timeouts to avoid. Reported as a status of 0 so both callers
+       treat it as "did not happen" rather than as a refusal. */
+    var r;
+    try {
+      r = await fetch(path, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined
+      });
+    } catch (e) {
+      return { ok: false, status: 0, body: {
+        detail: navigator.onLine === false
+          ? "You appear to be offline. Check your connection and try again."
+          : "Could not reach the server. Try again in a moment."
+      } };
+    }
+    var body = {};
+    try { body = await r.json(); } catch (e) { body = {}; }
+    return { ok: r.ok, status: r.status, body: body };
+  }
+
+  head.textContent = "Sign in with a code";
+  sub.textContent = "We will email you a six-digit code. No password needed.";
+  label("Send code");
+
+  var stage = "email";
+  var address = "";
+  var boxes = [];
+
+  function collect() {
+    return boxes.map(function (b) { return b.value; }).join("");
+  }
+  function clearBoxes() {
+    boxes.forEach(function (b) {
+      b.value = "";
+      b.classList.remove("filled");
+    });
+    if (boxes[0]) boxes[0].focus();
+  }
+
+  function buildBoxes() {
+    var wrap = document.createElement("div");
+    wrap.className = "otp";
+    wrap.setAttribute("role", "group");
+    wrap.setAttribute("aria-label", "Six-digit sign-in code");
+
+    for (var i = 0; i < LEN; i++) {
+      var b = document.createElement("input");
+      b.type = "text";
+      b.inputMode = "numeric";
+      b.maxLength = 1;
+      /* one-time-code on the FIRST box only. iOS offers the SMS/email
+         autofill against it, and repeating the hint on all six makes the
+         keyboard offer to fill each one separately. */
+      b.autocomplete = i === 0 ? "one-time-code" : "off";
+      b.setAttribute("aria-label", "Digit " + (i + 1) + " of " + LEN);
+      wrap.appendChild(b);
+      boxes.push(b);
+    }
+    emailInput.parentElement.insertAdjacentElement("afterend", wrap);
+
+    var hint = document.createElement("p");
+    hint.className = "otp-hint";
+    hint.textContent = "Sent to " + address + " if that address can sign in. Expires in 10 minutes.";
+    wrap.insertAdjacentElement("afterend", hint);
+
+    boxes.forEach(function (box, i) {
+      box.addEventListener("input", function () {
+        box.value = box.value.replace(/[^0-9]/g, "").slice(0, 1);
+        box.classList.toggle("filled", box.value !== "");
+        wrap.classList.remove("wrong");
+        if (box.value && i < LEN - 1) boxes[i + 1].focus();
+        if (collect().length === LEN) submitCode();
+      });
+
+      box.addEventListener("keydown", function (e) {
+        /* Backspace in an EMPTY box steps back and clears the previous one.
+           Without this the caret sticks in a box that is already empty and
+           the row cannot be corrected without a mouse. */
+        if (e.key === "Backspace" && !box.value && i > 0) {
+          boxes[i - 1].focus();
+          boxes[i - 1].value = "";
+          boxes[i - 1].classList.remove("filled");
+          e.preventDefault();
+        }
+        if (e.key === "ArrowLeft" && i > 0) {
+          boxes[i - 1].focus();
+          e.preventDefault();
+        }
+        if (e.key === "ArrowRight" && i < LEN - 1) {
+          boxes[i + 1].focus();
+          e.preventDefault();
+        }
+      });
+
+      /* Paste is how a code actually gets entered -- copied whole out of the
+         email -- and without this the whole string lands in one box. */
+      box.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var text = (e.clipboardData || window.clipboardData).getData("text") || "";
+        var digits = text.replace(/[^0-9]/g, "").slice(0, LEN).split("");
+        digits.forEach(function (d, k) {
+          if (boxes[k]) {
+            boxes[k].value = d;
+            boxes[k].classList.add("filled");
+          }
+        });
+        var next = boxes[Math.min(digits.length, LEN - 1)] || box;
+        next.focus();
+        if (collect().length === LEN) submitCode();
+      });
+    });
+
+    boxes[0].focus();
+  }
+
+  async function submitEmail() {
+    address = (emailInput.value || "").trim();
+    if (!address) {
+      say("Enter the email address on your account.");
+      return;
+    }
+    busy(true);
+    var r = await post("/api/auth/request-code", { email: address });
+    busy(false);
+
+    if (r.status === 429 || r.status === 0) {
+      /* 0 is a network failure, not a refusal. Advancing to the code screen
+         here would ask for six digits that were never sent. */
+      say(r.body.detail || "Too many requests. Try again shortly.");
+      return;
+    }
+    /* Moves on REGARDLESS of whether that address has an account. The server
+       answers identically either way on purpose, and branching here would
+       undo that -- the screen itself would become the membership oracle the
+       API was careful not to be. */
+    stage = "code";
+    emailInput.parentElement.classList.add("hide-in-recovery");
+    head.textContent = "Enter your code";
+    sub.textContent = "Six digits, from the email that just went out.";
+    label("Verify and sign in");
+    say(r.body.detail || "Check your email.", "info");
+    buildBoxes();
+  }
+
+  async function submitCode() {
+    var code = collect();
+    if (code.length !== LEN) {
+      say("Enter all six digits.");
+      return;
+    }
+    busy(true);
+    var r = await post("/api/auth/verify-code", { email: address, code: code });
+    busy(false);
+
+    if (r.ok) {
+      label("Signed in");
+      say("Signed in. Taking you in...", "info");
+      window.location.assign("/");
+      return;
+    }
+    var wrap = document.querySelector(".otp");
+    if (wrap) wrap.classList.add("wrong");
+    say(r.body.detail || "That code is not valid.");
+    clearBoxes();
+  }
+
+  btn.addEventListener("click", function (e) {
+    e.preventDefault();
+    if (stage === "email") { submitEmail(); } else { submitCode(); }
+  });
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    btn.click();
+  });
+})();
+
 </script>

@@ -88,7 +88,11 @@ _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
                     "test_account_data",
                     # Asserts that registration, login and recovery all
                     # refuse IDENTICALLY whether or not an account exists.
-                    "test_enumeration"}
+                    "test_enumeration",
+                    # Code sign-in: asserts the code dies after five wrong
+                    # guesses and that neither route reveals whether an
+                    # address has an account.
+                    "test_login_code"}
 
 
 @pytest.fixture(autouse=True)

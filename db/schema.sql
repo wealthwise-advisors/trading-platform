@@ -211,6 +211,11 @@ CREATE TABLE IF NOT EXISTS email_tokens (
     -- to confirm your address" into "click here to let someone set a
     -- password".
     purpose     TEXT    NOT NULL DEFAULT 'verify',
+    -- Wrong guesses against this token (schema v9). Only sign-in codes
+    -- use it: a 32-byte link is not guessable, but a six-digit code is
+    -- one million tries, so the cap -- not the hashing -- is what makes
+    -- it safe. The row is destroyed on the fifth wrong answer.
+    attempts    INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

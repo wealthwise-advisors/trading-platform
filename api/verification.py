@@ -424,6 +424,55 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
         return False
 
 
+#: A sign-in code lives minutes, not hours. It is six digits -- a million
+#: combinations -- so unlike the 32-byte links above, its strength does not
+#: come from length. It comes from a short window and a hard attempt cap, and
+#: both have to hold or the code is guessable.
+#:
+#: Four digits was asked for and is not enough: ten thousand combinations is
+#: within reach of a patient attacker even through a throttle.
+LOGIN_CODE_TTL = timedelta(minutes=10)
+LOGIN_CODE_DIGITS = 6
+
+#: Wrong guesses before the code is destroyed outright. The cap is the real
+#: control, not the hashing: an attacker who reaches the database can reverse
+#: a six-digit SHA-256 in about a second, so nothing about this code is safe
+#: once it is stored -- which is exactly why it expires in minutes and dies on
+#: the sixth wrong answer.
+LOGIN_CODE_MAX_ATTEMPTS = 5
+
+
+def new_login_code(user_id: int) -> str:
+    """Mint a single-use six-digit sign-in code and record its hash."""
+    # secrets.randbelow, not random: this is a credential.
+    code = f"{secrets.randbelow(10 ** LOGIN_CODE_DIGITS):0{LOGIN_CODE_DIGITS}d}"
+    expires = (datetime.now() + LOGIN_CODE_TTL).isoformat(timespec="seconds")
+    # Bound to the user id before hashing, so one stolen digest cannot be
+    # matched against every account at once.
+    repo.new_email_token(user_id, repo.hash_token(f"{user_id}:{code}"),
+                         expires, purpose="login")
+    return code
+
+
+def send_login_code(email: str, username: str, code: str) -> bool:
+    """Email a sign-in code. False when unconfigured or the send failed."""
+    if not email or not configured():
+        return False
+    minutes = int(LOGIN_CODE_TTL.total_seconds() // 60)
+    return _deliver(
+        email,
+        f"{code} is your AutoTrader sign-in code",
+        (f"Hello {username},\n\n"
+         f"Your sign-in code is:\n\n"
+         f"    {code}\n\n"
+         f"It expires in {minutes} minutes and works once.\n\n"
+         f"If you did not ask to sign in, ignore this message. Nobody can use "
+         f"this code without it, and your password has not changed.\n\n"
+         f"We will never ask you to read this code to anyone, including "
+         f"someone claiming to be AutoTrader support.\n"),
+        "sign-in code")
+
+
 def send_registration_collision(email: str, username: str) -> bool:
     """Tell an address that somebody tried to register with it.
 

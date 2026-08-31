@@ -88,6 +88,16 @@ class Me(BaseModel):
     onboarded: bool = True
 
 
+class RequestCodeRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=254)
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=254)
+    code: str = Field(min_length=1, max_length=12)
+    remember: bool = False
+
+
 class DeleteAccountRequest(BaseModel):
     """What the Close Account form sends.
 
@@ -268,6 +278,94 @@ def close_account(body: DeleteAccountRequest, request: Request, response: Respon
     return {"ok": True,
             "backtests": removed["backtests"],
             "trades": removed["trades"]}
+
+
+@router.post("/request-code")
+def request_code(body: RequestCodeRequest, request: Request,
+                 background: BackgroundTasks):
+    """Email a six-digit sign-in code.
+
+    A second way in for someone who does not want to type a password, and the
+    only one available to an account whose password is forgotten but whose
+    inbox is not.
+
+    ANSWERS IDENTICALLY whether or not the address has an account, for exactly
+    the reason /forgot-password does: anything else is a membership oracle that
+    needs no password to operate. Same body, same status, and the send goes to
+    a BackgroundTask so a real send and a no-op cannot be told apart by how
+    long the reply took.
+
+    An account with no PASSWORD is still eligible -- this is a different
+    credential, resting on the inbox rather than on something remembered. An
+    account with an UNPROVED address is not: issuing a code to an address
+    nobody has confirmed would hand a way in to whoever typed it, which is the
+    same reasoning that governs reset for OAuth-only accounts.
+    """
+    ip = auth.client_ip(request)
+    if wait := auth.recovery_throttle.retry_after(ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please wait a few minutes and try again.",
+            headers={"Retry-After": str(wait)},
+        )
+    auth.recovery_throttle.record(ip)
+
+    email = (body.email or "").strip()
+    user = repo.get_user_by_email(email) if email else None
+    if user and user.is_active and user.email_verified:
+        code = verification.new_login_code(user.id)
+        background.add_task(verification.send_login_code,
+                            user.email, user.username, code)
+        log.info("sign-in code issued for %s from %s", user.username, ip)
+    else:
+        log.info("sign-in code requested for an unusable address from %s", ip)
+
+    return {"ok": True, "detail": ("If that address can sign in here, we have "
+                                   "sent it a six-digit code. It expires in "
+                                   "10 minutes.")}
+
+
+@router.post("/verify-code", response_model=Me)
+def verify_code(body: VerifyCodeRequest, request: Request, response: Response):
+    """Trade a correct code for a session.
+
+    Every failure -- no such address, wrong code, expired, already spent, too
+    many guesses -- is the same 401 with the same sentence. Telling them apart
+    would say "that address has an account and you got the code wrong", which
+    is the oracle the request half was careful not to be.
+    """
+    ip = auth.client_ip(request)
+    email = (body.email or "").strip()
+
+    # On the login throttle, keyed on the address, so guessing codes spends the
+    # same budget as guessing passwords rather than a separate untracked one.
+    if wait := auth.throttle.retry_after(ip, f"code:{email}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts. Try again shortly.",
+            headers={"Retry-After": str(wait)},
+        )
+
+    user = repo.get_user_by_email(email) if email else None
+    ok = bool(
+        user and user.is_active and user.email_verified
+        and repo.take_login_code(user.id, (body.code or "").strip(),
+                                 verification.LOGIN_CODE_MAX_ATTEMPTS)
+    )
+    if not ok:
+        auth.throttle.record_failure(ip, f"code:{email}")
+        log.warning("failed sign-in code from %s (address usable=%s)",
+                    ip, bool(user))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="That code is not valid. It may have "
+                                   "expired or already been used.")
+
+    auth.throttle.record_success(ip, f"code:{email}")
+    token = repo.new_session(user.id, ip=ip,
+                             user_agent=request.headers.get("user-agent", ""))
+    auth.set_session_cookie(response, token, remember=body.remember)
+    log.info("code sign-in: %s from %s", user.username, ip)
+    return _identity(user)
 
 
 @router.get("/export")

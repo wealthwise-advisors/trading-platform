@@ -285,6 +285,13 @@ PUBLIC = {"/api/health", "/api/version",
           # Forgetting a USERNAME locks you out as completely as forgetting
           # the password, and reset never says what the username is.
           "/api/auth/forgot-username",
+          # Code sign-in. Public of necessity -- the whole point is signing in
+          # WITHOUT a session, and without a password either. They defend
+          # themselves the same way recovery does: one identical answer whether
+          # or not the address has an account, a six-digit code that dies after
+          # five wrong guesses, and the login throttle on top. See
+          # tests/test_login_code.py.
+          "/api/auth/request-code", "/api/auth/verify-code",
           # OAuth has to be reachable without a session -- that is the point of
           # it -- and the provider redirects the browser back to the callback
           # carrying none of our cookies. These defend themselves with a

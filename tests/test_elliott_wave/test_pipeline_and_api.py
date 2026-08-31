@@ -298,4 +298,11 @@ class TestExistingApiUnchanged:
         # All four refuse an anonymous caller; tests/test_auth.py's sweep is
         # what proves that, and tests/test_account_data.py proves the config
         # routes are scoped per owner.
-        assert len(paths) == 42, sorted(paths)
+        # +2 for code sign-in: /api/auth/request-code emails a six-digit code
+        # and /api/auth/verify-code trades a correct one for a session. A second
+        # way in for someone who does not want to type a password, and the only
+        # one left to an account whose password is forgotten but whose inbox is
+        # not. Both are PUBLIC by necessity and both answer identically whether
+        # or not the address has an account -- tests/test_login_code.py is what
+        # holds that.
+        assert len(paths) == 44, sorted(paths)

@@ -941,3 +941,62 @@ def purge_login_attempts(db: Path | None = None) -> int:
         return cur.rowcount
     finally:
         conn.close()
+
+
+def take_login_code(user_id: int, code: str, max_attempts: int,
+                    db: Path | None = None) -> bool:
+    """Spend a sign-in code. True only for the right one, once.
+
+    Looked up by OWNER rather than by the code's hash, which is the whole
+    reason a wrong guess can be counted at all: a lookup keyed on the hash
+    simply finds nothing when the guess is wrong, leaving nowhere to record
+    that an attempt happened and no way to ever stop guessing.
+
+    The code dies on the max_attempts-th wrong answer rather than merely
+    refusing it. Six digits is a million combinations, so a code that survives
+    unlimited guesses is a password with a very small alphabet.
+    """
+    now = _now()
+    conn = connect(db)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            r = conn.execute(
+                "SELECT token_hash, expires_at, used_at, attempts FROM email_tokens "
+                "WHERE user_id = ? AND purpose = 'login'", (user_id,)).fetchone()
+            if r is None or r["used_at"]:
+                conn.execute("COMMIT")
+                return False
+            if datetime.fromisoformat(r["expires_at"]) <= datetime.now():
+                conn.execute("DELETE FROM email_tokens WHERE token_hash = ?",
+                             (r["token_hash"],))
+                conn.execute("COMMIT")
+                return False
+
+            if not secrets.compare_digest(r["token_hash"],
+                                          hash_token(f"{user_id}:{code}")):
+                spent = r["attempts"] + 1
+                if spent >= max_attempts:
+                    conn.execute("DELETE FROM email_tokens WHERE token_hash = ?",
+                                 (r["token_hash"],))
+                    log.warning("sign-in code destroyed after %d wrong attempts "
+                                "for user %s", spent, user_id)
+                else:
+                    conn.execute("UPDATE email_tokens SET attempts = ? "
+                                 "WHERE token_hash = ?", (spent, r["token_hash"]))
+                conn.execute("COMMIT")
+                return False
+
+            # Correct. Spend it -- deleted, not merely marked, because unlike a
+            # reset link there is no second click to tell apart from a forgery.
+            conn.execute("DELETE FROM email_tokens WHERE token_hash = ?",
+                         (r["token_hash"],))
+            conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?",
+                         (now, user_id))
+            conn.execute("COMMIT")
+            return True
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()

@@ -36,7 +36,7 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: v6 added oauth_pending for sign-ups that need a username before they exist;
 #: v7 added email_tokens.purpose so a reset and a verification cannot
 #: cancel or impersonate each other.
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:
@@ -56,6 +56,7 @@ _ADDED_COLUMNS = [
     ("users", "is_owner", "INTEGER NOT NULL DEFAULT 0"),
     ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
     ("email_tokens", "purpose", "TEXT NOT NULL DEFAULT 'verify'"),
+    ("email_tokens", "attempts", "INTEGER NOT NULL DEFAULT 0"),
     # NULL means "has not finished onboarding". Server-side on purpose: in
     # localStorage the welcome screen reappears on every new browser and
     # vanishes for good on a cache clear, neither of which is what "has this
