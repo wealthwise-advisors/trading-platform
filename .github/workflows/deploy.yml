@@ -356,6 +356,9 @@ jobs:
               "${{ secrets.AUTOTRADER_RESEND_API_KEY }}"
             report_secret AUTOTRADER_MAIL_FROM \
               "${{ secrets.AUTOTRADER_MAIL_FROM }}"
+            report_secret AUTOTRADER_SMTP_HOST "${{ secrets.AUTOTRADER_SMTP_HOST }}"
+            report_secret AUTOTRADER_SMTP_USER "${{ secrets.AUTOTRADER_SMTP_USER }}"
+            report_secret AUTOTRADER_SMTP_PASSWORD "${{ secrets.AUTOTRADER_SMTP_PASSWORD }}"
             report_secret AUTOTRADER_REQUIRE_VERIFIED_EMAIL \
               "${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}"
             report_secret AUTOTRADER_TURNSTILE_SITE_KEY \
@@ -383,6 +386,10 @@ jobs:
             AUTOTRADER_GITHUB_CLIENT_SECRET="${{ secrets.GH_OAUTH_CLIENT_SECRET }}" \
             AUTOTRADER_RESEND_API_KEY="${{ secrets.AUTOTRADER_RESEND_API_KEY }}" \
             AUTOTRADER_MAIL_FROM="${{ secrets.AUTOTRADER_MAIL_FROM }}" \
+            AUTOTRADER_SMTP_HOST="${{ secrets.AUTOTRADER_SMTP_HOST }}" \
+            AUTOTRADER_SMTP_PORT="${{ secrets.AUTOTRADER_SMTP_PORT }}" \
+            AUTOTRADER_SMTP_USER="${{ secrets.AUTOTRADER_SMTP_USER }}" \
+            AUTOTRADER_SMTP_PASSWORD="${{ secrets.AUTOTRADER_SMTP_PASSWORD }}" \
             AUTOTRADER_REQUIRE_VERIFIED_EMAIL="${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}" \
             AUTOTRADER_TURNSTILE_SITE_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}" \
             AUTOTRADER_TURNSTILE_SECRET_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}" \

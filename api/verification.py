@@ -142,14 +142,121 @@ def _base_url() -> str:
     return os.environ.get(BASE_URL_ENV, "").strip().rstrip("/")
 
 
+#: SMTP, the alternative to Resend's HTTP API.
+#:
+#: WHY THIS EXISTS
+#: Resend will not deliver to a stranger until you have VERIFIED A DOMAIN, and
+#: verifying a domain needs DNS access to a domain you own. That is a blocker
+#: no amount of code can clear, and it is not always the developer's to clear:
+#: on this project the deployment answers to 3-218-23-37.sslip.io, a free
+#: IP-to-hostname service whose DNS nobody here controls.
+#:
+#: SMTP has no such requirement. Any ordinary mailbox -- a Gmail account with an
+#: App Password, an Outlook account, a work mailserver -- will relay to any
+#: recipient, today, with no domain and no DNS records. Gmail allows roughly 500
+#: messages a day, which is far beyond what confirmation and reset mail needs at
+#: this scale.
+#:
+#: When SMTP is configured it WINS over Resend, because someone who went to the
+#: trouble of setting it did so to get out of the sandbox.
+SMTP_HOST_ENV = "AUTOTRADER_SMTP_HOST"
+SMTP_PORT_ENV = "AUTOTRADER_SMTP_PORT"
+SMTP_USER_ENV = "AUTOTRADER_SMTP_USER"
+SMTP_PASSWORD_ENV = "AUTOTRADER_SMTP_PASSWORD"
+
+
+def _smtp_host() -> str:
+    return os.environ.get(SMTP_HOST_ENV, "").strip()
+
+
+def _smtp_configured() -> bool:
+    return bool(_smtp_host()
+                and os.environ.get(SMTP_USER_ENV, "").strip()
+                and os.environ.get(SMTP_PASSWORD_ENV, ""))
+
+
+def _deliver_smtp(to: str, subject: str, body: str) -> bool:
+    """Hand one message to an SMTP relay. Raises; the caller reports."""
+    import smtplib
+    import ssl
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg["From"] = _sender()
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    host = _smtp_host()
+    port = int(os.environ.get(SMTP_PORT_ENV, "587") or 587)
+    user = os.environ.get(SMTP_USER_ENV, "").strip()
+    password = os.environ.get(SMTP_PASSWORD_ENV, "")
+
+    # 465 is implicit TLS; 587 is plain then STARTTLS. Getting these the wrong
+    # way round is the usual reason an SMTP send hangs until it times out.
+    context = ssl.create_default_context()
+    if port == 465:
+        with smtplib.SMTP_SSL(host, port, timeout=TIMEOUT_SECONDS,
+                              context=context) as smtp:
+            smtp.login(user, password)
+            smtp.send_message(msg)
+    else:
+        with smtplib.SMTP(host, port, timeout=TIMEOUT_SECONDS) as smtp:
+            smtp.starttls(context=context)
+            smtp.login(user, password)
+            smtp.send_message(msg)
+    return True
+
+
+def _deliver_resend(to: str, subject: str, body: str) -> bool:
+    payload = {"from": _sender(), "to": [to], "subject": subject, "text": body}
+    req = urllib.request.Request(
+        _https_only(API_URL), data=json.dumps(payload).encode(),
+        headers=_headers(),
+    )
+    with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
+        return 200 <= resp.status < 300
+
+
+def _deliver(to: str, subject: str, body: str, what: str) -> bool:
+    """Send one message by whichever transport is configured.
+
+    One place, so the three callers below cannot drift apart -- and so adding a
+    transport does not mean editing three near-identical blocks and missing one.
+    """
+    try:
+        ok = (_deliver_smtp(to, subject, body) if _smtp_configured()
+              else _deliver_resend(to, subject, body))
+        if ok:
+            _remember("")
+            log.info("%s sent to %s via %s", what, _redact(to),
+                     "SMTP" if _smtp_configured() else "Resend")
+        return ok
+    except Exception as exc:            # noqa: BLE001 -- see below
+        # Deliberately broad. smtplib raises a family of its own exceptions
+        # (SMTPAuthenticationError, SMTPRecipientsRefused, SMTPServerDisconnected
+        # and more), ssl raises another, and this function's whole contract is
+        # that a mail failure never becomes a user-visible error on a
+        # registration or a reset that otherwise succeeded.
+        reason = _explain(exc)
+        _remember(reason)
+        log.warning("could not send %s to %s: %s", what, _redact(to), reason)
+        return False
+
+
 def configured() -> bool:
-    """True when a key, a sender and a base URL are all present.
+    """True when a transport, a sender and a base URL are all present.
+
+    A transport is EITHER SMTP or a Resend key. Requiring the Resend key
+    outright would have made SMTP unreachable: every send path checks this
+    first and returns early, so a fully configured mailserver would have been
+    treated as dormant.
 
     All three, because a verification email without an absolute link is
     useless, and a sender the domain does not authorise is silently dropped by
     the recipient's provider rather than bounced.
     """
-    return bool(_api_key() and _sender() and _base_url())
+    return bool((_smtp_configured() or _api_key()) and _sender() and _base_url())
 
 
 #: Resend's shared sandbox sender. Mail from it is accepted by the API and then
@@ -167,20 +274,38 @@ def sandboxed() -> bool:
     is the difference between password reset working for the operator and
     working for users.
     """
+    # SMTP relays to whoever is addressed -- there is no sandbox to be in. This
+    # matters beyond the label: api/auth.py's verification gate stays OFF while
+    # this is True, so without this line an SMTP deployment that CAN reach
+    # everyone would still refuse to enforce the confirmation it can now send.
+    if _smtp_configured():
+        return False
     sender = _sender()
     return bool(sender) and sender.rsplit("@", 1)[-1].lower().endswith(SANDBOX_SENDER)
+
+
+def transport_name() -> str:
+    if _smtp_configured():
+        return f"SMTP ({_smtp_host()})"
+    return "Resend"
 
 
 def describe() -> str:
     """One line for the startup log."""
     if configured():
+        if _smtp_configured():
+            return (f"Email: ACTIVE via {transport_name()} (from {_sender()}) "
+                    f"-- delivers to any recipient.")
         if sandboxed():
             return (f"Email verification: ACTIVE but SANDBOXED (from {_sender()}) "
                     f"-- Resend delivers this sender only to the account owner, "
                     f"so nobody else receives confirmation or reset mail. "
                     f"Verify a domain and set {FROM_ENV} to an address on it.")
         return f"Email verification: ACTIVE (from {_sender()})"
-    missing = [n for n, v in ((API_KEY_ENV, _api_key()), (FROM_ENV, _sender()),
+    missing = [n for n, v in ((f"{API_KEY_ENV} (or {SMTP_HOST_ENV}"
+                               f"/{SMTP_USER_ENV}/{SMTP_PASSWORD_ENV})",
+                               _api_key() or ("x" if _smtp_configured() else "")),
+                              (FROM_ENV, _sender()),
                               (BASE_URL_ENV, _base_url())) if not v]
     return f"Email verification: dormant (set {', '.join(missing)} to enable)"
 
@@ -223,20 +348,13 @@ def send_if_configured(user_id: int, email: str, username: str) -> bool:
                 f"nothing further will happen.\n"
             ),
         }
-        req = urllib.request.Request(
-            _https_only(API_URL), data=json.dumps(payload).encode(),
-            headers=_headers(),
-        )
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
-            ok = 200 <= resp.status < 300
-        if ok:
-            _remember("")
-            log.info("verification email sent to %s", _redact(email))
-        return ok
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        return _deliver(email, payload["subject"], payload["text"], "verification email")
+    except (TimeoutError, OSError, ValueError) as exc:
+        # Only token minting and link building can still raise here; delivery
+        # reports for itself.
         reason = _explain(exc)
         _remember(reason)
-        log.warning("could not send verification email to %s: %s",
+        log.warning("could not prepare the verification email for %s: %s",
                     _redact(email), reason)
         return False
 
@@ -295,20 +413,14 @@ def send_reset(user_id: int, email: str, username: str) -> bool:
                 f"inbox.\n"
             ),
         }
-        req = urllib.request.Request(
-            _https_only(API_URL), data=json.dumps(payload).encode(),
-            headers=_headers(),
-        )
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
-            ok = 200 <= resp.status < 300
-        if ok:
-            _remember("")
-            log.info("password reset email sent to %s", _redact(email))
-        return ok
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        return _deliver(email, payload["subject"], payload["text"], "password reset email")
+    except (TimeoutError, OSError, ValueError) as exc:
+        # Only token minting and link building can still raise here; delivery
+        # reports for itself.
         reason = _explain(exc)
         _remember(reason)
-        log.warning("could not send a reset email to %s: %s", _redact(email), reason)
+        log.warning("could not prepare the password reset email for %s: %s",
+                    _redact(email), reason)
         return False
 
 
@@ -338,20 +450,13 @@ def send_username(email: str, username: str) -> bool:
                 f"its own cannot be used to sign in.\n"
             ),
         }
-        req = urllib.request.Request(
-            _https_only(API_URL), data=json.dumps(payload).encode(),
-            headers=_headers(),
-        )
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:  # nosec B310 -- _https_only enforces the scheme
-            ok = 200 <= resp.status < 300
-        if ok:
-            _remember("")
-            log.info("username reminder sent to %s", _redact(email))
-        return ok
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
+        return _deliver(email, payload["subject"], payload["text"], "username reminder")
+    except (TimeoutError, OSError, ValueError) as exc:
+        # Only token minting and link building can still raise here; delivery
+        # reports for itself.
         reason = _explain(exc)
         _remember(reason)
-        log.warning("could not send a username reminder to %s: %s",
+        log.warning("could not prepare the username reminder for %s: %s",
                     _redact(email), reason)
         return False
 

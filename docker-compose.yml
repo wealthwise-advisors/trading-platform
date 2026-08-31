@@ -74,6 +74,13 @@ services:
       # container refusing to start. See api/verification.py and api/captcha.py.
       AUTOTRADER_RESEND_API_KEY: "${AUTOTRADER_RESEND_API_KEY:-}"
       AUTOTRADER_MAIL_FROM: "${AUTOTRADER_MAIL_FROM:-}"
+      # SMTP, an alternative to Resend that needs no verified domain --
+      # see api/verification.py. Set these and mail reaches ANY recipient;
+      # leave them empty and Resend is used as before.
+      AUTOTRADER_SMTP_HOST: "${AUTOTRADER_SMTP_HOST:-}"
+      AUTOTRADER_SMTP_PORT: "${AUTOTRADER_SMTP_PORT:-}"
+      AUTOTRADER_SMTP_USER: "${AUTOTRADER_SMTP_USER:-}"
+      AUTOTRADER_SMTP_PASSWORD: "${AUTOTRADER_SMTP_PASSWORD:-}"
       # Escape hatch for the confirm-your-address gate. The gate turns itself
       # ON as soon as mail can reach a stranger (a verified sending domain),
       # which is the right default but a surprising one to meet mid-deploy.
