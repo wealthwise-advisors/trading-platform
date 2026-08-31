@@ -30,13 +30,31 @@ SMIL NOTES (same three make_pipeline_svg.py learned the hard way)
 import pathlib
 import sys
 
+
+def fits(text, width, want, floor=12.0, advance=0.52):
+    """The largest size at or below `want` that keeps `text` inside `width`.
+
+    Every overflow in this file came from a size that was correct when it was
+    written and wrong after the surrounding box or the type scale moved. A
+    measured size cannot drift out of step with its container the way a
+    hand-picked one does. `advance` is the font's average glyph width relative
+    to its size -- about 0.52 for the sans stack, 0.60 for the monospace one.
+    """
+    if not text:
+        return want
+    return max(floor, min(want, width / (len(text) * advance)))
+
 W = 1280
 H = 456   # +26 for the second caption line; see the footnote below
 PAD = 34
 PLOT_X = PAD + 8
-PLOT_W = W - PLOT_X - PAD - 210      # room for the right-hand rule list
-                                     # 150 clipped "not an entry" and "the trigger";
-                                     # measured against the longest string, not guessed
+# Room reserved for the right-hand rule list. 350, not 210: 210 was measured
+# against the longest string at the OLD type size, and the size went up without
+# the reserve going with it, so "Price prints a lower low" ran off the canvas
+# entirely. 24 characters at 20.6px is 257px, plus the numbered chip and the
+# gutter. fits() below keeps that honest if a rule is ever reworded.
+RIGHT_BAND = 350
+PLOT_W = W - PLOT_X - PAD - RIGHT_BAND
 
 PRICE_Y, PRICE_H = 62, 210
 RSI_Y, RSI_H = 300, 92
@@ -156,17 +174,19 @@ def build() -> str:
     o.append(f'<line x1="{px(LOW_1):.1f}" y1="{ry(RSI[LOW_1]):.1f}" '
              f'x2="{px(LOW_2):.1f}" y2="{ry(RSI[LOW_2]):.1f}" stroke="{UP}" '
              f'stroke-width="2" stroke-dasharray="6 5" opacity="0">{fade(T_DIV)}</line>')
-    # Sat ON their own dashed lines when placed at an endpoint. Both now hang
-    # off the MIDPOINT of the line they describe -- price below it, RSI above
-    # it, which is the side the series curve is not on in each panel.
+    # Hung off the MIDPOINT of the line each describes -- price below it, RSI
+    # above it, which is the side the series curve is not on in each panel.
+    # The clearances are 27 and 13, not 15 and 9: a baseline 15px under the line
+    # puts the TOP of 20.6px type back on the line, which is exactly where
+    # "price: lower low" ended up once the type grew.
     mid = (LOW_1 + LOW_2) / 2
     p_mid = (py(PRICE[LOW_1]) + py(PRICE[LOW_2])) / 2
     r_mid = (ry(RSI[LOW_1]) + ry(RSI[LOW_2])) / 2
-    o.append(f'<text x="{px(mid):.1f}" y="{p_mid+15:.1f}" '
+    o.append(f'<text x="{px(mid):.1f}" y="{p_mid+27:.1f}" '
              f'text-anchor="middle" font-family="{FONT}" font-size="20.6" '
              f'font-weight="600" fill="{DOWN}" opacity="0">'
              f'price: lower low{fade(T_DIV)}</text>')
-    o.append(f'<text x="{px(mid):.1f}" y="{r_mid-9:.1f}" '
+    o.append(f'<text x="{px(mid):.1f}" y="{r_mid-13:.1f}" '
              f'text-anchor="middle" font-family="{FONT}" font-size="20.6" '
              f'font-weight="600" fill="{UP}" opacity="0">'
              f'RSI: higher low{fade(T_DIV)}</text>')
@@ -186,11 +206,17 @@ def build() -> str:
     o.append(f'<line x1="{px(LOW_2):.1f}" y1="{trig_y:.1f}" '
              f'x2="{px(N-1):.1f}" y2="{trig_y:.1f}" stroke="{TRIG}" '
              f'stroke-width="1.6" stroke-dasharray="5 4" opacity="0">{fade(T_ARM)}</line>')
-    # Anchored at the LEFT end of the line and inside the panel; anchored right
-    # it ran past the plot edge and into the rule list.
-    o.append(f'<text x="{px(LOW_2)+8:.1f}" y="{trig_y-7:.1f}" '
-             f'font-family="{MONO}" font-size="17" fill="{TRIG}" opacity="0">'
-             f'trigger — high of the divergence bar{fade(T_ARM)}</text>')
+    # Two short lines, not one long one. The line starts at the divergence bar
+    # and only ~210px of plot remain to its right, which "trigger — high of the
+    # divergence bar" needs 367px to say. Anchoring it right instead would have
+    # run it back over the price curve, and shrinking it to fit would have put
+    # it at 10px. Stacking is the only option that keeps the wording and the
+    # size, and the definition is the part worth keeping.
+    for i, line in enumerate(("trigger", "= divergence bar high")):
+        o.append(f'<text x="{px(LOW_2)+8:.1f}" y="{trig_y-33+i*17:.1f}" '
+                 f'font-family="{MONO}" '
+                 f'font-size="{fits(line, PLOT_X + PLOT_W - px(LOW_2) - 8, 16, advance=0.60):.1f}" '
+                 f'fill="{TRIG}" opacity="0">{line}{fade(T_ARM)}</text>')
 
     # ── step 4 · the entry ────────────────────────────────────────────────
     ex, ey = px(ENTRY), py(PRICE[ENTRY])
@@ -217,7 +243,8 @@ def build() -> str:
                  f'fill-opacity="0.16" stroke="{colour}" stroke-opacity="0.55"/>'
                  f'<text x="{lx+9}" y="{y}" text-anchor="middle" font-family="{MONO}" '
                  f'font-size="17" font-weight="700" fill="{colour}">{num}</text>'
-                 f'<text x="{lx+26}" y="{y}" font-family="{FONT}" font-size="20.6" '
+                 f'<text x="{lx+26}" y="{y}" font-family="{FONT}" '
+                 f'font-size="{fits(text, W - PAD - (lx + 26), 20.6):.1f}" '
                  f'fill="{INK}">{text}</text></g>')
 
     # Two lines. SVG <text> does not wrap, so a caption longer than the canvas

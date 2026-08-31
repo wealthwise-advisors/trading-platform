@@ -33,6 +33,20 @@ import sys
 W = 1280
 PAD = 30
 
+
+def fits(text, width, want, floor=12.0, advance=0.52):
+    """The largest size at or below `want` that keeps `text` inside `width`.
+
+    SVG <text> neither wraps nor clips to its parent, so a label too long for
+    its box is drawn straight through the border with nothing to indicate it.
+    Measuring against the box is the only way that stays true after the box or
+    the type scale moves -- which is how a 529px sentence ended up inside a
+    296px card here.
+    """
+    if not text:
+        return want
+    return max(floor, min(want, width / (len(text) * advance)))
+
 # The five, in the order the README lists them.
 RETIRED = ["trading-strategy", "trading-web", "Wealthwise", "backtest", "Project_work"]
 
@@ -172,21 +186,29 @@ def build() -> str:
     # legacy/ inside it
     ly = hub_y + 66
     o.append(f'<g opacity="0">{fade(T_HUB)}'
-             f'<rect x="{HUB_X+18}" y="{ly}" width="{HUB_W-36}" height="62" rx="9" '
+             f'<rect x="{HUB_X+18}" y="{ly}" width="{HUB_W-36}" height="80" rx="9" '
              f'fill="#101a2c" stroke="{RETIRE}" stroke-opacity="0.6" '
              f'stroke-dasharray="5 4"/>'
              f'<text x="{HUB_X+32}" y="{ly+26}" font-family="{MONO}" font-size="19.9" '
              f'font-weight="700" fill="{DIM}">legacy/</text>'
-             f'<text x="{HUB_X+32}" y="{ly+45}" font-family="{FONT}" font-size="18.5" '
-             f'fill="{RETIRE}">442 files · reference only — no lint, no tests, '
-             f'no image</text></g>')
+             # Two lines and a taller box. As one line this was 55 characters --
+             # 529px of text in a 296px card -- so it ran out through the right
+             # border, across the arrow, and into the data card beyond it.
+             + "".join(
+                 f'<text x="{HUB_X+32}" y="{ly+48+i*20}" font-family="{FONT}" '
+                 f'font-size="{fits(line, HUB_W-64, 18.5):.1f}" '
+                 f'fill="{RETIRE}">{line}</text>'
+                 for i, line in enumerate(("442 files · reference only",
+                                           "no lint, no tests, no image"))
+             ) + '</g>')
 
     # the running app, below it
-    ay = ly + 78
+    ay = ly + 96          # follows the taller legacy/ box
     o.append(f'<rect x="{HUB_X+18}" y="{ay}" width="{HUB_W-36}" height="44" rx="9" '
              f'fill="{HUB}" fill-opacity="0.10" stroke="{HUB}" stroke-opacity="0.45"/>')
-    o.append(f'<text x="{HUB_X+32}" y="{ay+28}" font-family="{FONT}" font-size="15" '
-             f'fill="{INK}">api/ · src/ · web/ — what actually runs</text>')
+    _run = "api/ · src/ · web/ — what actually runs"
+    o.append(f'<text x="{HUB_X+32}" y="{ay+28}" font-family="{FONT}" '
+             f'font-size="{fits(_run, HUB_W-64, 15):.1f}" fill="{INK}">{_run}</text>')
 
     # ── data ──────────────────────────────────────────────────────────────
     dy = COL_MID_Y - 62
@@ -194,20 +216,27 @@ def build() -> str:
              f'fill="#0b1526" stroke="{DATA}" stroke-width="2" stroke-opacity="0.7"/>')
     o.append(f'<text x="{DATA_X+16}" y="{dy+30:.1f}" font-family="{FONT}" '
              f'font-size="23.4" font-weight="700" fill="{DATA}">data</text>')
+    _mh = "market history · Git LFS"
     o.append(f'<text x="{DATA_X+16}" y="{dy+50:.1f}" font-family="{FONT}" '
-             f'font-size="18.5" fill="{DIM}">market history · Git LFS</text>')
+             f'font-size="{fits(_mh, DATA_W-32, 18.5):.1f}" fill="{DIM}">{_mh}</text>')
     o.append(f'<rect x="{DATA_X+16}" y="{dy+66:.1f}" width="{DATA_W-32}" height="52" '
              f'rx="8" fill="{DATA}" fill-opacity="0.10"/>')
     o.append(f'<text x="{DATA_X+28}" y="{dy+88:.1f}" font-family="{MONO}" '
              f'font-size="16" fill="{INK}">18-year 1-minute ES</text>')
+    _tl = "too large for an ordinary repo"
     o.append(f'<text x="{DATA_X+28}" y="{dy+108:.1f}" font-family="{FONT}" '
-             f'font-size="15" fill="{DIM}">too large for an ordinary repo</text>')
+             f'font-size="{fits(_tl, DATA_W-56, 15):.1f}" fill="{DIM}">{_tl}</text>')
 
     o.append(f'<path d="M {HUB_X+HUB_W+6} {COL_MID_Y:.1f} L {DATA_X-8} {COL_MID_Y:.1f}" '
              f'stroke="{DATA}" stroke-width="2" marker-end="url(#ad)" opacity="0">'
              f'{fade(T_DATA)}</path>')
+    # Sized to the gap it sits in. At 19.2 "reads history" is 130px wide in a
+    # 120px gap, so it overlapped the hub on one side and the data card on the
+    # other. Widening the gap instead would have taken the width out of the
+    # data card, whose own longest line already has only 10px to spare.
     o.append(f'<text x="{(HUB_X+HUB_W+DATA_X)/2:.1f}" y="{COL_MID_Y-11:.1f}" '
-             f'text-anchor="middle" font-family="{FONT}" font-size="19.2" '
+             f'text-anchor="middle" font-family="{FONT}" '
+             f'font-size="{fits("reads history", DATA_X-(HUB_X+HUB_W)-12, 19.2):.1f}" '
              f'fill="{DIM}" opacity="0">reads history{fade(T_DATA)}</text>')
 
     o.append(f'<text x="{PAD}" y="{H-18}" font-family="{FONT}" font-size="18.5" '

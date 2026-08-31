@@ -17,7 +17,7 @@
 | 📤 **Writes to** | [`docs/assets/`](..) |
 | 🎯 **Why scripts** | A diagram that must stay in step with the code has to be rebuildable |
 | 📁 **Path** | `docs/assets/tools/` |
-| 📦 **Holds** | `8` files · `2,899` lines |
+| 📦 **Holds** | `8` generators · `1` render harness |
 
 
 ---
@@ -78,9 +78,22 @@
 
 - ➜ **Check a change by rendering it, not by reasoning about it.** Every overflow
   fixed in this directory was invisible in the numbers and obvious in a screenshot
-  at 830px. For SMIL-animated files, note that a browser holds an active animation
-  at its `t=0` value, so a screenshot of `elliott-wave.svg` is blank by design —
-  strip the `<animate>` elements into a scratch copy to inspect its layout.
+  at 830px.
+
+- ➜ **Render at a time OTHER than zero, with [`seek.html`](seek.html).** A browser
+  holds an active SMIL animation at its `t=0` value, so a plain screenshot shows
+  only what is on screen *before* anything animates in. Most of these diagrams
+  build themselves — callout lists, annotations, decision branches — and none of
+  that exists at `t=0`. A whole column of clipped labels in `divergence.svg` was
+  signed off as clean because the screenshot that "proved" it could not show them.
+
+  ```
+  chrome --headless --allow-file-access-from-files --window-size=880,1200      --screenshot=out.png --virtual-time-budget=6000      "file:///<abs path>/tools/seek.html?t=8&f=divergence.svg,ecosystem.svg"
+  ```
+
+  `f` is a comma-separated list relative to the harness, `t` the moment in each
+  file's own loop. It inlines the SVG so `setCurrentTime()` reaches it, renders at
+  830px, and does **not** clip overflow — overflow is the thing being looked for.
 
 
 ---

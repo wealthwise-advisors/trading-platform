@@ -1,0 +1,50 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>diagram seek harness</title>
+<style>
+  body { margin:0; background:#0d1117; padding:14px;
+         font:12px system-ui; color:#8b949e }
+  .col { width:830px }
+  h3  { color:#c9d1d9; font:600 13px system-ui; margin:18px 0 6px }
+  .frame { width:830px; border:1px solid #21262d; border-radius:6px;
+           overflow:visible }          /* NOT hidden: overflow is what we hunt */
+  .frame svg { width:830px; height:auto; display:block }
+</style>
+<div class="col" id="out"></div>
+<script>
+/*
+  Chrome holds an ACTIVE SMIL animation at its t=0 value, so a plain screenshot
+  of these files shows only whatever is visible before anything animates in --
+  which is how a whole column of numbered callouts got signed off as "clean".
+  Inlining the SVG puts it in this document, which makes setCurrentTime() reach
+  it, so each diagram can be parked at a chosen moment of its own loop.
+*/
+const FILES = new URLSearchParams(location.search).get('f').split(',');
+const T = parseFloat(new URLSearchParams(location.search).get('t') || '6');
+const out = document.getElementById('out');
+
+function load(name) {
+  return new Promise((res) => {
+    const x = new XMLHttpRequest();
+    x.open('GET', name, true);
+    x.onload = () => res(x.responseText);
+    x.onerror = () => res('<svg xmlns="http://www.w3.org/2000/svg" width="830" height="40"><text x="8" y="24" fill="#f85149" font-family="monospace">FAILED: ' + name + '</text></svg>');
+    x.send();
+  });
+}
+
+(async () => {
+  for (const name of FILES) {
+    const h = document.createElement('h3');
+    h.textContent = name + '  @ t=' + T + 's';
+    out.appendChild(h);
+    const box = document.createElement('div');
+    box.className = 'frame';
+    box.innerHTML = await load(name);
+    out.appendChild(box);
+    const svg = box.querySelector('svg');
+    if (svg && svg.setCurrentTime) { svg.pauseAnimations(); svg.setCurrentTime(T); }
+  }
+  document.title = 'READY';
+})();
+</script>
