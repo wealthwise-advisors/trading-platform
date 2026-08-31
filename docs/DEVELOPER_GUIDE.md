@@ -151,6 +151,38 @@ calling an indicator or overlay fixed:
 > the **session anchor** than an indicator bug. Check the session window
 > before you start editing the maths.
 
+## Seeing the architecture
+
+[CodeFlow](https://github.com/braedonsaunders/codeflow) turns this repository
+into an interactive dependency map -- which file imports which, and what breaks
+if you change one. Useful for the question `Design Document.md` answers in prose
+but cannot answer for a specific file: *what actually depends on this?*
+
+```bash
+npx -y github:braedonsaunders/codeflow .
+```
+
+Opens on <http://127.0.0.1:4173>, watches the folder, and re-reads on save.
+
+> [!WARNING]
+> **Use the `github:` form, not `npx codeflow`.** There is an unrelated package
+> published on npm under the bare name `codeflow`, pointing at codeflow.co.
+> `npx codeflow` installs that one instead, which is not what you want and not
+> what this section is about.
+
+**Nothing is vendored, and nothing should be.** It is a tool you point at a
+codebase, not a dependency of one -- the repository is ~48 MB and its UI is a
+single 12,000-line `index.html`. Adding it to `package.json` would put all of
+that in every clone and every Docker build to serve a question asked
+occasionally.
+
+Verified before recommending it: MIT licensed, and the local mode reads files
+and serves on 127.0.0.1 only. It calls `api.github.com` in one place, reached
+solely by the paste-a-public-URL mode in the browser -- not by the CLI that
+reads this repository. Your code stays on the machine.
+
+---
+
 ## Code quality tools
 
 ```bash
