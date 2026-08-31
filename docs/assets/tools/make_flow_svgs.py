@@ -254,30 +254,6 @@ def about_rule(accent):
             'fill-opacity=".55"/></svg>\n')
 
 
-def legal_icon(key, accent):
-    """One icon for a Licence / Ownership / Developed By / Project Link card."""
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" '
-            'width="44" height="44" role="img" aria-label="">'
-            + icon(key, accent, 4, 4, 1.5) + '</svg>\n')
-
-
-def legal_rule():
-    """A blue-to-violet hairline under each of those headings.
-
-    Blue and violet only. These four sections are the legal and attribution
-    block; amber is this project's warning colour and carries a meaning here
-    that a copyright notice should not borrow.
-    """
-    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 2" '
-            'width="100" height="2" preserveAspectRatio="none" role="img" '
-            'aria-label=""><defs>'
-            '<linearGradient id="lr" x1="0" y1="0" x2="1" y2="0">'
-            f'<stop offset="0%" stop-color="{SKY}" stop-opacity=".9"/>'
-            f'<stop offset="55%" stop-color="{VIOLET}" stop-opacity=".65"/>'
-            f'<stop offset="100%" stop-color="{VIOLET}" stop-opacity="0"/>'
-            '</linearGradient></defs>'
-            '<rect width="100" height="2" rx="1" fill="url(#lr)"/></svg>\n')
-
 
 ABOUT = [("01", "book", SKY), ("02", "scales", AMBER), ("03", "trusted", VIOLET)]
 
@@ -377,26 +353,6 @@ def workflow():
 # Icons on a 24x24 grid, outlined at one weight so they read as one family
 # rather than as clip art collected from three places.
 ICONS = {
-    # ── the Licence / Ownership / Developed By / Project Link set ──────────
-    # Drawn here rather than fetched, for the reason SymbolMark.tsx gives: a
-    # brand's own mark is theirs, and these only need to say "document",
-    # "organisation" and "the web".
-    "license": ['<path d="M5.6 3.4h7.4L17 7.2v5.1"/>',
-                '<path d="M17 16.4v4.2H5.6V3.4"/>',
-                '<path d="M12.7 3.6v3.9H16.6"/>',
-                '<path d="M8.3 11.2h4.4M8.3 14.3h3"/>',
-                '<path d="M18.9 12.1l3.3 1.4v2.7c0 2-1.4 3.9-3.3 4.4'
-                '-1.9-.5-3.3-2.4-3.3-4.4v-2.7z"/>',
-                '<path d="m17.6 16.3 1 1 1.7-1.9"/>'],
-    "org":     ['<path d="M4.2 20.4V6.1l7.3-2.5v16.8"/>',
-                '<path d="M11.5 9.1h8.3v11.3"/>',
-                '<path d="M2.6 20.4h18.8"/>',
-                '<path d="M7 8.4h1.4M7 11.6h1.4M7 14.8h1.4"/>',
-                '<path d="M14.6 12.4h2.2M14.6 15.6h2.2"/>'],
-    "globe":   ['<circle cx="12" cy="12" r="8.6"/>',
-                '<path d="M3.4 12h17.2"/>',
-                '<path d="M12 3.4c2.2 2.3 3.4 5.4 3.4 8.6S14.2 18.3 12 20.6"/>',
-                '<path d="M12 3.4C9.8 5.7 8.6 8.8 8.6 12s1.2 6.3 3.4 8.6"/>'],
 
     "cloud": ['<path d="M7.4 18.4h9.2a4.1 4.1 0 0 0 .6-8.15 5.7 5.7 0 0 0-11 1.5 3.4 3.4 0 0 0 1.2 6.65z"/>'],
     "doc": ['<path d="M6.6 3.6h7.6L18.4 8v12.4H6.6z"/>', '<path d="M14 3.8V8.2h4.2"/>',
@@ -578,11 +534,6 @@ DIAGRAMS = {
     ], rows=1, label="Bars produce a strategy signal, the paper broker fills it with "
                      "slippage and commission, and the position becomes P&L and metrics"),
     "architecture.svg": architecture,
-    "legal-license.svg": lambda: legal_icon("license", SKY),
-    "legal-owner.svg": lambda: legal_icon("org", VIOLET),
-    "legal-dev.svg": lambda: legal_icon("code", SKY),
-    "legal-link.svg": lambda: legal_icon("globe", VIOLET),
-    "legal-rule.svg": legal_rule,
     "claim-1.svg": lambda: claim_icon("receipt", "#f97316"),
     "claim-rule-1.svg": lambda: about_rule("#f97316"),
     "claim-2.svg": lambda: claim_icon("bars", "#2dd4bf"),

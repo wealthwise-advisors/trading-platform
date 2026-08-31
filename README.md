@@ -1455,76 +1455,29 @@ Every directory also has its own README — [`src/`](src/README.md) ·
 
 ---
 
-## License
-
-<img src="docs/assets/legal-rule.svg" alt="" width="100%" height="2">
-
-<table width="100%">
-<tr>
-<td width="64" align="center"><img src="docs/assets/legal-license.svg" alt="" width="44"></td>
-<td width="760">
-
-**Proprietary**
-
-© **WealthWise Advisors.** All rights reserved.
-
-**[View License →](LICENSE)**
-
-</td>
-</tr>
-</table>
+<a href="LICENSE"><img src="docs/assets/legal-license.svg" alt="License: Proprietary. © WealthWise Advisors. All rights reserved. View License." width="100%"></a>
 
 <br>
 
-## Ownership
-
-<img src="docs/assets/legal-rule.svg" alt="" width="100%" height="2">
-
-<table>
-<tr>
-<td width="64" align="center"><img src="docs/assets/legal-owner.svg" alt="" width="44"></td>
-<td width="380"><b>Owner</b><br>WealthWise Advisors</td>
-<td width="380"><b>GitHub</b><br><a href="https://github.com/wealthwise-advisors">github.com/wealthwise-advisors</a></td>
-</tr>
-</table>
+<a href="https://github.com/wealthwise-advisors"><img src="docs/assets/legal-ownership.svg" alt="Ownership — Owner: WealthWise Advisors. GitHub: github.com/wealthwise-advisors" width="100%"></a>
 
 <br>
 
-## Developed By
-
-<img src="docs/assets/legal-rule.svg" alt="" width="100%" height="2">
-
-<table width="100%">
-<tr>
-<td width="64" align="center"><img src="docs/assets/legal-dev.svg" alt="" width="44"></td>
-<td width="250"><b>Developer</b><br>Akash Yadav</td>
-<td width="300"><b>Email</b><br><a href="mailto:akashyadav110502@gmail.com">akashyadav110502@gmail.com</a></td>
-<td width="210"><b>GitHub</b><br><a href="https://github.com/akxyverse">github.com/akxyverse</a></td>
-</tr>
-</table>
+<a href="https://github.com/akxyverse"><img src="docs/assets/legal-developed.svg" alt="Developed By — Developer: Akash Yadav. Email: akashyadav110502@gmail.com. GitHub: github.com/akxyverse" width="100%"></a>
 
 <br>
 
-## Project Link
+<img src="docs/assets/legal-project.svg" alt="Project Link — Repository: wealthwise-advisors/trading-platform. Live app: 3-218-23-37.sslip.io. Local: localhost:5173" width="100%">
 
-<img src="docs/assets/legal-rule.svg" alt="" width="100%" height="2">
+<sub>
 
-<table width="100%">
-<tr>
-<td width="64" align="center"><img src="docs/assets/legal-link.svg" alt="" width="44"></td>
-<td width="760"><a href="https://github.com/wealthwise-advisors/trading-platform">github.com/wealthwise-advisors/trading-platform</a></td>
-</tr>
-</table>
+**[Repository ↗](https://github.com/wealthwise-advisors/trading-platform)** &nbsp;·&nbsp; **[Live app ↗](https://3-218-23-37.sslip.io)** &nbsp;·&nbsp; `http://localhost:5173`
+
+</sub>
 
 ---
 
 <div align="center">
-
-### Built for research that has to hold up.
-
-<sub>If a number is on the screen, something in <a href="tests">tests/</a> defends it.</sub>
-
-<br>
 
 <sub><a href="#-table-of-contents">↑ Back to top</a></sub>
 
