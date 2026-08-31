@@ -69,14 +69,14 @@
       <path d="M7.3 7.3a6.6 6.6 0 0 0 0 9.4M16.7 7.3a6.6 6.6 0 0 1 0 9.4" fill="none" stroke="#22d3ee" stroke-width="1.9" stroke-linecap="round" opacity=".85"/>
       <path d="M4 4a11.3 11.3 0 0 0 0 16M20 4a11.3 11.3 0 0 1 0 16" fill="none" stroke="#22d3ee" stroke-width="1.9" stroke-linecap="round" opacity=".5"/>
     </g>
-    <text x="88" y="62" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#e8f2ff">Live Replay</text>
+    <text x="88" y="62" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="27.1" font-weight="700" fill="#e8f2ff">Live Replay</text>
     <line x1="38" y1="84" x2="1242" y2="84" stroke="#ffffff" stroke-opacity=".08" stroke-width="1"/>
     <circle cx="50" cy="106" r="9" fill="url(#gGreen)">
       <animate attributeName="opacity" values=".35;1;.35" dur="2.4s" repeatCount="indefinite"/>
     </circle>
     <circle cx="50" cy="106" r="4.2" fill="#22c55e"/>
-    <text x="66" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="1.1" fill="#22c55e">FOLLOWING LIVE</text>
-    <text x="202" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="#8ea3bd">new bars arrive on their own — no reload, no clicking</text>
+    <text x="66" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="700" letter-spacing="1.1" fill="#22c55e">FOLLOWING LIVE</text>
+    <text x="266" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" fill="#8ea3bd">new bars arrive on their own — no reload, no clicking</text>
     <polyline points="97.2,200.5 139.8,199.2 182.2,199.3 224.8,198.2 267.2,197.1 309.8,195.1 352.2,192.4 394.8,188.7 437.2,184.5 479.8,180.4 522.2,177.7 564.8,175.0 607.2,172.3 649.8,170.0 692.2,166.3 734.8,162.7 777.2,158.3 819.8,155.7 862.2,151.3 904.8,148.7 947.2,147.2 989.8,144.7 1032.2,142.2 1074.8,137.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,292.5 139.8,291.2 182.2,291.3 224.8,290.2 267.2,289.1 309.8,287.1 352.2,284.4 394.8,280.7 437.2,276.5 479.8,272.4 522.2,269.7 564.8,267.0 607.2,264.3 649.8,262.0 692.2,258.3 734.8,254.7 777.2,250.3 819.8,247.7 862.2,243.3 904.8,240.7 947.2,239.2 989.8,236.7 1032.2,234.2 1074.8,229.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,246.5 139.8,245.2 182.2,245.3 224.8,244.2 267.2,243.1 309.8,241.1 352.2,238.4 394.8,234.7 437.2,230.5 479.8,226.4 522.2,223.7 564.8,221.0 607.2,218.3 649.8,216.0 692.2,212.3 734.8,208.7 777.2,204.3 819.8,201.7 862.2,197.3 904.8,194.7 947.2,193.2 989.8,190.7 1032.2,188.2 1074.8,183.7" fill="none" stroke="#c084fc" stroke-opacity=".16" stroke-width="7" stroke-linecap="round"/>
@@ -163,17 +163,17 @@
     <ellipse cx="1074.8" cy="203.2" rx="6" ry="2.4" fill="none" stroke="#22c55e" stroke-width="1.2">
       <animate attributeName="opacity" values=".85;0;.85" dur="2.6s" repeatCount="indefinite"/>
     </ellipse>
-    <text x="1112" y="141.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" fill="#c084fc">+2σ</text>
-    <text x="1112" y="187.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5" font-weight="700" fill="#c084fc">VWAP</text>
-    <text x="1112" y="233.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12" font-weight="600" fill="#c084fc">−2σ</text>
-    <text x="1074.8" y="147.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" letter-spacing=".4" fill="#22c55e">forming</text>
+    <text x="1112" y="141.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="17" font-weight="600" fill="#c084fc">+2σ</text>
+    <text x="1112" y="187.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="17.5" font-weight="700" fill="#c084fc">VWAP</text>
+    <text x="1112" y="233.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="17" font-weight="600" fill="#c084fc">−2σ</text>
+    <text x="1074.8" y="147.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="600" letter-spacing=".4" fill="#22c55e">forming</text>
     <line x1="70" y1="306" x2="1102" y2="306" stroke="#ffffff" stroke-opacity=".10" stroke-width="1"/>
     <rect x="38" y="307" width="322" height="34" rx="17" fill="url(#card)" stroke="#22d3ee" stroke-opacity=".34"/>
     <circle cx="59" cy="324" r="11" fill="#22d3ee" fill-opacity=".14"/>
     <g transform="translate(49 314) scale(.83)">
       <path d="M2.8 12h4l2.4-6 3.4 12 2.6-6h5.8" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" fill="#e8f2ff" fill-opacity=".92">the newest bar is still forming (1 withheld)</text>
+    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" fill="#e8f2ff" fill-opacity=".92">the newest bar is still forming (1 withheld)</text>
   </g>
   <g>
     <rect x="16" y="372" width="1248" height="352" rx="18" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".075"/>
@@ -268,307 +268,308 @@
     <rect x="1168" y="394" width="34" height="34" rx="9" fill="none" stroke="#22d3ee" stroke-opacity=".30" stroke-width="1.1"/>
     <rect x="1.6" y="1.6" width="10.4" height="10.4" rx="2" fill="none" stroke="#22d3ee" stroke-opacity=".55" stroke-width="1.5" transform="translate(1176 402)"/>
     <rect x="6" y="6" width="10.4" height="10.4" rx="2" fill="none" stroke="#22d3ee" stroke-opacity=".85" stroke-width="1.5" transform="translate(1176 402)"/>
-    <line x1="152" y1="540" x2="170" y2="540" stroke="#3b82f6" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
-    <line x1="152" y1="540" x2="170" y2="540" stroke="#3b82f6" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
-    <line x1="156" y1="546" x2="166" y2="546" stroke="#3b82f6" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
-    <circle cx="152" cy="540" r="4.2" fill="#3b82f6" fill-opacity=".26"/>
-    <circle cx="152" cy="540" r="2.1" fill="#3b82f6"/>
-    <circle cx="170" cy="540" r="4.2" fill="#3b82f6" fill-opacity=".26"/>
-    <circle cx="170" cy="540" r="2.1" fill="#3b82f6"/>
-    <path d="M156.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#3b82f6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <line x1="166" y1="540" x2="178" y2="540" stroke="#3b82f6" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
+    <line x1="166" y1="540" x2="178" y2="540" stroke="#3b82f6" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="170" y1="546" x2="174" y2="546" stroke="#3b82f6" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
+    <circle cx="166" cy="540" r="4.2" fill="#3b82f6" fill-opacity=".26"/>
+    <circle cx="166" cy="540" r="2.1" fill="#3b82f6"/>
+    <circle cx="178" cy="540" r="4.2" fill="#3b82f6" fill-opacity=".26"/>
+    <circle cx="178" cy="540" r="2.1" fill="#3b82f6"/>
+    <path d="M167.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#3b82f6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.00s" repeatCount="indefinite"/>
     </path>
-    <path d="M165.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#3b82f6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <path d="M176.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#3b82f6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.14s" repeatCount="indefinite"/>
     </path>
-    <circle cx="152" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
-      <animate attributeName="cx" from="152" to="170" dur="1.5s" begin="0.00s" repeatCount="indefinite"/>
+    <circle cx="166" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
+      <animate attributeName="cx" from="166" to="178" dur="1.5s" begin="0.00s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="152" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
-      <animate attributeName="cx" from="152" to="170" dur="1.5s" begin="0.15s" repeatCount="indefinite"/>
+    <circle cx="166" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
+      <animate attributeName="cx" from="166" to="178" dur="1.5s" begin="0.15s" repeatCount="indefinite"/>
     </circle>
-    <line x1="286" y1="540" x2="304" y2="540" stroke="#38bdf8" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
-    <line x1="286" y1="540" x2="304" y2="540" stroke="#38bdf8" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
-    <line x1="290" y1="546" x2="300" y2="546" stroke="#38bdf8" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
-    <circle cx="286" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
-    <circle cx="286" cy="540" r="2.1" fill="#38bdf8"/>
-    <circle cx="304" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
-    <circle cx="304" cy="540" r="2.1" fill="#38bdf8"/>
-    <path d="M290.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <line x1="314" y1="540" x2="326" y2="540" stroke="#38bdf8" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
+    <line x1="314" y1="540" x2="326" y2="540" stroke="#38bdf8" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="318" y1="546" x2="322" y2="546" stroke="#38bdf8" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
+    <circle cx="314" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
+    <circle cx="314" cy="540" r="2.1" fill="#38bdf8"/>
+    <circle cx="326" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
+    <circle cx="326" cy="540" r="2.1" fill="#38bdf8"/>
+    <path d="M315.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.40s" repeatCount="indefinite"/>
     </path>
-    <path d="M299.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <path d="M324.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.54s" repeatCount="indefinite"/>
     </path>
-    <circle cx="286" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
-      <animate attributeName="cx" from="286" to="304" dur="1.5s" begin="0.40s" repeatCount="indefinite"/>
+    <circle cx="314" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
+      <animate attributeName="cx" from="314" to="326" dur="1.5s" begin="0.40s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="286" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
-      <animate attributeName="cx" from="286" to="304" dur="1.5s" begin="0.55s" repeatCount="indefinite"/>
+    <circle cx="314" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
+      <animate attributeName="cx" from="314" to="326" dur="1.5s" begin="0.55s" repeatCount="indefinite"/>
     </circle>
-    <line x1="420" y1="540" x2="438" y2="540" stroke="#22c55e" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
-    <line x1="420" y1="540" x2="438" y2="540" stroke="#22c55e" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
-    <line x1="424" y1="546" x2="434" y2="546" stroke="#22c55e" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
-    <circle cx="420" cy="540" r="4.2" fill="#22c55e" fill-opacity=".26"/>
-    <circle cx="420" cy="540" r="2.1" fill="#22c55e"/>
-    <circle cx="438" cy="540" r="4.2" fill="#22c55e" fill-opacity=".26"/>
-    <circle cx="438" cy="540" r="2.1" fill="#22c55e"/>
-    <path d="M424.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#22c55e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <line x1="462" y1="540" x2="474" y2="540" stroke="#22c55e" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
+    <line x1="462" y1="540" x2="474" y2="540" stroke="#22c55e" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="466" y1="546" x2="470" y2="546" stroke="#22c55e" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
+    <circle cx="462" cy="540" r="4.2" fill="#22c55e" fill-opacity=".26"/>
+    <circle cx="462" cy="540" r="2.1" fill="#22c55e"/>
+    <circle cx="474" cy="540" r="4.2" fill="#22c55e" fill-opacity=".26"/>
+    <circle cx="474" cy="540" r="2.1" fill="#22c55e"/>
+    <path d="M463.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#22c55e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.80s" repeatCount="indefinite"/>
     </path>
-    <path d="M433.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#22c55e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <path d="M472.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#22c55e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="0.94s" repeatCount="indefinite"/>
     </path>
-    <circle cx="420" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
-      <animate attributeName="cx" from="420" to="438" dur="1.5s" begin="0.80s" repeatCount="indefinite"/>
+    <circle cx="462" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
+      <animate attributeName="cx" from="462" to="474" dur="1.5s" begin="0.80s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="420" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
-      <animate attributeName="cx" from="420" to="438" dur="1.5s" begin="0.95s" repeatCount="indefinite"/>
+    <circle cx="462" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
+      <animate attributeName="cx" from="462" to="474" dur="1.5s" begin="0.95s" repeatCount="indefinite"/>
     </circle>
-    <line x1="554" y1="540" x2="572" y2="540" stroke="#38bdf8" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
-    <line x1="554" y1="540" x2="572" y2="540" stroke="#38bdf8" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
-    <line x1="558" y1="546" x2="568" y2="546" stroke="#38bdf8" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
-    <circle cx="554" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
-    <circle cx="554" cy="540" r="2.1" fill="#38bdf8"/>
-    <circle cx="572" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
-    <circle cx="572" cy="540" r="2.1" fill="#38bdf8"/>
-    <path d="M558.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <line x1="610" y1="540" x2="622" y2="540" stroke="#38bdf8" stroke-opacity=".13" stroke-width="8" stroke-linecap="round"/>
+    <line x1="610" y1="540" x2="622" y2="540" stroke="#38bdf8" stroke-opacity=".75" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="614" y1="546" x2="618" y2="546" stroke="#38bdf8" stroke-opacity=".26" stroke-width="1" stroke-dasharray="3 5"/>
+    <circle cx="610" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
+    <circle cx="610" cy="540" r="2.1" fill="#38bdf8"/>
+    <circle cx="622" cy="540" r="4.2" fill="#38bdf8" fill-opacity=".26"/>
+    <circle cx="622" cy="540" r="2.1" fill="#38bdf8"/>
+    <path d="M611.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="1.20s" repeatCount="indefinite"/>
     </path>
-    <path d="M567.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <path d="M620.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="1.34s" repeatCount="indefinite"/>
     </path>
-    <circle cx="554" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
-      <animate attributeName="cx" from="554" to="572" dur="1.5s" begin="1.20s" repeatCount="indefinite"/>
+    <circle cx="610" cy="540" r="3.2" fill="#f2fbff" opacity="1.0">
+      <animate attributeName="cx" from="610" to="622" dur="1.5s" begin="1.20s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="554" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
-      <animate attributeName="cx" from="554" to="572" dur="1.5s" begin="1.35s" repeatCount="indefinite"/>
+    <circle cx="610" cy="540" r="2.0" fill="#f2fbff" opacity="0.55">
+      <animate attributeName="cx" from="610" to="622" dur="1.5s" begin="1.35s" repeatCount="indefinite"/>
     </circle>
-    <line x1="688" y1="540" x2="728" y2="540" stroke="#a855f7" stroke-opacity=".14" stroke-width="8" stroke-linecap="round"/>
-    <line x1="688" y1="540" x2="728" y2="540" stroke="#a855f7" stroke-opacity=".8" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M704.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#a855f7" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <line x1="758" y1="540" x2="794" y2="540" stroke="#a855f7" stroke-opacity=".14" stroke-width="8" stroke-linecap="round"/>
+    <line x1="758" y1="540" x2="794" y2="540" stroke="#a855f7" stroke-opacity=".8" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M772.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#a855f7" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="1.60s" repeatCount="indefinite"/>
     </path>
-    <path d="M713.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#a855f7" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
+    <path d="M781.0 535.4 l4.6 4.6 -4.6 4.6" fill="none" stroke="#a855f7" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".28">
       <animate attributeName="opacity" values=".28;1;.28" dur="4.00s" begin="1.74s" repeatCount="indefinite"/>
     </path>
-    <circle cx="688" cy="540" r="3.2" fill="#f0e6ff">
-      <animate attributeName="cx" from="688" to="728" dur="1.5s" begin="1.60s" repeatCount="indefinite"/>
+    <circle cx="758" cy="540" r="3.2" fill="#f0e6ff">
+      <animate attributeName="cx" from="758" to="794" dur="1.5s" begin="1.60s" repeatCount="indefinite"/>
     </circle>
     <g>
-      <rect x="30" y="474.0" width="128" height="132" rx="26" fill="none" stroke="#22d3ee" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="34" y="478.0" width="120" height="124" rx="22" fill="none" stroke="#22d3ee" stroke-opacity="0.08" stroke-width="2"/>
-      <rect x="37" y="481.0" width="114" height="118" rx="19" fill="none" stroke="#22d3ee" stroke-opacity="0.11" stroke-width="2"/>
-      <rect x="40" y="484.0" width="108" height="112" rx="16" fill="url(#cardSurf)"/>
-      <rect x="40" y="484.0" width="108" height="112" rx="16" fill="#22d3ee" fill-opacity=".05"/>
-      <rect x="40.7" y="484.7" width="106.6" height="110.6" rx="15.4" fill="none" stroke="#22d3ee" stroke-opacity=".55" stroke-width="1.4">
+      <rect x="24" y="474.0" width="148" height="132" rx="26" fill="none" stroke="#22d3ee" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="28" y="478.0" width="140" height="124" rx="22" fill="none" stroke="#22d3ee" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="31" y="481.0" width="134" height="118" rx="19" fill="none" stroke="#22d3ee" stroke-opacity="0.11" stroke-width="2"/>
+      <rect x="34" y="484.0" width="128" height="112" rx="16" fill="url(#cardSurf)"/>
+      <rect x="34" y="484.0" width="128" height="112" rx="16" fill="#22d3ee" fill-opacity=".05"/>
+      <rect x="34.7" y="484.7" width="126.6" height="110.6" rx="15.4" fill="none" stroke="#22d3ee" stroke-opacity=".55" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values=".55;1;.55;.55" dur="4.00s" begin="0.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <rect x="45" y="489.0" width="98" height="102" rx="12" fill="none" stroke="#22d3ee" stroke-opacity=".14" stroke-width="1"/>
-      <g transform="translate(77.0 504.0) scale(1.4167)">
+      <rect x="39" y="489.0" width="118" height="102" rx="12" fill="none" stroke="#22d3ee" stroke-opacity=".14" stroke-width="1"/>
+      <g transform="translate(81.0 504.0) scale(1.4167)">
         <path d="M12 3.4v9" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round"/>
         <path d="M8.1 9.5 12 13.4 15.9 9.5" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M4.8 16.2v2.9a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.9" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round"/>
       </g>
-      <text x="94.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Load Data</text>
-      <circle cx="94.0" cy="610.0" r="7" fill="#22d3ee" fill-opacity=".22">
+      <text x="98.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="22.7" font-weight="600" fill="#e8f2ff">Load Data</text>
+      <circle cx="98.0" cy="610.0" r="7" fill="#22d3ee" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="94.0" cy="610.0" r="3.1" fill="#22d3ee"/>
-      <ellipse cx="94.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#22d3ee" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="94.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#22d3ee" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="94.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#22d3ee" stroke-opacity="0.26" stroke-width="1.2"/>
-      <ellipse cx="94.0" cy="627.0" rx="9" ry="2.2" fill="#22d3ee" fill-opacity=".30">
+      <circle cx="98.0" cy="610.0" r="3.1" fill="#22d3ee"/>
+      <ellipse cx="98.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#22d3ee" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="98.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#22d3ee" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="98.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#22d3ee" stroke-opacity="0.26" stroke-width="1.2"/>
+      <ellipse cx="98.0" cy="627.0" rx="9" ry="2.2" fill="#22d3ee" fill-opacity=".30">
         <animate attributeName="fill-opacity" values="0.14;0.6;0.14;0.14" dur="4.00s" begin="0.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </ellipse>
     </g>
     <g>
-      <rect x="164" y="474.0" width="128" height="132" rx="26" fill="none" stroke="#3b82f6" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="168" y="478.0" width="120" height="124" rx="22" fill="none" stroke="#3b82f6" stroke-opacity="0.08" stroke-width="2"/>
-      <rect x="171" y="481.0" width="114" height="118" rx="19" fill="none" stroke="#3b82f6" stroke-opacity="0.11" stroke-width="2"/>
-      <rect x="174" y="484.0" width="108" height="112" rx="16" fill="url(#cardSurf)"/>
-      <rect x="174" y="484.0" width="108" height="112" rx="16" fill="#3b82f6" fill-opacity=".05"/>
-      <rect x="174.7" y="484.7" width="106.6" height="110.6" rx="15.4" fill="none" stroke="#3b82f6" stroke-opacity=".55" stroke-width="1.4">
+      <rect x="172" y="474.0" width="148" height="132" rx="26" fill="none" stroke="#3b82f6" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="176" y="478.0" width="140" height="124" rx="22" fill="none" stroke="#3b82f6" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="179" y="481.0" width="134" height="118" rx="19" fill="none" stroke="#3b82f6" stroke-opacity="0.11" stroke-width="2"/>
+      <rect x="182" y="484.0" width="128" height="112" rx="16" fill="url(#cardSurf)"/>
+      <rect x="182" y="484.0" width="128" height="112" rx="16" fill="#3b82f6" fill-opacity=".05"/>
+      <rect x="182.7" y="484.7" width="126.6" height="110.6" rx="15.4" fill="none" stroke="#3b82f6" stroke-opacity=".55" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values=".55;1;.55;.55" dur="4.00s" begin="0.40s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <rect x="179" y="489.0" width="98" height="102" rx="12" fill="none" stroke="#3b82f6" stroke-opacity=".14" stroke-width="1"/>
-      <g transform="translate(211.0 504.0) scale(1.4167)">
+      <rect x="187" y="489.0" width="118" height="102" rx="12" fill="none" stroke="#3b82f6" stroke-opacity=".14" stroke-width="1"/>
+      <g transform="translate(229.0 504.0) scale(1.4167)">
         <path d="M8.4 5.2 19 12 8.4 18.8z" fill="#3b82f6"/>
       </g>
-      <text x="228.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Play</text>
-      <circle cx="228.0" cy="610.0" r="7" fill="#3b82f6" fill-opacity=".22">
+      <text x="246.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="22.7" font-weight="600" fill="#e8f2ff">Play</text>
+      <circle cx="246.0" cy="610.0" r="7" fill="#3b82f6" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.40s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="228.0" cy="610.0" r="3.1" fill="#3b82f6"/>
-      <ellipse cx="228.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#3b82f6" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="228.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#3b82f6" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="228.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#3b82f6" stroke-opacity="0.26" stroke-width="1.2"/>
-      <ellipse cx="228.0" cy="627.0" rx="9" ry="2.2" fill="#3b82f6" fill-opacity=".30">
+      <circle cx="246.0" cy="610.0" r="3.1" fill="#3b82f6"/>
+      <ellipse cx="246.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#3b82f6" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="246.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#3b82f6" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="246.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#3b82f6" stroke-opacity="0.26" stroke-width="1.2"/>
+      <ellipse cx="246.0" cy="627.0" rx="9" ry="2.2" fill="#3b82f6" fill-opacity=".30">
         <animate attributeName="fill-opacity" values="0.14;0.6;0.14;0.14" dur="4.00s" begin="0.40s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </ellipse>
     </g>
     <g>
-      <rect x="298" y="474.0" width="128" height="132" rx="26" fill="none" stroke="#38bdf8" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="302" y="478.0" width="120" height="124" rx="22" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="2"/>
-      <rect x="305" y="481.0" width="114" height="118" rx="19" fill="none" stroke="#38bdf8" stroke-opacity="0.11" stroke-width="2"/>
-      <rect x="308" y="484.0" width="108" height="112" rx="16" fill="url(#cardSurf)"/>
-      <rect x="308" y="484.0" width="108" height="112" rx="16" fill="#38bdf8" fill-opacity=".05"/>
-      <rect x="308.7" y="484.7" width="106.6" height="110.6" rx="15.4" fill="none" stroke="#38bdf8" stroke-opacity=".55" stroke-width="1.4">
+      <rect x="320" y="474.0" width="148" height="132" rx="26" fill="none" stroke="#38bdf8" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="324" y="478.0" width="140" height="124" rx="22" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="327" y="481.0" width="134" height="118" rx="19" fill="none" stroke="#38bdf8" stroke-opacity="0.11" stroke-width="2"/>
+      <rect x="330" y="484.0" width="128" height="112" rx="16" fill="url(#cardSurf)"/>
+      <rect x="330" y="484.0" width="128" height="112" rx="16" fill="#38bdf8" fill-opacity=".05"/>
+      <rect x="330.7" y="484.7" width="126.6" height="110.6" rx="15.4" fill="none" stroke="#38bdf8" stroke-opacity=".55" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values=".55;1;.55;.55" dur="4.00s" begin="0.80s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <rect x="313" y="489.0" width="98" height="102" rx="12" fill="none" stroke="#38bdf8" stroke-opacity=".14" stroke-width="1"/>
-      <g transform="translate(345.0 504.0) scale(1.4167)">
+      <rect x="335" y="489.0" width="118" height="102" rx="12" fill="none" stroke="#38bdf8" stroke-opacity=".14" stroke-width="1"/>
+      <g transform="translate(377.0 504.0) scale(1.4167)">
         <path d="M4 3.6v16.8h16.4" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".65"/>
         <path d="M6.8 16.4 10.6 11.6l3.3 2.6 5.1-6.8" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="10.6" cy="11.6" r="1.5" fill="#38bdf8"/>
         <circle cx="19" cy="7.4" r="1.8" fill="#38bdf8"/>
       </g>
-      <text x="362.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Live edge</text>
-      <text x="362.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-style="italic" fill="#38bdf8">reached</text>
-      <circle cx="362.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
+      <text x="394.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="22.7" font-weight="600" fill="#e8f2ff">Live edge</text>
+      <text x="394.0" y="584.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" font-style="italic" fill="#38bdf8">reached</text>
+      <circle cx="394.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="0.80s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="362.0" cy="610.0" r="3.1" fill="#38bdf8"/>
-      <ellipse cx="362.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#38bdf8" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="362.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="362.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#38bdf8" stroke-opacity="0.26" stroke-width="1.2"/>
-      <ellipse cx="362.0" cy="627.0" rx="9" ry="2.2" fill="#38bdf8" fill-opacity=".30">
+      <circle cx="394.0" cy="610.0" r="3.1" fill="#38bdf8"/>
+      <ellipse cx="394.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#38bdf8" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="394.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="394.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#38bdf8" stroke-opacity="0.26" stroke-width="1.2"/>
+      <ellipse cx="394.0" cy="627.0" rx="9" ry="2.2" fill="#38bdf8" fill-opacity=".30">
         <animate attributeName="fill-opacity" values="0.14;0.6;0.14;0.14" dur="4.00s" begin="0.80s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </ellipse>
     </g>
     <g>
-      <rect x="432" y="474.0" width="128" height="132" rx="26" fill="none" stroke="#22c55e" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="436" y="478.0" width="120" height="124" rx="22" fill="none" stroke="#22c55e" stroke-opacity="0.08" stroke-width="2"/>
-      <rect x="439" y="481.0" width="114" height="118" rx="19" fill="none" stroke="#22c55e" stroke-opacity="0.11" stroke-width="2"/>
-      <rect x="442" y="484.0" width="108" height="112" rx="16" fill="url(#cardSurf)"/>
-      <rect x="442" y="484.0" width="108" height="112" rx="16" fill="#22c55e" fill-opacity=".05"/>
-      <rect x="442.7" y="484.7" width="106.6" height="110.6" rx="15.4" fill="none" stroke="#22c55e" stroke-opacity=".55" stroke-width="1.4">
+      <rect x="468" y="474.0" width="148" height="132" rx="26" fill="none" stroke="#22c55e" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="472" y="478.0" width="140" height="124" rx="22" fill="none" stroke="#22c55e" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="475" y="481.0" width="134" height="118" rx="19" fill="none" stroke="#22c55e" stroke-opacity="0.11" stroke-width="2"/>
+      <rect x="478" y="484.0" width="128" height="112" rx="16" fill="url(#cardSurf)"/>
+      <rect x="478" y="484.0" width="128" height="112" rx="16" fill="#22c55e" fill-opacity=".05"/>
+      <rect x="478.7" y="484.7" width="126.6" height="110.6" rx="15.4" fill="none" stroke="#22c55e" stroke-opacity=".55" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values=".55;1;.55;.55" dur="4.00s" begin="1.20s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <rect x="447" y="489.0" width="98" height="102" rx="12" fill="none" stroke="#22c55e" stroke-opacity=".14" stroke-width="1"/>
-      <g transform="translate(479.0 504.0) scale(1.4167)">
+      <rect x="483" y="489.0" width="118" height="102" rx="12" fill="none" stroke="#22c55e" stroke-opacity=".14" stroke-width="1"/>
+      <g transform="translate(525.0 504.0) scale(1.4167)">
         <path d="M20 12a8 8 0 1 1-2.4-5.7" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round"/>
         <path d="M20 3.6V8h-4.4" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="496.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Follow live</text>
-      <text x="496.0" y="582.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-style="italic" fill="#22c55e">starts by itself</text>
-      <circle cx="496.0" cy="610.0" r="7" fill="#22c55e" fill-opacity=".22">
+      <text x="542.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.6" font-weight="600" fill="#e8f2ff">Follow live</text>
+      <text x="542.0" y="584.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" font-style="italic" fill="#22c55e">on its own</text>
+      <circle cx="542.0" cy="610.0" r="7" fill="#22c55e" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="1.20s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="496.0" cy="610.0" r="3.1" fill="#22c55e"/>
-      <ellipse cx="496.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="496.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#22c55e" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="496.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#22c55e" stroke-opacity="0.26" stroke-width="1.2"/>
-      <ellipse cx="496.0" cy="627.0" rx="9" ry="2.2" fill="#22c55e" fill-opacity=".30">
+      <circle cx="542.0" cy="610.0" r="3.1" fill="#22c55e"/>
+      <ellipse cx="542.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="542.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#22c55e" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="542.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#22c55e" stroke-opacity="0.26" stroke-width="1.2"/>
+      <ellipse cx="542.0" cy="627.0" rx="9" ry="2.2" fill="#22c55e" fill-opacity=".30">
         <animate attributeName="fill-opacity" values="0.14;0.6;0.14;0.14" dur="4.00s" begin="1.20s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </ellipse>
     </g>
     <g>
-      <rect x="566" y="474.0" width="128" height="132" rx="26" fill="none" stroke="#38bdf8" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="570" y="478.0" width="120" height="124" rx="22" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="2"/>
-      <rect x="573" y="481.0" width="114" height="118" rx="19" fill="none" stroke="#38bdf8" stroke-opacity="0.11" stroke-width="2"/>
-      <rect x="576" y="484.0" width="108" height="112" rx="16" fill="url(#cardSurf)"/>
-      <rect x="576" y="484.0" width="108" height="112" rx="16" fill="#38bdf8" fill-opacity=".05"/>
-      <rect x="576.7" y="484.7" width="106.6" height="110.6" rx="15.4" fill="none" stroke="#38bdf8" stroke-opacity=".55" stroke-width="1.4">
+      <rect x="616" y="474.0" width="148" height="132" rx="26" fill="none" stroke="#38bdf8" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="620" y="478.0" width="140" height="124" rx="22" fill="none" stroke="#38bdf8" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="623" y="481.0" width="134" height="118" rx="19" fill="none" stroke="#38bdf8" stroke-opacity="0.11" stroke-width="2"/>
+      <rect x="626" y="484.0" width="128" height="112" rx="16" fill="url(#cardSurf)"/>
+      <rect x="626" y="484.0" width="128" height="112" rx="16" fill="#38bdf8" fill-opacity=".05"/>
+      <rect x="626.7" y="484.7" width="126.6" height="110.6" rx="15.4" fill="none" stroke="#38bdf8" stroke-opacity=".55" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values=".55;1;.55;.55" dur="4.00s" begin="1.60s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <rect x="581" y="489.0" width="98" height="102" rx="12" fill="none" stroke="#38bdf8" stroke-opacity=".14" stroke-width="1"/>
-      <g transform="translate(613.0 504.0) scale(1.4167)">
+      <rect x="631" y="489.0" width="118" height="102" rx="12" fill="none" stroke="#38bdf8" stroke-opacity=".14" stroke-width="1"/>
+      <g transform="translate(673.0 504.0) scale(1.4167)">
         <circle cx="12" cy="12" r="8.6" fill="none" stroke="#38bdf8" stroke-width="2"/>
         <path d="M12 7.2V12l3.4 2.1" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="630.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#e8f2ff">Poll every 15s</text>
-      <circle cx="630.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
+      <text x="690.0" y="566.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="21.5" font-weight="600" fill="#e8f2ff">Poll every</text>
+      <text x="690.0" y="584.0" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" font-style="italic" fill="#38bdf8">15s</text>
+      <circle cx="690.0" cy="610.0" r="7" fill="#38bdf8" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="1.60s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="630.0" cy="610.0" r="3.1" fill="#38bdf8"/>
-      <ellipse cx="630.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#38bdf8" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="630.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="630.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#38bdf8" stroke-opacity="0.26" stroke-width="1.2"/>
-      <ellipse cx="630.0" cy="627.0" rx="9" ry="2.2" fill="#38bdf8" fill-opacity=".30">
+      <circle cx="690.0" cy="610.0" r="3.1" fill="#38bdf8"/>
+      <ellipse cx="690.0" cy="627.0" rx="34" ry="7.5" fill="none" stroke="#38bdf8" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="690.0" cy="627.0" rx="23" ry="5" fill="none" stroke="#38bdf8" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="690.0" cy="627.0" rx="13" ry="3" fill="none" stroke="#38bdf8" stroke-opacity="0.26" stroke-width="1.2"/>
+      <ellipse cx="690.0" cy="627.0" rx="9" ry="2.2" fill="#38bdf8" fill-opacity=".30">
         <animate attributeName="fill-opacity" values="0.14;0.6;0.14;0.14" dur="4.00s" begin="1.60s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </ellipse>
     </g>
     <g>
-      <circle cx="800" cy="540" r="100" fill="url(#gViolet)" opacity=".45">
+      <circle cx="866" cy="540" r="100" fill="url(#gViolet)" opacity=".45">
         <animate attributeName="opacity" values="0.28;0.9;0.28;0.28" dur="4.00s" begin="2.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="800" cy="540" r="96" fill="none" stroke="#a855f7" stroke-opacity="0.2" stroke-width="1.2" stroke-dasharray="7 11"/>
-      <circle cx="800" cy="540" r="85" fill="none" stroke="#a855f7" stroke-opacity="0.3" stroke-width="1.2" stroke-dasharray="4 9"/>
-      <circle cx="800" cy="540" r="75" fill="none" stroke="#a855f7" stroke-opacity="0.22" stroke-width="1"/>
-      <circle cx="800" cy="540" r="66" fill="none" stroke="#a855f7" stroke-width="1.6" opacity="0">
+      <circle cx="866" cy="540" r="96" fill="none" stroke="#a855f7" stroke-opacity="0.2" stroke-width="1.2" stroke-dasharray="7 11"/>
+      <circle cx="866" cy="540" r="85" fill="none" stroke="#a855f7" stroke-opacity="0.3" stroke-width="1.2" stroke-dasharray="4 9"/>
+      <circle cx="866" cy="540" r="75" fill="none" stroke="#a855f7" stroke-opacity="0.22" stroke-width="1"/>
+      <circle cx="866" cy="540" r="66" fill="none" stroke="#a855f7" stroke-width="1.6" opacity="0">
         <animate attributeName="r" values="66;106" dur="4.00s" begin="2.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;1" keySplines="0.2 0 0.3 1"/>
       </circle>
-      <circle cx="800" cy="540" r="66" fill="none" stroke="#a855f7" stroke-width="1.6" opacity="0">
+      <circle cx="866" cy="540" r="66" fill="none" stroke="#a855f7" stroke-width="1.6" opacity="0">
         <animate attributeName="opacity" values="0.0;0.85;0.0;0.0" dur="4.00s" begin="2.00s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <path d="M800 474 L866 540 L800 606 L734 540z" fill="#0b1120" fill-opacity=".95"/>
-      <path d="M800 474 L866 540 L800 606 L734 540z" fill="#a855f7" fill-opacity=".07"/>
-      <path d="M800 474 L866 540 L800 606 L734 540z" fill="none" stroke="#a855f7" stroke-opacity=".9" stroke-width="1.7"/>
-      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(800 487) rotate(90)"/>
-      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(853 540) rotate(180)"/>
-      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(800 593) rotate(270)"/>
-      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(747 540) rotate(0)"/>
-      <g transform="translate(787 500) scale(1.08)">
+      <path d="M866 474 L932 540 L866 606 L800 540z" fill="#0b1120" fill-opacity=".95"/>
+      <path d="M866 474 L932 540 L866 606 L800 540z" fill="#a855f7" fill-opacity=".07"/>
+      <path d="M866 474 L932 540 L866 606 L800 540z" fill="none" stroke="#a855f7" stroke-opacity=".9" stroke-width="1.7"/>
+      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(866 487) rotate(90)"/>
+      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(919 540) rotate(180)"/>
+      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(866 593) rotate(270)"/>
+      <path d="M-3.4 -3.4 L2.6 0 L-3.4 3.4z" fill="#a855f7" fill-opacity=".75" transform="translate(813 540) rotate(0)"/>
+      <g transform="translate(853 500) scale(1.08)">
         <path d="M9 3.6v3M9 17.4v3M15.4 5.6v3M15.4 19v2" stroke="#e9d5ff" stroke-width="1.7" stroke-linecap="round"/>
         <rect x="6.6" y="6.6" width="4.8" height="10.8" rx="1.1" fill="none" stroke="#e9d5ff" stroke-width="1.8"/>
         <rect x="13" y="8.6" width="4.8" height="10.4" rx="1.1" fill="none" stroke="#e9d5ff" stroke-width="1.8"/>
       </g>
-      <text x="800" y="548" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" fill="#e8f2ff">New closed</text>
-      <text x="800" y="564" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="14" font-weight="600" fill="#e8f2ff">bar?</text>
+      <text x="866" y="548" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="600" fill="#e8f2ff">New closed</text>
+      <text x="866" y="564" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="600" fill="#e8f2ff">bar?</text>
     </g>
-    <path d="M870 540 L890 540 L890 478 L952 478" fill="none" stroke="#22c55e" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M870 540 L890 540 L890 478 L952 478" fill="none" stroke="#22c55e" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arGreen)"/>
-    <rect x="903.0" y="462" width="46" height="32" rx="9" fill="none" stroke="#22c55e" stroke-opacity=".18"/>
-    <rect x="906.0" y="465" width="40" height="26" rx="7" fill="#0a1220" stroke="#22c55e" stroke-opacity=".85"/>
-    <text x="926.0" y="482.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".6" fill="#22c55e">YES</text>
-    <circle cx="870" cy="540" r="2.9" fill="#22c55e">
-      <animate attributeName="cx" from="870" to="950" dur="1.25s" begin="2.00s" repeatCount="indefinite"/>
+    <path d="M936 540 L956 540 L956 478 L986 478" fill="none" stroke="#22c55e" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M936 540 L956 540 L956 478 L986 478" fill="none" stroke="#22c55e" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arGreen)"/>
+    <rect x="953.0" y="462" width="46" height="32" rx="9" fill="none" stroke="#22c55e" stroke-opacity=".18"/>
+    <rect x="956.0" y="465" width="40" height="26" rx="7" fill="#0a1220" stroke="#22c55e" stroke-opacity=".85"/>
+    <text x="976.0" y="482.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" font-weight="700" letter-spacing=".6" fill="#22c55e">YES</text>
+    <circle cx="936" cy="540" r="2.9" fill="#22c55e">
+      <animate attributeName="cx" from="936" to="984" dur="1.25s" begin="2.00s" repeatCount="indefinite"/>
       <animate attributeName="cy" from="540" to="478" dur="1.25s" begin="2.00s" repeatCount="indefinite"/>
     </circle>
-    <path d="M870 540 L890 540 L890 606 L952 606" fill="none" stroke="#ec4899" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M870 540 L890 540 L890 606 L952 606" fill="none" stroke="#ec4899" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arPink)"/>
-    <rect x="907.0" y="590" width="38" height="32" rx="9" fill="none" stroke="#ec4899" stroke-opacity=".18"/>
-    <rect x="910.0" y="593" width="32" height="26" rx="7" fill="#0a1220" stroke="#ec4899" stroke-opacity=".85"/>
-    <text x="926.0" y="610.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing=".6" fill="#ec4899">NO</text>
-    <circle cx="870" cy="540" r="2.9" fill="#ec4899">
-      <animate attributeName="cx" from="870" to="950" dur="1.25s" begin="2.60s" repeatCount="indefinite"/>
+    <path d="M936 540 L956 540 L956 606 L986 606" fill="none" stroke="#ec4899" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M936 540 L956 540 L956 606 L986 606" fill="none" stroke="#ec4899" stroke-opacity=".8" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#arPink)"/>
+    <rect x="957.0" y="590" width="38" height="32" rx="9" fill="none" stroke="#ec4899" stroke-opacity=".18"/>
+    <rect x="960.0" y="593" width="32" height="26" rx="7" fill="#0a1220" stroke="#ec4899" stroke-opacity=".85"/>
+    <text x="976.0" y="610.6" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" font-weight="700" letter-spacing=".6" fill="#ec4899">NO</text>
+    <circle cx="936" cy="540" r="2.9" fill="#ec4899">
+      <animate attributeName="cx" from="936" to="984" dur="1.25s" begin="2.60s" repeatCount="indefinite"/>
       <animate attributeName="cy" from="540" to="606" dur="1.25s" begin="2.60s" repeatCount="indefinite"/>
     </circle>
     <g>
-      <rect x="953" y="430.0" width="296" height="96" rx="24" fill="none" stroke="#22c55e" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="957" y="434.0" width="288" height="88" rx="20" fill="none" stroke="#22c55e" stroke-opacity="0.09" stroke-width="2"/>
-      <rect x="960" y="437.0" width="282" height="82" rx="17" fill="none" stroke="#22c55e" stroke-opacity="0.12" stroke-width="2"/>
-      <rect x="962" y="439.0" width="278" height="78" rx="15" fill="url(#cardSurf)"/>
-      <rect x="962" y="439.0" width="278" height="78" rx="15" fill="#22c55e" fill-opacity=".05"/>
-      <rect x="962.7" y="439.7" width="276.6" height="76.6" rx="14.4" fill="none" stroke="#22c55e" stroke-opacity=".6" stroke-width="1.4">
+      <rect x="987" y="430.0" width="276" height="96" rx="24" fill="none" stroke="#22c55e" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="991" y="434.0" width="268" height="88" rx="20" fill="none" stroke="#22c55e" stroke-opacity="0.09" stroke-width="2"/>
+      <rect x="994" y="437.0" width="262" height="82" rx="17" fill="none" stroke="#22c55e" stroke-opacity="0.12" stroke-width="2"/>
+      <rect x="996" y="439.0" width="258" height="78" rx="15" fill="url(#cardSurf)"/>
+      <rect x="996" y="439.0" width="258" height="78" rx="15" fill="#22c55e" fill-opacity=".05"/>
+      <rect x="996.7" y="439.7" width="256.6" height="76.6" rx="14.4" fill="none" stroke="#22c55e" stroke-opacity=".6" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values="0.45;1.0;0.45;0.45" dur="4.00s" begin="2.30s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <g transform="translate(986 463) scale(1.25)">
+      <g transform="translate(1020 463) scale(1.25)">
         <rect x="4.4" y="13.4" width="3.7" height="6.4" rx="1.1" fill="#22c55e"/>
         <rect x="10.15" y="9.4" width="3.7" height="10.4" rx="1.1" fill="#22c55e"/>
         <rect x="15.9" y="5" width="3.7" height="14.8" rx="1.1" fill="#22c55e"/>
       </g>
-      <text x="1026" y="475" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#e8f2ff">Tape advances</text>
-      <text x="1026" y="494" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#8ea3bd">VWAP · bands · signals</text>
-      <circle cx="1101" cy="530" r="6.4" fill="#22c55e" fill-opacity=".22">
+      <text x="1060" y="475" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="22.7" font-weight="700" fill="#e8f2ff">Tape advances</text>
+      <text x="1060" y="494" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" fill="#8ea3bd">VWAP · bands · signals</text>
+      <circle cx="1125" cy="530" r="6.4" fill="#22c55e" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="2.30s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="1101" cy="530" r="3" fill="#22c55e"/>
-      <ellipse cx="1101" cy="545" rx="30" ry="6.6" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="1101" cy="545" rx="20" ry="4.4" fill="none" stroke="#22c55e" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="1101" cy="545" rx="11" ry="2.6" fill="none" stroke="#22c55e" stroke-opacity="0.26" stroke-width="1.2"/>
+      <circle cx="1125" cy="530" r="3" fill="#22c55e"/>
+      <ellipse cx="1125" cy="545" rx="30" ry="6.6" fill="none" stroke="#22c55e" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="1125" cy="545" rx="20" ry="4.4" fill="none" stroke="#22c55e" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="1125" cy="545" rx="11" ry="2.6" fill="none" stroke="#22c55e" stroke-opacity="0.26" stroke-width="1.2"/>
     </g>
     <g>
-      <rect x="953" y="558.0" width="296" height="96" rx="24" fill="none" stroke="#ec4899" stroke-opacity="0.05" stroke-width="2"/>
-      <rect x="957" y="562.0" width="288" height="88" rx="20" fill="none" stroke="#ec4899" stroke-opacity="0.09" stroke-width="2"/>
-      <rect x="960" y="565.0" width="282" height="82" rx="17" fill="none" stroke="#ec4899" stroke-opacity="0.12" stroke-width="2"/>
-      <rect x="962" y="567.0" width="278" height="78" rx="15" fill="url(#cardSurf)"/>
-      <rect x="962" y="567.0" width="278" height="78" rx="15" fill="#ec4899" fill-opacity=".05"/>
-      <rect x="962.7" y="567.7" width="276.6" height="76.6" rx="14.4" fill="none" stroke="#ec4899" stroke-opacity=".6" stroke-width="1.4">
+      <rect x="987" y="558.0" width="276" height="96" rx="24" fill="none" stroke="#ec4899" stroke-opacity="0.05" stroke-width="2"/>
+      <rect x="991" y="562.0" width="268" height="88" rx="20" fill="none" stroke="#ec4899" stroke-opacity="0.09" stroke-width="2"/>
+      <rect x="994" y="565.0" width="262" height="82" rx="17" fill="none" stroke="#ec4899" stroke-opacity="0.12" stroke-width="2"/>
+      <rect x="996" y="567.0" width="258" height="78" rx="15" fill="url(#cardSurf)"/>
+      <rect x="996" y="567.0" width="258" height="78" rx="15" fill="#ec4899" fill-opacity=".05"/>
+      <rect x="996.7" y="567.7" width="256.6" height="76.6" rx="14.4" fill="none" stroke="#ec4899" stroke-opacity=".6" stroke-width="1.4">
         <animate attributeName="stroke-opacity" values="0.45;1.0;0.45;0.45" dur="4.00s" begin="2.90s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </rect>
-      <g transform="translate(1000 606)">
+      <g transform="translate(1034 606)">
         <circle cx="15.0" cy="0.0" r="2.5" fill="#ec4899" opacity=".55"/>
         <circle cx="10.6" cy="10.6" r="2.5" fill="#ec4899" opacity=".55"/>
         <circle cx="0.0" cy="15.0" r="2.5" fill="#ec4899" opacity=".55"/>
@@ -578,22 +579,22 @@
         <circle cx="-0.0" cy="-15.0" r="2.5" fill="#ec4899" opacity=".55"/>
         <circle cx="10.6" cy="-10.6" r="2.5" fill="#ec4899" opacity=".55"/>
       </g>
-      <text x="1030" y="611" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#e8f2ff">Still forming…</text>
-      <circle cx="1101" cy="658" r="6.4" fill="#ec4899" fill-opacity=".22">
+      <text x="1064" y="611" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="22.7" font-weight="700" fill="#e8f2ff">Still forming…</text>
+      <circle cx="1125" cy="658" r="6.4" fill="#ec4899" fill-opacity=".22">
         <animate attributeName="fill-opacity" values="0.1;0.42;0.1;0.1" dur="4.00s" begin="2.90s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.10;0.38;1" keySplines="0.15 0 0.1 1;0.35 0 0.45 1;0 0 1 1"/>
       </circle>
-      <circle cx="1101" cy="658" r="3" fill="#ec4899"/>
-      <ellipse cx="1101" cy="673" rx="30" ry="6.6" fill="none" stroke="#ec4899" stroke-opacity="0.1" stroke-width="1.2"/>
-      <ellipse cx="1101" cy="673" rx="20" ry="4.4" fill="none" stroke="#ec4899" stroke-opacity="0.16" stroke-width="1.2"/>
-      <ellipse cx="1101" cy="673" rx="11" ry="2.6" fill="none" stroke="#ec4899" stroke-opacity="0.26" stroke-width="1.2"/>
+      <circle cx="1125" cy="658" r="3" fill="#ec4899"/>
+      <ellipse cx="1125" cy="673" rx="30" ry="6.6" fill="none" stroke="#ec4899" stroke-opacity="0.1" stroke-width="1.2"/>
+      <ellipse cx="1125" cy="673" rx="20" ry="4.4" fill="none" stroke="#ec4899" stroke-opacity="0.16" stroke-width="1.2"/>
+      <ellipse cx="1125" cy="673" rx="11" ry="2.6" fill="none" stroke="#ec4899" stroke-opacity="0.26" stroke-width="1.2"/>
     </g>
-    <path d="M1101 675 L1101 691 L630 691 L630 648" fill="none" stroke="#a855f7" stroke-opacity=".14" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="M1101 675 L1101 691 L630 691 L630 648" fill="none" stroke="#a855f7" stroke-opacity=".7" stroke-width="1.7" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#arViolet)">
+    <path d="M1125 675 L1125 691 L690 691 L690 648" fill="none" stroke="#a855f7" stroke-opacity=".14" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M1125 675 L1125 691 L690 691 L690 648" fill="none" stroke="#a855f7" stroke-opacity=".7" stroke-width="1.7" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#arViolet)">
       <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.15s" repeatCount="indefinite"/>
     </path>
-    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(983 691) rotate(180)"/>
-    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(866 691) rotate(180)"/>
-    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(748 691) rotate(180)"/>
-    <text x="866" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#a855f7" fill-opacity=".8">poll again — the tape does not move</text>
+    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(1016 691) rotate(180)"/>
+    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(908 691) rotate(180)"/>
+    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(799 691) rotate(180)"/>
+    <text x="908" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" fill="#a855f7" fill-opacity=".8">poll again — the tape does not move</text>
   </g>
 </svg>

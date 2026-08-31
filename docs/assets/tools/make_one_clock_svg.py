@@ -73,7 +73,10 @@ INK = "#eaf3ff"
 DIM = "#8ba1bc"
 GRID = "#1c2740"
 
-H = LANE_Y0 + LANE_H * len(LANES) + 54
+# +80, not +54: the footnote sets on TWO lines now. At 19px the single
+# line was 1,547px of text in a 1,212px box and simply ran off the right
+# edge -- SVG does not wrap, so an overlong <text> is silently clipped.
+H = LANE_Y0 + LANE_H * len(LANES) + 80
 
 # Fast attack, slower decay, dark for the rest -- a bar CLOSING, not breathing.
 # Same envelope the pipeline nodes use, so the two drawings agree about what an
@@ -149,17 +152,17 @@ def build() -> str:
 
     # ── header ────────────────────────────────────────────────────────────
     o.append(
-        f'<text x="{PAD}" y="{HEAD_Y-14}" font-family="{FONT}" font-size="14.5" '
+        f'<text x="{PAD}" y="{HEAD_Y-14}" font-family="{FONT}" font-size="20.6" '
         f'font-weight="700" letter-spacing="1.6" fill="{INK}">ONE MARKET CLOCK</text>'
     )
     o.append(
-        f'<text x="{PAD}" y="{HEAD_Y+6}" font-family="{FONT}" font-size="14" '
+        f'<text x="{PAD}" y="{HEAD_Y+6}" font-family="{FONT}" font-size="19.9" '
         f'fill="{DIM}">One tick advances market time by a single base bar. '
         f'A pane steps only when its own bar has closed.</text>'
     )
     o.append(
         f'<text x="{W-PAD}" y="{HEAD_Y-14}" text-anchor="end" font-family="{MONO}" '
-        f'font-size="13.5" letter-spacing="1.2" fill="{DIM}">60 MIN OF MARKET TIME</text>'
+        f'font-size="19.2" letter-spacing="1.2" fill="{DIM}">60 MIN OF MARKET TIME</text>'
     )
 
     # ── lanes ─────────────────────────────────────────────────────────────
@@ -176,7 +179,7 @@ def build() -> str:
             f'fill="{colour}" fill-opacity="0.10" stroke="{colour}" stroke-opacity="0.34"/>'
         )
         o.append(
-            f'<text x="{PAD+14}" y="{cy+4.5}" font-family="{MONO}" font-size="14.5" '
+            f'<text x="{PAD+14}" y="{cy+4.5}" font-family="{MONO}" font-size="20.6" '
             f'font-weight="700" fill="{colour}">{label}</text>'
         )
 
@@ -214,7 +217,7 @@ def build() -> str:
         # only chance to read it.
         o.append(
             f'<text x="{W-PAD}" y="{cy+4.5}" text-anchor="end" font-family="{MONO}" '
-            f'font-size="13.5" font-weight="700" fill="{colour}" opacity="0.42">'
+            f'font-size="19.2" font-weight="700" fill="{colour}" opacity="0.42">'
             f'{closes}×'
             f'<animate attributeName="opacity" values="0.42;0.42;1;0.42" '
             f'keyTimes="0;0.86;0.94;1" begin="0s" dur="{CYCLE}s" '
@@ -239,12 +242,14 @@ def build() -> str:
     )
 
     # ── footnote ──────────────────────────────────────────────────────────
-    o.append(
-        f'<text x="{PAD}" y="{H-20}" font-family="{FONT}" font-size="13.5" fill="{DIM}">'
-        f'Every lane reaches the right edge together — that is what "synchronised" '
-        f'means here, and it is what stepping each engine once per tick does not give you.'
-        f'</text>'
-    )
+    for i, line in enumerate((
+        'Every lane reaches the right edge together — that is what "synchronised"',
+        'means here, and it is what stepping each engine once per tick does not give you.',
+    )):
+        o.append(
+            f'<text x="{PAD}" y="{H-46+i*24}" font-family="{FONT}" font-size="18.4" '
+            f'fill="{DIM}">{line}</text>'
+        )
 
     o.append("</svg>")
     return "".join(o)

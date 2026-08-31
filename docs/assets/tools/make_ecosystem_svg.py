@@ -103,11 +103,11 @@ def build() -> str:
              f'fill="none" stroke="#1e2a44"/>')
 
     # ── column headings ───────────────────────────────────────────────────
-    o.append(f'<text x="{COL_X}" y="46" font-family="{MONO}" font-size="14" '
+    o.append(f'<text x="{COL_X}" y="46" font-family="{MONO}" font-size="19.9" '
              f'letter-spacing="1.3" fill="{RETIRE}">RETIRED · 5 REPOSITORIES</text>')
-    o.append(f'<text x="{HUB_X}" y="46" font-family="{MONO}" font-size="14" '
+    o.append(f'<text x="{HUB_X}" y="46" font-family="{MONO}" font-size="19.9" '
              f'letter-spacing="1.3" fill="{HUB}">THIS REPOSITORY</text>')
-    o.append(f'<text x="{DATA_X}" y="46" font-family="{MONO}" font-size="14" '
+    o.append(f'<text x="{DATA_X}" y="46" font-family="{MONO}" font-size="19.9" '
              f'letter-spacing="1.3" fill="{DATA}">LIVE DEPENDENCY</text>')
 
     # ── the five predecessors, each folding in on its own beat ────────────
@@ -119,7 +119,7 @@ def build() -> str:
             f'<g opacity="0.30">{fade(t, 0.30, 1.0)}'
             f'<rect x="{COL_X}" y="{y}" width="{CARD_W}" height="{CARD_H}" rx="9" '
             f'fill="#101a2c" stroke="{RETIRE}" stroke-opacity="0.5"/>'
-            f'<text x="{COL_X+14}" y="{cy+4.5}" font-family="{MONO}" font-size="13.5" '
+            f'<text x="{COL_X+14}" y="{cy+4.5}" font-family="{MONO}" font-size="19.2" '
             f'fill="{DIM}">{name}</text></g>'
         )
         # Converging feeder into the gate. An elbow, not a bezier: a curved
@@ -141,12 +141,12 @@ def build() -> str:
     o.append(f'<rect x="{GATE_X}" y="{gy:.1f}" width="104" height="{gh}" rx="10" '
              f'fill="{GATE}" fill-opacity="0.08" stroke="{GATE}" stroke-opacity="0.55"/>')
     o.append(f'<text x="{GATE_X+52}" y="{gy+30:.1f}" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="13.5" font-weight="700" fill="{GATE}">'
+             f'font-family="{MONO}" font-size="19.2" font-weight="700" fill="{GATE}">'
              f'REDACTED</text>')
     o.append(f'<text x="{GATE_X+52}" y="{gy+48:.1f}" text-anchor="middle" '
-             f'font-family="{FONT}" font-size="14" fill="{DIM}">credentials</text>')
+             f'font-family="{FONT}" font-size="19.9" fill="{DIM}">credentials</text>')
     o.append(f'<text x="{GATE_X+52}" y="{gy+63:.1f}" text-anchor="middle" '
-             f'font-family="{FONT}" font-size="14" fill="{DIM}">stripped</text>')
+             f'font-family="{FONT}" font-size="19.9" fill="{DIM}">stripped</text>')
     # it lights when the last predecessor has arrived
     o.append(f'<rect x="{GATE_X}" y="{gy:.1f}" width="104" height="{gh}" rx="10" '
              f'fill="{GATE}" fill-opacity="0">'
@@ -164,9 +164,9 @@ def build() -> str:
     hub_h = H - hub_y - 62
     o.append(f'<rect x="{HUB_X}" y="{hub_y}" width="{HUB_W}" height="{hub_h}" rx="12" '
              f'fill="#0c1a22" stroke="{HUB}" stroke-width="2" stroke-opacity="0.75"/>')
-    o.append(f'<text x="{HUB_X+18}" y="{hub_y+30}" font-family="{FONT}" font-size="16.5" '
+    o.append(f'<text x="{HUB_X+18}" y="{hub_y+30}" font-family="{FONT}" font-size="23.4" '
              f'font-weight="700" fill="{HUB}">trading-platform</text>')
-    o.append(f'<text x="{HUB_X+18}" y="{hub_y+49}" font-family="{FONT}" font-size="13" '
+    o.append(f'<text x="{HUB_X+18}" y="{hub_y+49}" font-family="{FONT}" font-size="18.5" '
              f'fill="{DIM}">the platform · you are here</text>')
 
     # legacy/ inside it
@@ -175,9 +175,9 @@ def build() -> str:
              f'<rect x="{HUB_X+18}" y="{ly}" width="{HUB_W-36}" height="62" rx="9" '
              f'fill="#101a2c" stroke="{RETIRE}" stroke-opacity="0.6" '
              f'stroke-dasharray="5 4"/>'
-             f'<text x="{HUB_X+32}" y="{ly+26}" font-family="{MONO}" font-size="14" '
+             f'<text x="{HUB_X+32}" y="{ly+26}" font-family="{MONO}" font-size="19.9" '
              f'font-weight="700" fill="{DIM}">legacy/</text>'
-             f'<text x="{HUB_X+32}" y="{ly+45}" font-family="{FONT}" font-size="13" '
+             f'<text x="{HUB_X+32}" y="{ly+45}" font-family="{FONT}" font-size="18.5" '
              f'fill="{RETIRE}">442 files · reference only — no lint, no tests, '
              f'no image</text></g>')
 
@@ -185,7 +185,7 @@ def build() -> str:
     ay = ly + 78
     o.append(f'<rect x="{HUB_X+18}" y="{ay}" width="{HUB_W-36}" height="44" rx="9" '
              f'fill="{HUB}" fill-opacity="0.10" stroke="{HUB}" stroke-opacity="0.45"/>')
-    o.append(f'<text x="{HUB_X+32}" y="{ay+27}" font-family="{FONT}" font-size="13.5" '
+    o.append(f'<text x="{HUB_X+32}" y="{ay+28}" font-family="{FONT}" font-size="15" '
              f'fill="{INK}">api/ · src/ · web/ — what actually runs</text>')
 
     # ── data ──────────────────────────────────────────────────────────────
@@ -193,24 +193,24 @@ def build() -> str:
     o.append(f'<rect x="{DATA_X}" y="{dy:.1f}" width="{DATA_W}" height="124" rx="12" '
              f'fill="#0b1526" stroke="{DATA}" stroke-width="2" stroke-opacity="0.7"/>')
     o.append(f'<text x="{DATA_X+16}" y="{dy+30:.1f}" font-family="{FONT}" '
-             f'font-size="16.5" font-weight="700" fill="{DATA}">data</text>')
+             f'font-size="23.4" font-weight="700" fill="{DATA}">data</text>')
     o.append(f'<text x="{DATA_X+16}" y="{dy+50:.1f}" font-family="{FONT}" '
-             f'font-size="13" fill="{DIM}">market history · Git LFS</text>')
-    o.append(f'<rect x="{DATA_X+16}" y="{dy+64:.1f}" width="{DATA_W-32}" height="42" '
+             f'font-size="18.5" fill="{DIM}">market history · Git LFS</text>')
+    o.append(f'<rect x="{DATA_X+16}" y="{dy+66:.1f}" width="{DATA_W-32}" height="52" '
              f'rx="8" fill="{DATA}" fill-opacity="0.10"/>')
-    o.append(f'<text x="{DATA_X+28}" y="{dy+82:.1f}" font-family="{MONO}" '
-             f'font-size="13" fill="{INK}">18-year 1-minute ES</text>')
-    o.append(f'<text x="{DATA_X+28}" y="{dy+97:.1f}" font-family="{FONT}" '
-             f'font-size="14" fill="{DIM}">too large for an ordinary repo</text>')
+    o.append(f'<text x="{DATA_X+28}" y="{dy+88:.1f}" font-family="{MONO}" '
+             f'font-size="16" fill="{INK}">18-year 1-minute ES</text>')
+    o.append(f'<text x="{DATA_X+28}" y="{dy+108:.1f}" font-family="{FONT}" '
+             f'font-size="15" fill="{DIM}">too large for an ordinary repo</text>')
 
     o.append(f'<path d="M {HUB_X+HUB_W+6} {COL_MID_Y:.1f} L {DATA_X-8} {COL_MID_Y:.1f}" '
              f'stroke="{DATA}" stroke-width="2" marker-end="url(#ad)" opacity="0">'
              f'{fade(T_DATA)}</path>')
     o.append(f'<text x="{(HUB_X+HUB_W+DATA_X)/2:.1f}" y="{COL_MID_Y-11:.1f}" '
-             f'text-anchor="middle" font-family="{FONT}" font-size="13.5" '
+             f'text-anchor="middle" font-family="{FONT}" font-size="19.2" '
              f'fill="{DIM}" opacity="0">reads history{fade(T_DATA)}</text>')
 
-    o.append(f'<text x="{PAD}" y="{H-18}" font-family="{FONT}" font-size="13" '
+    o.append(f'<text x="{PAD}" y="{H-18}" font-family="{FONT}" font-size="18.5" '
              f'fill="{DIM}">Five repositories were retired into one archive; what runs '
              f'today is a single platform reading one shared history.</text>')
 

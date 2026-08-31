@@ -70,6 +70,26 @@ def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _fits(text, width, want, floor=12.0):
+    """The largest size at or below `want` that keeps `text` inside `width`.
+
+    A single size cannot serve every diagram this helper draws: the cards are
+    laid out by dividing 1280 between however many nodes a chain has, so a
+    four-node row gives ~290px per card and a seven-node row gives ~160px. The
+    type pass that made these readable pushed the subtitle to 17px, which fits
+    the first and ran "+ slippage, + commission" straight out of the second.
+
+    0.52 is the average advance of this font relative to its size -- close
+    enough for a label, and it errs toward shrinking rather than overflowing.
+    The floor stops a very long string collapsing to something unreadable; a
+    label that cannot fit at 12px is too long for its box and wants rewording,
+    not more shrinking.
+    """
+    if not text:
+        return want
+    return max(floor, min(want, (width - 22) / (len(text) * 0.52)))
+
+
 def card(x, y, w, h, title, sub, accent, begin, cycle, strong):
     """One node. Border brightens as the travelling dot reaches it."""
     o = []
@@ -83,13 +103,15 @@ def card(x, y, w, h, title, sub, accent, begin, cycle, strong):
     o.append("</rect>")
     cx = x + w / 2
     ty = y + (h / 2) + (0 if sub else 5)
+    ts = _fits(title, w, 19, floor=13.0)
     o.append(f'<text x="{cx:.0f}" y="{ty - (8 if sub else 0):.0f}" text-anchor="middle" '
-             f'font-family="{FONT}" font-size="14" font-weight="700" '
+             f'font-family="{FONT}" font-size="{ts:g}" font-weight="700" '
              f'fill="{INK}">{esc(title)}</text>')
     if sub:
         for i, line in enumerate(sub if isinstance(sub, list) else [sub]):
+            ss = _fits(line, w, 17)
             o.append(f'<text x="{cx:.0f}" y="{ty + 11 + i * 15:.0f}" text-anchor="middle" '
-                     f'font-family="{FONT}" font-size="12.5" font-style="italic" '
+                     f'font-family="{FONT}" font-size="{ss:g}" font-style="italic" '
                      f'fill="{DIM}">{esc(line)}</text>')
     return o
 
@@ -153,7 +175,7 @@ def chain(nodes, rows, label, accent_default=SLATE):
            138px cards, too narrow for "Backtest & Replay"; two rows of four
            give 290px and the text sits comfortably.
     """
-    PAD, GAP, CH = 26, 22, 74
+    PAD, GAP, CH = 26, 22, 92
     ROW_GAP = 40
     per = -(-len(nodes) // rows)
     CW = (W - 2 * PAD - GAP * (per - 1)) / per
@@ -245,7 +267,10 @@ def workflow():
     Two rows, not one: eight cards across 1280px give 138px each, and
     "Backtest & Replay" does not fit in 138px. Four give 288px.
     """
-    PAD, GAP, CW, CH = 28, 24, 288, 140
+    # CH 152, not 140. The type below went up and the card has to grow with
+    # it, or the title and its subtitle end up tighter to each other and to
+    # the floor than the icon is to the ceiling, which reads as crowding.
+    PAD, GAP, CW, CH = 28, 24, 288, 152
     ROW_GAP, TOP = 74, 24
     H = TOP + 2 * CH + ROW_GAP + 24
 
@@ -282,19 +307,22 @@ def workflow():
         o.append("</rect>")
 
         # step number, in its own chip so it reads as an index, not as data
-        o.append(f'<rect x="{x + 16:.0f}" y="{y + 16}" width="36" height="22" rx="6" '
+        o.append(f'<rect x="{x + 16:.0f}" y="{y + 16}" width="44" height="27" rx="7" '
                  f'fill="{accent}" fill-opacity=".12"/>')
-        o.append(f'<text x="{x + 34:.0f}" y="{y + 31}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="11.5" font-weight="700" '
+        o.append(f'<text x="{x + 38:.0f}" y="{y + 35}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="14.5" font-weight="700" '
                  f'letter-spacing=".5" fill="{accent}" fill-opacity=".85">{num}</text>')
 
-        o.append(icon(ic, accent, cx - 18, y + 46, 1.5))
-        o.append(f'<text x="{cx:.0f}" y="{y + 107}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="17" font-weight="700" '
-                 f'fill="{INK}">{esc(title)}</text>')
+        o.append(icon(ic, accent, cx - 18, y + 52, 1.5))
+        # _fits rather than a flat number: the cards are 288px wide, which holds
+        # everything here today, but a longer stage name added later should be
+        # shrunk to its box rather than silently drawn through the border.
+        o.append(f'<text x="{cx:.0f}" y="{y + 114}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="{_fits(title, CW, 21, floor=14.0):g}" '
+                 f'font-weight="700" fill="{INK}">{esc(title)}</text>')
         if sub:
-            o.append(f'<text x="{cx:.0f}" y="{y + 127}" text-anchor="middle" '
-                     f'font-family="{FONT}" font-size="12.5" '
+            o.append(f'<text x="{cx:.0f}" y="{y + 137}" text-anchor="middle" '
+                     f'font-family="{FONT}" font-size="{_fits(sub, CW, 18):g}" '
                      f'fill="{DIM}">{esc(sub)}</text>')
         stops.append((cx, y + CH / 2))
         if c < 3:
@@ -384,8 +412,19 @@ def icon(key, ink, x, y, s=1.0):
 
 
 def architecture():
-    PAD, GAP, CH = 28, 20, 84
-    LBL = 30          # room for the band caption above its row
+    # Sized for where it is actually SEEN, not for the canvas.
+    #
+    # GitHub renders a README at roughly 830px, so a 1280-wide drawing is shown
+    # at about 0.65 scale -- which turned a 12.5px label into 8px on screen and
+    # made the whole diagram unreadable without opening it in a new tab. The
+    # type here is therefore set so that it survives that reduction: 20px lands
+    # near 13px, 17px near 11px.
+    #
+    # Card height grows with the type. Leaving CH at 84 with larger text put the
+    # title and its subtitle closer together than the padding above them, which
+    # reads as crowding rather than as a pair.
+    PAD, GAP, CH = 28, 18, 108
+    LBL = 36          # room for the band caption above its row
     BAND_GAP = 62     # room for the arrow between bands
 
     bands = [
@@ -416,8 +455,8 @@ def architecture():
     step, cycle = 1.15, 3.45
 
     for bi, (name, accent, chain_len, items) in enumerate(bands):
-        o.append(f'<text x="{PAD}" y="{y + 13}" font-family="{MONO}" font-size="12.5" '
-                 f'font-weight="700" letter-spacing="1.4" fill="{accent}" '
+        o.append(f'<text x="{PAD}" y="{y + 15}" font-family="{MONO}" font-size="16" '
+                 f'font-weight="700" letter-spacing="1.6" fill="{accent}" '
                  f'fill-opacity=".9">{esc(name.upper())}</text>')
         yy = y + LBL
         n = len(items)
@@ -433,14 +472,14 @@ def architecture():
                      f'keyTimes="0;0.06;0.30;1" begin="{bi * step:.2f}s" '
                      f'dur="{cycle:.2f}s" repeatCount="indefinite"/>')
             o.append("</rect>")
-            o.append(icon(ic, accent, x + 18, yy + CH / 2 - 15, 1.25))
+            o.append(icon(ic, accent, x + 16, yy + CH / 2 - 17, 1.45))
             tx = x + 54
-            o.append(f'<text x="{tx:.0f}" y="{yy + (CH / 2) - (5 if sub else -5):.0f}" '
-                     f'font-family="{FONT}" font-size="15" font-weight="700" '
+            o.append(f'<text x="{tx:.0f}" y="{yy + (CH / 2) - (7 if sub else -7):.0f}" '
+                     f'font-family="{FONT}" font-size="20" font-weight="700" '
                      f'fill="{INK}">{esc(title)}</text>')
             if sub:
-                o.append(f'<text x="{tx:.0f}" y="{yy + CH / 2 + 15:.0f}" '
-                         f'font-family="{FONT}" font-size="12.5" '
+                o.append(f'<text x="{tx:.0f}" y="{yy + CH / 2 + 19:.0f}" '
+                         f'font-family="{FONT}" font-size="16" '
                          f'fill="{DIM}">{esc(sub)}</text>')
             if i < chain_len - 1:
                 o += arrow_h(x + cw, x + cw + GAP, yy + CH / 2, "#4c3a72")
@@ -508,7 +547,13 @@ DIAGRAMS = {
 
 
 if __name__ == "__main__":
-    out = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(".")
+    # Defaults to the assets directory this file lives in, NOT the shell's
+    # working directory. The old default silently wrote every diagram into
+    # tools/ when the argument was forgotten, printed "wrote ..." for each,
+    # and left the real ones untouched -- a run that looks successful and
+    # changes nothing is worse than one that fails.
+    out = (pathlib.Path(sys.argv[1]) if len(sys.argv) > 1
+           else pathlib.Path(__file__).resolve().parent.parent)
     for name, fn in DIAGRAMS.items():
         svg = fn()
         p = out / name

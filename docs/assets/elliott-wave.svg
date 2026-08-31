@@ -1,14 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="An Elliott Wave impulse drawing itself wave by wave, then the ABC correction, with each rule checked as it completes">
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="400" viewBox="0 0 980 400" role="img" aria-label="An Elliott Wave impulse drawing itself wave by wave, then the ABC correction, with each of the three rules checked as it completes">
+  <!--
+    WHY THE CANVAS IS 980 AND NOT 1280
+    GitHub's content column is about 830px, so a 1280-wide drawing is displayed
+    at 0.65 scale and its 18px type arrives as 11px — which is why this picture
+    was unreadable. Narrowing the canvas raises the render scale to 0.85 without
+    enlarging a single glyph. The wave geometry below is the old geometry with
+    every x multiplied by 0.766; the type sizes are unchanged, so they are now
+    a third larger relative to the drawing.
+
+    WHY EVERY STATIC VALUE IS THE FINISHED STATE
+    The static attributes are the COMPLETED count, not the blank state the
+    animation starts from, so a renderer that ignores SMIL outright (a converter
+    to PNG or PDF, an editor, a thumbnailer) draws the finished diagram instead
+    of an empty panel.
+
+    Note what this does NOT fix: an ACTIVE animation overrides the base value
+    for the whole of its duration, so a browser holding this file at t=0 still
+    shows the animation's own first value, which is blank. That is inherent to
+    a picture whose subject is being drawn, and it is why the layout here has to
+    be checked against a SMIL-stripped copy rather than a plain screenshot.
+  -->
   <defs>
     <linearGradient id="ebg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="#0b1626"/>
       <stop offset="100%" stop-color="#050810"/>
     </linearGradient>
-    <linearGradient id="impulse" gradientUnits="userSpaceOnUse" x1="90" y1="0" x2="820" y2="0">
+    <linearGradient id="impulse" gradientUnits="userSpaceOnUse" x1="69" y1="0" x2="628" y2="0">
       <stop offset="0%"   stop-color="#2dd4bf"/>
       <stop offset="100%" stop-color="#22c55e"/>
     </linearGradient>
-    <linearGradient id="corr" gradientUnits="userSpaceOnUse" x1="820" y1="0" x2="1170" y2="0">
+    <linearGradient id="corr" gradientUnits="userSpaceOnUse" x1="628" y1="0" x2="896" y2="0">
       <stop offset="0%"   stop-color="#f43f5e"/>
       <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
@@ -17,41 +38,41 @@
     </pattern>
   </defs>
 
-  <rect width="1280" height="320" fill="url(#ebg)"/>
-  <rect width="1280" height="320" fill="url(#egrid)" opacity=".6"/>
-  <rect width="1280" height="320" fill="none" stroke="#1c2b40"/>
+  <rect width="980" height="400" fill="url(#ebg)"/>
+  <rect width="980" height="400" fill="url(#egrid)" opacity=".6"/>
+  <rect width="980" height="400" fill="none" stroke="#1c2b40"/>
 
   <!-- ── the impulse: five waves, each drawn in turn ───────────────────────── -->
   <!-- pathLength normalises every leg to 100 so one dashoffset value works for
        all of them regardless of their real length. -->
   <g fill="none" stroke="url(#impulse)" stroke-width="3.5" stroke-linecap="round"
-     stroke-dasharray="100" stroke-dashoffset="100">
+     stroke-dasharray="100" stroke-dashoffset="0">
 
-    <path pathLength="100" d="M 90 268 L 250 168">
+    <path pathLength="100" d="M 69 268 L 191 168">
       <animate attributeName="stroke-dashoffset" values="100;0;0;100"
                keyTimes="0;0.09;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
 
-    <path pathLength="100" d="M 250 168 L 340 216">
+    <path pathLength="100" d="M 191 168 L 260 216">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.10;0.17;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
 
-    <path pathLength="100" d="M 340 216 L 560 96">
+    <path pathLength="100" d="M 260 216 L 429 96">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.18;0.30;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
 
-    <path pathLength="100" d="M 560 96 L 660 150">
+    <path pathLength="100" d="M 429 96 L 505 150">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.31;0.38;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
 
-    <path pathLength="100" d="M 660 150 L 820 62">
+    <path pathLength="100" d="M 505 150 L 628 62">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.39;0.49;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
@@ -60,18 +81,18 @@
 
   <!-- ── the ABC correction ────────────────────────────────────────────────── -->
   <g fill="none" stroke="url(#corr)" stroke-width="3.5" stroke-linecap="round"
-     stroke-dasharray="100" stroke-dashoffset="100">
-    <path pathLength="100" d="M 820 62 L 950 158">
+     stroke-dasharray="100" stroke-dashoffset="0">
+    <path pathLength="100" d="M 628 62 L 727 158">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.53;0.63;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
-    <path pathLength="100" d="M 950 158 L 1040 104">
+    <path pathLength="100" d="M 727 158 L 796 104">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.64;0.71;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
     </path>
-    <path pathLength="100" d="M 1040 104 L 1170 196">
+    <path pathLength="100" d="M 796 104 L 896 196">
       <animate attributeName="stroke-dashoffset" values="100;100;0;0;100"
                keyTimes="0;0.72;0.82;0.94;1" dur="12s" repeatCount="indefinite"
                calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1"/>
@@ -79,77 +100,92 @@
   </g>
 
   <!-- ── pivot labels, each popping as its wave completes ──────────────────── -->
-  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14"
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="19.9"
      font-weight="700" text-anchor="middle">
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.07;.10;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="250" cy="168" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
-      <text x="250" y="150" fill="#2dd4bf">1</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.07;.10;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="191" cy="168" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="191" y="150" fill="#2dd4bf">1</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.15;.18;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="340" cy="216" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
-      <text x="340" y="240" fill="#2dd4bf">2</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.15;.18;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="260" cy="216" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="260" y="240" fill="#2dd4bf">2</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.28;.31;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="560" cy="96" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
-      <text x="560" y="78" fill="#2dd4bf">3</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.28;.31;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="429" cy="96" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="429" y="78" fill="#2dd4bf">3</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.36;.39;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="660" cy="150" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
-      <text x="660" y="174" fill="#2dd4bf">4</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.36;.39;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="505" cy="150" r="7" fill="#0b1626" stroke="#2dd4bf" stroke-width="2.5"/>
+      <text x="505" y="174" fill="#2dd4bf">4</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.47;.50;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="820" cy="62" r="8" fill="#0b1626" stroke="#22c55e" stroke-width="3"/>
-      <text x="820" y="42" fill="#22c55e">5</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.47;.50;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="628" cy="62" r="8" fill="#0b1626" stroke="#22c55e" stroke-width="3"/>
+      <text x="628" y="42" fill="#22c55e">5</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.61;.64;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="950" cy="158" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
-      <text x="950" y="182" fill="#f43f5e">A</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.61;.64;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="727" cy="158" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="727" y="182" fill="#f43f5e">A</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.69;.72;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="1040" cy="104" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
-      <text x="1040" y="86" fill="#f43f5e">B</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.69;.72;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="796" cy="104" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="796" y="86" fill="#f43f5e">B</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.80;.83;.94;1" dur="12s" repeatCount="indefinite"/>
-      <circle cx="1170" cy="196" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
-      <text x="1170" y="220" fill="#f43f5e">C</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.80;.83;.94;1" dur="12s" repeatCount="indefinite"/>
+      <circle cx="896" cy="196" r="7" fill="#0b1626" stroke="#f43f5e" stroke-width="2.5"/>
+      <text x="896" y="220" fill="#f43f5e">C</text></g>
   </g>
 
   <!-- The pen: a dot riding the front of whichever wave is being drawn.
        Its halo is two wider, fainter circles rather than a Gaussian blur.
        Same emphasis, but no filter region to rasterise, and consistent with
-       the other six diagrams in docs/assets, none of which filter anything.
+       the other diagrams in docs/assets, none of which filter anything.
        The fade and the motion sit on this <g> so all three circles share one
-       path. Duplicating that keySplines list per circle is how they drift
-       out of sync later. -->
+       path. Duplicating that keySplines list per circle is how they drift out
+       of sync later.
+
+       This is the ONE element that correctly rests at opacity 0: a pen frozen
+       partway along the path is a smudge, not a diagram. It exists only while
+       something is being drawn.
+
+       keyPoints are recomputed from the rescaled vertices — they are fractions
+       of total path length, and squeezing x without squeezing y changed every
+       segment's share of it. Left alone they would have parked the pen short of
+       each pivot. -->
   <g opacity="0">
-    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.03;.84;.88" dur="12s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.03;.84;.88;1"
+             dur="12s" repeatCount="indefinite"/>
     <animateMotion dur="12s" repeatCount="indefinite" calcMode="spline"
-      keyPoints="0;.14;.14;.20;.20;.44;.44;.53;.53;.70;.70;.74;.74;.85;.85;.92;.92;1;1"
-      keyTimes="0;.09;.10;.17;.18;.30;.31;.38;.39;.49;.53;.63;.64;.71;.72;.82;.83;.94;1"
-      keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
-      path="M 90 268 L 250 168 L 340 216 L 560 96 L 660 150 L 820 62 L 950 158 L 1040 104 L 1170 196"/>
+      keyPoints="0;.1495;.1495;.2292;.2292;.4257;.4257;.5141;.5141;.6574;.6574;.7881;.7881;.8712;.8712;1;1"
+      keyTimes="0;.09;.10;.17;.18;.30;.31;.38;.39;.49;.53;.63;.64;.71;.72;.82;1"
+      keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+      path="M 69 268 L 191 168 L 260 216 L 429 96 L 505 150 L 628 62 L 727 158 L 796 104 L 896 196"/>
     <circle r="14" fill="#ffffff" opacity=".13"/>
     <circle r="9"  fill="#ffffff" opacity=".22"/>
     <circle r="6"  fill="#ffffff"/>
   </g>
 
   <!-- ── the rules, checked off as they are satisfied ──────────────────────── -->
-  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5">
-    <text x="60" y="40" fill="#7b93ad" font-size="13" font-weight="700" letter-spacing="2">
-      ELLIOTT WAVE · RULES CHECKED AS THE COUNT FORMS
-    </text>
+  <!-- Stacked, not strung across the foot in three columns. Side by side, the
+       first rule alone was 513px of monospace starting at x=80 and the second
+       column began at x=470 — they overlapped for most of the cycle, and the
+       only way to fit three on one line here is type too small to read, which
+       is the problem this pass exists to fix. -->
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="17.8">
+    <!-- Shortened, and the tracking eased from 2 to 1.5. The long version ran
+         to about x=630, and the label on the wave-5 peak sits at x=628. -->
+    <text x="46" y="40" fill="#7b93ad" font-size="18.5" font-weight="700" letter-spacing="1.5">ELLIOTT WAVE · RULES CHECKED AS IT FORMS</text>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.20;.94;1" dur="12s" repeatCount="indefinite"/>
-      <text x="60" y="298" fill="#22c55e">✓</text>
-      <text x="80" y="298" fill="#8ba3bd">wave 2 never retraces beyond the start of wave 1</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.18;.20;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="46" y="318" fill="#22c55e">✓</text>
+      <text x="70" y="318" fill="#8ba3bd">wave 2 never retraces beyond the start of wave 1</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;.001;1;1;0" keyTimes="0;.32;.34;.94;1" dur="12s" repeatCount="indefinite"/>
-      <text x="470" y="298" fill="#22c55e">✓</text>
-      <text x="490" y="298" fill="#8ba3bd">wave 3 is never the shortest impulse</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.32;.34;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="46" y="346" fill="#22c55e">✓</text>
+      <text x="70" y="346" fill="#8ba3bd">wave 3 is never the shortest impulse</text></g>
 
-    <g opacity="0"><animate attributeName="opacity" values="0;.001;1;1;0" keyTimes="0;.40;.42;.94;1" dur="12s" repeatCount="indefinite"/>
-      <text x="840" y="298" fill="#22c55e">✓</text>
-      <text x="860" y="298" fill="#8ba3bd">wave 4 never enters wave 1's territory</text></g>
+    <g opacity="1"><animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.40;.42;.94;1" dur="12s" repeatCount="indefinite"/>
+      <text x="46" y="374" fill="#22c55e">✓</text>
+      <text x="70" y="374" fill="#8ba3bd">wave 4 never enters wave 1's territory</text></g>
   </g>
 </svg>

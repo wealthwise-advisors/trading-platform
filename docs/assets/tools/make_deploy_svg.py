@@ -31,17 +31,29 @@ SMIL NOTES (same three make_pipeline_svg.py learned the hard way)
 import pathlib
 import sys
 
-W = 1280
-H = 268
+# ── canvas ───────────────────────────────────────────────────────────────────
+# 980, not 1280, and that is the whole readability fix. GitHub's content column
+# is about 830px, so a 1280-wide drawing is shown at 0.65 scale and its 16px
+# type arrives as 10px. Narrowing the canvas raises the render scale to 0.85
+# WITHOUT enlarging anything, which is the only version of "bigger" that does
+# not also mean "more crowded". The sizes below are chosen for the RENDERED
+# size, not the authored one.
+W = 980
+H = 404
 PAD = 26
 
-BOX_W, BOX_H, GAP = 138, 74, 24
-ROW_Y = 88
+# Stage cards stack the glyph ABOVE the words rather than beside them. Side by
+# side spent 60px of a 171px card on the icon and left the label about 100px,
+# which is what clipped "Pull Request" and "Docker Compose" when the type went
+# up. Stacking gives every label the full width of its card.
+GAP = 18
+BOX_W = (W - 2 * PAD - 4 * GAP) // 5
+BOX_H = 104
+ROW_Y = 62
 
-DIA_CX, DIA_RX, DIA_RY = 900, 66, 52
-OUT_X = 1000
-OUT_W = W - OUT_X - PAD
-OUT_H = 60
+DIA_CX, DIA_CY, DIA_RX, DIA_RY = 490, 285, 118, 70
+OUT_W, OUT_H = 300, 62
+OUT_Y = DIA_CY - OUT_H / 2
 
 FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
         "Roboto,Helvetica,Arial,sans-serif")
@@ -54,7 +66,7 @@ OK, BAD, DEC = "#22c55e", "#ef4444", "#a855f7"
 STAGES = [
     ("Pull Request", "", "#3b82f6", "branch"),
     ("CI", "6 checks", "#22c55e", "check"),
-    ("Merge to", "master", "#a855f7", "merge"),
+    ("Merge", "to master", "#a855f7", "merge"),
     ("Deploy", "workflow", "#f43f5e", "rocket"),
     ("AWS EC2", "Docker Compose", "#f59e0b", "cloud"),
 ]
@@ -63,6 +75,19 @@ CYCLE = 9.0
 STEP_T = 0.62
 T_DEC = len(STAGES) * STEP_T + 0.3
 T_OUT = T_DEC + 0.7
+
+
+def fits(text: str, width: float, want: float, floor: float = 11.0) -> float:
+    """The largest size at or below `want` that keeps `text` inside `width`.
+
+    0.52 is this font stack's average advance relative to its size. Sizing text
+    to its box is what stops a font bump from silently clipping a label -- the
+    previous pass raised every size by hand and the overflow was only found by
+    rendering the picture and looking at it.
+    """
+    if not text:
+        return want
+    return max(floor, min(want, (width - 16) / (len(text) * 0.52)))
 
 
 def lit(begin: float, lo: float, hi: float, attr: str = "opacity") -> str:
@@ -125,79 +150,93 @@ def build() -> str:
     o.append(f'<rect width="{W}" height="{H}" rx="16" fill="url(#pbg)"/>')
     o.append(f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="16" '
              f'fill="none" stroke="#1e2a44"/>')
-    o.append(f'<text x="{PAD}" y="34" font-family="{MONO}" font-size="14" '
-             f'letter-spacing="1.4" fill="{DIM}">EVERY DEPLOY PROVES WHAT IT SERVED</text>')
+    o.append(f'<text x="{PAD}" y="38" font-family="{MONO}" font-size="17" '
+             f'letter-spacing="1.5" fill="{DIM}">EVERY DEPLOY PROVES WHAT IT SERVED</text>')
 
     # ── the five stages ───────────────────────────────────────────────────
     for i, (l1, l2, colour, key) in enumerate(STAGES):
         x = PAD + i * (BOX_W + GAP)
-        cy = ROW_Y + BOX_H / 2
+        cx = x + BOX_W / 2
         t = i * STEP_T
-        o.append(f'<rect x="{x}" y="{ROW_Y}" width="{BOX_W}" height="{BOX_H}" rx="11" '
+        o.append(f'<rect x="{x}" y="{ROW_Y}" width="{BOX_W}" height="{BOX_H}" rx="12" '
                  f'fill="#101a2c" stroke="{colour}" stroke-opacity="0.28"/>')
         # the lit state, over the resting one
-        o.append(f'<rect x="{x}" y="{ROW_Y}" width="{BOX_W}" height="{BOX_H}" rx="11" '
+        o.append(f'<rect x="{x}" y="{ROW_Y}" width="{BOX_W}" height="{BOX_H}" rx="12" '
                  f'fill="{colour}" fill-opacity="0" stroke="{colour}" '
                  f'stroke-opacity="0" stroke-width="1.8">'
                  f'{lit(t, 0, 0.09, "fill-opacity")}{lit(t, 0, 0.85, "stroke-opacity")}</rect>')
-        o.append(f'<rect x="{x+12}" y="{ROW_Y+18}" width="38" height="38" rx="9" '
+        o.append(f'<rect x="{cx-20:.1f}" y="{ROW_Y+13}" width="40" height="40" rx="10" '
                  f'fill="{colour}" fill-opacity="0.12"/>')
-        o.append(glyph(key, x + 31, ROW_Y + 37, colour))
-        ty = cy + (0 if not l2 else -5)
-        o.append(f'<text x="{x+60}" y="{ty:.1f}" font-family="{FONT}" font-size="14" '
-                 f'font-weight="600" fill="{INK}">{l1}</text>')
+        o.append(glyph(key, cx, ROW_Y + 33, colour))
+        # A card with no second line centres its title across the space both
+        # lines would have used, rather than sitting high with a gap under it.
+        ty = ROW_Y + (80 if not l2 else 74)
+        o.append(f'<text x="{cx:.1f}" y="{ty}" text-anchor="middle" font-family="{FONT}" '
+                 f'font-size="{fits(l1, BOX_W, 19):.1f}" font-weight="600" '
+                 f'fill="{INK}">{l1}</text>')
         if l2:
-            o.append(f'<text x="{x+60}" y="{ty+15:.1f}" font-family="{FONT}" '
-                     f'font-size="13" fill="{DIM}">{l2}</text>')
+            o.append(f'<text x="{cx:.1f}" y="{ty+21}" text-anchor="middle" '
+                     f'font-family="{FONT}" font-size="{fits(l2, BOX_W, 15.5):.1f}" '
+                     f'fill="{DIM}">{l2}</text>')
         if i < len(STAGES) - 1:
-            ax = x + BOX_W + 4
-            o.append(f'<path d="M {ax} {cy:.1f} L {ax+GAP-11} {cy:.1f}" stroke="{DIM}" '
+            ax = x + BOX_W + 3
+            ay = ROW_Y + BOX_H / 2
+            o.append(f'<path d="M {ax} {ay:.1f} L {ax+GAP-9} {ay:.1f}" stroke="{DIM}" '
                      f'stroke-width="1.8" marker-end="url(#pa)" opacity="0.25">'
                      f'{lit(t+0.3, 0.25, 1)}</path>')
 
-    # ── the decision ──────────────────────────────────────────────────────
-    last_r = PAD + (len(STAGES) - 1) * (BOX_W + GAP) + BOX_W
-    dcy = ROW_Y + BOX_H / 2
-    o.append(f'<path d="M {last_r+4} {dcy:.1f} L {DIA_CX-DIA_RX-10} {dcy:.1f}" '
-             f'stroke="{DIM}" stroke-width="1.8" marker-end="url(#pa)" opacity="0.25">'
-             f'{lit(T_DEC-0.3, 0.25, 1)}</path>')
-    o.append(f'<path d="M {DIA_CX} {dcy-DIA_RY:.1f} L {DIA_CX+DIA_RX} {dcy:.1f} '
-             f'L {DIA_CX} {dcy+DIA_RY:.1f} L {DIA_CX-DIA_RX} {dcy:.1f} Z" '
-             f'fill="#101a2c" stroke="{DEC}" stroke-opacity="0.35"/>')
-    o.append(f'<path d="M {DIA_CX} {dcy-DIA_RY:.1f} L {DIA_CX+DIA_RX} {dcy:.1f} '
-             f'L {DIA_CX} {dcy+DIA_RY:.1f} L {DIA_CX-DIA_RX} {dcy:.1f} Z" '
-             f'fill="{DEC}" fill-opacity="0" stroke="{DEC}" stroke-opacity="0" '
-             f'stroke-width="1.8">{lit(T_DEC, 0, 0.10, "fill-opacity")}'
+    # ── into the decision ─────────────────────────────────────────────────
+    # The row ends at the right edge and the check sits centred below it, so
+    # the connector wraps: down out of the last card, back along the width and
+    # into the top vertex. Drawn as a rounded elbow rather than a diagonal, so
+    # it reads as the same track continuing instead of a new relationship.
+    lcx = PAD + (len(STAGES) - 1) * (BOX_W + GAP) + BOX_W / 2
+    o.append(f'<path d="M {lcx:.1f} {ROW_Y+BOX_H} V 180 Q {lcx:.1f} 190 {lcx-10:.1f} 190 '
+             f'H {DIA_CX+10} Q {DIA_CX} 190 {DIA_CX} 200 V {DIA_CY-DIA_RY-8}" '
+             f'fill="none" stroke="{DIM}" stroke-width="1.8" marker-end="url(#pa)" '
+             f'opacity="0.25">{lit(T_DEC-0.3, 0.25, 1)}</path>')
+
+    dpath = (f'M {DIA_CX} {DIA_CY-DIA_RY} L {DIA_CX+DIA_RX} {DIA_CY} '
+             f'L {DIA_CX} {DIA_CY+DIA_RY} L {DIA_CX-DIA_RX} {DIA_CY} Z')
+    o.append(f'<path d="{dpath}" fill="#101a2c" stroke="{DEC}" stroke-opacity="0.35"/>')
+    o.append(f'<path d="{dpath}" fill="{DEC}" fill-opacity="0" stroke="{DEC}" '
+             f'stroke-opacity="0" stroke-width="1.8">{lit(T_DEC, 0, 0.10, "fill-opacity")}'
              f'{lit(T_DEC, 0, 0.9, "stroke-opacity")}</path>')
+    # Three lines, because a diamond is widest at its middle: the longest
+    # string has to sit near the centre line or it runs out through the slope.
     for k, line in enumerate(("Served commit", "==", "github.sha ?")):
-        o.append(f'<text x="{DIA_CX}" y="{dcy-14+k*15:.1f}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="14" fill="{INK}">{line}</text>')
+        o.append(f'<text x="{DIA_CX}" y="{DIA_CY-14+k*19}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="16" fill="{INK}">{line}</text>')
 
     # ── the two exits ─────────────────────────────────────────────────────
-    oy_ok = ROW_Y - 12
-    oy_bad = ROW_Y + BOX_H + 6
-    for label, colour, oy, marker, edge, t in (
-        ("Deployment confirmed", OK, oy_ok, "pok", "yes", T_OUT),
-        ("Fail the run", BAD, oy_bad, "pbad", "no", T_OUT),
+    # Side by side at the decision's own level: failure back to the left,
+    # confirmation onward to the right. Stacking them wanted another 120px of
+    # height, which at this width would have cost every label its size again.
+    mid = OUT_Y + OUT_H / 2
+    for label, colour, ox, vx, marker, edge, lx in (
+        ("Fail the run", BAD, PAD, DIA_CX - DIA_RX, "pbad", "no", DIA_CX - DIA_RX - 28),
+        ("Deployment confirmed", OK, W - PAD - OUT_W, DIA_CX + DIA_RX,
+         "pok", "yes", DIA_CX + DIA_RX + 28),
     ):
-        mid = oy + OUT_H / 2
-        o.append(f'<path d="M {DIA_CX+DIA_RX+4} {dcy:.1f} C {OUT_X-34} {dcy:.1f}, '
-                 f'{OUT_X-34} {mid:.1f}, {OUT_X-9} {mid:.1f}" fill="none" '
-                 f'stroke="{colour}" stroke-width="1.8" marker-end="url(#{marker})" '
-                 f'opacity="0">{lit(t, 0, 0.9)}</path>')
-        o.append(f'<text x="{OUT_X-40}" y="{(dcy+mid)/2-6:.1f}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="12" fill="{colour}" opacity="0">'
-                 f'{edge}{lit(t, 0, 1)}</text>')
-        o.append(f'<rect x="{OUT_X}" y="{oy}" width="{OUT_W}" height="{OUT_H}" rx="11" '
+        end = ox + OUT_W + 6 if colour == BAD else ox - 6
+        o.append(f'<path d="M {vx} {DIA_CY} H {end}" fill="none" stroke="{colour}" '
+                 f'stroke-width="1.8" marker-end="url(#{marker})" opacity="0">'
+                 f'{lit(T_OUT, 0, 0.9)}</path>')
+        o.append(f'<text x="{lx}" y="{DIA_CY-10}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="15" fill="{colour}" opacity="0">'
+                 f'{edge}{lit(T_OUT, 0, 1)}</text>')
+        o.append(f'<rect x="{ox}" y="{OUT_Y}" width="{OUT_W}" height="{OUT_H}" rx="12" '
                  f'fill="{colour}" fill-opacity="0.07" stroke="{colour}" '
-                 f'stroke-opacity="0" stroke-width="1.8">{lit(t, 0, 0.85, "stroke-opacity")}</rect>')
-        o.append(f'<text x="{OUT_X+18}" y="{mid+4.5:.1f}" font-family="{FONT}" '
-                 f'font-size="14" font-weight="600" fill="{colour}" opacity="0.45">'
-                 f'{label}{lit(t, 0.45, 1)}</text>')
+                 f'stroke-opacity="0" stroke-width="1.8">'
+                 f'{lit(T_OUT, 0, 0.85, "stroke-opacity")}</rect>')
+        o.append(f'<text x="{ox+OUT_W/2}" y="{mid+6:.1f}" text-anchor="middle" '
+                 f'font-family="{FONT}" font-size="{fits(label, OUT_W, 19):.1f}" '
+                 f'font-weight="600" fill="{colour}" opacity="0.45">'
+                 f'{label}{lit(T_OUT, 0.45, 1)}</text>')
 
-    o.append(f'<text x="{PAD}" y="{H-16}" font-family="{FONT}" font-size="13" '
-             f'fill="{DIM}">A deploy that quietly leaves the old build running is the '
-             f'exact failure the last step exists to catch.</text>')
+    o.append(f'<text x="{W/2}" y="{H-22}" text-anchor="middle" font-family="{FONT}" '
+             f'font-size="15.5" fill="{DIM}">A deploy that quietly leaves the old build '
+             f'running is the exact failure the last step exists to catch.</text>')
     o.append("</svg>")
     return "".join(o)
 

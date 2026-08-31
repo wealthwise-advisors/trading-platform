@@ -219,7 +219,7 @@ def build() -> str:
         # kept, because six stages in a row only read as a SEQUENCE if they are
         # numbered -- the arrows say direction, the numbers say position.
         o.append(f'<text x="{x+12}" y="{CARD_Y+21}" font-family="{MONO}" '
-                 f'font-size="11" font-weight="700" letter-spacing="0.5" '
+                 f'font-size="17" font-weight="700" letter-spacing="0.5" '
                  f'fill="{accent}" fill-opacity="0.75">{i+1:02d}</text>')
 
         # a flat seat for the glyph -- no rings, no ticks
@@ -229,12 +229,12 @@ def build() -> str:
                  + "".join(icon(key, accent)) + '</g>')
 
         o.append(f'<text x="{cx:.1f}" y="{CARD_Y+76}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="14" font-weight="700" '
+                 f'font-family="{FONT}" font-size="19.9" font-weight="700" '
                  f'fill="{INK}">{esc(title)}</text>')
         o.append(f'<text x="{cx:.1f}" y="{CARD_Y+94}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="12" fill="{DIM}">{esc(d1)}</text>')
+                 f'font-family="{FONT}" font-size="17" fill="{DIM}">{esc(d1)}</text>')
         o.append(f'<text x="{cx:.1f}" y="{CARD_Y+108}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="12" fill="{DIM}">{esc(d2)}</text>')
+                 f'font-family="{FONT}" font-size="17" fill="{DIM}">{esc(d2)}</text>')
 
         bw = CARD_W - 26
         o.append(f'<rect x="{x+13}" y="{CARD_Y+120}" width="{bw}" height="21" rx="6" '
@@ -244,7 +244,7 @@ def build() -> str:
                  # only value under the 10px floor the other six diagrams keep.
                  # The longest badge, "Schwab · Rithmic · CSV", measures ~136px
                  # at 10px inside a 158px chip, so every badge still fits.
-                 f'font-family="{MONO}" font-size="11" letter-spacing="0.2" '
+                 f'font-family="{MONO}" font-size="17" letter-spacing="0.2" '
                  f'fill="{accent}">{esc(badge)}</text>')
 
     o.append("</svg>")

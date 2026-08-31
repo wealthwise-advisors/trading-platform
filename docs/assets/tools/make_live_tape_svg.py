@@ -74,9 +74,13 @@ MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 # Cards are square-ish now, with the icon high and the label under it, and a
 # status light plus a floor pool below. The pool is what stops the row reading
 # as shapes floating on a flat backdrop, and it needs vertical room.
-CARD_W, CARD_H = 108, 112
-CARD_GAP = 26
-CARD_X0 = 40
+# 128 wide, not 108. At 108 the label font was set to 22.7 for legibility
+# and 'Poll every 15s' wanted 165px of it, so the words ran straight out
+# through both sides of the card. Widening by 20 and tightening the gap by
+# 6 costs the row only 34px of total width.
+CARD_W, CARD_H = 128, 112
+CARD_GAP = 20
+CARD_X0 = 34
 FLOW_Y = PB[1] + 168                # centre line the cards sit on
 
 # The decision node's energy ring expands to DIAMOND_R + 20. At the first
@@ -84,16 +88,19 @@ FLOW_Y = PB[1] + 168                # centre line the cards sit on
 # swallowed the right-hand edge of the Poll card. Placed and sized so the widest
 # moment of the animation still clears the card.
 # The decision node is the focal point, so it is larger than anything else and
-# carries three halo rings. Its widest ring reaches DIAMOND_R + 34; the last
-# card ends at 40 + 5*134 = 710, so the node clears it.
-DIAMOND_CX = 800
+# carries three halo rings. Its widest ring reaches DIAMOND_R + 34, so it
+# sweeps back to 866 - 100 = 766; the last card now ends at
+# 34 + 5*128 + 4*20 = 754, which is what that 12px of clearance is for.
+# Widening the cards without moving this node is what puts the ring through
+# the Poll card, so the two numbers move together or not at all.
+DIAMOND_CX = 866
 DIAMOND_R = 66
 HALO_MAX = DIAMOND_R + 34
 
 # The elbow both branches share before splitting up and down.
 ELBOW_X = DIAMOND_CX + DIAMOND_R + 24
 
-OUT_X, OUT_W, OUT_H = 962, 278, 78
+OUT_X, OUT_W, OUT_H = 996, 258, 78
 YES_CY = FLOW_Y - 62
 NO_CY = FLOW_Y + 66
 
@@ -111,8 +118,11 @@ STAGES = [
     ("Load Data",      None,               "download", CYAN),
     ("Play",           None,               "play",     BLUE),
     ("Live edge",      "reached",           "trend",    SKY),
-    ("Follow live",    "starts by itself",  "follow",   GREEN),
-    ("Poll every 15s", None,               "clock",    SKY),
+    # "starts by itself" and "Poll every 15s" were both wider than the card
+    # at any readable size. The second line exists for exactly this, so the
+    # interval moves into it rather than being shrunk until it is unreadable.
+    ("Follow live",    "on its own",        "follow",   GREEN),
+    ("Poll every",     "15s",               "clock",    SKY),
 ]
 
 
@@ -134,6 +144,18 @@ def pulse_b(attr: str, lo: float, hi: float, begin: float) -> str:
 
 def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def fits(text: str, width: float, want: float, floor: float = 12.0) -> float:
+    """The largest size at or below `want` that keeps `text` inside `width`.
+
+    0.52 is this font stack's average advance relative to its size. Without
+    this the sizes are guesses that hold until someone edits a label, and the
+    overflow is invisible until the picture is rendered and looked at.
+    """
+    if not text:
+        return want
+    return max(floor, min(want, (width - 16) / (len(text) * 0.52)))
 
 
 def card_x(i: int) -> float:
@@ -353,7 +375,7 @@ def build() -> str:
     for p in glyph("dish", CYAN):
         a("      " + p)
     a("    </g>")
-    a(f'    <text x="{x + 72}" y="{y + 46}" font-family="{FONT}" font-size="23" '
+    a(f'    <text x="{x + 72}" y="{y + 46}" font-family="{FONT}" font-size="27.1" '
       f'font-weight="700" fill="{INK}">Live Replay</text>')
     a(f'    <line x1="{x + 22}" y1="{y + 68}" x2="{x + w - 22}" y2="{y + 68}" '
       f'stroke="#ffffff" stroke-opacity=".08" stroke-width="1"/>')
@@ -365,9 +387,11 @@ def build() -> str:
       'repeatCount="indefinite"/>')
     a("    </circle>")
     a(f'    <circle cx="{x + 34}" cy="{sy}" r="4.2" fill="{GREEN}"/>')
-    a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="14" '
+    a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="19.9" '
       f'font-weight="700" letter-spacing="1.1" fill="{GREEN}">FOLLOWING LIVE</text>')
-    a(f'    <text x="{x + 186}" y="{sy + 4.6}" font-family="{FONT}" font-size="14" '
+    # x+250, not x+186: "FOLLOWING LIVE" is 14 tracked caps and runs to about
+    # x+220 at this size, so the sentence used to start underneath its own badge.
+    a(f'    <text x="{x + 250}" y="{sy + 4.6}" font-family="{FONT}" font-size="19.9" '
       f'fill="{DIM}">new bars arrive on their own — no reload, no clicking</text>')
 
     # ── deviation bands (dashed) and VWAP ──
@@ -429,9 +453,12 @@ def build() -> str:
     # ── right-hand axis ──
     vy = vw[-1][1]
     for lbl, ly_, col, weight, size in (
-        ("+2σ", vy - band, VWAP_C, "600", "12"),
-        ("VWAP", vy, VWAP_C, "700", "12.5"),
-        ("−2σ", vy + band, VWAP_C, "600", "12"),
+        # Sizes as strings in a tuple rather than literals in the f-string,
+        # which is why the type pass that raised every other label here missed
+        # these three and left the price axis unreadable beside its own chart.
+        ("+2σ", vy - band, VWAP_C, "600", "17"),
+        ("VWAP", vy, VWAP_C, "700", "17.5"),
+        ("−2σ", vy + band, VWAP_C, "600", "17"),
     ):
         a(f'    <text x="{AXIS_X}" y="{ly_ + 4.2:.1f}" font-family="{MONO}" '
           f'font-size="{size}" font-weight="{weight}" fill="{col}">{lbl}</text>')
@@ -441,7 +468,7 @@ def build() -> str:
     lastx = cs[-1][0]
     lasty = min(cs[-1][1], cs[-1][2]) - 16
     a(f'    <text x="{lastx:.1f}" y="{lasty:.1f}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="14" font-weight="600" letter-spacing=".4" '
+      f'font-family="{FONT}" font-size="19.9" font-weight="600" letter-spacing=".4" '
       f'fill="{GREEN}">forming</text>')
     a(f'    <line x1="{PLOT_L - 6}" y1="{PLOT_B + 16}" x2="{PLOT_R + 6}" '
       f'y2="{PLOT_B + 16}" stroke="#ffffff" stroke-opacity=".10" stroke-width="1"/>')
@@ -456,7 +483,7 @@ def build() -> str:
     for p in glyph("pulse", CYAN):
         a("      " + p)
     a("    </g>")
-    a(f'    <text x="{x + 62}" y="{cy_pill + 4.4}" font-family="{FONT}" font-size="14" '
+    a(f'    <text x="{x + 62}" y="{cy_pill + 4.4}" font-family="{FONT}" font-size="19.9" '
       f'fill="{INK}" fill-opacity=".92">the newest bar is still forming '
       f'(1 withheld)</text>')
     a("  </g>")
@@ -646,12 +673,12 @@ def build() -> str:
 
         ty = top + 82
         a(f'      <text x="{ccx:.1f}" y="{ty}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="16" font-weight="600" '
-          f'fill="{INK}">{esc(t1)}</text>')
+          f'font-family="{FONT}" font-size="{fits(t1, CARD_W, 22.7):.1f}" '
+          f'font-weight="600" fill="{INK}">{esc(t1)}</text>')
         if t2:
-            a(f'      <text x="{ccx:.1f}" y="{ty + 16}" text-anchor="middle" '
-              f'font-family="{FONT}" font-size="13" font-style="italic" '
-              f'fill="{accent}">{esc(t2)}</text>')
+            a(f'      <text x="{ccx:.1f}" y="{ty + 18}" text-anchor="middle" '
+              f'font-family="{FONT}" font-size="{fits(t2, CARD_W, 18.5):.1f}" '
+              f'font-style="italic" fill="{accent}">{esc(t2)}</text>')
 
         # Status light and the pool it throws on the floor. This is the detail
         # that gives the row a ground plane instead of leaving the cards
@@ -720,10 +747,10 @@ def build() -> str:
         a("        " + p)
     a("      </g>")
     a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 8}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="14" font-weight="600" fill="{INK}">New '
+      f'font-family="{FONT}" font-size="19.9" font-weight="600" fill="{INK}">New '
       f'closed</text>')
     a(f'      <text x="{DIAMOND_CX}" y="{FLOW_Y + 24}" text-anchor="middle" '
-      f'font-family="{FONT}" font-size="14" font-weight="600" fill="{INK}">bar?</text>')
+      f'font-family="{FONT}" font-size="19.9" font-weight="600" fill="{INK}">bar?</text>')
     a("    </g>")
 
     # ── the two branches ───────────────────────────────────────────────────
@@ -746,7 +773,7 @@ def build() -> str:
         a(f'    <rect x="{chip_cx - cw / 2:.1f}" y="{cyb - 13}" width="{cw}" height="26" '
           f'rx="7" fill="#0a1220" stroke="{col}" stroke-opacity=".85"/>')
         a(f'    <text x="{chip_cx:.1f}" y="{cyb + 4.6}" text-anchor="middle" '
-          f'font-family="{FONT}" font-size="13" font-weight="700" letter-spacing=".6" '
+          f'font-family="{FONT}" font-size="18.5" font-weight="700" letter-spacing=".6" '
           f'fill="{col}">{lbl}</text>')
         a(f'    <circle cx="{bx + 4}" cy="{FLOW_Y}" r="2.9" fill="{col}">')
         for attr, frm, to in (("cx", bx + 4, OUT_X - 12), ("cy", FLOW_Y, cyb)):
@@ -792,11 +819,11 @@ def build() -> str:
             a("      </g>")
             tx0 = OUT_X + 64
         a(f'      <text x="{tx0}" y="{cy_ + (5 if not sub else -3):.0f}" '
-          f'font-family="{FONT}" font-size="16" font-weight="700" '
+          f'font-family="{FONT}" font-size="22.7" font-weight="700" '
           f'fill="{INK}">{esc(title)}</text>')
         if sub:
             a(f'      <text x="{tx0}" y="{cy_ + 16:.0f}" font-family="{FONT}" '
-              f'font-size="13" fill="{DIM}">{esc(sub)}</text>')
+              f'font-size="18.5" fill="{DIM}">{esc(sub)}</text>')
         dcx = OUT_X + OUT_W / 2
         dy = top_ + OUT_H + 13
         a(f'      <circle cx="{dcx:.0f}" cy="{dy:.0f}" r="6.4" fill="{col}" '
@@ -834,7 +861,7 @@ def build() -> str:
         a(f'    <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="{VIOLET}" fill-opacity=".55" '
           f'transform="translate({axp:.0f} {ret_y:.0f}) rotate(180)"/>')
     a(f'    <text x="{(OUT_X + OUT_W / 2 + poll_cx) / 2:.0f}" y="{ret_y - 10:.0f}" '
-      f'text-anchor="middle" font-family="{FONT}" font-size="13" fill="{VIOLET}" '
+      f'text-anchor="middle" font-family="{FONT}" font-size="18.5" fill="{VIOLET}" '
       f'fill-opacity=".8">poll again — the tape does not move</text>')
     a("  </g>")
 
@@ -843,7 +870,11 @@ def build() -> str:
 
 
 if __name__ == "__main__":
-    dest = pathlib.Path(sys.argv[1])
+    # Same default as the other generators: the assets directory this file
+    # lives in. Requiring an argument meant the script simply crashed when
+    # run on its own, which is how both of these came to be out of date.
+    dest = (pathlib.Path(sys.argv[1]) if len(sys.argv) > 1
+            else pathlib.Path(__file__).resolve().parent.parent / "live-tape.svg")
     svg = build()
     dest.write_text(svg, encoding="utf-8")
     print(f"wrote {dest}  ({len(svg):,} chars)")
