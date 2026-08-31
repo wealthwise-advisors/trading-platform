@@ -26,6 +26,26 @@ BASE_PRICES = {
 }
 
 
+
+#: What a symbol and a timeframe are allowed to look like, at the API boundary.
+#:
+#: These are PATH COMPONENTS before they are anything else.
+#: src/data/csv_provider.py builds `self.data_dir / f"{symbol}_{timeframe}.csv"`,
+#: and Path's `/` operator does not stop a segment climbing out of its parent --
+#: "../../.." joined to a directory resolves above it, exactly as on a command
+#: line. Reaching an arbitrary file still needs one whose name ends
+#: `_{timeframe}.csv`, so this was never a read-anything hole, but "constrained
+#: by a filename suffix" is not a security boundary and should not be relied on
+#: as one.
+#:
+#: Alphanumeric only, which every real value already is: the configured
+#: contracts are ES, NQ, MES, CL, HG, AAPL, BTC and the rest, and timeframes
+#: are 1m, 5m, 15m, 1h. Nothing legitimate needs a dot or a slash, so nothing
+#: legitimate is refused.
+SYMBOL_PATTERN = r"^[A-Za-z0-9]{1,16}$"
+TIMEFRAME_PATTERN = r"^[A-Za-z0-9]{1,8}$"
+
+
 @lru_cache
 def get_config() -> dict:
     return load_config()

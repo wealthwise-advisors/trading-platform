@@ -3,16 +3,22 @@
 from datetime import date, time
 from typing import Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
+
+from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN
 
 
 class ReplayCreateRequest(BaseModel):
-    symbol: str = "ES"
+    #: Constrained because it becomes a FILENAME downstream -- see
+    #: api/deps.py's SYMBOL_PATTERN. Request models only; the response
+    #: models carry the same field but the server wrote those.
+    symbol: str = Field(default="ES", pattern=SYMBOL_PATTERN)
     #: Legacy single-timeframe field. Kept so existing callers keep working;
     #: when `timeframes` is omitted the session runs this one alone.
-    timeframe: str = "5m"
+    timeframe: str = Field(default="5m", pattern=TIMEFRAME_PATTERN)
     #: Multi-timeframe grid. The finest entry becomes the clock's base.
-    timeframes: Optional[list[str]] = None
+    timeframes: Optional[list[str]] = Field(default=None,
+                                            max_length=12)
     #: "synthetic" | "external_csv" | "schwab" | "rithmic" -- same set the
     #: backtest endpoint accepts. Replay used to be synthetic-only.
     data_source: str = "synthetic"

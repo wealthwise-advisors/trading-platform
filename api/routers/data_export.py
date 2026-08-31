@@ -7,7 +7,7 @@ from datetime import date, datetime, time as time_type
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
-from api.deps import get_contract_spec
+from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN, get_contract_spec
 from api.export import formats
 from api.routers.backtests import _build_provider
 
@@ -18,12 +18,14 @@ _FORMATS = {"csv", "xlsx", "pdf", "docx"}
 
 @router.get("/export")
 def export_data(
-    symbol: str = Query(...),
-    timeframe: str = Query("1h"),
+    # Both become part of a filename on disk and of the download's
+    # Content-Disposition; see api/deps.py's SYMBOL_PATTERN.
+    symbol: str = Query(..., pattern=SYMBOL_PATTERN),
+    timeframe: str = Query("1h", pattern=TIMEFRAME_PATTERN),
     start: date = Query(...),
     end: date = Query(...),
     data_source: str = Query("synthetic"),
-    format: str = Query("csv"),
+    format: str = Query("csv", pattern=r"^(csv|xlsx|pdf|docx)$"),
     session_start: time_type | None = Query(None),
     session_end: time_type | None = Query(None),
 ):

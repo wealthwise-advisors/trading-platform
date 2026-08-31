@@ -50,6 +50,18 @@ server {
         application/xml
         image/svg+xml;
 
+    include /etc/nginx/security-headers.conf;
+
+    # HSTS, on the TLS server only. A browser must never be told to force
+    # HTTPS by a reply that arrived over plain HTTP.
+    #
+    # One year, and NO preload. Preloading is close to irreversible -- the
+    # list ships inside browsers and removal takes months -- and this host
+    # answers on an sslip.io name derived from an elastic IP. If that IP is
+    # ever released, preloading would have committed a name we no longer
+    # control to HTTPS-only in every browser on earth.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     location /api/ {
         proxy_pass http://api:8000/api/;
         proxy_http_version 1.1;
@@ -72,17 +84,37 @@ server {
     # headers or locations belongs in BOTH files or it only half exists.
     location ~ ^/autotrader_(signin|signup)\.html$ {
         add_header Cache-Control "no-cache, must-revalidate" always;
+        include /etc/nginx/security-headers.conf;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 
     location = /index.html {
         add_header Cache-Control "no-cache, must-revalidate" always;
+        include /etc/nginx/security-headers.conf;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 
-    location /assets/ {
+    location ^~ /assets/ {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
+        include /etc/nginx/security-headers.conf;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+
+    # A typo'd PAGE gets a page saying so, instead of the dashboard. Mirrors
+    # nginx.conf; see the longer note there. Split on the file extension so the
+    # SPA catch-all above keeps every extension-less path.
+    location ~ \.(html|css|js|json|txt|xml|svg|png|jpg|jpeg|webp|woff2?)$ {
+        try_files $uri /404.html =404;
+        include /etc/nginx/security-headers.conf;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    }
+
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
     }
 }

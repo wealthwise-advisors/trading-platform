@@ -95,7 +95,25 @@ async def _lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="AutoTrader API", version=_version, lifespan=_lifespan)
+#: Swagger UI and the raw schema. ON by default -- they are a documented
+#: feature (docs/API_GUIDE.md) and the way anyone works on this locally.
+#:
+#: The DEPLOY turns them off. Every route behind them is guarded, so this is
+#: not access control; it is surface reduction. A public /docs hands an
+#: attacker the complete route list, every parameter name and every response
+#: shape, on a site that anyone can reach and register on. That is a map worth
+#: not drawing for them.
+_DOCS = os.environ.get("AUTOTRADER_ENABLE_DOCS", "1").strip().lower() not in {
+    "0", "false", "no", "off"}
+
+app = FastAPI(
+    title="AutoTrader API", version=_version, lifespan=_lifespan,
+    docs_url="/docs" if _DOCS else None,
+    redoc_url="/redoc" if _DOCS else None,
+    # The schema itself, which is what /docs reads. Leaving it reachable while
+    # hiding the UI would publish exactly the same information one fetch away.
+    openapi_url="/openapi.json" if _DOCS else None,
+)
 
 # Task 10 API audit: no CORS policy existed at all. In dev this is masked
 # by Vite's proxy (browser sees same-origin), but a production deployment

@@ -12,6 +12,9 @@ RUN npm run build
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Included by BOTH server blocks, and by the locations that set an
+# add_header of their own -- nginx drops inherited headers there.
+COPY security-headers.conf /etc/nginx/security-headers.conf
 
 # The TLS server ships as a TEMPLATE outside conf.d. 40-enable-ssl.sh installs
 # it only once a certificate exists -- see that script for why it is a watcher

@@ -375,6 +375,7 @@ jobs:
             TLS_DOMAIN="$TLS_DOMAIN" \
             AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }},https://$TLS_DOMAIN" \
             AUTOTRADER_COMMIT="${{ github.sha }}" \
+            AUTOTRADER_ENABLE_DOCS="0" \
             AUTOTRADER_PUBLIC_BASE_URL="$OAUTH_BASE" \
             AUTOTRADER_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
             AUTOTRADER_GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \

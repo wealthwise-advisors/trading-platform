@@ -3,13 +3,18 @@
 from datetime import date, time
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN
 
 
 class BacktestRequest(BaseModel):
     data_source: str = "synthetic"      # "synthetic" | "external_csv" | "schwab" | "rithmic"
-    symbol: str = "ES"
-    timeframe: str = "5m"
+    #: Constrained because it becomes a FILENAME downstream -- see
+    #: api/deps.py's SYMBOL_PATTERN. Request models only; the response
+    #: models carry the same field but the server wrote those.
+    symbol: str = Field(default="ES", pattern=SYMBOL_PATTERN)
+    timeframe: str = Field(default="5m", pattern=TIMEFRAME_PATTERN)
     strategy_id: str
     params: dict = {}
     initial_capital: float = 100_000.0

@@ -50,6 +50,8 @@ services:
       # is the one it just built. "unknown" locally; the deploy workflow sets
       # it to the commit being shipped.
       AUTOTRADER_COMMIT: "${AUTOTRADER_COMMIT:-unknown}"
+      # Swagger UI + /openapi.json. The deploy sets 0; local dev leaves it on.
+      AUTOTRADER_ENABLE_DOCS: "${AUTOTRADER_ENABLE_DOCS:-}"
 
       # ── OAuth sign-in (Google / LinkedIn / Twitter) ────────────────────────
       # Every one of these defaults to empty, and empty means the provider is

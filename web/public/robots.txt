@@ -1,0 +1,32 @@
+# AutoTrader
+#
+# This is a private application, not a marketing site. There is no public
+# catalogue to rank and nothing here is written to be found by search -- so
+# this file exists to keep crawlers OUT of the parts that cost something,
+# not to invite them into the parts that do not.
+#
+# What it is not: a security control. A crawler that ignores this reads the
+# same pages a browser does, and an attacker never asks. The controls that
+# actually matter are the session guard on every /api route, the rate limits,
+# and Turnstile on registration.
+
+User-agent: *
+
+# The API. Nothing under it is a document: every route either needs a session
+# or is a health check, so crawling it produces a long list of 401s and, on the
+# auth routes, spends rate-limit budget that belongs to real people.
+Disallow: /api/
+
+# The application itself. Everything past the sign-in page needs an account, so
+# a crawler reaching it collects the sign-in redirect over and over under a
+# hundred different URLs.
+Disallow: /assets/
+
+# Deliberately NOT disallowed: /autotrader_signin.html, /autotrader_signup.html,
+# /help.html, /privacy.html and /terms.html. Those are the only pages here that
+# read as documents to somebody who has not signed in, and the legal ones in
+# particular should be reachable by anyone who wants to check them before
+# creating an account.
+
+# No Crawl-delay: Google ignores it, and the ones that honour it are not the
+# ones causing load. nginx and the throttles handle volume.
