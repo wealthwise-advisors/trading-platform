@@ -115,9 +115,15 @@ def build() -> str:
     o.append(f'<text x="{PAD + 18}" y="{BAR_Y + 29}" font-family="{FONT}" '
              f'font-size="21.3" font-weight="700" fill="{INK}">'
              f'The suite</text>')
-    o.append(f'<text x="{PAD + 96}" y="{BAR_Y + 29}" font-family="{MONO}" '
+    # PAD+140, not PAD+96. "The suite" is 9 characters of 21.3px bold, which is
+    # about 107px wide starting at PAD+18 -- so the stats used to begin 22px
+    # inside the word and hid the "1," of the count.
+    #
+    # Counts re-read from `pytest --collect-only` and `vitest list`; the old
+    # 1,557 Python predated several suites and made the total wrong too.
+    o.append(f'<text x="{PAD + 140}" y="{BAR_Y + 29}" font-family="{MONO}" '
              f'font-size="19.2" fill="{DIM}">'
-             f'1,853 passing &#183; 1,557 Python &#183; 296 web</text>')
+             f'2,147 tests &#183; 1,840 Python &#183; 307 web</text>')
     o.append(f'<text x="{W - PAD - 18}" y="{BAR_Y + 29}" text-anchor="end" '
              f'font-family="{MONO}" font-size="18.5" letter-spacing="0.6" '
              f'fill="#4d6280">THREE KINDS</text>')

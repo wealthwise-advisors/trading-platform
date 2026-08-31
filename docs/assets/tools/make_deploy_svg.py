@@ -38,8 +38,11 @@ import sys
 # WITHOUT enlarging anything, which is the only version of "bigger" that does
 # not also mean "more crowded". The sizes below are chosen for the RENDERED
 # size, not the authored one.
+# H 360, not 404: the closing sentence is gone. A diagram states the
+# relationship; the prose that explains it belongs in the README, where it
+# can be a bullet the reader can skim past.
 W = 980
-H = 404
+H = 360
 PAD = 26
 
 # Stage cards stack the glyph ABOVE the words rather than beside them. Side by
@@ -234,9 +237,6 @@ def build() -> str:
                  f'font-weight="600" fill="{colour}" opacity="0.45">'
                  f'{label}{lit(T_OUT, 0.45, 1)}</text>')
 
-    o.append(f'<text x="{W/2}" y="{H-22}" text-anchor="middle" font-family="{FONT}" '
-             f'font-size="15.5" fill="{DIM}">A deploy that quietly leaves the old build '
-             f'running is the exact failure the last step exists to catch.</text>')
     o.append("</svg>")
     return "".join(o)
 

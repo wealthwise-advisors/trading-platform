@@ -452,8 +452,9 @@ it matches
 
 <br>
 
-The flagship surface. A session loads history, plays it bar by bar, and then **keeps
-going** — following the live market instead of stopping at the snapshot it loaded.
+- ➜ **The flagship surface** — loads history, plays it bar by bar, then keeps going
+- ➜ **Follows the live market** — instead of stopping at the snapshot it loaded
+- ➜ **The forming bar is withheld** — the tape advances only on a bar that has closed
 
 **What makes it trustworthy rather than merely live**
 
@@ -480,9 +481,8 @@ going** — following the live market instead of stopping at the snapshot it loa
 <img src="docs/assets/architecture.svg" alt="Data sources feed one core engine, which the interfaces read; the engine imports nothing from them" width="100%">
 </div>
 
-**The engine knows nothing about how it is called.** No HTTP, no React, no framework
-inside [`src/`](src) — which is what lets the same analysis run from a test, from the
-API and from a script and give the same answer each time.
+- ➜ **The engine knows nothing about how it is called** — no HTTP, no React, no framework inside [`src/`](src)
+- ➜ **Same answer from anywhere** — a test, the API and a script all run the identical analysis
 
 <table>
 <tr><td valign="top" width="33%">
@@ -594,9 +594,8 @@ non-determinism the shared aggregator exists to kill.
 
 ## 🧠 Strategy Engine
 
-Five strategies ship, all behind one interface
-([`base_strategy.py`](src/strategies/base_strategy.py)), so any of them drops into any
-run without the engine knowing which it holds.
+- ➜ **Five strategies ship**, all behind one interface — [`base_strategy.py`](src/strategies/base_strategy.py)
+- ➜ **Any of them drops into any run** — the engine never knows which it holds
 
 | | Strategy | The idea |
 |---|---|---|
@@ -613,9 +612,11 @@ run without the engine knowing which it holds.
 <br>
 
 > **Each timeframe gets its own strategy instance and its own paper broker.**
-> Strategies are stateful — RSI divergence arms a setup on one bar and confirms it
-> several bars later — so sharing one instance would let an hourly bar corrupt the
-> one-minute strategy's pre-conditions and silently change its signals.
+>
+> - ➜ **The trigger is the divergence bar's high** — a later *close* above it is the entry
+> - ➜ **The divergence only ARMS the setup** — several bars can pass before the trigger is taken
+> - ➜ **Strategies are stateful** — a setup armed on one bar is confirmed several bars later
+> - ➜ **So one shared instance would corrupt them** — an hourly bar would overwrite the one-minute strategy's pre-conditions and silently change its signals
 
 <br>
 
@@ -641,6 +642,8 @@ run without the engine knowing which it holds.
 **➜** So the clock runs in **market time** — one tick advances exactly one base bar
 
 **➜** Every other timeframe steps only when its own bar has **closed**
+
+**➜** Every lane reaches the right edge **together** — that is what *synchronised* means here
 
 **➜** [`multi_replay.py`](src/backtesting/multi_replay.py)
 
@@ -1143,8 +1146,8 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-2%2C026-22c55e?style=flat-square)
-![python](https://img.shields.io/badge/python-1%2C730-3776AB?style=flat-square&logo=python&logoColor=white)
+![tests](https://img.shields.io/badge/tests-2%2C147-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-1%2C840-3776AB?style=flat-square&logo=python&logoColor=white)
 ![web](https://img.shields.io/badge/web-296-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![coverage](https://img.shields.io/badge/coverage-78.2%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
@@ -1313,10 +1316,8 @@ had already shipped, and checked against the commit that shipped it.
 > CONFIRMED: port 80 is served by 104bb20...
 > ```
 >
-> A deploy that quietly leaves the old build running — because a container failed to
-> restart, or an image was cached — is the exact failure this exists to catch. Without
-> this check a deploy is green when nothing was deployed, which is the most expensive
-> kind of green there is.
+> - ➜ **It catches the silent failure** — a container that failed to restart, or a cached image, leaves the old build serving
+> - ➜ **Without it, a deploy is green when nothing deployed** — the most expensive kind of green there is
 
 <br>
 

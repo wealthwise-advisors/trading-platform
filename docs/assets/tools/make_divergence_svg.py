@@ -45,7 +45,8 @@ def fits(text, width, want, floor=12.0, advance=0.52):
     return max(floor, min(want, width / (len(text) * advance)))
 
 W = 1280
-H = 456   # +26 for the second caption line; see the footnote below
+# 410: the explanatory footnote is gone, so the height it needed goes too.
+H = 410
 PAD = 34
 PLOT_X = PAD + 8
 # Room reserved for the right-hand rule list. 350, not 210: 210 was measured
@@ -206,17 +207,14 @@ def build() -> str:
     o.append(f'<line x1="{px(LOW_2):.1f}" y1="{trig_y:.1f}" '
              f'x2="{px(N-1):.1f}" y2="{trig_y:.1f}" stroke="{TRIG}" '
              f'stroke-width="1.6" stroke-dasharray="5 4" opacity="0">{fade(T_ARM)}</line>')
-    # Two short lines, not one long one. The line starts at the divergence bar
-    # and only ~210px of plot remain to its right, which "trigger — high of the
-    # divergence bar" needs 367px to say. Anchoring it right instead would have
-    # run it back over the price curve, and shrinking it to fit would have put
-    # it at 10px. Stacking is the only option that keeps the wording and the
-    # size, and the definition is the part worth keeping.
-    for i, line in enumerate(("trigger", "= divergence bar high")):
-        o.append(f'<text x="{px(LOW_2)+8:.1f}" y="{trig_y-33+i*17:.1f}" '
-                 f'font-family="{MONO}" '
-                 f'font-size="{fits(line, PLOT_X + PLOT_W - px(LOW_2) - 8, 16, advance=0.60):.1f}" '
-                 f'fill="{TRIG}" opacity="0">{line}{fade(T_ARM)}</text>')
+    # One word. This line is the trigger; WHAT the trigger is set to is a
+    # sentence, and a sentence needs 367px in a 210px space, which is how it
+    # ended up crossing the panel border into the rule list. Stacking it onto
+    # two lines fitted, but put twenty characters of prose on top of the line
+    # they describe in the busiest part of the plot. The definition belongs in
+    # the README beside the diagram, where it costs nothing to read.
+    o.append(f'<text x="{px(LOW_2)+8:.1f}" y="{trig_y-9:.1f}" font-family="{MONO}" '
+             f'font-size="17" fill="{TRIG}" opacity="0">trigger{fade(T_ARM)}</text>')
 
     # ── step 4 · the entry ────────────────────────────────────────────────
     ex, ey = px(ENTRY), py(PRICE[ENTRY])
@@ -247,15 +245,6 @@ def build() -> str:
                  f'font-size="{fits(text, W - PAD - (lx + 26), 20.6):.1f}" '
                  f'fill="{INK}">{text}</text></g>')
 
-    # Two lines. SVG <text> does not wrap, so a caption longer than the canvas
-    # is not shrunk or reflowed -- it is silently cut off at the edge, which is
-    # exactly what the single-line version did once the type went up.
-    for i, line in enumerate((
-        'The divergence only ARMS the setup. Several bars can pass before the',
-        'trigger is taken — which is why every timeframe needs its own strategy instance.',
-    )):
-        o.append(f'<text x="{PAD}" y="{H-40+i*24}" font-family="{FONT}" '
-                 f'font-size="18.4" fill="{DIM}">{line}</text>')
 
     o.append("</svg>")
     return "".join(o)

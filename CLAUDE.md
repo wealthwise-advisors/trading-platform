@@ -137,7 +137,7 @@ Trading/
 │   ├── generate_data.py           # Generate synthetic CSV data for all symbols
 │   └── download_rithmic_data.py   # Download real Rithmic bars
 │
-├── tests/                      # 20 files, ~1,715 tests -- see "Tests" below
+├── tests/                      # 27 files, 1,840 tests -- see "Tests" below
 │   ├── test_auth.py                       # the guard: every route refuses anon
 │   ├── test_reset_auth.py                 # password + username recovery
 │   ├── test_oauth_auth.py                 # Google · LinkedIn · GitHub · Twitter
@@ -354,7 +354,7 @@ timestamp,open,high,low,close,volume
 py -3.12 -m pytest tests/ -v
 ```
 
-**20 files, ~1,715 tests.** The four below are the security suite and have a
+**27 files, 1,840 tests** (plus 307 in `web/`). The four below are the security suite and have a
 rule of their own -- see the warning after them.
 
 | Suite | Holds |

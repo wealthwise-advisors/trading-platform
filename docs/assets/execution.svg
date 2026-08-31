@@ -8,21 +8,19 @@
 <rect x="234" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
 <animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="1.00s" dur="6.00s" repeatCount="indefinite"/>
 </rect>
-<text x="328" y="68" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#e2e8f0">Strategy</text>
-<text x="328" y="87" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="17" font-style="italic" fill="#94a3b8">signal</text>
+<text x="328" y="81" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#e2e8f0">Strategy</text>
 <path d="M 421 76 H 436" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
 <path d="M 436 72 L 443 76 L 436 80 Z" fill="#3a4a63"/>
-<rect x="443" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#f59e0b" stroke-opacity="0.55" stroke-width="2">
-<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="2.00s" dur="6.00s" repeatCount="indefinite"/>
+<rect x="443" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="2.00s" dur="6.00s" repeatCount="indefinite"/>
 </rect>
 <text x="536" y="81" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#e2e8f0">Paper Broker</text>
 <path d="M 629 76 H 644" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
 <path d="M 644 72 L 651 76 L 644 80 Z" fill="#3a4a63"/>
-<rect x="651" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#f59e0b" stroke-opacity="0.55" stroke-width="2">
-<animate attributeName="stroke-opacity" values="0.55;1;0.55;0.55" keyTimes="0;0.06;0.30;1" begin="3.00s" dur="6.00s" repeatCount="indefinite"/>
+<rect x="651" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">
+<animate attributeName="stroke-opacity" values="0.30;1;0.30;0.30" keyTimes="0;0.06;0.30;1" begin="3.00s" dur="6.00s" repeatCount="indefinite"/>
 </rect>
-<text x="744" y="68" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#e2e8f0">Fill</text>
-<text x="744" y="87" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="13.1677" font-style="italic" fill="#94a3b8">+ slippage, + commission</text>
+<text x="744" y="81" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#e2e8f0">Fill</text>
 <path d="M 837 76 H 852" stroke="#3a4a63" stroke-width="1.5" fill="none"/>
 <path d="M 852 72 L 859 76 L 852 80 Z" fill="#3a4a63"/>
 <rect x="859" y="30" width="186" height="92" rx="10" fill="#0b1220" stroke="#334155" stroke-opacity="0.30" stroke-width="1.2">

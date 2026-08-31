@@ -62,6 +62,19 @@
 
 - ➜ **A diagram that must stay in step with the code has to be rebuildable.** That is why these are scripts rather than drawings.
 
+- ➜ **A diagram carries labels, not sentences.** Every one of these used to end
+  with a line of prose explaining what it had just shown — and several set a
+  second explanatory line inside the boxes. That is README text drawn as an
+  image: it cannot be skimmed, searched, translated or read by a screen reader,
+  and it forces the canvas taller so the type gets smaller. The picture states
+  the relationship; the prose goes in the README **as a bullet**, next to it.
+
+- ➜ **Style every peer identically unless the difference means something.**
+  `execution.svg` gave two of its six boxes an amber accent and a heavier
+  border, and a subtitle to two of six. Read literally that says "these two
+  matter more" — a claim the diagram was not making. Uniform boxes, or an
+  accent that earns itself.
+
 - ➜ **Size the type for 830px, not for the canvas.** GitHub renders a README at
   roughly 830px wide, so a `1280`-wide drawing is shown at **0.65 scale** and its
   16px label arrives as **10px**. Multiply every font size by `830 / viewBox_width`

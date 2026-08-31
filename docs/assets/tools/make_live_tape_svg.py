@@ -389,10 +389,6 @@ def build() -> str:
     a(f'    <circle cx="{x + 34}" cy="{sy}" r="4.2" fill="{GREEN}"/>')
     a(f'    <text x="{x + 50}" y="{sy + 4.6}" font-family="{FONT}" font-size="19.9" '
       f'font-weight="700" letter-spacing="1.1" fill="{GREEN}">FOLLOWING LIVE</text>')
-    # x+250, not x+186: "FOLLOWING LIVE" is 14 tracked caps and runs to about
-    # x+220 at this size, so the sentence used to start underneath its own badge.
-    a(f'    <text x="{x + 250}" y="{sy + 4.6}" font-family="{FONT}" font-size="19.9" '
-      f'fill="{DIM}">new bars arrive on their own — no reload, no clicking</text>')
 
     # ── deviation bands (dashed) and VWAP ──
     # Wide enough that the bars sit inside the channel. At 26 the bodies broke
@@ -475,7 +471,10 @@ def build() -> str:
 
     # ── the withheld-bar caption ──
     cy_pill = y + h - 32
-    pill_w = 322
+    # "forming bar withheld", not "the newest bar is still forming (1 withheld)".
+    # Both facts survive -- the bar is forming, and it is held back -- but as a
+    # status label rather than a sentence, and the pill shrinks to match.
+    pill_w = 265
     a(f'    <rect x="{x + 22}" y="{cy_pill - 17}" width="{pill_w}" height="34" rx="17" '
       f'fill="url(#card)" stroke="{CYAN}" stroke-opacity=".34"/>')
     a(f'    <circle cx="{x + 43}" cy="{cy_pill}" r="11" fill="{CYAN}" fill-opacity=".14"/>')
@@ -484,8 +483,7 @@ def build() -> str:
         a("      " + p)
     a("    </g>")
     a(f'    <text x="{x + 62}" y="{cy_pill + 4.4}" font-family="{FONT}" font-size="19.9" '
-      f'fill="{INK}" fill-opacity=".92">the newest bar is still forming '
-      f'(1 withheld)</text>')
+      f'fill="{INK}" fill-opacity=".92">forming bar withheld</text>')
     a("  </g>")
 
     # ══ panel B: the loop ═════════════════════════════════════════════════
@@ -862,7 +860,7 @@ def build() -> str:
           f'transform="translate({axp:.0f} {ret_y:.0f}) rotate(180)"/>')
     a(f'    <text x="{(OUT_X + OUT_W / 2 + poll_cx) / 2:.0f}" y="{ret_y - 10:.0f}" '
       f'text-anchor="middle" font-family="{FONT}" font-size="18.5" fill="{VIOLET}" '
-      f'fill-opacity=".8">poll again — the tape does not move</text>')
+      f'fill-opacity=".8">poll again</text>')
     a("  </g>")
 
     a("</svg>")

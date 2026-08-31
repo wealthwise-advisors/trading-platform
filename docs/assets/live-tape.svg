@@ -76,7 +76,6 @@
     </circle>
     <circle cx="50" cy="106" r="4.2" fill="#22c55e"/>
     <text x="66" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="700" letter-spacing="1.1" fill="#22c55e">FOLLOWING LIVE</text>
-    <text x="266" y="110.6" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" fill="#8ea3bd">new bars arrive on their own — no reload, no clicking</text>
     <polyline points="97.2,200.5 139.8,199.2 182.2,199.3 224.8,198.2 267.2,197.1 309.8,195.1 352.2,192.4 394.8,188.7 437.2,184.5 479.8,180.4 522.2,177.7 564.8,175.0 607.2,172.3 649.8,170.0 692.2,166.3 734.8,162.7 777.2,158.3 819.8,155.7 862.2,151.3 904.8,148.7 947.2,147.2 989.8,144.7 1032.2,142.2 1074.8,137.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,292.5 139.8,291.2 182.2,291.3 224.8,290.2 267.2,289.1 309.8,287.1 352.2,284.4 394.8,280.7 437.2,276.5 479.8,272.4 522.2,269.7 564.8,267.0 607.2,264.3 649.8,262.0 692.2,258.3 734.8,254.7 777.2,250.3 819.8,247.7 862.2,243.3 904.8,240.7 947.2,239.2 989.8,236.7 1032.2,234.2 1074.8,229.7" fill="none" stroke="#c084fc" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="5 5"/>
     <polyline points="97.2,246.5 139.8,245.2 182.2,245.3 224.8,244.2 267.2,243.1 309.8,241.1 352.2,238.4 394.8,234.7 437.2,230.5 479.8,226.4 522.2,223.7 564.8,221.0 607.2,218.3 649.8,216.0 692.2,212.3 734.8,208.7 777.2,204.3 819.8,201.7 862.2,197.3 904.8,194.7 947.2,193.2 989.8,190.7 1032.2,188.2 1074.8,183.7" fill="none" stroke="#c084fc" stroke-opacity=".16" stroke-width="7" stroke-linecap="round"/>
@@ -168,12 +167,12 @@
     <text x="1112" y="233.9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="17" font-weight="600" fill="#c084fc">−2σ</text>
     <text x="1074.8" y="147.4" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" font-weight="600" letter-spacing=".4" fill="#22c55e">forming</text>
     <line x1="70" y1="306" x2="1102" y2="306" stroke="#ffffff" stroke-opacity=".10" stroke-width="1"/>
-    <rect x="38" y="307" width="322" height="34" rx="17" fill="url(#card)" stroke="#22d3ee" stroke-opacity=".34"/>
+    <rect x="38" y="307" width="265" height="34" rx="17" fill="url(#card)" stroke="#22d3ee" stroke-opacity=".34"/>
     <circle cx="59" cy="324" r="11" fill="#22d3ee" fill-opacity=".14"/>
     <g transform="translate(49 314) scale(.83)">
       <path d="M2.8 12h4l2.4-6 3.4 12 2.6-6h5.8" fill="none" stroke="#22d3ee" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" fill="#e8f2ff" fill-opacity=".92">the newest bar is still forming (1 withheld)</text>
+    <text x="78" y="328.4" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="19.9" fill="#e8f2ff" fill-opacity=".92">forming bar withheld</text>
   </g>
   <g>
     <rect x="16" y="372" width="1248" height="352" rx="18" fill="url(#panel)" stroke="#ffffff" stroke-opacity=".075"/>
@@ -595,6 +594,6 @@
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(1016 691) rotate(180)"/>
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(908 691) rotate(180)"/>
     <path d="M3.6 0 L-3 3.6 L-3 -3.6z" fill="#a855f7" fill-opacity=".55" transform="translate(799 691) rotate(180)"/>
-    <text x="908" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" fill="#a855f7" fill-opacity=".8">poll again — the tape does not move</text>
+    <text x="908" y="681" text-anchor="middle" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="18.5" fill="#a855f7" fill-opacity=".8">poll again</text>
   </g>
 </svg>

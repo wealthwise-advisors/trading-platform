@@ -63,7 +63,8 @@ DATA_W = W - DATA_X - PAD
 TOP = 74
 # The left column is the tallest thing here, so it sets the height. +96
 # left 114px of empty box under the hub content.
-H = TOP + len(RETIRED) * (CARD_H + CARD_GAP) + 48
+# +18, not +48: the closing sentence that needed the rest of it is gone.
+H = TOP + len(RETIRED) * (CARD_H + CARD_GAP) + 18
 
 FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
         "Roboto,Helvetica,Arial,sans-serif")
@@ -150,17 +151,15 @@ def build() -> str:
         )
 
     # ── the redaction gate ────────────────────────────────────────────────
-    gh = 82
+    # 52, not 82: "credentials / stripped" came off, and a box keeps the height
+    # its contents need rather than the height it used to need.
+    gh = 52
     gy = COL_MID_Y - gh / 2
     o.append(f'<rect x="{GATE_X}" y="{gy:.1f}" width="104" height="{gh}" rx="10" '
              f'fill="{GATE}" fill-opacity="0.08" stroke="{GATE}" stroke-opacity="0.55"/>')
-    o.append(f'<text x="{GATE_X+52}" y="{gy+30:.1f}" text-anchor="middle" '
+    o.append(f'<text x="{GATE_X+52}" y="{gy+33:.1f}" text-anchor="middle" '
              f'font-family="{MONO}" font-size="19.2" font-weight="700" fill="{GATE}">'
              f'REDACTED</text>')
-    o.append(f'<text x="{GATE_X+52}" y="{gy+48:.1f}" text-anchor="middle" '
-             f'font-family="{FONT}" font-size="19.9" fill="{DIM}">credentials</text>')
-    o.append(f'<text x="{GATE_X+52}" y="{gy+63:.1f}" text-anchor="middle" '
-             f'font-family="{FONT}" font-size="19.9" fill="{DIM}">stripped</text>')
     # it lights when the last predecessor has arrived
     o.append(f'<rect x="{GATE_X}" y="{gy:.1f}" width="104" height="{gh}" rx="10" '
              f'fill="{GATE}" fill-opacity="0">'
@@ -180,11 +179,10 @@ def build() -> str:
              f'fill="#0c1a22" stroke="{HUB}" stroke-width="2" stroke-opacity="0.75"/>')
     o.append(f'<text x="{HUB_X+18}" y="{hub_y+30}" font-family="{FONT}" font-size="23.4" '
              f'font-weight="700" fill="{HUB}">trading-platform</text>')
-    o.append(f'<text x="{HUB_X+18}" y="{hub_y+49}" font-family="{FONT}" font-size="18.5" '
-             f'fill="{DIM}">the platform · you are here</text>')
+
 
     # legacy/ inside it
-    ly = hub_y + 66
+    ly = hub_y + 48          # the tagline that used to sit here is gone
     o.append(f'<g opacity="0">{fade(T_HUB)}'
              f'<rect x="{HUB_X+18}" y="{ly}" width="{HUB_W-36}" height="80" rx="9" '
              f'fill="#101a2c" stroke="{RETIRE}" stroke-opacity="0.6" '
@@ -206,42 +204,39 @@ def build() -> str:
     ay = ly + 96          # follows the taller legacy/ box
     o.append(f'<rect x="{HUB_X+18}" y="{ay}" width="{HUB_W-36}" height="44" rx="9" '
              f'fill="{HUB}" fill-opacity="0.10" stroke="{HUB}" stroke-opacity="0.45"/>')
-    _run = "api/ · src/ · web/ — what actually runs"
+    _run = "api/ · src/ · web/"
     o.append(f'<text x="{HUB_X+32}" y="{ay+28}" font-family="{FONT}" '
              f'font-size="{fits(_run, HUB_W-64, 15):.1f}" fill="{INK}">{_run}</text>')
 
     # ── data ──────────────────────────────────────────────────────────────
-    dy = COL_MID_Y - 62
-    o.append(f'<rect x="{DATA_X}" y="{dy:.1f}" width="{DATA_W}" height="124" rx="12" '
+    dy = hub_y                # top-aligned with the hub, not centred
+    o.append(f'<rect x="{DATA_X}" y="{dy:.1f}" width="{DATA_W}" height="106" rx="12" '
              f'fill="#0b1526" stroke="{DATA}" stroke-width="2" stroke-opacity="0.7"/>')
     o.append(f'<text x="{DATA_X+16}" y="{dy+30:.1f}" font-family="{FONT}" '
              f'font-size="23.4" font-weight="700" fill="{DATA}">data</text>')
-    _mh = "market history · Git LFS"
-    o.append(f'<text x="{DATA_X+16}" y="{dy+50:.1f}" font-family="{FONT}" '
-             f'font-size="{fits(_mh, DATA_W-32, 18.5):.1f}" fill="{DIM}">{_mh}</text>')
-    o.append(f'<rect x="{DATA_X+16}" y="{dy+66:.1f}" width="{DATA_W-32}" height="52" '
+
+    o.append(f'<rect x="{DATA_X+16}" y="{dy+46:.1f}" width="{DATA_W-32}" height="46" '
              f'rx="8" fill="{DATA}" fill-opacity="0.10"/>')
-    o.append(f'<text x="{DATA_X+28}" y="{dy+88:.1f}" font-family="{MONO}" '
+    o.append(f'<text x="{DATA_X+28}" y="{dy+66:.1f}" font-family="{MONO}" '
              f'font-size="16" fill="{INK}">18-year 1-minute ES</text>')
     _tl = "too large for an ordinary repo"
-    o.append(f'<text x="{DATA_X+28}" y="{dy+108:.1f}" font-family="{FONT}" '
+    o.append(f'<text x="{DATA_X+28}" y="{dy+84:.1f}" font-family="{FONT}" '
              f'font-size="{fits(_tl, DATA_W-56, 15):.1f}" fill="{DIM}">{_tl}</text>')
 
-    o.append(f'<path d="M {HUB_X+HUB_W+6} {COL_MID_Y:.1f} L {DATA_X-8} {COL_MID_Y:.1f}" '
+    ARROW_Y = dy + 53
+    o.append(f'<path d="M {HUB_X+HUB_W+6} {ARROW_Y:.1f} L {DATA_X-8} {ARROW_Y:.1f}" '
              f'stroke="{DATA}" stroke-width="2" marker-end="url(#ad)" opacity="0">'
              f'{fade(T_DATA)}</path>')
     # Sized to the gap it sits in. At 19.2 "reads history" is 130px wide in a
     # 120px gap, so it overlapped the hub on one side and the data card on the
     # other. Widening the gap instead would have taken the width out of the
     # data card, whose own longest line already has only 10px to spare.
-    o.append(f'<text x="{(HUB_X+HUB_W+DATA_X)/2:.1f}" y="{COL_MID_Y-11:.1f}" '
+    o.append(f'<text x="{(HUB_X+HUB_W+DATA_X)/2:.1f}" y="{ARROW_Y-11:.1f}" '
              f'text-anchor="middle" font-family="{FONT}" '
              f'font-size="{fits("reads history", DATA_X-(HUB_X+HUB_W)-12, 19.2):.1f}" '
              f'fill="{DIM}" opacity="0">reads history{fade(T_DATA)}</text>')
 
-    o.append(f'<text x="{PAD}" y="{H-18}" font-family="{FONT}" font-size="18.5" '
-             f'fill="{DIM}">Five repositories were retired into one archive; what runs '
-             f'today is a single platform reading one shared history.</text>')
+
 
     o.append("</svg>")
     return "".join(o)

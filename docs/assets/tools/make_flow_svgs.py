@@ -278,7 +278,7 @@ def workflow():
         ("01", "Idea", None, "bulb", SKY, False),
         ("02", "Research", "measure it", "search", SKY, False),
         ("03", "Implement", "+ tests that can fail", "code", SKY, False),
-        ("04", "Verify", "1,853 tests \u00b7 ruff \u00b7 tsc", "shield", TEAL, True),
+        ("04", "Verify", "2,147 tests \u00b7 ruff \u00b7 tsc", "shield", TEAL, True),
         ("05", "Backtest & Replay", "against real bars", "bars", VIOLET, False),
         ("06", "Pull Request", "6 CI checks", "branch", VIOLET, False),
         ("07", "Merge", None, "merge", VIOLET, False),
@@ -515,11 +515,18 @@ def architecture():
 
 DIAGRAMS = {
     "workflow.svg": workflow,
+    # Six identical boxes, deliberately. Two of them used to carry an amber
+    # accent and a heavier border while the other four did not, which reads as
+    # "these two matter more" -- a claim the diagram does not actually make.
+    # The subtitles went the same way: two of six had one, so the row looked
+    # half-finished rather than annotated, and "+ slippage, + commission" set a
+    # comma where every other diagram here separates with a middot. What each
+    # stage does belongs in the README next to it, not stacked inside the box.
     "execution.svg": lambda: chain([
         ("Bars", None, None, False),
-        ("Strategy", "signal", None, False),
-        ("Paper Broker", None, AMBER, True),
-        ("Fill", "+ slippage, + commission", AMBER, True),
+        ("Strategy", None, None, False),
+        ("Paper Broker", None, None, False),
+        ("Fill", None, None, False),
         ("Position & P&L", None, None, False),
         ("Metrics", None, None, False),
     ], rows=1, label="Bars produce a strategy signal, the paper broker fills it with "

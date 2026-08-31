@@ -73,10 +73,9 @@ INK = "#eaf3ff"
 DIM = "#8ba1bc"
 GRID = "#1c2740"
 
-# +80, not +54: the footnote sets on TWO lines now. At 19px the single
-# line was 1,547px of text in a 1,212px box and simply ran off the right
-# edge -- SVG does not wrap, so an overlong <text> is silently clipped.
-H = LANE_Y0 + LANE_H * len(LANES) + 80
+# +34: enough to close the panel under the last lane, and no more. The
+# footnote that used to need the rest of it now lives in the README.
+H = LANE_Y0 + LANE_H * len(LANES) + 34
 
 # Fast attack, slower decay, dark for the rest -- a bar CLOSING, not breathing.
 # Same envelope the pipeline nodes use, so the two drawings agree about what an
@@ -154,11 +153,6 @@ def build() -> str:
     o.append(
         f'<text x="{PAD}" y="{HEAD_Y-14}" font-family="{FONT}" font-size="20.6" '
         f'font-weight="700" letter-spacing="1.6" fill="{INK}">ONE MARKET CLOCK</text>'
-    )
-    o.append(
-        f'<text x="{PAD}" y="{HEAD_Y+6}" font-family="{FONT}" font-size="19.9" '
-        f'fill="{DIM}">One tick advances market time by a single base bar. '
-        f'A pane steps only when its own bar has closed.</text>'
     )
     o.append(
         f'<text x="{W-PAD}" y="{HEAD_Y-14}" text-anchor="end" font-family="{MONO}" '
@@ -242,14 +236,6 @@ def build() -> str:
     )
 
     # ── footnote ──────────────────────────────────────────────────────────
-    for i, line in enumerate((
-        'Every lane reaches the right edge together — that is what "synchronised"',
-        'means here, and it is what stepping each engine once per tick does not give you.',
-    )):
-        o.append(
-            f'<text x="{PAD}" y="{H-46+i*24}" font-family="{FONT}" font-size="18.4" '
-            f'fill="{DIM}">{line}</text>'
-        )
 
     o.append("</svg>")
     return "".join(o)
