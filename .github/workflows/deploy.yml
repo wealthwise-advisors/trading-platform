@@ -356,6 +356,8 @@ jobs:
               "${{ secrets.AUTOTRADER_RESEND_API_KEY }}"
             report_secret AUTOTRADER_MAIL_FROM \
               "${{ secrets.AUTOTRADER_MAIL_FROM }}"
+            report_secret AUTOTRADER_REQUIRE_VERIFIED_EMAIL \
+              "${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}"
             report_secret AUTOTRADER_TURNSTILE_SITE_KEY \
               "${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}"
             report_secret AUTOTRADER_TURNSTILE_SECRET_KEY \
@@ -381,6 +383,7 @@ jobs:
             AUTOTRADER_GITHUB_CLIENT_SECRET="${{ secrets.GH_OAUTH_CLIENT_SECRET }}" \
             AUTOTRADER_RESEND_API_KEY="${{ secrets.AUTOTRADER_RESEND_API_KEY }}" \
             AUTOTRADER_MAIL_FROM="${{ secrets.AUTOTRADER_MAIL_FROM }}" \
+            AUTOTRADER_REQUIRE_VERIFIED_EMAIL="${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}" \
             AUTOTRADER_TURNSTILE_SITE_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}" \
             AUTOTRADER_TURNSTILE_SECRET_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}" \
             docker compose up --build -d --remove-orphans
