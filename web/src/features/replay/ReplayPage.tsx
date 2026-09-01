@@ -31,7 +31,7 @@ import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { daysForSet } from "@/lib/chartSetup"
+import { daysFor, daysForSet } from "@/lib/chartSetup"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -1600,6 +1600,15 @@ export function ReplayPage() {
                 >
                   <TfGlyph />
                   {tf}
+                  {/* The history this timeframe loads, on the button that
+                      loads it. Hidden once `ready`: the range is fixed for the
+                      running session, so the number would no longer describe
+                      what pressing this does. */}
+                  {!ready && daysFor(tf) != null && (
+                    <span className="ml-1 text-[10px] tabular-nums opacity-55">
+                      {daysFor(tf)}D
+                    </span>
+                  )}
                   {on && <Check size={12} strokeWidth={3.2} className="ml-0.5" />}
                   {needsRefetch && <span className="ml-0.5 opacity-60">↻</span>}
                 </button>

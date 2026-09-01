@@ -14,7 +14,7 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { daysFor } from "@/lib/chartSetup"
+import { ALL_CHART_TIMEFRAMES, daysFor } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -225,15 +225,28 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             {/* Same eleven the Live Replay grid offers. This was five, so a backtest
                 could not use the intervals a replay could -- and asking for one
                 that the provider had no alias for surfaced as a 500. */}
-            {["1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h"]
-              .map((tf) => (
+            {/* Each option carries the history it loads, so the choice and its
+                consequence are read in one place rather than the range moving
+                after the fact and having to be explained. A timeframe with no
+                specified day count shows nothing, because selecting it changes
+                no range -- see lib/chartSetup.ts. */}
+            {ALL_CHART_TIMEFRAMES.map((tf) => {
+              const days = daysFor(tf)
+              return (
                 <SelectItem key={tf} value={tf}>
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 w-full">
                     <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
                     {tf}
+                    {days != null && (
+                      <span className="ml-auto pl-3 text-[11px] tabular-nums
+                                       text-muted-foreground">
+                        {days}D
+                      </span>
+                    )}
                   </span>
                 </SelectItem>
-              ))}
+              )
+            })}
           </SelectContent>
         </Select>
       </Section>
