@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { daysFor } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -203,23 +201,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
       <Section icon="timeframe" label="Timeframe" accent="iris">
-        <Select
-          value={cfg.timeframe}
-          onValueChange={(v) => {
-            cfg.setField("timeframe", v)
-            // Move the START back, keeping the end date where it is: the
-            // preset is "the last N days", and the end is usually the most
-            // recent session the source can serve. Moving the end instead
-            // would walk the window off the live edge.
-            //
-            // A timeframe with no preset leaves the range untouched rather
-            // than falling back to a number nobody chose.
-            const days = daysFor(v)
-            if (days == null) return
-            const start = startDateForDays(cfg.endDate, days)
-            if (start) cfg.setField("startDate", start)
-          }}
-        >
+        <Select value={cfg.timeframe} onValueChange={(v) => cfg.setField("timeframe", v)}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             {/* Same eleven the Live Replay grid offers. This was five, so a backtest
@@ -236,11 +218,6 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               ))}
           </SelectContent>
         </Select>
-      </Section>
-
-      {/* ── chart setup ──────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Chart Setup" accent="iris">
-        <ChartSetupPanel active={[cfg.timeframe]} />
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}

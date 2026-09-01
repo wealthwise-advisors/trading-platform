@@ -29,9 +29,7 @@ import { DateField } from "@/components/ui/date-field"
 import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-react"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
-import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { daysForSet } from "@/lib/chartSetup"
+import { steppedEndDate } from "@/lib/dayRange"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -976,22 +974,7 @@ export function ReplayPage() {
     setTimeframes(next)
     setTfNotice(null)
 
-    if (!ready) {
-      // Move the range to the chart setup for the COARSEST timeframe now
-      // selected -- every pane shares one range, and the coarsest is the one
-      // that needs the most history to show anything at all.
-      //
-      // Only while this is still a form. Once a session is running its bars
-      // were fetched for the range it started with, and rewriting the dates
-      // underneath would describe a session that is not the one on screen --
-      // which is also why the stepper and date fields lock on `ready`.
-      const days = daysForSet(next)
-      if (days != null) {
-        const start = startDateForDays(endDate, days)
-        if (start) setStartDate(start)
-      }
-      return                                        // no session yet: just a form
-    }
+    if (!ready) return                              // no session yet: just a form
     if (on) {
       setTfNotice(`${tf} hidden. Its pane keeps running, so re-adding it is instant.`)
     } else if (activeTimeframes.includes(tf)) {
@@ -1473,14 +1456,7 @@ export function ReplayPage() {
             than adjacency does. The weekday under each is there because a
             trading range is chosen in weekdays: "Thursday to Monday" is the
             fact that decides whether a range covers three sessions or five. */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_auto_19rem] gap-3 items-stretch">
-
-          <div className="range-group">
-            <span className="range-cap">Chart setup</span>
-            <div className="range-body">
-              <ChartSetupPanel active={timeframes} />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_19rem] gap-3 items-stretch">
 
           <div className="range-group">
             <span className="range-cap">Date range</span>

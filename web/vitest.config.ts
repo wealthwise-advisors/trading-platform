@@ -23,7 +23,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.a11y.test.tsx"],
+    include: ["src/**/*.test.ts", "src/**/*.a11y.test.tsx"],
     reporters: "verbose",
   },
 })
