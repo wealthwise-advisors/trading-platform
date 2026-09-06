@@ -29,9 +29,9 @@ import { DateField } from "@/components/ui/date-field"
 import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-react"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
+import { steppedEndDate } from "@/lib/dayRange"
 import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { daysFor, daysForSet } from "@/lib/chartSetup"
+import { daysFor, startDateForTimeframes } from "@/lib/chartSetup"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -985,11 +985,8 @@ export function ReplayPage() {
       // were fetched for the range it started with, and rewriting the dates
       // underneath would describe a session that is not the one on screen --
       // which is also why the stepper and date fields lock on `ready`.
-      const days = daysForSet(next)
-      if (days != null) {
-        const start = startDateForDays(endDate, days)
-        if (start) setStartDate(start)
-      }
+      const start = startDateForTimeframes(endDate, next)
+      if (start) setStartDate(start)
       return                                        // no session yet: just a form
     }
     if (on) {

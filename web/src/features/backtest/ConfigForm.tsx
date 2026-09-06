@@ -14,7 +14,9 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { ChartSetupPanel } from "@/components/ChartSetupPanel"
-import { ALL_CHART_TIMEFRAMES, daysFor } from "@/lib/chartSetup"
+import {
+  ALL_CHART_TIMEFRAMES, daysFor, startDateForTimeframe,
+} from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -214,9 +216,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             //
             // A timeframe with no preset leaves the range untouched rather
             // than falling back to a number nobody chose.
-            const days = daysFor(v)
-            if (days == null) return
-            const start = startDateForDays(cfg.endDate, days)
+            const start = startDateForTimeframe(cfg.endDate, v)
             if (start) cfg.setField("startDate", start)
           }}
         >

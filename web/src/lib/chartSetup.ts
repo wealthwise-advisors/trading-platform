@@ -38,6 +38,7 @@
  * decide for those. If any is ever added it lands here with no entry, changes
  * no range, and shows as unset until someone gives it a number.
  */
+import { startDateForDays } from "./dayRange"
 
 /** Exactly as specified. Eight entries; do not add a ninth by inference. */
 const SPECIFIED: Record<string, number> = {
@@ -107,4 +108,32 @@ export function daysFor(timeframe: string): number | null {
 export function daysForSet(timeframes: readonly string[]): number | null {
   const known = timeframes.map(daysFor).filter((d): d is number => d != null)
   return known.length ? Math.max(...known) : null
+}
+
+/**
+ * The start date that charts `timeframe` over its specified history, counting
+ * back from `endISO`, or null when nothing should move.
+ *
+ * This is the whole behaviour the pages apply on a timeframe change, in one
+ * place where it can be tested. It used to be four lines inlined into each of
+ * two components -- so the rule that actually reaches the user (which end
+ * moves, and when nothing moves at all) was only ever exercised by rendering
+ * a form.
+ *
+ * Null covers both reasons to leave the range alone: a timeframe the table
+ * does not cover, and an end date that is mid-edit and unparseable. The caller
+ * writes nothing in either case, rather than writing a date derived from a
+ * number nobody chose or from a string that is not yet a date.
+ */
+export function startDateForTimeframe(endISO: string, timeframe: string): string | null {
+  const days = daysFor(timeframe)
+  return days == null ? null : startDateForDays(endISO, days)
+}
+
+/** The same for a SET of timeframes sharing one range -- see daysForSet. */
+export function startDateForTimeframes(
+  endISO: string, timeframes: readonly string[],
+): string | null {
+  const days = daysForSet(timeframes)
+  return days == null ? null : startDateForDays(endISO, days)
 }
