@@ -14,8 +14,8 @@ tape while it does. Built at **WealthWise Advisors**.
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/tests-1864%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
-[![Coverage](https://img.shields.io/badge/coverage-77%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
+[![Tests](https://img.shields.io/badge/tests-2%2C183%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Coverage](https://img.shields.io/badge/coverage-78.6%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](api)
@@ -31,6 +31,12 @@ tape while it does. Built at **WealthWise Advisors**.
 
 [![License](https://img.shields.io/badge/license-proprietary-64748b?style=flat-square)](LICENSE)
 
+</div>
+
+<br>
+
+<div align="center">
+<img src="docs/assets/overview.svg" alt="AutoTrader overview: a futures trading research platform. Market data, prepare, analyze, test strategy, simulate trades, results. Built with Python, FastAPI, React, TypeScript, Vite, pandas, Tailwind, Docker, AWS EC2 and Schwab. CI passing, deployed live, 2,183 tests passing, 78.6% coverage, proprietary licence." width="100%">
 </div>
 
 <br>
@@ -1146,10 +1152,10 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-2%2C147-22c55e?style=flat-square)
+![tests](https://img.shields.io/badge/tests-2%2C183-22c55e?style=flat-square)
 ![python](https://img.shields.io/badge/python-1%2C840-3776AB?style=flat-square&logo=python&logoColor=white)
 ![web](https://img.shields.io/badge/web-296-61DAFB?style=flat-square&logo=react&logoColor=white)
-![coverage](https://img.shields.io/badge/coverage-78.2%25-0ea5e9?style=flat-square)
+![coverage](https://img.shields.io/badge/coverage-78.6%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 
 </div>
@@ -1185,11 +1191,11 @@ Four checks. Each answers a different question, and none substitutes for another
 | 🐍 **Python** | **1,730** | Engine · analysis · API · providers · replay · accounts |
 | ⚛️ **Web** | **296** | Pure logic in [`web/src/lib`](web/src/lib) |
 | 📦 **Total** | **2,026** | |
-| 📊 **Coverage** | **78.2%** | `src/` and `api/`, measured on every push |
+| 📊 **Coverage** | **78.6%** | `src/` and `api/`, measured on every push |
 
 </div>
 
-- ➜ **Gated at 70%**, deliberately below the current 78.2% — a threshold pinned to today's number gets lowered the first time it fails
+- ➜ **Gated at 70%**, deliberately below the current 78.6% — a threshold pinned to today's number gets lowered the first time it fails
 - ➜ **Excludes the vendored Schwab client**, as [`ruff`](pyproject.toml) and `mypy` already do — it is third-party code nobody here will change
 - ➜ **Runs in the same CI step as the tests**, so coverage cannot silently stop being measured
 
