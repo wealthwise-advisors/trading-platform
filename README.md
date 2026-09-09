@@ -481,7 +481,7 @@ it matches
 <img src="docs/assets/architecture.svg" alt="Data sources feed one core engine, which the interfaces read; the engine imports nothing from them" width="100%">
 </div>
 
-- ➜ **The engine knows nothing about how it is called** — no HTTP, no React, no framework inside [`src/`](src)
+- ➜ **The engine knows nothing about how it is called** — no HTTP, no React, no framework inside [src/](src)
 - ➜ **Same answer from anywhere** — a test, the API and a script all run the identical analysis
 
 <table>
@@ -507,7 +507,7 @@ it matches
 
 - One shared aggregator (Resampler)
 - Event-driven, modular components
-- No HTTP, no React, no framework inside `src/`
+- No HTTP, no React, no framework inside src/
 
 </td></tr>
 </table>
@@ -548,7 +548,7 @@ How a change actually travels from an idea to the live URL.
 <tr><td valign="top" width="50%">
 
 ### 🌊 Elliott Wave
-[`src/analysis/elliott_wave/`](src/analysis/elliott_wave)
+[src/analysis/elliott_wave/](src/analysis/elliott_wave)
 
 - ➜ [`impulse`](src/analysis/elliott_wave/impulse.py) · [`correction`](src/analysis/elliott_wave/correction.py) · [`diagonal`](src/analysis/elliott_wave/diagonal.py)
 - ➜ [`triangle`](src/analysis/elliott_wave/triangle.py) · [`combination`](src/analysis/elliott_wave/combination.py)
@@ -561,7 +561,7 @@ How a change actually travels from an idea to the live URL.
 </td><td valign="top" width="50%">
 
 ### 📐 Price structure
-[`src/analysis/`](src/analysis)
+[src/analysis/](src/analysis)
 
 - ➜ [`swing_identification`](src/analysis/swing_identification.py) · [`zigzag`](src/analysis/zigzag.py) — the skeleton of a trend
 - ➜ [`chart_patterns`](src/analysis/chart_patterns.py) — triangles, wedges, head-and-shoulders
@@ -693,7 +693,7 @@ non-determinism the shared aggregator exists to kill.
 |:---|:---|
 | **File** | `data/autotrader.db` — survives restarts and redeploys |
 | **Schema** | [`db/schema.sql`](db/schema.sql) — `backtests`, `trades` |
-| **Code** | [`db/`](db/README.md) — routers never see a cursor |
+| **Code** | [db/](db/README.md) — routers never see a cursor |
 | **Guard** | A test fails the build if a metric has no column |
 
 Query across runs:
@@ -866,7 +866,7 @@ FastAPI, with interactive documentation at **`/docs`** while running.
 
 </details>
 
-See [`api/routers/`](api/routers) and the [API Guide](docs/API_GUIDE.md).
+See [api/routers/](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 <br>
 
@@ -1340,7 +1340,7 @@ had already shipped, and checked against the commit that shipped it.
 
 - ➜ **The code repository stays small.** Cloning this one does not pull 433 MB of bars
 - ➜ **Docker images stay lean.** None of the market data enters a build
-- ➜ **[`data/sample/`](data/sample) is enough to run everything** — 5,000-row slices ship with the code, so the tests and a first run need no download
+- ➜ **[data/sample/](data/sample) is enough to run everything** — 5,000-row slices ship with the code, so the tests and a first run need no download
 
 <br>
 
@@ -1358,7 +1358,7 @@ had already shipped, and checked against the commit that shipped it.
 | 🔒 **Credentials** | Hardcoded secrets were stripped on the way in, and every one was rotated |
 
 > [!NOTE]
-> **Nothing was lost when `legacy/` was removed.** Deleting a folder from the working
+> **Nothing was lost when legacy/ was removed.** Deleting a folder from the working
 > tree does not delete it from git history, and a tag pins the commit that still holds
 > all 519 files:
 >
@@ -1402,9 +1402,9 @@ had already shipped, and checked against the commit that shipped it.
 </td></tr>
 </table>
 
-Every directory also has its own README — [`src/`](src/README.md) ·
-[`api/`](api/README.md) · [`web/src/lib/`](web/src/lib/README.md) ·
-[`tests/`](tests/README.md) · [`config/`](config/README.md) and the rest.
+Every directory also has its own README — [src/](src/README.md) ·
+[api/](api/README.md) · [web/src/lib/](web/src/lib/README.md) ·
+[tests/](tests/README.md) · [config/](config/README.md) and the rest.
 
 <br>
 
