@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { ChartSetupPanel } from "@/components/ChartSetupPanel"
 import {
   ALL_CHART_TIMEFRAMES, daysFor, startDateForTimeframe,
 } from "@/lib/chartSetup"
@@ -249,11 +248,6 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             })}
           </SelectContent>
         </Select>
-      </Section>
-
-      {/* ── chart setup ──────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Chart Setup" accent="iris">
-        <ChartSetupPanel active={[cfg.timeframe]} />
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}

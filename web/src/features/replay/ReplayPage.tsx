@@ -30,7 +30,6 @@ import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
-import { ChartSetupPanel } from "@/components/ChartSetupPanel"
 import { daysFor, startDateForTimeframes } from "@/lib/chartSetup"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
@@ -1470,14 +1469,7 @@ export function ReplayPage() {
             than adjacency does. The weekday under each is there because a
             trading range is chosen in weekdays: "Thursday to Monday" is the
             fact that decides whether a range covers three sessions or five. */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_auto_19rem] gap-3 items-stretch">
-
-          <div className="range-group">
-            <span className="range-cap">Chart setup</span>
-            <div className="range-body">
-              <ChartSetupPanel active={timeframes} />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto_19rem] gap-3 items-stretch">
 
           <div className="range-group">
             <span className="range-cap">Date range</span>
