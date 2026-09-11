@@ -4,7 +4,7 @@
 // annotation logic, mirroring the Python trace-by-trace.
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Plot from "react-plotly.js"
+import Plot from "@/lib/plot"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"

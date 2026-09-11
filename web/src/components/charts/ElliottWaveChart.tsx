@@ -25,7 +25,7 @@
 // analysis backs.
 
 import { useMemo, useState } from "react"
-import Plot from "react-plotly.js"
+import Plot from "@/lib/plot"
 import type { Data, Layout, Annotations } from "plotly.js"
 import type { ElliottWaveResponse, EWWave, OHLCVRecord } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"

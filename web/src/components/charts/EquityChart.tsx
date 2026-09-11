@@ -1,7 +1,7 @@
 // Port of ui/components/charts.py's equity_curve() — 2-row Plotly subplot:
 // portfolio value with a fill, and drawdown % below it.
 
-import Plot from "react-plotly.js"
+import Plot from "@/lib/plot"
 import type { Data, Layout } from "plotly.js"
 import type { EquityPoint } from "@/lib/types"
 

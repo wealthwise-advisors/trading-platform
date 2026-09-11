@@ -1,7 +1,7 @@
 // Port of ui/components/charts.py's pnl_distribution() — histogram of trade
 // P&L, colored green/red per bin so losing vs winning trades read at a glance.
 
-import Plot from "react-plotly.js"
+import Plot from "@/lib/plot"
 import type { Data, Layout } from "plotly.js"
 import type { TradeRecord } from "@/lib/types"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
