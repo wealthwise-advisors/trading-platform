@@ -79,13 +79,14 @@ describe("Interval Picker", () => {
     expect(await violations(dialog)).toEqual([])
   })
 
-  it("lists all eleven intervals as days : interval, straight from the table", () => {
+  it("lists all thirteen intervals as days : interval, straight from the table", () => {
     const { trigger } = setup()
     const dialog = openPicker(trigger)
     showTab(/time frame/i)
     expect(rowNames()).toEqual([
       "1m, 2 days", "2m", "5m, 2 days", "10m, 3 days", "15m, 4 days", "20m, 5 days",
       "25m", "30m, 10 days", "35m", "45m, 15 days", "1h, 25 days",
+      "2h, 180 days", "4h, 180 days",
     ])
     const row1m = within(dialog).getByRole("button", { name: "1m, 2 days" })
     expect(row1m.textContent).toContain("2 D : 1m")

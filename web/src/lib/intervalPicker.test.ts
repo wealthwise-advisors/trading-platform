@@ -25,6 +25,7 @@ describe("rangeLabel reads the specified table and invents nothing", () => {
   it.each([
     ["1m", "2 D"], ["5m", "2 D"], ["10m", "3 D"], ["15m", "4 D"],
     ["20m", "5 D"], ["30m", "10 D"], ["45m", "15 D"], ["1h", "25 D"],
+    ["2h", "180 D"], ["4h", "180 D"],
   ])("%s -> %s", (tf, label) => {
     expect(rangeLabel(tf)).toBe(label)
   })
@@ -40,9 +41,10 @@ describe("normalizeLayout", () => {
   })
 
   it("drops intervals the app does not offer and collapses duplicates", () => {
-    const l = normalizeLayout({ order: ["4h", "5m", "5m", "7m", "1m"], hidden: ["D", "1m", "1m"] })
+    // 3h and 7m: intervals the app has never offered (4h was the example until it was added).
+    const l = normalizeLayout({ order: ["3h", "5m", "5m", "7m", "1m"], hidden: ["D", "1m", "1m"] })
     expect(l.order.slice(0, 2)).toEqual(["5m", "1m"])
-    expect(l.order).not.toContain("4h")
+    expect(l.order).not.toContain("3h")
     expect(l.order).not.toContain("7m")
     expect(l.hidden).toEqual(["1m"])
   })
@@ -92,7 +94,7 @@ describe("rows", () => {
 
 describe("persistence", () => {
   it("favourites round-trip, filtered to known intervals", () => {
-    const s = memStore({ [FAV_KEY]: JSON.stringify(["5m", "4h", "5m", 7]) })
+    const s = memStore({ [FAV_KEY]: JSON.stringify(["5m", "3h", "5m", 7]) })
     expect(loadFavourites(s)).toEqual(["5m"])
     saveFavourites(["1m", "1h"], s)
     expect(loadFavourites(s)).toEqual(["1m", "1h"])

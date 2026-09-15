@@ -4,7 +4,7 @@ Following the live market across EVERY timeframe, offset and date.
 Written because the first version of this feature was verified on a 1m base and
 shipped a bug that only appears on coarser ones. A 1m base makes the source and
 the clock the same resolution, which hides an entire class of failure. So this
-does not test "a timeframe" -- it tests all eleven the UI offers, at several
+does not test "a timeframe" -- it tests every one the UI offers, at several
 positions within each bar, across dates chosen to break assumptions.
 
 THE INVARIANT
@@ -46,7 +46,7 @@ from src.strategies.ma_crossover import MACrossoverStrategy
 
 #: Every timeframe the Live Replay page offers, in UI order.
 ALL_TIMEFRAMES = ["1m", "5m", "10m", "15m", "20m", "25m",
-                  "30m", "35m", "40m", "45m", "1h"]
+                  "30m", "35m", "40m", "45m", "1h", "2h", "4h"]
 
 #: Dates picked to break assumptions rather than to be representative.
 DATES = [

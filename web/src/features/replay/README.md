@@ -31,7 +31,7 @@
                      ▼                                         ▼
               ONE shared clock                          bars arrive
                      │                                         │
-        1m  5m  15m  1h  …  eleven timeframes  ◄───────────────┘
+        1m  5m  15m  1h  … thirteen timeframes ◄───────────────┘
                      │
                      └── caught up? ──► follow live ──► keep asking
                                                         for new bars
@@ -55,8 +55,8 @@
 
 ## 💡 Worth knowing
 
-- ➜ **Every timeframe advances off one clock.** Eleven independent clocks would drift, and the grid would quietly disagree with itself.
-- ➜ **Follow-live is the part that broke before.** [`tests/test_follow_live_matrix.py`](../../../../tests/test_follow_live_matrix.py) covers all eleven timeframes, both DST switches and a leap day.
+- ➜ **Every timeframe advances off one clock.** Thirteen independent clocks would drift, and the grid would quietly disagree with itself.
+- ➜ **Follow-live is the part that broke before.** [`tests/test_follow_live_matrix.py`](../../../../tests/test_follow_live_matrix.py) covers all thirteen timeframes, both DST switches and a leap day.
 
 
 ---

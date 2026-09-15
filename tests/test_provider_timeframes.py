@@ -14,7 +14,7 @@ from src.backtesting.multi_replay import TF_MINUTES
 #: What the selector offers, mirroring ALL_TIMEFRAMES in ReplayPage.tsx and the
 #: list in ConfigForm.tsx.
 UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m",
-                 "30m", "35m", "45m", "1h"]
+                 "30m", "35m", "45m", "1h", "2h", "4h"]
 
 
 def test_every_selectable_timeframe_is_one_the_engine_knows():

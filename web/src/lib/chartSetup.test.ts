@@ -1,5 +1,5 @@
 /**
- * The eight specified numbers are the point of this module, so each is
+ * The ten specified numbers are the point of this module, so each is
  * asserted on its own line rather than looped over. A loop that reads the
  * table and checks itself against the table proves nothing; if a value is
  * edited by accident, these say which one.
@@ -19,13 +19,15 @@ describe("the specified table", () => {
   it("loads 10 days for 30m", () => expect(daysFor("30m")).toBe(10))
   it("loads 15 days for 45m", () => expect(daysFor("45m")).toBe(15))
   it("loads 25 days for 1h", () => expect(daysFor("1h")).toBe(25))
+  it("loads 180 days for 2h", () => expect(daysFor("2h")).toBe(180))
+  it("loads 180 days for 4h", () => expect(daysFor("4h")).toBe(180))
 
   it("gives 1m and 5m the same value, which is intended and not a typo", () => {
     expect(daysFor("1m")).toBe(daysFor("5m"))
   })
 
-  it("holds exactly eight entries — nothing inferred has been added", () => {
-    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(8)
+  it("holds exactly ten entries — nothing inferred has been added", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(10)
   })
 })
 
@@ -50,8 +52,6 @@ describe("timeframes the table does not cover", () => {
 
 describe("an unknown timeframe", () => {
   it("returns null rather than inventing a default", () => {
-    expect(daysFor("2h")).toBeNull()
-    expect(daysFor("4h")).toBeNull()
     expect(daysFor("1d")).toBeNull()
     expect(daysFor("1w")).toBeNull()
     expect(daysFor("")).toBeNull()
@@ -62,6 +62,7 @@ describe("a set of timeframes sharing one range", () => {
   it("takes the largest, so the coarsest pane still has history", () => {
     expect(daysForSet(["1m", "1h"])).toBe(25)
     expect(daysForSet(["5m", "15m"])).toBe(4)
+    expect(daysForSet(["1m", "4h"])).toBe(180)
   })
 
   it("matches the single value when only one is selected", () => {
@@ -82,7 +83,7 @@ describe("a set of timeframes sharing one range", () => {
 describe("the timeframe list", () => {
   it("covers every interval both pages offer, in bar-interval order", () => {
     expect(ALL_CHART_TIMEFRAMES).toEqual([
-      "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h",
+      "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
     ])
   })
 })
@@ -100,6 +101,8 @@ describe("the start date a timeframe change produces", () => {
     expect(startDateForTimeframe(END, "10m")).toBe("2026-08-30")   // 3 days
     expect(startDateForTimeframe(END, "30m")).toBe("2026-08-23")   // 10 days
     expect(startDateForTimeframe(END, "1h")).toBe("2026-08-08")    // 25 days
+    expect(startDateForTimeframe(END, "2h")).toBe("2026-03-06")    // 180 days
+    expect(startDateForTimeframe(END, "4h")).toBe("2026-03-06")    // 180 days
   })
 
   it("gives 1m and 5m the same start, as the table intends", () => {
@@ -107,7 +110,7 @@ describe("the start date a timeframe change produces", () => {
   })
 
   it("moves nothing for a timeframe the table does not cover", () => {
-    for (const tf of ["2m", "25m", "35m", "4h", "1d"]) {
+    for (const tf of ["2m", "25m", "35m", "1d"]) {
       expect(startDateForTimeframe(END, tf)).toBeNull()
     }
   })

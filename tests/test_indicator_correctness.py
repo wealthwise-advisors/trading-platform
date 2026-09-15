@@ -29,7 +29,7 @@ import pytest
 
 from src.backtesting.multi_replay import TF_MINUTES, resample_ohlcv, session_origin
 
-TIMEFRAMES = list(TF_MINUTES)                       # all eleven
+TIMEFRAMES = list(TF_MINUTES)                       # every one the engine builds
 ANCHORS = [time(18, 0), time(9, 30), time(0, 0), time(6, 30)]
 # Five dates, Monday through Friday, so a weekday-specific grid error
 # cannot hide in a sample that happens to miss it.
@@ -635,7 +635,10 @@ def test_a_closed_bar_does_not_change_when_later_bars_arrive(tf):
     from src.analysis.indicators import calc_vwap_bands
 
     anchor = time(18, 0)
-    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 12)
+    # Twelve hours, or six bars' worth where that is more: twelve hours is only
+    # three 4h bars, which skipped this test. Every interval up to 2h keeps the
+    # same twelve hours of data it always had.
+    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), max(60 * 12, TF_MINUTES[tf] * 6))
     full = resample_ohlcv(minute, tf, anchor)
     if len(full) < 4:
         pytest.skip(f"{tf}: too few bars in the window to truncate meaningfully")
@@ -813,7 +816,12 @@ def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
 
     anchor = time(18, 0)
     rsi_len, stoch_len, k_p, d_p = 14, 14, 3, 3
-    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 48 + offset).iloc[offset:]
+    # Forty-eight hours, or forty-eight bars' worth where that is more: 48 hours
+    # is 24 bars at 2h and 12 at 4h, too few for RSI(14), a 14-bar stochastic and
+    # two 3-bar smoothings to produce a value, which skipped this test. Every
+    # interval up to 1h keeps the data it always had.
+    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"),
+                          max(60 * 48, TF_MINUTES[tf] * 48) + offset).iloc[offset:]
     df = resample_ohlcv(minute, tf, anchor)
 
     k, d = calc_stochrsi(df["close"], rsi_len, stoch_len, k_p, d_p)
@@ -858,7 +866,11 @@ def test_money_flow_index_matches_a_longhand_recompute(tf, offset):
 
     anchor = time(18, 0)
     length = 20
-    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 48 + offset).iloc[offset:]
+    # Forty-eight hours, or forty-eight bars' worth where that is more: 48 hours
+    # is twelve 4h bars, fewer than MFI(20) needs to produce a value, which
+    # skipped this test. Every interval up to 1h keeps the data it always had.
+    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"),
+                          max(60 * 48, TF_MINUTES[tf] * 48) + offset).iloc[offset:]
     df = resample_ohlcv(minute, tf, anchor)
 
     got = calc_mfi(df["high"], df["low"], df["close"], df["volume"], length)

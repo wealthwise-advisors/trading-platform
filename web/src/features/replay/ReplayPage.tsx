@@ -132,7 +132,7 @@ const TZ_CHOICES = [
 const ALL_TIMEFRAMES = ALL_CHART_TIMEFRAMES
 const TF_MINUTES: Record<string, number> = {
   "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
-  "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60,
+  "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60, "2h": 120, "4h": 240,
 }
 
 /** Can `tf` be resampled out of a frame held at `source`?
@@ -1563,7 +1563,7 @@ export function ReplayPage() {
               )}
             </span>
           </Label>
-          {/* A grid, not a wrap: eleven pills of differing text width reflowed
+          {/* A grid, not a wrap: thirteen pills of differing text width reflowed
               into ragged rows that moved every time a label changed. Fixed
               columns keep each timeframe in the same place every render, which
               is what makes them findable by muscle memory. */}

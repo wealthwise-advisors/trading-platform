@@ -23,7 +23,7 @@ const FORMATS = [
   { id: "docx", label: "Word", icon: <FileCode className="h-3.5 w-3.5 shrink-0" /> },
 ]
 
-// The same eleven the Backtest and Market Grid pages offer. This page kept
+// The same list the Backtest and Market Grid pages offer. This page kept
 // its own list of five, so 2m, 10m, 20m, 25m, 35m and 45m could be backtested
 // and replayed but never exported.
 const TIMEFRAMES = ALL_CHART_TIMEFRAMES

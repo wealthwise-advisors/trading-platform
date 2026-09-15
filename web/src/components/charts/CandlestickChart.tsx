@@ -12,6 +12,7 @@ import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
+import { DEFAULT_WINDOW_MS, barStepMs, defaultAggregationSpanMs, defaultWindowMs } from "@/lib/chartWindow"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
@@ -56,11 +57,10 @@ interface CandlestickChartProps {
 }
 
 
-// Default view opens on the last ~2 hours rather than the whole session.
-// Hoisted to module scope because swing-header collision detection (which
-// runs earlier in the render) needs the same window to reason about how far
-// apart two headers actually appear on screen.
-const DEFAULT_WINDOW_MS = 2 * 60 * 60 * 1000
+// Default view opens on the last ~2 hours rather than the whole session, or on
+// the last 40 bars once a bar is two hours wide -- see lib/chartWindow.ts. It is
+// worked out once per render (`defaultWindow`) because swing-header collision
+// detection, candle aggregation and both axis ranges must use the same window.
 
 // Mirrors Plotly's make_subplots(row_heights=[...], vertical_spacing=v)
 // domain math — returns [[y0,y1], ...] top-to-bottom for each row.
@@ -260,6 +260,7 @@ export function CandlestickChart({
   }
 
   const t = bars.map((b) => b.t)
+  const defaultWindow = defaultWindowMs(t)
   // Display candles are aggregated to suit the VISIBLE window, not to a fixed
   // bucket. This used to be resampleOHLC(bars, 9), which is comfortable in the
   // default 2-hour window but collapses when zoomed out: a 37-hour Globex
@@ -267,14 +268,18 @@ export function CandlestickChart({
   // hairlines under the 12px trade markers. The window used here must match
   // the one xRange applies below, or the aggregation and the axis disagree
   // about what is on screen.
+  // The default view is handed over as a bar count for 2h and 4h bars (see
+  // defaultAggregationSpanMs): the clock window spans overnight gaps, which the
+  // aggregation would count as bars and merge 2h candles into 4h ones.
+  const aggregationDefault = defaultAggregationSpanMs(t)
   const displayWindowMs = (() => {
-    if (bars.length < 2) return DEFAULT_WINDOW_MS
+    if (bars.length < 2) return aggregationDefault
     const first = new Date(bars[0].t).getTime()
     const last = new Date(bars[bars.length - 1].t).getTime()
     if (visibleRange) {
       return Math.max(1, Math.min(last, visibleRange.end) - Math.max(first, visibleRange.start))
     }
-    return Math.min(DEFAULT_WINDOW_MS, last - first || DEFAULT_WINDOW_MS)
+    return Math.min(aggregationDefault, last - first || aggregationDefault)
   })()
   const candleBars = resampleOHLC(bars, displayBucketMinutes(bars, displayWindowMs))
 
@@ -554,7 +559,7 @@ export function CandlestickChart({
     // one was pushed a row higher than the last.
     const visibleSpanMs = visibleRange
       ? visibleRange.end - visibleRange.start
-      : Math.min(DEFAULT_WINDOW_MS, totalSpanMs || DEFAULT_WINDOW_MS)
+      : Math.min(defaultWindow, totalSpanMs || defaultWindow)
 
     // ── Collision avoidance for swing headers ──────────────────────────
     // Every swing gets a header (never omitted), placed at the base row by
@@ -846,7 +851,7 @@ export function CandlestickChart({
   const rangeSelectorY =
     1 + paperToPriceRow(RANGE_SELECTOR_PAPER_OFFSET + extraHeaderRows * HEADER_LEVEL_HEIGHT)
 
-  // DEFAULT_WINDOW_MS is defined at module scope -- aggregation alone
+  // The default window (lib/chartWindow.ts) exists because aggregation alone
   // couldn't make candles look wide on a full-day view, because "wide" is a
   // function of how many bars are visible at once, not just how much time
   // each one covers. "All" (and the other range-selector buttons) still
@@ -867,7 +872,7 @@ export function CandlestickChart({
   const priceYRange: [number, number] | undefined = bars.length
     ? (() => {
         const lastMs = new Date(bars[bars.length - 1].t).getTime()
-        const windowStartMs = visibleRange ? visibleRange.start : lastMs - DEFAULT_WINDOW_MS
+        const windowStartMs = visibleRange ? visibleRange.start : lastMs - defaultWindow
         const windowEndMs = visibleRange ? visibleRange.end : lastMs
         const visible = bars.filter((b) => {
           const ms = new Date(b.t).getTime()
@@ -955,7 +960,7 @@ export function CandlestickChart({
     // trade data, a resize -- would otherwise snap x back to the 2-hour
     // default while y stayed at the user's wider window, stretching a still
     // 2-hour-wide slice of candles across a much taller price axis).
-    const windowStart = visibleRange ? Math.max(first, visibleRange.start) : Math.max(first, last - DEFAULT_WINDOW_MS)
+    const windowStart = visibleRange ? Math.max(first, visibleRange.start) : Math.max(first, last - defaultWindow)
     const windowEnd = visibleRange ? Math.min(last, visibleRange.end) : last
     return [toNaiveString(windowStart), toNaiveString(windowEnd + pad)]
   })()
@@ -1070,7 +1075,14 @@ export function CandlestickChart({
       // the start of the axis when ticks span less than a day, which is
       // redundant with the date already in the chart title. An explicit
       // format with no date component suppresses that bookend entirely.
-      ...(isBottom ? { automargin: true, tickfont: { size: 11 }, tickformat: "%H:%M" } : {}),
+      // Time only suits intraday bars, where a view spans hours. From 2h bars
+      // up the default view spans weeks and every tick lands on the same
+      // session open, so the ticks read "09:30 09:30 09:30" -- those carry the
+      // date instead.
+      ...(isBottom
+        ? { automargin: true, tickfont: { size: 11 },
+            tickformat: barStepMs(t) >= DEFAULT_WINDOW_MS ? "%b %d" : "%H:%M" }
+        : {}),
       ...spikeAxis,
     }
     dynamicAxes[`yaxis${suffix}`] = {

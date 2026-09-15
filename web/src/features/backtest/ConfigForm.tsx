@@ -241,7 +241,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               SYMBOL heading above it, so the timeframe list read as a symbol
               list. */}
           <SelectContent position="popper" className="cfg-scope">
-            {/* Same eleven the Live Replay grid offers. This was five, so a backtest
+            {/* Same list the Live Replay grid offers. This was five, so a backtest
                 could not use the intervals a replay could -- and asking for one
                 that the provider had no alias for surfaced as a 500. */}
             {/* The interval only. The day count each timeframe loads is still

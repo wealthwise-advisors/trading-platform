@@ -639,7 +639,7 @@ non-determinism the shared aggregator exists to kill.
 - ➜ **Session-aware** — RTH, Globex (18:00–17:00) or 24-hour, with VWAP anchored to the session open rather than to midnight
 - ➜ **Deterministic** — the same inputs produce the same output every time, which is what makes a rebuilt result comparable to the one it replaced
 
-### ◆ One clock, eleven timeframes
+### ◆ One clock, thirteen timeframes
 
 **➜** `step()` advances one **bar** — and a bar is a different span on every timeframe
 
@@ -1225,7 +1225,7 @@ Four checks. Each answers a different question, and none substitutes for another
 
 | Area | ➜ The guarantee |
 |:---|:---|
-| 📡 **Follow-live** | All **eleven** timeframes · every position within a bar · seven combinations · five dates, including both DST switches and a leap day |
+| 📡 **Follow-live** | All **thirteen** timeframes · every position within a bar · seven combinations · five dates, including both DST switches and a leap day |
 | ⏱ **Bar aggregation** | **One** aggregator, session-anchored — so no two code paths can disagree about what a bar is |
 | 🔁 **Determinism** | A session grown bar by bar is **byte-identical** to one handed all the data at once |
 | 🌊 **Elliott Wave** | A count that breaks a rule is **rejected**, not drawn |

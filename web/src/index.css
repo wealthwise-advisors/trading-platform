@@ -1247,7 +1247,7 @@ button, [role="button"] {
    and back at others, which moves a pill out from under the cursor mid-click;
    a fixed count keeps every timeframe in the same place at every size. */
 .tf-row {
-  grid-template-columns: repeat(11, minmax(0, 1fr));
+  grid-template-columns: repeat(13, minmax(0, 1fr));
 }
 @media (max-width: 1100px) { .tf-row { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 @media (max-width: 640px)  { .tf-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

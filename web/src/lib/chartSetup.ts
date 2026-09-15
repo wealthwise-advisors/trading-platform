@@ -5,19 +5,28 @@
  * project on 2026-09-01 and replaces whatever per-timeframe day count the
  * pages applied before.
  *
- *     1m → 2 days     20m → 5 days
- *     5m → 2 days     30m → 10 days
+ *     1m → 2 days     20m → 5 days      2h → 180 days
+ *     5m → 2 days     30m → 10 days     4h → 180 days
  *     10m → 3 days    45m → 15 days
  *     15m → 4 days     1h → 25 days
  *
  * 1m and 5m share 2 days deliberately. That is not a transcription slip, and
- * the surrounding numbers are not a curve with a gap in it: they are eight
- * separate judgements. Nothing here smooths, fits or extrapolates between
- * them, and nothing should.
+ * the surrounding numbers are not a curve with a gap in it: they are separate
+ * judgements. Nothing here smooths, fits or extrapolates between them, and
+ * nothing should.
  *
- * No value in this file comes from a third-party charting platform. A
- * screenshot of one was shown as a conceptual example of the idea, not as data,
- * and none of its numbers were read into this table.
+ * WHERE THE NUMBERS COME FROM
+ * ---------------------------
+ * The first eight were specified on 2026-09-01 and owe nothing to any
+ * third-party charting platform; a screenshot of one was shown then as an
+ * example of the idea, not as data.
+ *
+ * 2h and 4h were added on 2026-09-15 at 180 days each, and those two values
+ * ARE the reference platform's own defaults, read from its interval list in a
+ * screenshot shared that day. They were proposed with that source stated and
+ * adopted by explicit approval. 180 days also sits inside what Schwab serves
+ * for the 30-minute bars both are built from (see INTRADAY_LOOKBACK_DAYS in
+ * src/data/schwab_provider.py).
  *
  * WHAT IT DOES
  * ------------
@@ -29,18 +38,18 @@
  *
  * TIMEFRAMES THIS TABLE DOES NOT COVER
  * ------------------------------------
- * The app offers eleven; the specification covers eight. 2m, 25m and 35m have
- * no entry, and deliberately get none: `daysFor` returns null and the caller
+ * The app offers thirteen; the table covers ten. 2m, 25m and 35m have no
+ * entry, and deliberately get none: `daysFor` returns null and the caller
  * leaves the range exactly as the user had it. Proposed values for those three
  * are in UNSPECIFIED below, awaiting a decision -- they are NOT applied.
  *
- * The app has no 2h, 4h, Daily or Weekly timeframe, so there is nothing to
- * decide for those. If any is ever added it lands here with no entry, changes
- * no range, and shows as unset until someone gives it a number.
+ * The app has no Daily or Weekly timeframe, so there is nothing to decide for
+ * those. If either is added it lands here with no entry, changes no range, and
+ * shows as unset until someone gives it a number.
  */
 import { startDateForDays } from "./dayRange"
 
-/** Exactly as specified. Eight entries; do not add a ninth by inference. */
+/** Exactly as specified. Ten entries; do not add an eleventh by inference. */
 const SPECIFIED: Record<string, number> = {
   "1m": 2,
   "5m": 2,
@@ -50,6 +59,8 @@ const SPECIFIED: Record<string, number> = {
   "30m": 10,
   "45m": 15,
   "1h": 25,
+  "2h": 180,
+  "4h": 180,
 }
 
 /**
@@ -75,7 +86,7 @@ export const UNSPECIFIED: Record<string, number> = {
 
 /** Every timeframe both pages offer, in bar-interval order. */
 export const ALL_CHART_TIMEFRAMES = [
-  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h",
+  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
 ] as const
 
 /** Does this timeframe have a specified day count? */

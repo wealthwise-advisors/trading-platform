@@ -170,7 +170,7 @@ def test_vwap_and_bands_are_within_tolerance_of_the_reference(tf, level, minutes
 @pytest.mark.parametrize("tf", list(TF_MINUTES))
 def test_every_timeframe_tiles_from_exchange_midnight(tf, minutes):
     """
-    Generalises the four reference bars to all eleven timeframes: every bar opens
+    Generalises the four reference bars to every timeframe: each bar opens
     a whole number of intervals after midnight on the exchange's clock. Nothing
     here depends on the session window, which is the point -- the session moves
     the VWAP reset and must not move the grid.

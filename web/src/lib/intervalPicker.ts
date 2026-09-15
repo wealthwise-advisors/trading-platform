@@ -16,7 +16,7 @@
  * rows are hidden, and which are starred. Those are conveniences -- like the
  * instrument picker's favourites they never reach the config store, a saved
  * config, or a request. A user cannot add an interval (the backend serves only
- * these eleven) or edit a day count (that would override the specified table).
+ * these thirteen) or edit a day count (that would override the specified table).
  */
 import { ALL_CHART_TIMEFRAMES, daysFor } from "./chartSetup"
 
