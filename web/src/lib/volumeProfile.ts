@@ -155,9 +155,14 @@ interface TimedBar extends VPBar {
 /** Base period a bar belongs to, before the multiplier is applied. */
 function periodKey(iso: string, timePer: TimePerProfile): string {
   if (timePer === "CHART") return "all"
-  const d = new Date(iso)
-  const dayIndex = Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-    / 86_400_000)
+  // The bar's calendar date as written in its timestamp. Going through
+  // new Date() first read a naive "2025-01-02T20:30:00" in the VIEWER's time
+  // zone and took the UTC date of that, so in New York every bar after 19:00
+  // was filed under the next day and the day profiles depended on where the
+  // chart was opened. The exported report (api/report/chart_settings_draw.py)
+  // groups bars the same way.
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number)
+  const dayIndex = Math.floor(Date.UTC(y, m - 1, d) / 86_400_000)
   if (timePer === "WEEK") return `w${Math.floor(dayIndex / 7)}`
   return `d${dayIndex}`
 }

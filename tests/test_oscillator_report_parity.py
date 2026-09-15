@@ -7,6 +7,10 @@ and the report builds its own Plotly figure in api/report/report.py. A change
 made to one and not the other has already shipped once, so this compares the
 two directly -- the value the chart is sent for every bar against the value the
 report's figure actually plots for that bar, read out of the figure's traces.
+
+The report draws only the oscillators switched on in the chart, so the value
+comparisons use a report with all four on. Which rows appear for each
+combination is tests/test_report_chart_settings.py's job.
 """
 
 import math
@@ -20,6 +24,10 @@ from src.strategies import MACrossoverStrategy
 from src.backtesting.engine import BacktestEngine
 from api.serializers import price_data_to_response
 from api.report.report import _candlestick_chart
+from api.schemas.chart_settings import ChartSettings
+
+ALL_FOUR = ChartSettings.model_validate(
+    {"oscillators": {"rsi2": True, "stochrsi": True, "rsi13": True, "mfi": True}})
 
 
 @pytest.fixture(scope="module")
@@ -47,7 +55,7 @@ def live(results):
 
 @pytest.fixture(scope="module")
 def report_fig(results):
-    return _candlestick_chart(results)
+    return _candlestick_chart(results, chart_settings=ALL_FOUR)
 
 
 def _report_trace(fig, name):
@@ -98,8 +106,17 @@ def test_without_volume_neither_the_chart_nor_the_report_draws_mfi(results):
     bare.price_data = results.price_data.drop(columns=["volume"])
     chart = price_data_to_response(bare.price_data)["indicators"]["mfi"]
     assert chart and all(v is None for v in chart), "chart is sent MFI values without volume"
-    fig = _candlestick_chart(bare)
+    fig = _candlestick_chart(bare, chart_settings=ALL_FOUR)
+    assert [s.yaxis.title.text for s in [fig.layout]][0] == "Price"
+    assert fig.layout.yaxis5.title.text == "MFI", "the MFI row itself should still be there"
     assert not [t for t in fig.data if t.name == "MoneyFlowIndex"], "report draws MFI without volume"
+
+
+def test_the_default_report_shows_the_rows_the_default_chart_shows(results):
+    # MFI starts off on the chart, so a report exported without settings leaves it off too.
+    names = {t.name for t in _candlestick_chart(results).data}
+    assert {"RSI(2)", "FullK", "FullD", "RSI(13)"} <= names
+    assert "MoneyFlowIndex" not in names
 
 
 def test_stochrsi_levels_are_80_20_in_the_report(report_fig):

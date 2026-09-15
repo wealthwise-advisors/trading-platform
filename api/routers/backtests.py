@@ -24,7 +24,9 @@ from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
 from api import store, serializers
 from api.schemas.backtest import BacktestRequest
+from api.schemas.chart_settings import ChartSettings
 from api.schemas.elliott_wave import ElliottWaveResponse
+from pydantic import ValidationError
 
 try:
     from src.data.external_csv_provider import ExternalCSVProvider
@@ -310,18 +312,34 @@ def get_chart_patterns(backtest_id: str, user=PROTECTED):
 @router.get("/{backtest_id}/report")
 def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float = Query(0.0005),
                format: str = Query("html"),
+               chart: str | None = Query(None, max_length=16_000),
     user=PROTECTED,
 ):
     """Backtest report, downloadable as HTML (full charts, via
     api/report/report.py) or as CSV/Excel/PDF/Word (metrics summary + trade
-    log table only -- those formats can't carry interactive Plotly charts)."""
+    log table only -- those formats can't carry interactive Plotly charts).
+
+    `chart` is the live chart's current display settings as JSON
+    (api/schemas/chart_settings.py): which oscillator rows are on and every
+    Volume Profile setting. The HTML report draws with them, so it matches the
+    chart it was exported from. Omitted, the chart's factory defaults apply.
+    It is validated for every format, so a bad value fails the same way
+    whichever format was picked; the other four formats contain no chart."""
+    try:
+        chart_settings = ChartSettings.model_validate_json(chart) if chart else ChartSettings()
+    except ValidationError as exc:
+        first = exc.errors()[0]
+        where = ".".join(str(p) for p in first.get("loc", ())) or "chart"
+        raise HTTPException(400, f"chart settings are not valid: {where}: {first.get('msg')}")
+
     stored = _get_or_404(backtest_id, user)
     r = stored.results
     base_name = f"backtest_{r.symbol}_{r.strategy_name}"
 
     if format == "html":
         html = generate_html_report(r, zz_deviation=zz_dev, zz_deviation_3=zz_dev_3,
-                                    session_start=stored.session_start)
+                                    session_start=stored.session_start,
+                                    chart_settings=chart_settings)
         return Response(
             content=html, media_type="text/html",
             headers={"Content-Disposition": f'attachment; filename="{base_name}.html"'},

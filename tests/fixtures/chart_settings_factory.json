@@ -1,0 +1,31 @@
+{
+  "oscillators": {
+    "rsi2": true,
+    "stochrsi": true,
+    "rsi13": true,
+    "mfi": false
+  },
+  "volumeProfile": {
+    "on": true,
+    "bins": 48,
+    "valueArea": 70,
+    "opacity": 50,
+    "rowMode": "AUTOMATIC",
+    "rowHeight": 1,
+    "timePer": "CHART",
+    "multiplier": 1,
+    "maxProfiles": 1000,
+    "onExpansion": true,
+    "plots": {
+      "poc":         { "show": true,  "values": "numerical", "drawAs": "line", "style": "solid", "width": 1, "color": "#38bdf8", "bubble": true, "title": true },
+      "profileHigh": { "show": false, "values": "numerical", "drawAs": "line", "style": "dot",   "width": 1, "color": "#94a3b8", "bubble": true, "title": true },
+      "profileLow":  { "show": false, "values": "numerical", "drawAs": "line", "style": "dot",   "width": 1, "color": "#94a3b8", "bubble": true, "title": true },
+      "vah":         { "show": true,  "values": "numerical", "drawAs": "line", "style": "dash",  "width": 1, "color": "#7dd3fc", "bubble": true, "title": true },
+      "val":         { "show": true,  "values": "numerical", "drawAs": "line", "style": "dash",  "width": 1, "color": "#7dd3fc", "bubble": true, "title": true }
+    },
+    "showStudy": true,
+    "showPlotNames": true,
+    "showInputNames": true,
+    "leftAxis": true
+  }
+}

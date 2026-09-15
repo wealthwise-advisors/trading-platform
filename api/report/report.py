@@ -23,7 +23,12 @@ from api.report.charts import (
 )
 from datetime import time as time_type
 from src.analysis.indicators import (
-    calc_vwap_bands, calc_volume_profile, calc_mfi, compute_rangebreaks,
+    calc_vwap_bands, calc_mfi, compute_rangebreaks,
+)
+from api.schemas.chart_settings import ChartSettings
+from api.report.chart_settings_draw import (
+    OSC_LEVELS, OSC_TITLE, ROW_SPACING,
+    active_oscillator_rows, draw_volume_profile, oscillator_row_heights,
 )
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
@@ -120,21 +125,28 @@ def _layout(title: str = "", height: int = 500, dragmode: str = "pan",
 
 def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                         zz_deviation_3: float = 0.0005,
-                        session_start: time_type | None = None) -> go.Figure:
+                        session_start: time_type | None = None,
+                        chart_settings: ChartSettings | None = None) -> go.Figure:
     df = results.price_data
     trades = results.trades
     ts_set = set(df.index)
+    # The live chart's own settings, sent with the Export Report request. None
+    # means the chart's factory defaults -- what the chart shows untouched.
+    chart_settings = chart_settings or ChartSettings()
 
-    # ── 5-panel layout: Price / RSI(2) / StochRSI / RSI(13) / MFI ───────────
-    # Price row raised 0.55 -> 0.68 and spacing tightened 0.035 -> 0.028, to
+    # ── Price, then whichever oscillator rows the chart has switched on ─────
+    # Order, row heights (price 0.68, the rest shared equally) and spacing
     # match web/src/components/charts/CandlestickChart.tsx. The dashboard and
     # this exported report draw the same chart from separate code, so a change
     # to one that skips the other leaves the two looking different for the
     # same backtest -- which is exactly what happened on the first pass.
+    osc_rows = active_oscillator_rows(chart_settings)
+    row_of = {key: i + 2 for i, key in enumerate(osc_rows)}
+    row_heights = oscillator_row_heights(len(osc_rows))
     fig = make_subplots(
-        rows=5, cols=1, shared_xaxes=True,
-        row_heights=[0.68, 0.08, 0.08, 0.08, 0.08],
-        vertical_spacing=0.028,
+        rows=1 + len(osc_rows), cols=1, shared_xaxes=True,
+        row_heights=row_heights,
+        vertical_spacing=ROW_SPACING,
     )
 
     # Row 1 — Candlestick
@@ -190,37 +202,13 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
 
 
     # ── Volume Profile ──────────────────────────────────────────────────
-    # Overlaid on the price row via a reversed secondary x-axis rather than
-    # given a subplot column of its own -- a column would cost chart width and
-    # force the indicator rows to shrink to match. Mirrors CandlestickChart.tsx.
-    _vp = calc_volume_profile(
-        df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
-    )
-    if _vp["prices"]:
-        _in_va = [
-            _vp["val"] is not None and _vp["vah"] is not None and _vp["val"] <= p <= _vp["vah"]
-            for p in _vp["prices"]
-        ]
-        fig.add_trace(go.Bar(
-            x=_vp["volumes"], y=_vp["prices"], orientation="h",
-            width=_vp["bin_size"],
-            marker_color=["rgba(56,189,248,0.34)" if f else "rgba(56,189,248,0.13)"
-                          for f in _in_va],
-            name="Volume Profile", xaxis="x5",
-            hovertemplate="<b>Volume Profile</b><br>%{y:.2f}: %{x:,.0f}<extra></extra>",
-        ), row=1, col=1)
-        for _lbl, _val, _col, _dash in (
-            ("POC", _vp["poc"], "#38bdf8", "solid"),
-            ("VAHigh", _vp["vah"], "#7dd3fc", "dash"),
-            ("VALow", _vp["val"], "#7dd3fc", "dash"),
-        ):
-            if _val is None:
-                continue
-            fig.add_trace(go.Scatter(
-                x=df.index, y=[_val] * len(df.index), name=_lbl, legendgroup="vp",
-                line=dict(color=_col, width=1.2, dash=_dash),
-                hovertemplate=f"<b>{_lbl}</b>: %{{y:.2f}}<extra></extra>",
-            ), row=1, col=1)
+    # Drawn with the chart's settings -- bins, value area, opacity, time per
+    # profile, and each plot's colour, style, width, draw-as, name, bubble and
+    # title -- by api/report/chart_settings_draw.py, which mirrors the web code
+    # line for line. The histogram sits on the reversed overlay axis x9; before
+    # that module it was added with row=1, which silently moved it onto the
+    # price row's date axis, where it never drew where the chart draws it.
+    _vp_drawing = draw_volume_profile(fig, df, chart_settings.volume_profile)
 
     longs  = [t for t in trades if t.direction == "LONG"  and t.entry_time in ts_set]
     shorts = [t for t in trades if t.direction == "SHORT" and t.entry_time in ts_set]
@@ -271,51 +259,64 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
             showlegend=False, hoverinfo="skip",
         ), row=1, col=1)
 
-    # Row 2 — RSI(2)
-    rsi2 = _calc_rsi(df["close"], 2)
-    fig.add_trace(go.Scatter(
-        x=df.index, y=rsi2, line=dict(color="#bb86fc", width=1.2),
-        name="RSI(2)", showlegend=True,
-    ), row=2, col=1)
-    fig.add_hline(y=94, line=dict(color=_R, width=0.8, dash="dash"), row=2, col=1)
-    fig.add_hline(y=2,  line=dict(color=_G, width=0.8, dash="dash"), row=2, col=1)
+    # ── Oscillator rows: only those switched on in the chart ───────────────
+    # A row that is off gets no trace, no level lines and no swing circles;
+    # its space goes to price and the rows that remain, as on the chart. The
+    # value each swing circle sits at is kept per row for the mirror below.
+    osc_values: dict[str, pd.Series] = {}
 
-    # Row 3 — StochRSI (RSI 14, K 3, D 3, Wilder's). The same function and
-    # defaults as api/serializers.py, which feeds the live chart; see
-    # tests/test_oscillator_report_parity.py.
-    stochrsi_k, stochrsi_d = _calc_stochrsi(df["close"])
-    fig.add_trace(go.Scatter(
-        x=df.index, y=stochrsi_k, line=dict(color="#42a5f5", width=1.2),
-        name="FullK", showlegend=True,
-    ), row=3, col=1)
-    fig.add_trace(go.Scatter(
-        x=df.index, y=stochrsi_d, line=dict(color="#ef9a9a", width=1.0, dash="dash"),
-        name="FullD", showlegend=True,
-    ), row=3, col=1)
-    fig.add_hline(y=80, line=dict(color=_R, width=0.8, dash="dash"), row=3, col=1)
-    fig.add_hline(y=20, line=dict(color=_G, width=0.8, dash="dash"), row=3, col=1)
-
-    # Row 4 — RSI(13)
-    rsi13 = _calc_rsi(df["close"], 13)
-    fig.add_trace(go.Scatter(
-        x=df.index, y=rsi13, line=dict(color="#ffb74d", width=1.2),
-        name="RSI(13)", showlegend=True,
-    ), row=4, col=1)
-    fig.add_hline(y=70, line=dict(color=_R, width=0.8, dash="dash"), row=4, col=1)
-    fig.add_hline(y=30, line=dict(color=_G, width=0.8, dash="dash"), row=4, col=1)
-
-    # Row 5 — MoneyFlowIndex (length 20, levels 80/20). Needs volume: without a
-    # volume column calc_mfi returns all-NaN and no line is drawn, the same rule
-    # VWAP follows above. The level lines stay, so an empty panel still reads as
-    # MFI rather than as a panel that failed to render.
-    mfi = calc_mfi(df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None)
-    if mfi.notna().any():
+    # RSI(2)
+    if "rsi2" in row_of:
+        rsi2 = _calc_rsi(df["close"], 2)
+        osc_values["rsi2"] = rsi2
         fig.add_trace(go.Scatter(
-            x=df.index, y=mfi, line=dict(color="#facc15", width=1.2),
-            name="MoneyFlowIndex", showlegend=True,
-        ), row=5, col=1)
-    fig.add_hline(y=80, line=dict(color=_R, width=0.8, dash="dash"), row=5, col=1)
-    fig.add_hline(y=20, line=dict(color=_G, width=0.8, dash="dash"), row=5, col=1)
+            x=df.index, y=rsi2, line=dict(color="#bb86fc", width=1.2),
+            name="RSI(2)", showlegend=True,
+        ), row=row_of["rsi2"], col=1)
+
+    # StochRSI (RSI 14, K 3, D 3, Wilder's). The same function and defaults as
+    # api/serializers.py, which feeds the live chart; see
+    # tests/test_oscillator_report_parity.py.
+    if "stochrsi" in row_of:
+        stochrsi_k, stochrsi_d = _calc_stochrsi(df["close"])
+        osc_values["stochrsi"] = stochrsi_k
+        fig.add_trace(go.Scatter(
+            x=df.index, y=stochrsi_k, line=dict(color="#42a5f5", width=1.2),
+            name="FullK", showlegend=True,
+        ), row=row_of["stochrsi"], col=1)
+        fig.add_trace(go.Scatter(
+            x=df.index, y=stochrsi_d, line=dict(color="#ef9a9a", width=1.0, dash="dash"),
+            name="FullD", showlegend=True,
+        ), row=row_of["stochrsi"], col=1)
+
+    # RSI(13)
+    if "rsi13" in row_of:
+        rsi13 = _calc_rsi(df["close"], 13)
+        osc_values["rsi13"] = rsi13
+        fig.add_trace(go.Scatter(
+            x=df.index, y=rsi13, line=dict(color="#ffb74d", width=1.2),
+            name="RSI(13)", showlegend=True,
+        ), row=row_of["rsi13"], col=1)
+
+    # MoneyFlowIndex (length 20, levels 80/20). Needs volume: without a volume
+    # column calc_mfi returns all-NaN and no line is drawn, the same rule VWAP
+    # follows above. The level lines stay, so an empty panel still reads as MFI
+    # rather than as a panel that failed to render.
+    if "mfi" in row_of:
+        mfi = calc_mfi(df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None)
+        osc_values["mfi"] = mfi
+        if mfi.notna().any():
+            fig.add_trace(go.Scatter(
+                x=df.index, y=mfi, line=dict(color="#facc15", width=1.2),
+                name="MoneyFlowIndex", showlegend=True,
+            ), row=row_of["mfi"], col=1)
+
+    # Overbought / oversold lines for the rows drawn. RSI(2) 94/2 and RSI(13)
+    # 70/30 are confirmed final -- see OSC_LEVELS.
+    for key in osc_rows:
+        overbought, oversold = OSC_LEVELS[key]
+        fig.add_hline(y=overbought, line=dict(color=_R, width=0.8, dash="dash"), row=row_of[key], col=1)
+        fig.add_hline(y=oversold,   line=dict(color=_G, width=0.8, dash="dash"), row=row_of[key], col=1)
 
     # ── ZigZag swing overlay ──────────────────────────────────────────────────
     has_headers = False
@@ -386,8 +387,8 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
             ), row=1, col=1)
 
-            # Swing circles on RSI(2), StochRSI, RSI(13), MFI panels
-            for row_n, row_y in [(2, rsi2), (3, stochrsi_k), (4, rsi13), (5, mfi)]:
+            # Swing circles on whichever oscillator rows are drawn
+            for row_n, row_y in [(row_of[key], osc_values[key]) for key in osc_rows]:
                 vals = row_y.reindex(zz.index)
                 fig.add_trace(go.Scatter(
                     x=zz.index, y=vals, mode="markers+text",
@@ -450,12 +451,13 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     # paper-sized offset through the row's share keeps "same strip as the
     # modebar" true at any row split. t drops with it: the buttons now sit on
     # the toolbar's row instead of occupying a band of their own.
-    _PRICE_ROW_FRACTION = 0.68 * (1 - 4 * 0.028)
+    _PRICE_ROW_FRACTION = row_heights[0] / sum(row_heights) * (1 - len(osc_rows) * ROW_SPACING)
     _rangebreaks = compute_rangebreaks(df.index)
     _t = 120 if has_headers else 55
     _rs_y = (1 + 0.115 / _PRICE_ROW_FRACTION) if has_headers else 1.02
     _ylabel = dict(font=dict(size=9, color=_MUTED), standoff=4)
-    _base = _layout(f"{results.symbol} — {results.strategy_name}", height=920)
+    # "Show input names" appends VolumeProfile(...) to the title, as on the chart.
+    _base = _layout(f"{results.symbol} — {results.strategy_name}{_vp_drawing.title_suffix}", height=920)
     _base["margin"] = dict(l=60, r=12, t=_t, b=8)
     # Default view: the most recent DEFAULT_VIEW_BARS bars, not the whole
     # series -- with no explicit range, Plotly renders every bar (and every
@@ -480,25 +482,22 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
             range=_initial_range,
             **_SPIKE,
         ),
-        xaxis2=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
-        xaxis3=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
-        xaxis4=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
-        xaxis5=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
-        yaxis =dict(gridcolor=_GRID, title=dict(text="Price",   **_ylabel), fixedrange=False),
-        yaxis2=dict(gridcolor=_GRID, title=dict(text="RSI(2)",  **_ylabel), fixedrange=True, range=[-5, 105]),
-        yaxis3=dict(gridcolor=_GRID, title=dict(text="StochRSI", **_ylabel), fixedrange=True, range=[-5, 105]),
-        yaxis4=dict(gridcolor=_GRID, title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[-5, 105]),
-        yaxis5=dict(gridcolor=_GRID, title=dict(text="MFI",     **_ylabel), fixedrange=True, range=[-5, 105]),
+        # "Left axis" in the Volume Profile dialog moves the price scale, as on the chart.
+        yaxis=dict(gridcolor=_GRID, title=dict(text="Price", **_ylabel), fixedrange=False,
+                   side="left" if chart_settings.volume_profile.left_axis else "right"),
+        **{
+            axis: spec
+            for key in osc_rows
+            for axis, spec in (
+                (f"xaxis{row_of[key]}", dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE)),
+                (f"yaxis{row_of[key]}", dict(gridcolor=_GRID, title=dict(text=OSC_TITLE[key], **_ylabel),
+                                             fixedrange=True, range=[-5, 105])),
+            )
+        },
     )
-    # Reversed overlay axis for the profile; 4x cap keeps it to <= 1/4 width.
-    # Axis 9, not 5: the price row and four oscillator rows use axes 1 to 5.
-    if _vp["prices"]:
-        _vmax = max(_vp["volumes"]) or 1
-        fig.update_layout(xaxis9=dict(
-            overlaying="x", side="top", anchor="y",
-            range=[_vmax * 4, 0], showgrid=False, zeroline=False,
-            showticklabels=False, fixedrange=True,
-        ))
+    # Reversed overlay axis for the whole-chart profile, when it is drawn.
+    if _vp_drawing.overlay_axis is not None:
+        fig.update_layout(xaxis9=_vp_drawing.overlay_axis)
 
     return fig
 
@@ -1071,7 +1070,8 @@ def _fig_to_div(fig: go.Figure, first: bool = False) -> str:
 
 def generate_html_report(results: BacktestResults, output_path: str | None = None,
                          zz_deviation: float = 0.0010, zz_deviation_3: float = 0.0005,
-                         session_start: time_type | None = None) -> str:
+                         session_start: time_type | None = None,
+                         chart_settings: ChartSettings | None = None) -> str:
     """
     Build a self-contained HTML report from BacktestResults. Defaults match
     the live chart's own hardcoded query (ResultsPage.tsx's api.getZigZag
@@ -1121,7 +1121,7 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     # First chart bundles Plotly.js from CDN; subsequent charts reuse it.
     chart_candle  = _fig_to_div(_candlestick_chart(
         r, zz_deviation=zz_deviation, zz_deviation_3=zz_deviation_3,
-        session_start=session_start,
+        session_start=session_start, chart_settings=chart_settings,
     ), first=True)
     chart_equity  = _fig_to_div(_equity_chart(r))
     chart_pnl     = _fig_to_div(_pnl_hist(r))

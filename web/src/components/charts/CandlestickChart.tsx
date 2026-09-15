@@ -15,9 +15,13 @@ import { computeVolumeProfiles } from "@/lib/volumeProfile"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
-  normalizePlotStyles, plotToggles, setShowValueArea, showValueArea, titleEntries,
+  plotToggles, setShowValueArea, showValueArea, titleEntries,
   type PlotKey, type PlotStyle, type PlotStyles,
 } from "@/lib/vpPlotStyles"
+import {
+  VP_STORE_KEY, buildChartSettings, loadSavedVpSettings, vpFactorySettings,
+} from "@/lib/chartExportSettings"
+import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import {
   OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
   type OscKey, type OscToggles,
@@ -155,14 +159,9 @@ export function CandlestickChart({
   // Factory values live here so "reset" has something authoritative to return
   // to; "save as default" writes the current set to localStorage and it is
   // restored on the next mount.
-  const VP_FACTORY = {
-    bins: 48, valueArea: 70, opacity: 50, rowMode: "AUTOMATIC" as RowHeightMode,
-    rowHeight: 1, timePer: "CHART" as TimePerProfile, multiplier: 1,
-    maxProfiles: 1000, onExpansion: true,
-    plots: defaultPlotStyles(),
-    showStudy: true, showPlotNames: true, showInputNames: true, leftAxis: true,
-  }
-  const VP_STORE_KEY = "autotrader.volumeProfile.defaults"
+  // The values themselves live in lib/chartExportSettings.ts, which the export
+  // request and the report's contract test read too.
+  const VP_FACTORY = vpFactorySettings()
 
   const applyVpSettings = (v: typeof VP_FACTORY) => {
     setVpBins(v.bins); setVpValueArea(v.valueArea); setVpOpacity(v.opacity)
@@ -174,17 +173,9 @@ export function CandlestickChart({
   }
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(VP_STORE_KEY)
-      if (raw) {
-        const saved = JSON.parse(raw)
-        // `plots` replaced five `show` booleans. An older saved default's
-        // flags are carried across rather than dropped.
-        applyVpSettings({ ...VP_FACTORY, ...saved, plots: normalizePlotStyles(saved?.plots, saved?.show) })
-      }
-    } catch {
-      /* corrupt or unavailable storage just means factory defaults */
-    }
+    // Corrupt or unavailable storage just means factory defaults.
+    const saved = loadSavedVpSettings()
+    if (saved) applyVpSettings(saved)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -212,6 +203,24 @@ export function CandlestickChart({
     setVpSavedNote("Reset to factory defaults.")
     setTimeout(() => setVpSavedNote(""), 3000)
   }
+
+  // ── What the chart is drawing with, for Export Report ──────────────────
+  // Published on every change, so the report downloaded next is drawn with the
+  // same oscillator rows and Volume Profile settings -- see
+  // lib/chartExportSettings.ts. Left in place on unmount: switching to another
+  // results tab and exporting from there still describes the chart as last seen.
+  const publishChartSettings = useChartSettingsStore((s) => s.setSettings)
+  useEffect(() => {
+    publishChartSettings(buildChartSettings(osc, vpOn, {
+      bins: vpBins, valueArea: vpValueArea, opacity: vpOpacity, rowMode: vpRowMode,
+      rowHeight: vpRowHeight, timePer: vpTimePer, multiplier: vpMultiplier,
+      maxProfiles: vpMaxProfiles, onExpansion: vpOnExpansion, plots: vpPlots,
+      showStudy: vpShowStudy, showPlotNames: vpShowPlotNames,
+      showInputNames: vpShowInputNames, leftAxis: vpLeftAxis,
+    }))
+  }, [publishChartSettings, osc, vpOn, vpBins, vpValueArea, vpOpacity, vpRowMode, vpRowHeight,
+      vpTimePer, vpMultiplier, vpMaxProfiles, vpOnExpansion, vpPlots, vpShowStudy,
+      vpShowPlotNames, vpShowInputNames, vpLeftAxis])
 
   const containerRef = useRef<HTMLDivElement>(null)
 

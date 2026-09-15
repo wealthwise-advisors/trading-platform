@@ -240,11 +240,18 @@ class TestExistingApiUnchanged:
         assert set(r.json()) == {"zigzag_10", "zigzag_3"}
 
     def test_report_endpoint_gained_no_elliott_params(self, client):
-        """Report integration is a later phase -- the endpoint must be untouched."""
+        """Report integration is a later phase -- no Elliott parameters on the endpoint.
+
+        The list is exact so nothing arrives unannounced. It has grown once
+        since, by `chart`: the live chart's display settings, so the exported
+        report draws the oscillator rows and Volume Profile the chart shows
+        (api/schemas/chart_settings.py). A separate, declared change -- not
+        Elliott Wave scope creep.
+        """
         from api.main import app
         params = app.openapi()["paths"]["/api/backtests/{backtest_id}/report"]["get"]
         names = [p["name"] for p in params.get("parameters", [])]
-        assert names == ["backtest_id", "zz_dev", "zz_dev_3", "format"]
+        assert names == ["backtest_id", "zz_dev", "zz_dev_3", "format", "chart"]
 
     def test_only_one_new_path_added(self):
         """The Elliott Wave phase was allowed exactly one new route.

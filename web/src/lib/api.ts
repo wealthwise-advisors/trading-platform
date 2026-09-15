@@ -10,6 +10,7 @@ import type {
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
   OptimizeRequest, OptimizeResponse, ElliottWaveResponse,
 } from "./types"
+import type { ChartExportSettings } from "./chartExportSettings"
 
 const BASE = "/api"
 
@@ -265,7 +266,10 @@ export const api = {
     request<ChartPatternRecord[]>(`/backtests/${id}/chart-patterns`),
   getMonthlyReturns: (id: string) =>
     request<MonthlyReturns>(`/backtests/${id}/monthly-returns`),
-  reportUrl: (id: string, format: string = "html") => `${BASE}/backtests/${id}/report?format=${format}`,
+  /** `chart`: the price chart's current settings, so the report is drawn the same way. */
+  reportUrl: (id: string, format: string = "html", chart?: ChartExportSettings) =>
+    `${BASE}/backtests/${id}/report?format=${format}`
+    + (chart ? `&chart=${encodeURIComponent(JSON.stringify(chart))}` : ""),
   dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string }) =>
     `${BASE}/data/export?symbol=${params.symbol}&timeframe=${params.timeframe}&start=${params.start}&end=${params.end}&data_source=${params.dataSource}&format=${params.format}`,
 

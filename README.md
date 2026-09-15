@@ -56,7 +56,7 @@ RSI(2), StochRSI and RSI(13) beneath it, all on one shared time axis. Entries,
 exits and every labelled swing are drawn by the same code the backtest scored.
 
 <div align="center">
-<img src="docs/assets/analysis-engine.png" alt="The AutoTrader dashboard: an ES price chart with labelled ZigZag swings, EMA9 and EMA21, long and short entry markers, above RSI(2), Stochastic and RSI(13) panels sharing one time axis" width="100%">
+<img src="docs/assets/analysis-engine.png" alt="The AutoTrader price chart: ES candles with labelled ZigZag swings, EMA9 and EMA21, VWAP bands, the Volume Profile with its POC and value area, long and short entry markers, above RSI(2), StochRSI and RSI(13) panels sharing one time axis" width="100%">
 </div>
 
 <br>

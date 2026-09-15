@@ -5,6 +5,7 @@ import { ResultsPage } from "@/features/backtest/ResultsPage"
 import { ReplayPage } from "@/features/replay/ReplayPage"
 import { DataExportPage } from "@/features/export/DataExportPage"
 import { useConfigStore } from "@/store/configStore"
+import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,6 +35,8 @@ function App({ user }: { user: Me }) {
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
   const [reportFormat, setReportFormat] = useState("html")
+  // Sent with Export Report so the report draws what the price chart shows.
+  const chartSettings = useChartSettingsStore((s) => s.settings)
 
   return (
     // Stack sidebar above content on small screens; side-by-side from md up.
@@ -142,7 +145,7 @@ function App({ user }: { user: Me }) {
                   </SelectContent>
                 </Select>
                 <Button asChild size="sm" variant="default">
-                  <a href={api.reportUrl(backtestId, reportFormat)} download><Download className="h-3.5 w-3.5" aria-hidden /> Export Report</a>
+                  <a href={api.reportUrl(backtestId, reportFormat, chartSettings)} download><Download className="h-3.5 w-3.5" aria-hidden /> Export Report</a>
                 </Button>
               </div>
             )}

@@ -499,7 +499,8 @@ Key parameters:
 The live candlestick chart is `web/src/components/charts/CandlestickChart.tsx` (React,
 react-plotly.js) -- it's a full-fidelity port of the old `candlestick_with_trades()`.
 The exported report is built by `api/report/report.py` (what the "Export Report"
-button returns); `api/report/charts.py` holds the same layout. All render 5 rows:
+button returns). `api/report/charts.py` holds the older fixed five-row layout and
+is on no export path. With every oscillator on, the chart and the report render 5 rows:
 
 | Row | Content |
 |-----|---------|
@@ -511,9 +512,33 @@ button returns); `api/report/charts.py` holds the same layout. All render 5 rows
 
 On the live chart each of the four oscillator rows has its own checkbox and
 settings gear in the chart strip, so a row only takes space when it is on;
-RSI(2), StochRSI and RSI(13) start on and MFI starts off. The exported report
-always draws all five. `tests/test_oscillator_report_parity.py` holds the chart
-and the report to identical values.
+RSI(2), StochRSI and RSI(13) start on and MFI starts off. Row heights follow:
+price 68%, the rest shared equally, price alone takes the whole chart.
+
+**The exported report is drawn with the chart's current settings.** The chart
+publishes them (`web/src/store/chartSettingsStore.ts`), Export Report sends them
+as the `chart` query parameter, and `api/schemas/chart_settings.py` validates
+them. The report then draws only the oscillator rows switched on, and the Volume
+Profile with every dialog setting: colour, width, style, draw-as, show value
+area, plot names, input names, bubbles, titles, bins, value area %, opacity,
+time per profile, left axis. `api/report/chart_settings_draw.py` mirrors the web
+code line for line; don't change one side without the other.
+
+- `tests/fixtures/chart_settings_factory.json` holds the factory defaults. Both
+  the Python model and `web/src/lib/chartExportSettings.ts` are tested against it.
+- `tests/fixtures/volume_profile_golden.json` was computed by the browser's
+  `volumeProfile.ts`. The report's port must reproduce it exactly (not within a
+  tolerance), because bubbles print to the cent.
+- The report no longer uses `calc_volume_profile` for its profile. That
+  function's floor division files some bar edges one bucket lower than the
+  browser does.
+- CSV, Excel, PDF and Word carry the metrics summary and trade log only, with no
+  chart. They accept the settings, so a bad value fails the same way in every
+  format, and are unchanged by them.
+
+`tests/test_oscillator_report_parity.py` holds the chart and the report to
+identical oscillator values. `tests/test_report_chart_settings.py` covers each
+setting's effect.
 
 ### ZigZag overlay
 
