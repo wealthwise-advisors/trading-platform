@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { ALL_CHART_TIMEFRAMES } from "@/lib/chartSetup"
 import { CopyButton } from "@/components/ui/copy-button"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -22,7 +23,10 @@ const FORMATS = [
   { id: "docx", label: "Word", icon: <FileCode className="h-3.5 w-3.5 shrink-0" /> },
 ]
 
-const TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h"]
+// The same eleven the Backtest and Market Grid pages offer. This page kept
+// its own list of five, so 2m, 10m, 20m, 25m, 35m and 45m could be backtested
+// and replayed but never exported.
+const TIMEFRAMES = ALL_CHART_TIMEFRAMES
 // Symbols come from /api/symbols per data source -- see the note in
 // features/replay/ReplayPage.tsx. Hardcoding them here meant this page could
 // not export the gold, bitcoin or equity samples that ship in data/sample.

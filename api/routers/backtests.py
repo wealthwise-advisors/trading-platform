@@ -7,6 +7,7 @@ from fastapi.responses import Response
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
+from src.data.resample import TF_MINUTES
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
@@ -74,7 +75,16 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
             raise HTTPException(400, str(e))
 
     # synthetic (default)
-    tf_min = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60}[timeframe]
+    # The minutes come from the one shared table. This used to be its own
+    # five-entry dict, so the form offered eleven timeframes and six of them
+    # -- 2m, 10m, 20m, 25m, 35m, 45m -- died here with a KeyError that
+    # reached the user as a bare "Internal Server Error". The Optimizer and
+    # the data export share this function, so they failed the same way.
+    if timeframe not in TF_MINUTES:
+        raise HTTPException(
+            400, f"Unsupported timeframe {timeframe!r}. "
+                 f"Supported: {', '.join(TF_MINUTES)}.")
+    tf_min = TF_MINUTES[timeframe]
     total_minutes = (end_date - start_date).days * 6.5 * 60
     bars = max(int(total_minutes / tf_min), 100)
     generate_sample_data(
