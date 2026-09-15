@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import type { ProfileSlice } from "@/lib/volumeProfile"
 import { toNaiveString } from "@/lib/isoTime"
+import { defaultPlotStyles } from "@/lib/vpPlotStyles"
 
 const ALL_ON = { poc: true, vah: true, val: true, profileHigh: true, profileLow: true }
 const ALL_OFF = { poc: false, vah: false, val: false, profileHigh: false, profileLow: false }
@@ -118,5 +119,33 @@ describe("buildSessionProfileShapes", () => {
     const s = [slice("2026-08-10T09:30:00", "2026-08-10T16:00:00")]
     const first = buildSessionProfileShapes(s, 50, ALL_ON)[0]
     expect(first.x0).toBe(toNaiveString(Date.parse("2026-08-10T09:30:00")))
+  })
+})
+
+describe("per-plot styles on session profiles", () => {
+  const one = () => [slice("2026-08-10T09:30:00", "2026-08-10T16:00:00")]
+  const lines = (shapes: ReturnType<typeof buildSessionProfileShapes>) => shapes.filter((s) => s.type === "line")
+
+  it("without styles, every level keeps its original colour, dash and 1.1px", () => {
+    const got = lines(buildSessionProfileShapes(one(), 50, ALL_ON)).map((l) => l.line)
+    expect(got).toEqual([
+      { color: "#38bdf8", width: 1.1, dash: "solid" },
+      { color: "#7dd3fc", width: 1.1, dash: "dash" },
+      { color: "#7dd3fc", width: 1.1, dash: "dash" },
+      { color: "#94a3b8", width: 1.1, dash: "dot" },
+      { color: "#94a3b8", width: 1.1, dash: "dot" },
+    ])
+  })
+
+  it("the default styles draw exactly the same lines", () => {
+    expect(lines(buildSessionProfileShapes(one(), 50, ALL_ON, defaultPlotStyles())))
+      .toEqual(lines(buildSessionProfileShapes(one(), 50, ALL_ON)))
+  })
+
+  it("a plot's colour, style and width reach its level", () => {
+    const styles = defaultPlotStyles()
+    styles.poc = { ...styles.poc, color: "#ff8800", style: "longdash", width: 3 }
+    const poc = lines(buildSessionProfileShapes(one(), 50, ALL_ON, styles)).find((l) => l.y0 === 4510)
+    expect(poc?.line).toEqual({ color: "#ff8800", width: 3, dash: "longdash" })
   })
 })

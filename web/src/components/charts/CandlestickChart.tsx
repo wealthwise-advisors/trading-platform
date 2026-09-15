@@ -13,6 +13,16 @@ import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
+import {
+  PLOT_LABEL, bubbleAnnotation, defaultPlotStyles, levelTrace, normalizePlotStyles,
+  plotToggles, titleEntries, type PlotKey, type PlotStyle, type PlotStyles,
+} from "@/lib/vpPlotStyles"
+import {
+  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
+  type OscKey, type OscToggles,
+} from "@/lib/oscillatorStudies"
+import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
+import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
@@ -116,9 +126,16 @@ export function CandlestickChart({
   const [vpBins, setVpBins] = useState(48)
   const [vpValueArea, setVpValueArea] = useState(70)
   const [vpOpacity, setVpOpacity] = useState(50)
-  const [vpShow, setVpShow] = useState({
-    poc: true, vah: true, val: true, profileHigh: false, profileLow: false,
-  })
+  // Per-plot styles for POC, ProfileHigh, ProfileLow, VAHigh and VALow. The
+  // defaults are the look these levels always had -- see lib/vpPlotStyles.ts.
+  const [vpPlots, setVpPlots] = useState<PlotStyles>(defaultPlotStyles)
+  const vpShow = plotToggles(vpPlots)
+  const setVpPlot = (key: PlotKey, patch: Partial<PlotStyle>) =>
+    setVpPlots((s) => ({ ...s, [key]: { ...s[key], ...patch } }))
+  // Oscillator panels as opt-in studies, the way VWAP and Volume Profile work.
+  // Each starts as it was drawn before; MFI is listed but cannot be switched on.
+  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stoch: showStochastic, rsi13: true, mfi: false })
+  const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)
   const [vpTimePer, setVpTimePer] = useState<TimePerProfile>("CHART")
@@ -140,7 +157,7 @@ export function CandlestickChart({
     bins: 48, valueArea: 70, opacity: 50, rowMode: "AUTOMATIC" as RowHeightMode,
     rowHeight: 1, timePer: "CHART" as TimePerProfile, multiplier: 1,
     maxProfiles: 1000, onExpansion: true,
-    show: { poc: true, vah: true, val: true, profileHigh: false, profileLow: false },
+    plots: defaultPlotStyles(),
     showStudy: true, showPlotNames: false, showInputNames: false, leftAxis: true,
   }
   const VP_STORE_KEY = "autotrader.volumeProfile.defaults"
@@ -149,7 +166,7 @@ export function CandlestickChart({
     setVpBins(v.bins); setVpValueArea(v.valueArea); setVpOpacity(v.opacity)
     setVpRowMode(v.rowMode); setVpRowHeight(v.rowHeight); setVpTimePer(v.timePer)
     setVpMultiplier(v.multiplier); setVpMaxProfiles(v.maxProfiles)
-    setVpOnExpansion(v.onExpansion); setVpShow(v.show)
+    setVpOnExpansion(v.onExpansion); setVpPlots(v.plots)
     setVpShowStudy(v.showStudy); setVpShowPlotNames(v.showPlotNames)
     setVpShowInputNames(v.showInputNames); setVpLeftAxis(v.leftAxis)
   }
@@ -157,7 +174,12 @@ export function CandlestickChart({
   useEffect(() => {
     try {
       const raw = localStorage.getItem(VP_STORE_KEY)
-      if (raw) applyVpSettings({ ...VP_FACTORY, ...JSON.parse(raw) })
+      if (raw) {
+        const saved = JSON.parse(raw)
+        // `plots` replaced five `show` booleans. An older saved default's
+        // flags are carried across rather than dropped.
+        applyVpSettings({ ...VP_FACTORY, ...saved, plots: normalizePlotStyles(saved?.plots, saved?.show) })
+      }
     } catch {
       /* corrupt or unavailable storage just means factory defaults */
     }
@@ -169,7 +191,7 @@ export function CandlestickChart({
       bins: vpBins, valueArea: vpValueArea, opacity: vpOpacity,
       rowMode: vpRowMode, rowHeight: vpRowHeight, timePer: vpTimePer,
       multiplier: vpMultiplier, maxProfiles: vpMaxProfiles,
-      onExpansion: vpOnExpansion, show: vpShow, showStudy: vpShowStudy,
+      onExpansion: vpOnExpansion, plots: vpPlots, showStudy: vpShowStudy,
       showPlotNames: vpShowPlotNames, showInputNames: vpShowInputNames,
       leftAxis: vpLeftAxis,
     }
@@ -251,7 +273,8 @@ export function CandlestickChart({
   // turned out to be wrong, it's expected to always be visible). Axis
   // suffixes ("", "2", "3", "4") are assigned by position, so RSI(13)
   // automatically shifts down a slot if Stochastic is ever turned off again.
-  const indicatorRows = ["rsi2", ...(showStochastic ? ["stoch"] : []), "rsi13"] as const
+  // Only the oscillators switched on get a row. See lib/oscillatorStudies.ts.
+  const indicatorRows = activeOscillatorRows(osc)
   const totalRows = 1 + indicatorRows.length
   const axisSuffix = ["", "2", "3", "4"].slice(0, totalRows)
   const rowIndexOf = (name: (typeof indicatorRows)[number]) => 1 + indicatorRows.indexOf(name)
@@ -284,10 +307,9 @@ export function CandlestickChart({
   // bottom rows off entirely rather than shrinking them.
   const PRICE_WEIGHT = 0.68
   const ROW_SPACING = 0.028
-  const indicatorWeight = (1 - PRICE_WEIGHT) / indicatorRows.length
-  const domains = rowDomains(
-    [PRICE_WEIGHT, ...indicatorRows.map(() => indicatorWeight)], ROW_SPACING,
-  )
+  // With every oscillator off, price takes the whole chart instead of dividing
+  // the indicator share by zero rows.
+  const domains = rowDomains(oscillatorRowHeights(indicatorRows.length, PRICE_WEIGHT), ROW_SPACING)
 
   // The x-axis only shows a date label where the visible range crosses a day
   // boundary (Plotly's default date-axis behavior) -- when zoomed into a
@@ -434,7 +456,7 @@ export function CandlestickChart({
   // Session-anchored profiles (time per profile = DAY / WEEK). Geometry lives
   // in lib/volumeProfileShapes.ts so its x-boundary handling can be tested.
   if (vpOn && vpShowStudy && !vpSingle && vpSlices.length) {
-    shapes.push(...buildSessionProfileShapes(vpSlices, vpOpacity, vpShow))
+    shapes.push(...buildSessionProfileShapes(vpSlices, vpOpacity, vpShow, vpPlots))
   }
 
   // ── ZigZag overlay with per-swing numbering ───────────────────────────
@@ -724,14 +746,19 @@ export function CandlestickChart({
     } as unknown as Data)
   }
 
-  // ── RSI(2) / [Stoch K&D] / RSI(13) -- axes assigned dynamically ────────
-  const rsi2Suffix = suffixOf("rsi2")
-  data.push({
-    type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)",
-    line: { color: "#ce93d8", width: 1.1 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
-    xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
-  } as unknown as Data)
-  if (showStochastic) {
+  // ── RSI(2) / Stochastic / RSI(13) -- a trace only for a row that exists ──
+  // suffixOf() on a row that is not drawn resolves to the PRICE axis, which
+  // would lay an oscillator line across the candles. So every trace is guarded
+  // by its row actually being in indicatorRows.
+  if (indicatorRows.includes("rsi2")) {
+    const rsi2Suffix = suffixOf("rsi2")
+    data.push({
+      type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)",
+      line: { color: "#ce93d8", width: 1.1 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
+      xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
+    } as unknown as Data)
+  }
+  if (indicatorRows.includes("stoch")) {
     const stochSuffix = suffixOf("stoch")
     data.push(
       { type: "scatter", mode: "lines", x: t, y: indicators.stoch_k, name: "%K",
@@ -742,24 +769,23 @@ export function CandlestickChart({
         xaxis: `x${stochSuffix}`, yaxis: `y${stochSuffix}` } as unknown as Data,
     )
   }
-  const rsi13Suffix = suffixOf("rsi13")
-  data.push({
-    type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)",
-    line: { color: "#ffcc80", width: 1.1 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
-    xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
-  } as unknown as Data)
+  if (indicatorRows.includes("rsi13")) {
+    const rsi13Suffix = suffixOf("rsi13")
+    data.push({
+      type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)",
+      line: { color: "#ffcc80", width: 1.1 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
+      xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
+    } as unknown as Data)
+  }
 
-  // Overbought/oversold reference lines (hline equivalents) per active row
-  const hlines: [string, number, string][] = [
-    [rsi2Suffix, 94, RED], [rsi2Suffix, 2, GREEN],
-    ...(showStochastic ? ([[suffixOf("stoch"), 80, RED], [suffixOf("stoch"), 20, GREEN]] as [string, number, string][]) : []),
-    [rsi13Suffix, 70, RED], [rsi13Suffix, 30, GREEN],
-  ]
-  for (const [suffix, level, color] of hlines) {
+  // Overbought/oversold reference lines, for the rows being drawn. The values
+  // live in lib/oscillatorStudies.ts, which the settings panels read too, so
+  // what a panel says and what the chart draws cannot disagree.
+  for (const { row, value, kind } of levelLines(indicatorRows)) {
     shapes.push({
-      type: "line", xref: "paper", yref: `y${suffix}` as Shape["yref"],
-      x0: 0, x1: 1, y0: level, y1: level,
-      line: { color, dash: "dash", width: 0.8 },
+      type: "line", xref: "paper", yref: `y${suffixOf(row)}` as Shape["yref"],
+      x0: 0, x1: 1, y0: value, y1: value,
+      line: { color: kind === "overbought" ? RED : GREEN, dash: "dash", width: 0.8 },
     })
   }
 
@@ -929,21 +955,25 @@ export function CandlestickChart({
   // POC / VAH / VAL as horizontal levels across the price panel, matching the
   // reference platform. Solid for the point of control, dashed for the value
   // area bounds -- one is a single price, the others are a band's edges.
-  const vpLevels: { value: number; label: string; color: string; dash: string }[] = []
+  const vpLevels: { key: PlotKey; value: number; label: string; style: PlotStyle }[] = []
+  const vpValues: Record<PlotKey, number | null> = {
+    poc: null, profileHigh: null, profileLow: null, vah: null, val: null,
+  }
   if (vpVisible) {
-    const { poc, vah, val } = vpLocal
-    if (vpShow.poc && poc != null) vpLevels.push({ value: poc, label: "POC", color: "#38bdf8", dash: "solid" })
-    if (vpShow.vah && vah != null) vpLevels.push({ value: vah, label: "VAHigh", color: "#7dd3fc", dash: "dash" })
-    if (vpShow.val && val != null) vpLevels.push({ value: val, label: "VALow", color: "#7dd3fc", dash: "dash" })
     // ProfileHigh / ProfileLow are the outer edges of the profile's own price
     // range -- the top of the highest bucket and the bottom of the lowest.
     const half = (vpLocal.binSize ?? 0) / 2
-    const hi = vpLocal.prices.length ? vpLocal.prices[vpLocal.prices.length - 1] + half : null
-    const lo = vpLocal.prices.length ? vpLocal.prices[0] - half : null
-    if (vpShow.profileHigh && hi != null)
-      vpLevels.push({ value: hi, label: "ProfileHigh", color: "#94a3b8", dash: "dot" })
-    if (vpShow.profileLow && lo != null)
-      vpLevels.push({ value: lo, label: "ProfileLow", color: "#94a3b8", dash: "dot" })
+    vpValues.poc = vpLocal.poc
+    vpValues.vah = vpLocal.vah
+    vpValues.val = vpLocal.val
+    vpValues.profileHigh = vpLocal.prices.length ? vpLocal.prices[vpLocal.prices.length - 1] + half : null
+    vpValues.profileLow = vpLocal.prices.length ? vpLocal.prices[0] - half : null
+    for (const key of ["poc", "vah", "val", "profileHigh", "profileLow"] as PlotKey[]) {
+      const value = vpValues[key]
+      if (vpPlots[key].show && value != null) {
+        vpLevels.push({ key, value, label: PLOT_LABEL[key], style: vpPlots[key] })
+      }
+    }
   }
   // "Show plot names": Plotly has no per-trace on-chart label, so each level
   // gets a small annotation pinned at its right-hand end -- the same thing the
@@ -954,22 +984,30 @@ export function CandlestickChart({
         x: 1, xref: "paper", xanchor: "right",
         y: lv.value, yref: "y", yanchor: "middle",
         text: lv.label, showarrow: false,
-        font: { size: 9, color: lv.color },
+        font: { size: 9, color: lv.style.color },
         bgcolor: "rgba(20,21,28,0.75)", borderpad: 2,
       } as Partial<Annotations>)
     }
   }
-
+  // Per-plot "Show bubble": the level's price tagged on the price axis.
   for (const lv of vpLevels) {
-    // Zero-length scatter carrying the hover text, so POC/VAHigh/VALow appear
-    // in the unified tooltip the way the reference panel lists them.
-    data.push({
-      type: "scatter", mode: "lines", x: t, y: t.map(() => lv.value),
-      name: lv.label, line: { color: lv.color, width: 1.2, dash: lv.dash },
-      hovertemplate: `<b>${lv.label}</b>: %{y:.2f}<extra></extra>`,
-      legendgroup: "vp", xaxis: "x", yaxis: "y",
-    } as unknown as Data)
+    if (lv.style.bubble) annotations.push(bubbleAnnotation(lv.value, lv.style, vpLeftAxis ? "left" : "right"))
   }
+  // Per-plot "Show title": name and value in a line at the top of the price panel.
+  const vpTitleLine = vpVisible ? titleEntries(vpPlots, vpValues) : ""
+  if (vpTitleLine) {
+    annotations.push({
+      x: 0, xref: "paper", xanchor: "left",
+      y: 1, yref: "y domain", yanchor: "top",
+      text: vpTitleLine, showarrow: false,
+      font: { size: 10, color: "#7dd3fc" },
+      bgcolor: "rgba(20,21,28,0.75)", borderpad: 2,
+    } as unknown as Partial<Annotations>)
+  }
+
+  // Each level as a trace, so it also appears in the unified tooltip the way the
+  // reference panel lists these values. Draw as / Style / Width / Colour apply.
+  for (const lv of vpLevels) data.push(levelTrace(lv.label, lv.value, t, lv.style))
 
   const rowOrder = ["price", ...indicatorRows]
   const dynamicAxes: Record<string, unknown> = {}
@@ -1124,7 +1162,7 @@ export function CandlestickChart({
       {/* VWAP controls. The gear sits beside the toggle so the settings are
           discoverable from the thing they configure, rather than buried in a
           global preferences screen. */}
-      <div className="shrink-0 flex items-center gap-2 pb-1.5 text-xs relative">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 pb-1.5 text-xs relative">
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={vwapOn}
                  onChange={(e) => setVwapOn(e.target.checked)} />
@@ -1169,6 +1207,40 @@ export function CandlestickChart({
             {vpBins} rows · VA {vpValueArea}%
           </span>
         )}
+
+        {/* Oscillator panels, switched on and configured the same way as VWAP
+            and Volume Profile. Switching one off removes its row, handing the
+            space to price and the rest. MFI is listed so the strip matches the
+            reference stack, but it cannot be switched on until it is built --
+            and it says so rather than doing nothing. */}
+        {OSC_ORDER.map((key) => {
+          const info = OSC_STUDIES[key]
+          return (
+            <span key={key} className="flex items-center gap-1.5">
+              <span className="mx-1 text-white/15" aria-hidden>|</span>
+              <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
+                     title={info.available ? undefined : info.pending}>
+                <input type="checkbox" checked={osc[key]} disabled={!info.available}
+                       aria-label={`Show ${info.label}`}
+                       onChange={(e) => setOsc((o) => ({ ...o, [key]: e.target.checked }))} />
+                <span>{info.label}</span>
+              </label>
+              <button
+                type="button"
+                aria-label={`${info.label} settings`}
+                title={info.available ? `${info.label} settings` : info.pending}
+                onClick={() => {
+                  // Same as the VWAP gear: reaching for the settings of a study
+                  // that is off switches it on.
+                  if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
+                  setOscPanel(key)
+                }}
+                className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
+                           hover:bg-white/10"
+              >⚙</button>
+            </span>
+          )
+        })}
 
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-white/12
@@ -1284,20 +1356,7 @@ export function CandlestickChart({
 
             <div className="space-y-1 pt-2 border-t border-white/8">
               <div className="text-muted-foreground mb-1">Plots</div>
-              {([
-                ["show point of control", "poc"],
-                ["show VAHigh", "vah"],
-                ["show VALow", "val"],
-                ["show ProfileHigh", "profileHigh"],
-                ["show ProfileLow", "profileLow"],
-              ] as [string, "poc" | "vah" | "val" | "profileHigh" | "profileLow"][]).map(([label, key]) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={vpShow[key]}
-                         aria-label={label}
-                         onChange={(e) => setVpShow((v) => ({ ...v, [key]: e.target.checked }))} />
-                  <span>{label}</span>
-                </label>
-              ))}
+              <VolumeProfilePlotTabs styles={vpPlots} onChange={setVpPlot} />
             </div>
 
             <p className="text-muted-foreground">
@@ -1399,6 +1458,10 @@ export function CandlestickChart({
               range, so changes redraw immediately.
             </p>
           </div>
+        )}
+        {oscPanel && (
+          <OscillatorStudyPanel study={oscPanel} onClose={() => setOscPanel(null)}
+                                className="absolute right-0 top-7 z-20" />
         )}
       </div>
 
