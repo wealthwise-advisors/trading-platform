@@ -18,7 +18,15 @@ export default defineConfig({
       // /api/... paths, dev and prod alike.
       "/api": {
         target: "http://localhost:8000",
-        changeOrigin: true,
+        // false, not true: the API refuses a state-changing request whose
+        // Origin does not match its Host (api/auth.py's require_user).
+        // changeOrigin rewrote Host to localhost:8000 while the browser's
+        // Origin stayed localhost:5173, so every save and run made through
+        // `npm run dev` came back 403 "Cross-origin request refused".
+        // Keeping the browser's Host is what production's nginx does
+        // (proxy_set_header Host $host). Dev server only -- `vite build` does
+        // not read this block.
+        changeOrigin: false,
         ws: true, // needed for the Phase 3 replay WebSocket
       },
     },
