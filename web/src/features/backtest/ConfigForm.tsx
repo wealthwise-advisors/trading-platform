@@ -13,22 +13,21 @@ import {
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import {
-  ALL_CHART_TIMEFRAMES, startDateForTimeframe,
-} from "@/lib/chartSetup"
+import { startDateForTimeframe } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 import { DateField } from "@/components/ui/date-field"
 import { SymbolOption } from "@/components/SymbolOption"
 import { InstrumentPicker } from "@/components/InstrumentPicker"
+import { IntervalPicker } from "@/components/IntervalPicker"
 import { SourceMark } from "@/components/SourceMark"
 import { StrategyMark } from "@/components/StrategyMark"
 import {
   Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
 } from "./ConfigParts"
 import {
-  Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock,
+  Settings2, Database, FileSpreadsheet, LineChart, Radio, 
   Wallet, Layers, Percent, Play, ChevronsLeft, ChevronsUpDown,
 } from "lucide-react"
 
@@ -203,10 +202,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe Selector" accent="iris">
-        <Select
+      <Section icon="timeframe" label="Interval Picker" accent="iris">
+        <IntervalPicker
           value={cfg.timeframe}
-          onValueChange={(v) => {
+          onChange={(v) => {
             cfg.setField("timeframe", v)
             // Move the START back, keeping the end date where it is: the
             // preset is "the last N days", and the end is usually the most
@@ -218,30 +217,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             const start = startDateForTimeframe(cfg.endDate, v)
             if (start) cfg.setField("startDate", start)
           }}
-        >
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          {/* position="popper" opens the list BELOW the box. The default,
-              item-aligned, slides the list up so the current value sits over
-              the box -- which covered this section's own heading and left the
-              SYMBOL heading above it, so the timeframe list read as a symbol
-              list. */}
-          <SelectContent position="popper">
-            {/* Same eleven the Live Replay grid offers. This was five, so a backtest
-                could not use the intervals a replay could -- and asking for one
-                that the provider had no alias for surfaced as a 500. */}
-            {/* The interval only. The day count each timeframe loads is still
-                applied when one is picked (see onValueChange above) -- it is
-                just no longer printed beside the option. */}
-            {ALL_CHART_TIMEFRAMES.map((tf) => (
-              <SelectItem key={tf} value={tf}>
-                <span className="flex items-center gap-2 w-full">
-                  <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
-                  {tf}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}
