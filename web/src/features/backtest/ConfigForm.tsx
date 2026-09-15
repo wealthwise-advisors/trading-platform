@@ -14,7 +14,7 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import {
-  ALL_CHART_TIMEFRAMES, daysFor, startDateForTimeframe,
+  ALL_CHART_TIMEFRAMES, startDateForTimeframe,
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
@@ -203,7 +203,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe" accent="iris">
+      <Section icon="timeframe" label="Timeframe Selector" accent="iris">
         <Select
           value={cfg.timeframe}
           onValueChange={(v) => {
@@ -220,32 +220,26 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           }}
         >
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          {/* position="popper" opens the list BELOW the box. The default,
+              item-aligned, slides the list up so the current value sits over
+              the box -- which covered this section's own heading and left the
+              SYMBOL heading above it, so the timeframe list read as a symbol
+              list. */}
+          <SelectContent position="popper">
             {/* Same eleven the Live Replay grid offers. This was five, so a backtest
                 could not use the intervals a replay could -- and asking for one
                 that the provider had no alias for surfaced as a 500. */}
-            {/* Each option carries the history it loads, so the choice and its
-                consequence are read in one place rather than the range moving
-                after the fact and having to be explained. A timeframe with no
-                specified day count shows nothing, because selecting it changes
-                no range -- see lib/chartSetup.ts. */}
-            {ALL_CHART_TIMEFRAMES.map((tf) => {
-              const days = daysFor(tf)
-              return (
-                <SelectItem key={tf} value={tf}>
-                  <span className="flex items-center gap-2 w-full">
-                    <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
-                    {tf}
-                    {days != null && (
-                      <span className="ml-auto pl-3 text-[11px] tabular-nums
-                                       text-muted-foreground">
-                        {days}D
-                      </span>
-                    )}
-                  </span>
-                </SelectItem>
-              )
-            })}
+            {/* The interval only. The day count each timeframe loads is still
+                applied when one is picked (see onValueChange above) -- it is
+                just no longer printed beside the option. */}
+            {ALL_CHART_TIMEFRAMES.map((tf) => (
+              <SelectItem key={tf} value={tf}>
+                <span className="flex items-center gap-2 w-full">
+                  <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
+                  {tf}
+                </span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </Section>

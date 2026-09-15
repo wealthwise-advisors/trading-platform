@@ -30,7 +30,7 @@ import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
-import { daysFor, startDateForTimeframes } from "@/lib/chartSetup"
+import { ALL_CHART_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -127,9 +127,9 @@ const TZ_CHOICES = [
   { short: "PT", label: "Pacific", offset: -180 },
 ] as const
 
-const ALL_TIMEFRAMES = [
-  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h",
-] as const
+// The shared list, not a second copy of it -- a timeframe added in
+// lib/chartSetup.ts would otherwise appear on Backtest and not here.
+const ALL_TIMEFRAMES = ALL_CHART_TIMEFRAMES
 const TF_MINUTES: Record<string, number> = {
   "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
   "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60,
@@ -1589,15 +1589,6 @@ export function ReplayPage() {
                 >
                   <TfGlyph />
                   {tf}
-                  {/* The history this timeframe loads, on the button that
-                      loads it. Hidden once `ready`: the range is fixed for the
-                      running session, so the number would no longer describe
-                      what pressing this does. */}
-                  {!ready && daysFor(tf) != null && (
-                    <span className="ml-1 text-[10px] tabular-nums opacity-55">
-                      {daysFor(tf)}D
-                    </span>
-                  )}
                   {on && <Check size={12} strokeWidth={3.2} className="ml-0.5" />}
                   {needsRefetch && <span className="ml-0.5 opacity-60">↻</span>}
                 </button>
