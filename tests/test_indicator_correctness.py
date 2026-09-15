@@ -21,6 +21,7 @@ several times of day, so an edge case at the open, mid-session or near the close
 cannot hide.
 """
 
+import math
 from datetime import date, time
 
 import pandas as pd
@@ -708,14 +709,15 @@ def test_the_provider_builds_the_same_bars_the_replay_does(tf, anchor):
 
 
 # ---------------------------------------------------------------------------
-# RSI and Stochastic.
+# RSI and StochRSI.
 #
 # Neither is derived from VWAP, but both are read off the same rows and both are
 # division-based, so they belong in the same standing check.
 #
-# Note on scope: the app has no StochRSI and no MFI. There is a Stochastic
-# oscillator (%K/%D), which is a different indicator. Nothing below pretends
-# otherwise, and if either is added later it needs its own case here.
+# StochRSI replaced the price Stochastic (%K/%D) on 2026-09-15. It is a different
+# calculation -- the stochastic formula applied to RSI values, not to price -- so
+# it has its own longhand case below rather than inheriting the old one. The app
+# has no MFI yet; when it is added it needs its own case here.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("period", [2, 13])
@@ -748,60 +750,97 @@ def test_rsi_matches_a_longhand_wilder_recompute(tf, period):
         assert abs(got.iloc[i] - mine[i]) < 1e-6, f"{tf} RSI{period} bar {i}"
 
 
+def _rsi_longhand(close, period):
+    """Wilder RSI written out, seeded on the first delta, with the app's zero-loss
+    guard (a zero average loss is treated as 1e-10), NaN until `period` deltas."""
+    nan = float("nan")
+    out = [nan]
+    ag = al = None
+    n = 0
+    for i in range(1, len(close)):
+        d = close[i] - close[i - 1]
+        g, ls = max(d, 0.0), max(-d, 0.0)
+        ag = g if ag is None else ag + (g - ag) / period
+        al = ls if al is None else al + (ls - al) / period
+        n += 1
+        if n < period:
+            out.append(nan)
+        else:
+            out.append(100.0 - 100.0 / (1.0 + ag / (al if al != 0 else 1e-10)))
+    return out
+
+
+def _wilder_longhand(values, period):
+    """
+    Wilder smoothing written out: seeded on the first observation, each later
+    observation folds in with weight 1/period, and a missing value decays the
+    running average's weight rather than resetting it -- the documented
+    behaviour of an exponential average with adjust=False and missing values
+    kept in place. NaN until `period` observations have been seen.
+    """
+    nan = float("nan")
+    alpha = 1.0 / period
+    out, w, old_wt, nobs = [], None, 1.0, 0
+    for x in values:
+        obs = not math.isnan(x)
+        nobs += obs
+        if w is None:
+            if obs:
+                w = x
+        else:
+            old_wt *= (1.0 - alpha)
+            if obs:
+                w = (old_wt * w + alpha * x) / (old_wt + alpha)
+                old_wt = 1.0
+        out.append(w if (w is not None and nobs >= period) else nan)
+    return out
+
+
+# Three different stretches of the saw-tooth, so the check does not rest on one
+# particular run of prices.
+@pytest.mark.parametrize("offset", [0, 137, 911])
 @pytest.mark.parametrize("tf", TIMEFRAMES)
-def test_stochastic_k_and_d_match_a_longhand_recompute(tf):
+def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
     """
-    The SLOW stochastic, which is what calc_stoch returns:
-
-        raw %K = 100 * (C - LL) / (HH - LL)   over k_period
-        %K     = SMA(raw %K, smooth_k)        <- the returned "K", already smoothed
-        %D     = SMA(%K, d_period)
-
-    Worth stating explicitly because the first version of this test compared the
-    returned K against RAW %K and called the app wrong by up to 1.5 points. The
-    app was right; the expectation was a fast stochastic. A zero-width range
-    yields NaN rather than a made-up midpoint, so those bars are skipped.
+    StochRSI as confirmed: RSI(14, Wilder's) -> stochastic over 14 RSI values ->
+    FullK = Wilder's(raw, 3), FullD = Wilder's(FullK, 3). Every step is recomputed
+    here in plain Python -- nothing below calls the app's RSI, rolling window or
+    smoothing -- and the warm-up (which bars are empty) must agree too, not only
+    the values.
     """
-    from src.analysis.indicators import calc_stoch
+    from src.analysis.indicators import calc_stochrsi
 
     anchor = time(18, 0)
-    k_period, smooth_k, d_period = 14, 3, 3
-    df = resample_ohlcv(_minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 20), tf, anchor)
-    if len(df) < k_period + smooth_k + d_period:
-        pytest.skip(f"{tf}: fewer bars than the stochastic lookback needs")
+    rsi_len, stoch_len, k_p, d_p = 14, 14, 3, 3
+    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 48 + offset).iloc[offset:]
+    df = resample_ohlcv(minute, tf, anchor)
 
-    k, d = calc_stoch(df["high"], df["low"], df["close"], k_period, smooth_k, d_period)
+    k, d = calc_stochrsi(df["close"], rsi_len, stoch_len, k_p, d_p)
 
-    hi, lo, cl = df["high"].tolist(), df["low"].tolist(), df["close"].tolist()
     nan = float("nan")
-
-    raw_k = []
-    for i in range(len(df)):
-        if i + 1 < k_period:
-            raw_k.append(nan)
+    rsi = _rsi_longhand(df["close"].tolist(), rsi_len)
+    raw = []
+    for i in range(len(rsi)):
+        window = rsi[i + 1 - stoch_len: i + 1] if i + 1 >= stoch_len else None
+        if window is None or any(math.isnan(v) for v in window):
+            raw.append(nan)
             continue
-        hh, ll = max(hi[i + 1 - k_period: i + 1]), min(lo[i + 1 - k_period: i + 1])
-        raw_k.append(nan if hh == ll else 100.0 * (cl[i] - ll) / (hh - ll))
+        hh, ll = max(window), min(window)
+        raw.append(nan if hh == ll else 100.0 * (rsi[i] - ll) / (hh - ll))
+    mine_k = _wilder_longhand(raw, k_p)
+    mine_d = _wilder_longhand(mine_k, d_p)
 
-    def sma(series, n):
-        out = []
-        for i in range(len(series)):
-            w = series[i + 1 - n: i + 1]
-            out.append(nan if i + 1 < n or any(pd.isna(x) for x in w) else sum(w) / n)
-        return out
-
-    mine_k = sma(raw_k, smooth_k)
-    mine_d = sma(mine_k, d_period)
-
+    compared = 0
     for i in range(len(df)):
-        if pd.isna(k.iloc[i]) or pd.isna(mine_k[i]):
-            continue
-        assert abs(k.iloc[i] - mine_k[i]) < 1e-6, f"{tf} %K bar {i}"
-
-    for i in range(len(df)):
-        if pd.isna(d.iloc[i]) or pd.isna(mine_d[i]):
-            continue
-        assert abs(d.iloc[i] - mine_d[i]) < 1e-6, f"{tf} %D bar {i}"
+        for got, mine, name in ((k.iloc[i], mine_k[i], "FullK"), (d.iloc[i], mine_d[i], "FullD")):
+            assert pd.isna(got) == math.isnan(mine), f"{tf} +{offset} {name} bar {i}: empty on one side only"
+            if math.isnan(mine):
+                continue
+            assert abs(got - mine) < 1e-6, f"{tf} +{offset} {name} bar {i}: app {got} vs longhand {mine}"
+            assert -1e-9 <= got <= 100 + 1e-9, f"{tf} +{offset} {name} bar {i}: {got} outside 0..100"
+            compared += 1
+    if compared == 0:
+        pytest.skip(f"{tf}: too few bars for StochRSI to warm up")
 
 
 # ---------------------------------------------------------------------------

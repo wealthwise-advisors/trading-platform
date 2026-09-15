@@ -1,5 +1,5 @@
 // Full-fidelity port of ui/components/charts.py's candlestick_with_trades().
-// Indicator math (EMA/RSI/Stoch) is computed server-side (api/serializers.py)
+// Indicator math (EMA/RSI/StochRSI) is computed server-side (api/serializers.py)
 // and delivered as arrays — this component only handles the plotting/shape/
 // annotation logic, mirroring the Python trace-by-trace.
 
@@ -38,14 +38,10 @@ interface CandlestickChartProps {
   zigzag: ZigZagResponse
   trades: TradeRecord[]
   showZigzag?: boolean
-  // Stochastic is off by default -- TradingView-style layouts give the
-  // price panel the bulk of the vertical space and keep only RSI as the
-  // default secondary panel; Stochastic stays fully wired up (data,
-  // hlines, swing-label mirroring) and can be turned back on via this prop
-  // without any of that logic needing to be rebuilt.
-  showStochastic?: boolean
+  /** Initial state of the StochRSI panel's checkbox. */
+  showStochRsi?: boolean
   // Session VWAP with ±2σ bands, overlaid on the price panel. Same
-  // opt-out shape as showStochastic. Draws nothing when the dataset has no
+  // opt-out shape as showStochRsi. Draws nothing when the dataset has no
   // volume, regardless of this flag.
   showVwap?: boolean
   /** Initial state of the Volume Profile toggle. The profile itself is
@@ -79,7 +75,7 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
 
 export function CandlestickChart({
   symbol, strategyName, bars, indicators, zigzag, trades, showZigzag = true,
-  showStochastic = true, showVwap = true, showVolumeProfile = true,
+  showStochRsi = true, showVwap = true, showVolumeProfile = true,
 }: CandlestickChartProps) {
   // react-plotly.js's useResizeHandler only listens for window "resize"
   // events -- it never fires when the CONTAINER grows/shrinks from a pure
@@ -134,7 +130,7 @@ export function CandlestickChart({
     setVpPlots((s) => ({ ...s, [key]: { ...s[key], ...patch } }))
   // Oscillator panels as opt-in studies, the way VWAP and Volume Profile work.
   // Each starts as it was drawn before; MFI is listed but cannot be switched on.
-  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stoch: showStochastic, rsi13: true, mfi: false })
+  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: false })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)
@@ -267,13 +263,10 @@ export function CandlestickChart({
   })()
   const candleBars = resampleOHLC(bars, displayBucketMinutes(bars, displayWindowMs))
 
-  // Row layout is built dynamically: price is always row 1; RSI(2) and
-  // RSI(13) are always the secondary rows; Stochastic is spliced in between
-  // them (back on by default -- it was switched off for one round and that
-  // turned out to be wrong, it's expected to always be visible). Axis
-  // suffixes ("", "2", "3", "4") are assigned by position, so RSI(13)
-  // automatically shifts down a slot if Stochastic is ever turned off again.
-  // Only the oscillators switched on get a row. See lib/oscillatorStudies.ts.
+  // Row layout is built dynamically: price is always row 1, then one row per
+  // oscillator switched on, in the order RSI(2) / StochRSI / RSI(13). Axis
+  // suffixes are assigned by position, so a row below one that is switched off
+  // moves up a slot. See lib/oscillatorStudies.ts.
   const indicatorRows = activeOscillatorRows(osc)
   const totalRows = 1 + indicatorRows.length
   const axisSuffix = ["", "2", "3", "4"].slice(0, totalRows)
@@ -689,7 +682,7 @@ export function CandlestickChart({
     const nearestIdx = (ts: string) => byTime.get(ts) ?? 0
     const borderColors = zz10.map((p) => (p.type === "H" ? RED : GREEN))
     const panelValues: Record<(typeof indicatorRows)[number], (number | null)[]> = {
-      rsi2: indicators.rsi2, stoch: indicators.stoch_k, rsi13: indicators.rsi13,
+      rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
     }
     for (const name of indicatorRows) {
       const suffix = suffixOf(name)
@@ -746,7 +739,7 @@ export function CandlestickChart({
     } as unknown as Data)
   }
 
-  // ── RSI(2) / Stochastic / RSI(13) -- a trace only for a row that exists ──
+  // ── RSI(2) / StochRSI / RSI(13) -- a trace only for a row that exists ──
   // suffixOf() on a row that is not drawn resolves to the PRICE axis, which
   // would lay an oscillator line across the candles. So every trace is guarded
   // by its row actually being in indicatorRows.
@@ -758,15 +751,16 @@ export function CandlestickChart({
       xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
     } as unknown as Data)
   }
-  if (indicatorRows.includes("stoch")) {
-    const stochSuffix = suffixOf("stoch")
+  if (indicatorRows.includes("stochrsi")) {
+    // StochRSI's two plots, named as the reference platform names them.
+    const stochRsiSuffix = suffixOf("stochrsi")
     data.push(
-      { type: "scatter", mode: "lines", x: t, y: indicators.stoch_k, name: "%K",
-        line: { color: "#4fc3f7", width: 1.1 }, hovertemplate: "%%K: %{y:.1f}<extra></extra>",
-        xaxis: `x${stochSuffix}`, yaxis: `y${stochSuffix}` } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: indicators.stoch_d, name: "%D",
-        line: { color: "#f48fb1", width: 1.0, dash: "dot" }, hovertemplate: "%%D: %{y:.1f}<extra></extra>",
-        xaxis: `x${stochSuffix}`, yaxis: `y${stochSuffix}` } as unknown as Data,
+      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_k, name: "FullK",
+        line: { color: "#4fc3f7", width: 1.1 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
+        xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
+      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_d, name: "FullD",
+        line: { color: "#f48fb1", width: 1.0, dash: "dot" }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
+        xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
     )
   }
   if (indicatorRows.includes("rsi13")) {
@@ -943,11 +937,10 @@ export function CandlestickChart({
     spikethickness: 1, spikedash: "dot" as const, spikecolor: "#6b6b8a",
   }
 
-  // Axis definitions are built per active row (price + whichever indicator
-  // rows are on) instead of 4 hardcoded blocks, so RSI(13) correctly takes
-  // over the bottom-axis role (tick labels, automargin) whenever Stochastic
-  // is off and it becomes the last row.
-  const rowTitles: Record<string, string> = { price: "Price", rsi2: "RSI(2)", stoch: "Stoch", rsi13: "RSI(13)" }
+  // Axis definitions are built per active row (price + whichever oscillator
+  // rows are on) instead of hardcoded blocks, so whichever row is last takes
+  // over the bottom-axis role (tick labels, automargin).
+  const rowTitles: Record<string, string> = { price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)" }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
   const rangebreaks = useMemo(() => computeRangebreaks(bars.map((b) => b.t)), [bars])

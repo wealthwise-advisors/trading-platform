@@ -25,8 +25,8 @@ const ITEMS: LegendItem[] = [
   { label: "Short Entry", color: RED, marker: "triangle-down" },
   { label: "Exit", color: GREEN, marker: "x" },
   { label: "RSI(2)", color: "#ce93d8", marker: "line" },
-  { label: "%K", color: "#4fc3f7", marker: "line" },
-  { label: "%D", color: "#f48fb1", dash: true, marker: "line" },
+  { label: "FullK", color: "#4fc3f7", marker: "line" },
+  { label: "FullD", color: "#f48fb1", dash: true, marker: "line" },
   { label: "RSI(13)", color: "#ffcc80", marker: "line" },
 ]
 

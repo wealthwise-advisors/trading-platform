@@ -12,7 +12,7 @@ import pandas as pd
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
 from src.analysis.indicators import (
-    calc_rsi, calc_stoch, calc_vwap_bands, calc_volume_profile,
+    calc_rsi, calc_stochrsi, calc_vwap_bands, calc_volume_profile,
 )
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 
@@ -109,7 +109,10 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
     ema21 = df["close"].ewm(span=21, adjust=False).mean()
     rsi2 = calc_rsi(df["close"], 2)
     rsi13 = calc_rsi(df["close"], 13)
-    stoch_k, stoch_d = calc_stoch(df["high"], df["low"], df["close"])
+    # StochRSI (RSI 14, K 3, D 3, Wilder's). The exported report calls the same
+    # function with the same defaults; tests/test_oscillator_report_parity.py
+    # holds the two to identical values.
+    stochrsi_k, stochrsi_d = calc_stochrsi(df["close"])
     # Session VWAP ±2σ. Comes back all-NaN when the dataset carries no volume
     # column, which serialises to nulls -- the chart then simply has nothing to
     # draw rather than plotting a fake line.
@@ -128,8 +131,8 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
         "ema21": series_to_list(ema21),
         "rsi2": series_to_list(rsi2),
         "rsi13": series_to_list(rsi13),
-        "stoch_k": series_to_list(stoch_k),
-        "stoch_d": series_to_list(stoch_d),
+        "stochrsi_k": series_to_list(stochrsi_k),
+        "stochrsi_d": series_to_list(stochrsi_d),
         "vwap": series_to_list(vwap),
         "vwap_upper": series_to_list(vwap_u),
         "vwap_lower": series_to_list(vwap_l),

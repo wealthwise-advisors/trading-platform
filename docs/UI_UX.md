@@ -82,7 +82,7 @@ stacked rows:
 |---|---|---|
 | 1 | 55% | Candles, EMA(9), EMA(21), ZigZag overlay, trade markers |
 | 2 | 15% | RSI(2), with threshold lines |
-| 3 | 15% | Stochastic %K/%D |
+| 3 | 15% | StochRSI FullK/FullD |
 | 4 | 15% | RSI(13) |
 
 The exported HTML report uses the same layout from `api/report/charts.py`.

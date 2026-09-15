@@ -19,7 +19,7 @@ import plotly.io as pio
 from src.backtesting.results import BacktestResults
 from api.report.charts import (
     _calc_zigzag, _assign_swing_labels, _calc_nested_zigzag, _SWING_COLORS,
-    _calc_rsi, _calc_stoch,
+    _calc_rsi, _calc_stochrsi,
 )
 from datetime import time as time_type
 from src.analysis.indicators import calc_vwap_bands, calc_volume_profile, compute_rangebreaks
@@ -123,7 +123,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     trades = results.trades
     ts_set = set(df.index)
 
-    # ── 4-panel layout: Price / RSI(2) / Stoch / RSI(13) ────────────────────
+    # ── 4-panel layout: Price / RSI(2) / StochRSI / RSI(13) ─────────────────
     # Price row raised 0.55 -> 0.68 and spacing tightened 0.035 -> 0.028, to
     # match web/src/components/charts/CandlestickChart.tsx. The dashboard and
     # this exported report draw the same chart from separate code, so a change
@@ -278,15 +278,17 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     fig.add_hline(y=94, line=dict(color=_R, width=0.8, dash="dash"), row=2, col=1)
     fig.add_hline(y=2,  line=dict(color=_G, width=0.8, dash="dash"), row=2, col=1)
 
-    # Row 3 — Stochastic
-    stoch_k, stoch_d = _calc_stoch(df["high"], df["low"], df["close"])
+    # Row 3 — StochRSI (RSI 14, K 3, D 3, Wilder's). The same function and
+    # defaults as api/serializers.py, which feeds the live chart; see
+    # tests/test_oscillator_report_parity.py.
+    stochrsi_k, stochrsi_d = _calc_stochrsi(df["close"])
     fig.add_trace(go.Scatter(
-        x=df.index, y=stoch_k, line=dict(color="#42a5f5", width=1.2),
-        name="%K", showlegend=True,
+        x=df.index, y=stochrsi_k, line=dict(color="#42a5f5", width=1.2),
+        name="FullK", showlegend=True,
     ), row=3, col=1)
     fig.add_trace(go.Scatter(
-        x=df.index, y=stoch_d, line=dict(color="#ef9a9a", width=1.0, dash="dash"),
-        name="%D", showlegend=True,
+        x=df.index, y=stochrsi_d, line=dict(color="#ef9a9a", width=1.0, dash="dash"),
+        name="FullD", showlegend=True,
     ), row=3, col=1)
     fig.add_hline(y=80, line=dict(color=_R, width=0.8, dash="dash"), row=3, col=1)
     fig.add_hline(y=20, line=dict(color=_G, width=0.8, dash="dash"), row=3, col=1)
@@ -369,8 +371,8 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
             ), row=1, col=1)
 
-            # Swing circles on RSI(2), Stoch, RSI(13) panels
-            for row_n, row_y in [(2, rsi2), (3, stoch_k), (4, rsi13)]:
+            # Swing circles on RSI(2), StochRSI, RSI(13) panels
+            for row_n, row_y in [(2, rsi2), (3, stochrsi_k), (4, rsi13)]:
                 vals = row_y.reindex(zz.index)
                 fig.add_trace(go.Scatter(
                     x=zz.index, y=vals, mode="markers+text",

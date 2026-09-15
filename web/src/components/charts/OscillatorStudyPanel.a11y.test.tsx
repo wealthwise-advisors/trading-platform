@@ -16,14 +16,14 @@ const UNDECIDABLE_IN_JSDOM = {
 }
 
 describe("Oscillator study panel", () => {
-  it.each(["rsi2", "stoch", "rsi13", "mfi"] as OscKey[])("%s: labelled dialog, passes axe", async (study) => {
+  it.each(["rsi2", "stochrsi", "rsi13", "mfi"] as OscKey[])("%s: labelled dialog, passes axe", async (study) => {
     const { container } = render(<OscillatorStudyPanel study={study} onClose={() => {}} />)
     expect(screen.getByRole("dialog", { name: `${OSC_STUDIES[study].label} settings` })).toBeTruthy()
     const r = await axe.run(container, { rules: UNDECIDABLE_IN_JSDOM })
     expect(r.violations.map((v) => v.id)).toEqual([])
   })
 
-  it.each([["rsi2", "94", "2"], ["stoch", "80", "20"], ["rsi13", "70", "30"]])(
+  it.each([["rsi2", "94", "2"], ["stochrsi", "80", "20"], ["rsi13", "70", "30"]])(
     "%s shows the levels actually drawn (%s / %s), read-only",
     (study, ob, os) => {
       render(<OscillatorStudyPanel study={study as OscKey} onClose={() => {}} />)

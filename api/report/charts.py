@@ -8,7 +8,7 @@ from src.backtesting.results import BacktestResults
 from datetime import time as time_type
 from src.analysis.indicators import (
     calc_rsi as _calc_rsi,
-    calc_stoch as _calc_stoch,
+    calc_stochrsi as _calc_stochrsi,
     calc_vwap_bands,
     calc_volume_profile,
     compute_rangebreaks,
@@ -102,7 +102,7 @@ def candlestick_with_trades(
 ) -> go.Figure:
     """
     Candlestick + EMA overlays + trade markers.
-    Sub-panels (replacing volume): RSI(2) | Stoch K/D | RSI(13)
+    Sub-panels (replacing volume): RSI(2) | StochRSI FullK/FullD | RSI(13)
     """
     full_df = results.price_data  # full dataset — used for trade marker lookup
     df = full_df.copy()
@@ -118,7 +118,7 @@ def candlestick_with_trades(
     # Use full_df for indicators so ZigZag pivot alignment is exact
     rsi2   = _calc_rsi(full_df["close"], 2)
     rsi13  = _calc_rsi(full_df["close"], 13)
-    stk, std = _calc_stoch(full_df["high"], full_df["low"], full_df["close"])
+    stk, std = _calc_stochrsi(full_df["close"])
     # Downsample indicators to match the (possibly thinned) candle series
     rsi2  = rsi2.reindex(df.index, method="nearest")
     rsi13 = rsi13.reindex(df.index, method="nearest")
@@ -443,16 +443,16 @@ def candlestick_with_trades(
         fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
                       row=2, col=1)
 
-    # ── Row 3: Stochastic K & D ───────────────────────────────────────
+    # ── Row 3: StochRSI FullK & FullD ─────────────────────────────────
     fig.add_trace(go.Scatter(
         x=df.index, y=stk,
-        name="%K", line=dict(color="#4fc3f7", width=1.4),
-        hovertemplate="%%K: %{y:.1f}<extra></extra>",
+        name="FullK", line=dict(color="#4fc3f7", width=1.4),
+        hovertemplate="FullK: %{y:.1f}<extra></extra>",
     ), row=3, col=1)
     fig.add_trace(go.Scatter(
         x=df.index, y=std,
-        name="%D", line=dict(color="#f48fb1", width=1.2, dash="dot"),
-        hovertemplate="%%D: %{y:.1f}<extra></extra>",
+        name="FullD", line=dict(color="#f48fb1", width=1.2, dash="dot"),
+        hovertemplate="FullD: %{y:.1f}<extra></extra>",
     ), row=3, col=1)
     for lvl, color in [(80, _RED), (20, _GREEN)]:
         fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),

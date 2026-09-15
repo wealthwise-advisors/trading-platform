@@ -52,7 +52,7 @@ tape while it does. Built at **WealthWise Advisors**.
 ## 👀 Quick Look
 
 The analysis engine on real ES data — price with swing structure and EMAs, then
-RSI(2), Stochastic and RSI(13) beneath it, all on one shared time axis. Entries,
+RSI(2), StochRSI and RSI(13) beneath it, all on one shared time axis. Entries,
 exits and every labelled swing are drawn by the same code the backtest scored.
 
 <div align="center">
@@ -572,7 +572,7 @@ How a change actually travels from an idea to the live URL.
 - ➜ [`swing_identification`](src/analysis/swing_identification.py) · [`zigzag`](src/analysis/zigzag.py) — the skeleton of a trend
 - ➜ [`chart_patterns`](src/analysis/chart_patterns.py) — triangles, wedges, head-and-shoulders
 - ➜ [`candlestick_patterns`](src/analysis/candlestick_patterns.py) — single and multi-bar formations
-- ➜ [`indicators`](src/analysis/indicators.py) — RSI, Stochastic, moving averages, VWAP
+- ➜ [`indicators`](src/analysis/indicators.py) — RSI, StochRSI, moving averages, VWAP
 - ➜ [`regime`](src/analysis/regime.py) — trending, ranging or volatile
 
 </td></tr>

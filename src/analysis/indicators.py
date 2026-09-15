@@ -2,9 +2,10 @@
 indicators.py
 =============
 
-RSI and Stochastic calculations, extracted verbatim from
-ui/components/charts.py so the FastAPI backend and the Streamlit app share one
-implementation instead of forking it. No logic changes from the originals.
+RSI and StochRSI calculations, shared by the API (which feeds the live chart)
+and the exported HTML report, so the two cannot compute different values.
+RSI was extracted verbatim from ui/components/charts.py. StochRSI replaced the
+price Stochastic on 2026-09-15.
 """
 
 from __future__ import annotations
@@ -25,14 +26,35 @@ def calc_rsi(close: pd.Series, period: int) -> pd.Series:
     return 100.0 - (100.0 / (1.0 + rs))
 
 
-def calc_stoch(high: pd.Series, low: pd.Series, close: pd.Series,
-               k_period: int = 14, smooth_k: int = 3, d_period: int = 3):
-    lowest = low.rolling(k_period).min()
-    highest = high.rolling(k_period).max()
+def _wilder(series: pd.Series, period: int) -> pd.Series:
+    """Wilder's smoothing: the same recursion calc_rsi uses for its averages."""
+    return series.ewm(alpha=1.0 / period, min_periods=period, adjust=False).mean()
+
+
+def calc_stochrsi(close: pd.Series, rsi_length: int = 14, stoch_length: int = 14,
+                  k_period: int = 3, d_period: int = 3):
+    """
+    Stochastic RSI: the stochastic formula applied to RSI values, not to price.
+
+        RSI    = calc_rsi(close, rsi_length)                            Wilder's
+        raw    = 100 * (RSI - min RSI) / (max RSI - min RSI)   over stoch_length
+        FullK  = Wilder's(raw, k_period)
+        FullD  = Wilder's(FullK, d_period)
+
+    Settings confirmed 2026-09-15: RSI length 14, K period 3, D period 3,
+    Wilder's averaging for the RSI and for K/D, levels 80/20. The stochastic
+    lookback was not given; it is the standard default, equal to the RSI length.
+
+    A window where RSI did not move has no range, so raw is NaN there rather than
+    an invented midpoint -- the rule the price Stochastic this replaced used too.
+    """
+    rsi = calc_rsi(close, rsi_length)
+    lowest = rsi.rolling(stoch_length).min()
+    highest = rsi.rolling(stoch_length).max()
     rng = (highest - lowest).replace(0, np.nan)
-    raw_k = 100.0 * (close - lowest) / rng
-    k = raw_k.rolling(smooth_k).mean()   # Slow %K
-    d = k.rolling(d_period).mean()        # Slow %D
+    raw = 100.0 * (rsi - lowest) / rng
+    k = _wilder(raw, k_period)
+    d = _wilder(k, d_period)
     return k, d
 
 

@@ -1,8 +1,7 @@
 // The settings panel behind each oscillator's gear.
 //
-// Read-only for now, and says so: it lists the inputs and level lines the
-// chart actually draws. Making them editable waits on the open decisions about
-// the RSI levels and StochRSI; MFI says plainly that it is not built. A panel
+// Read-only, and says so: it lists the inputs and level lines the chart
+// actually draws. An unbuilt study says plainly that it is not built. A panel
 // of dead inputs would suggest otherwise.
 
 import { useEffect, useRef } from "react"
@@ -59,7 +58,7 @@ export function OscillatorStudyPanel({
             )}
           </dl>
           <p className="text-[11px] text-muted-foreground">
-            These are the values drawn on the chart, shown read-only until the levels are confirmed.
+            These are the values drawn on the chart.
           </p>
         </>
       ) : (

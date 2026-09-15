@@ -121,8 +121,9 @@ export interface IndicatorSeries {
   ema21: (number | null)[]
   rsi2: (number | null)[]
   rsi13: (number | null)[]
-  stoch_k: (number | null)[]
-  stoch_d: (number | null)[]
+  /** StochRSI (RSI 14, K 3, D 3, Wilder's): FullK and FullD. */
+  stochrsi_k: (number | null)[]
+  stochrsi_d: (number | null)[]
   /** Session VWAP and its ±2σ bands. All-null when the dataset has no volume
    *  column — VWAP is undefined without volume, so the chart draws nothing
    *  rather than a fabricated line. Optional so an older cached response

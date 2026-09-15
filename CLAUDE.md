@@ -505,7 +505,7 @@ only by the "Export Report" button). Both render 4 rows:
 |-----|---------|
 | 1 (55%) | Candlestick + EMA(9) + EMA(21) + ZigZag overlay + trade markers |
 | 2 (15%) | RSI(2) — purple, lines at 94 (red) and 2 (green) |
-| 3 (15%) | Stochastic %K/%D — lines at 80/20 |
+| 3 (15%) | StochRSI FullK/FullD (RSI 14, K 3, D 3, Wilder's) — lines at 80/20 |
 | 4 (15%) | RSI(13) — amber, lines at 70/30 |
 
 ### ZigZag overlay

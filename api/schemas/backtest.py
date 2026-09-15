@@ -91,8 +91,8 @@ class IndicatorSeries(BaseModel):
     ema21: list[Optional[float]]
     rsi2: list[Optional[float]]
     rsi13: list[Optional[float]]
-    stoch_k: list[Optional[float]]
-    stoch_d: list[Optional[float]]
+    stochrsi_k: list[Optional[float]]
+    stochrsi_d: list[Optional[float]]
 
 
 class PriceDataResponse(BaseModel):
