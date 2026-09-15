@@ -10,7 +10,7 @@ type AnyTrace = {
   marker?: { symbol: string; size: number; color: string }
 }
 
-describe("defaults are the chart as it was drawn before this change", () => {
+describe("defaults", () => {
   const d = defaultPlotStyles()
 
   it("POC solid sky, value area dashed light sky, profile edges dotted slate", () => {
@@ -24,12 +24,17 @@ describe("defaults are the chart as it was drawn before this change", () => {
     expect(plotToggles(d)).toEqual({ poc: true, vah: true, val: true, profileHigh: false, profileLow: false })
   })
 
-  it("lines, width 1 drawn at the previous 1.2px, no bubbles, no titles", () => {
+  it("lines, width 1 drawn at the previous 1.2px", () => {
     for (const k of PLOT_ORDER) {
       expect(d[k].drawAs).toBe("line")
       expect(lineWidthPx(d[k].width)).toBe(1.2)
-      expect(d[k].bubble).toBe(false)
-      expect(d[k].title).toBe(false)
+    }
+  })
+
+  it("Show bubble and Show title on for every plot, as in the reference dialog", () => {
+    for (const k of PLOT_ORDER) {
+      expect(d[k].bubble).toBe(true)
+      expect(d[k].title).toBe(true)
     }
   })
 
@@ -62,7 +67,7 @@ describe("normalizePlotStyles", () => {
     expect(s.vah.width).toBe(1)
     expect(s.vah.color).toBe("#abcdef")
     expect(s.vah.bubble).toBe(true)
-    expect(s.vah.title).toBe(false)
+    expect(s.vah.title).toBe(true)   // invalid value -> the default
   })
 
   it("rejects colours that are not six-digit hex", () => {
@@ -118,16 +123,20 @@ describe("bubbleAnnotation", () => {
 describe("titleEntries", () => {
   const values = { poc: 100, profileHigh: 105, profileLow: 95, vah: 102.5, val: null }
 
-  it("only shown, titled plots with a value, in tab order", () => {
+  it("with the defaults: shown plots with a value, in tab order", () => {
+    // ProfileHigh/Low are hidden and VALow has no value, so only two remain.
+    expect(titleEntries(defaultPlotStyles(), values)).toBe("POC: 100.00  ·  VAHigh: 102.50")
+  })
+
+  it("a plot with its title switched off is left out", () => {
     const s = defaultPlotStyles()
-    s.poc.title = true
-    s.vah.title = true
-    s.val.title = true          // no value -> left out
-    s.profileHigh.title = true  // hidden -> left out
-    expect(titleEntries(s, values)).toBe("POC: 100.00  ·  VAHigh: 102.50")
+    s.poc.title = false
+    expect(titleEntries(s, values)).toBe("VAHigh: 102.50")
   })
 
   it("empty when no plot asks for a title", () => {
-    expect(titleEntries(defaultPlotStyles(), values)).toBe("")
+    const s = defaultPlotStyles()
+    for (const k of PLOT_ORDER) s[k].title = false
+    expect(titleEntries(s, values)).toBe("")
   })
 })

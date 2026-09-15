@@ -4,14 +4,16 @@
  * Show bubble / Show title -- the tab strip of the reference platform's study
  * dialog.
  *
- * DEFAULTS REPRODUCE THE CHART AS IT WAS
- * --------------------------------------
- * Before this module the five levels were hard-coded: POC solid #38bdf8, VAHigh
- * and VALow dashed #7dd3fc, ProfileHigh and ProfileLow dotted #94a3b8 and
- * hidden, all at 1.2px, with no bubble and no title. DEFAULT_PLOT_STYLES is that
- * exact look, so opening the dialog and changing nothing changes nothing.
- * Whether bubbles, titles or plot names should default to ON is an open
- * question and is deliberately not decided here.
+ * DEFAULTS
+ * --------
+ * Colours, styles, widths and visibility are the levels as they were always
+ * drawn: POC solid #38bdf8, VAHigh and VALow dashed #7dd3fc, ProfileHigh and
+ * ProfileLow dotted #94a3b8 and hidden, all at 1.2px.
+ *
+ * Show bubble and Show title default to ON for every plot, as confirmed against
+ * the reference study dialog, where both are ticked. They only draw for a plot
+ * that is itself shown, so the hidden profile edges add nothing. Whether plot
+ * names and input names should also default to on is still open.
  *
  * WHAT IS NOT HERE
  * ----------------
@@ -58,11 +60,11 @@ export interface PlotStyle {
 export type PlotStyles = Record<PlotKey, PlotStyle>
 
 const DEFAULTS: PlotStyles = {
-  poc:         { show: true,  drawAs: "line", style: "solid", width: 1, color: "#38bdf8", bubble: false, title: false },
-  profileHigh: { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: false, title: false },
-  profileLow:  { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: false, title: false },
-  vah:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: false, title: false },
-  val:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: false, title: false },
+  poc:         { show: true,  drawAs: "line", style: "solid", width: 1, color: "#38bdf8", bubble: true, title: true },
+  profileHigh: { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
+  profileLow:  { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
+  vah:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
+  val:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
 }
 
 /** A fresh copy every call, so no caller can mutate the defaults. */

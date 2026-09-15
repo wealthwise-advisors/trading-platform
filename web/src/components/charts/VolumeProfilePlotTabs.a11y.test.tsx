@@ -43,14 +43,15 @@ describe("Volume Profile plot tabs", () => {
     }
   })
 
-  it("opens on POC showing today's look", () => {
+  it("opens on POC showing the defaults", () => {
     setup()
     expect((screen.getByLabelText("Draw as") as HTMLSelectElement).value).toBe("line")
     expect((screen.getByLabelText("Style") as HTMLSelectElement).value).toBe("solid")
     expect((screen.getByLabelText("Width") as HTMLSelectElement).value).toBe("1")
     expect((screen.getByLabelText("Colour") as HTMLInputElement).value).toBe("#38bdf8")
     expect((screen.getByLabelText("Show plot") as HTMLInputElement).checked).toBe(true)
-    expect((screen.getByLabelText("Show bubble") as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByLabelText("Show bubble") as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText("Show title") as HTMLInputElement).checked).toBe(true)
   })
 
   it("reports each edit against the plot whose tab is open", () => {
@@ -69,7 +70,7 @@ describe("Volume Profile plot tabs", () => {
     fireEvent.change(screen.getByLabelText("Colour"), { target: { value: "#ff8800" } })
     expect(onChange).toHaveBeenLastCalledWith("vah", { color: "#ff8800" })
     fireEvent.click(screen.getByLabelText("Show bubble"))
-    expect(onChange).toHaveBeenLastCalledWith("vah", { bubble: true })
+    expect(onChange).toHaveBeenLastCalledWith("vah", { bubble: false })
   })
 
   it("disables Style when a plot is drawn as markers", () => {
