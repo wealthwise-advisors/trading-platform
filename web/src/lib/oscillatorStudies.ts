@@ -1,22 +1,22 @@
 /**
  * The oscillator panels under the price chart -- RSI(2), StochRSI, RSI(13) and
- * MFI -- as studies a user switches on and off, the way VWAP and Volume Profile
- * already work.
+ * MoneyFlowIndex -- as studies a user switches on and off, the way VWAP and
+ * Volume Profile already work.
  *
  * Every number below is what the chart draws: the calculations in
  * src/analysis/indicators.py and the level lines. RSI(2) at 94/2 and RSI(13) at
  * 70/30 are confirmed final and deliberately differ from the reference
  * platform's 5 and 55/45. StochRSI (RSI 14, K 3, D 3, Wilder's, 80/20) replaced
- * the price Stochastic on 2026-09-15. MFI is listed but not yet built.
+ * the price Stochastic, and MoneyFlowIndex (length 20, 80/20) was added, both on
+ * 2026-09-15.
  */
 
 export type OscKey = "rsi2" | "stochrsi" | "rsi13" | "mfi"
-/** The oscillators that can occupy a chart row today. */
-export type OscRowKey = Exclude<OscKey, "mfi">
+/** The oscillators that can occupy a chart row. */
+export type OscRowKey = OscKey
 
-/** Strip order, matching the reference stack top to bottom. */
+/** Strip and row order, matching the reference stack top to bottom. */
 export const OSC_ORDER: OscKey[] = ["rsi2", "stochrsi", "rsi13", "mfi"]
-const ROW_ORDER: OscRowKey[] = ["rsi2", "stochrsi", "rsi13"]
 
 export interface StudyInfo {
   label: string
@@ -48,8 +48,9 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
     levels: { overbought: 70, oversold: 30 },
   },
   mfi: {
-    label: "MFI", available: false, inputs: [], levels: null,
-    pending: "Money Flow Index is not built yet.",
+    label: "MFI", available: true,
+    inputs: [["length", "20"], ["price", "(H+L+C)/3"], ["needs volume", "yes -- empty without it"]],
+    levels: { overbought: 80, oversold: 20 },
   },
 }
 
@@ -60,7 +61,7 @@ export type OscToggles = Record<OscKey, boolean>
  * if its toggle is somehow on -- there is nothing to plot in it.
  */
 export function activeOscillatorRows(toggles: OscToggles): OscRowKey[] {
-  return ROW_ORDER.filter((k) => toggles[k] && OSC_STUDIES[k].available)
+  return OSC_ORDER.filter((k) => toggles[k] && OSC_STUDIES[k].available)
 }
 
 /**

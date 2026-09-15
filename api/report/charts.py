@@ -9,6 +9,7 @@ from datetime import time as time_type
 from src.analysis.indicators import (
     calc_rsi as _calc_rsi,
     calc_stochrsi as _calc_stochrsi,
+    calc_mfi as _calc_mfi,
     calc_vwap_bands,
     calc_volume_profile,
     compute_rangebreaks,
@@ -102,7 +103,7 @@ def candlestick_with_trades(
 ) -> go.Figure:
     """
     Candlestick + EMA overlays + trade markers.
-    Sub-panels (replacing volume): RSI(2) | StochRSI FullK/FullD | RSI(13)
+    Sub-panels (replacing volume): RSI(2) | StochRSI FullK/FullD | RSI(13) | MFI
     """
     full_df = results.price_data  # full dataset — used for trade marker lookup
     df = full_df.copy()
@@ -119,19 +120,22 @@ def candlestick_with_trades(
     rsi2   = _calc_rsi(full_df["close"], 2)
     rsi13  = _calc_rsi(full_df["close"], 13)
     stk, std = _calc_stochrsi(full_df["close"])
+    mfi = _calc_mfi(full_df["high"], full_df["low"], full_df["close"],
+                    full_df["volume"] if "volume" in full_df else None)
     # Downsample indicators to match the (possibly thinned) candle series
     rsi2  = rsi2.reindex(df.index, method="nearest")
     rsi13 = rsi13.reindex(df.index, method="nearest")
     stk   = stk.reindex(df.index, method="nearest")
     std   = std.reindex(df.index, method="nearest")
+    mfi   = mfi.reindex(df.index, method="nearest")
 
     # ── Layout: 4 rows ────────────────────────────────────────────────
     # Kept in step with report.py and the React CandlestickChart -- see the
     # note there. Three separate implementations draw this same 4-panel view.
     fig = make_subplots(
-        rows=4, cols=1,
+        rows=5, cols=1,
         shared_xaxes=True,
-        row_heights=[0.68, 0.1067, 0.1067, 0.1067],
+        row_heights=[0.68, 0.08, 0.08, 0.08, 0.08],
         vertical_spacing=0.028,
     )
 
@@ -349,7 +353,7 @@ def candlestick_with_trades(
                     hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
 
-            # ── Same decimal labels mirrored on RSI(2), Stoch, RSI(13) ────
+            # ── Same labels mirrored on RSI(2), StochRSI, RSI(13), MFI ────
             # bfill first: early-session pivots can fall inside an indicator's
             # warm-up window (Stoch needs 14 bars, RSI13 needs 13) where the
             # value is still NaN -- that silently drops the marker and makes
@@ -357,9 +361,10 @@ def candlestick_with_trades(
             rsi2_s  = rsi2.bfill().reindex(zz.index, method="nearest")
             stk_s   = stk.bfill().reindex(zz.index, method="nearest")
             rsi13_s = rsi13.bfill().reindex(zz.index, method="nearest")
+            mfi_s   = mfi.bfill().reindex(zz.index, method="nearest")
             border_colors = [_RED if t == "H" else _GREEN for t in zz["type"]]
 
-            for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s)):
+            for row_n, vals in ((2, rsi2_s), (3, stk_s), (4, rsi13_s), (5, mfi_s)):
                 fig.add_trace(go.Scatter(
                     x=zz.index, y=vals.values,
                     mode="markers+text",
@@ -468,6 +473,18 @@ def candlestick_with_trades(
         fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
                       row=4, col=1)
 
+    # ── Row 5: MoneyFlowIndex ─────────────────────────────────────────
+    # All-NaN without volume, so nothing is drawn; the levels stay.
+    if mfi.notna().any():
+        fig.add_trace(go.Scatter(
+            x=df.index, y=mfi,
+            name="MoneyFlowIndex", line=dict(color="#facc15", width=1.4),
+            hovertemplate="MoneyFlowIndex: %{y:.1f}<extra></extra>",
+        ), row=5, col=1)
+    for lvl, color in [(80, _RED), (20, _GREEN)]:
+        fig.add_hline(y=lvl, line=dict(color=color, dash="dash", width=0.8),
+                      row=5, col=1)
+
     # ── Layout ────────────────────────────────────────────────────────
     _ylabel = dict(font=dict(size=9, color="#8b8ba0"), standoff=4)
     layout = _base_layout(f"{results.symbol} — {results.strategy_name}", height=920)
@@ -480,7 +497,7 @@ def candlestick_with_trades(
     # matching note in report.py. 0.115 of the paper above the row top lands
     # the buttons on the same strip as the modebar.
     _rangebreaks = compute_rangebreaks(df.index)
-    _PRICE_ROW_FRACTION = 0.68 * (1 - 3 * 0.028)
+    _PRICE_ROW_FRACTION = 0.68 * (1 - 4 * 0.028)
     _rangeselector = ({**_RANGE_SELECTOR, "y": 1 + 0.115 / _PRICE_ROW_FRACTION}
                       if _has_swing_headers else _RANGE_SELECTOR)
     layout.update(
@@ -494,20 +511,24 @@ def candlestick_with_trades(
         xaxis2=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         xaxis3=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         xaxis4=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
+        xaxis5=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         yaxis =dict(gridcolor=_GRID, showgrid=True,
                     title=dict(text="Price",   **_ylabel), fixedrange=False),
         yaxis2=dict(gridcolor=_GRID, showgrid=True,
                     title=dict(text="RSI(2)",  **_ylabel), fixedrange=True, range=[0, 100]),
         yaxis3=dict(gridcolor=_GRID, showgrid=True,
-                    title=dict(text="Stoch",   **_ylabel), fixedrange=True, range=[0, 100]),
+                    title=dict(text="StochRSI", **_ylabel), fixedrange=True, range=[0, 100]),
         yaxis4=dict(gridcolor=_GRID, showgrid=True,
                     title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[0, 100]),
+        yaxis5=dict(gridcolor=_GRID, showgrid=True,
+                    title=dict(text="MFI",     **_ylabel), fixedrange=True, range=[0, 100]),
     )
     fig.update_layout(**layout)
     # Reversed overlay axis for the profile; 4x cap keeps it to <= 1/4 width.
     if _vp["prices"]:
         _vmax = max(_vp["volumes"]) or 1
-        fig.update_layout(xaxis5=dict(
+        # Axis 9, not 5: the price row and four oscillator rows use axes 1 to 5.
+        fig.update_layout(xaxis9=dict(
             overlaying="x", side="top", anchor="y",
             range=[_vmax * 4, 0], showgrid=False, zeroline=False,
             showticklabels=False, fixedrange=True,

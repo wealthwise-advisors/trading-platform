@@ -28,6 +28,7 @@ const ITEMS: LegendItem[] = [
   { label: "FullK", color: "#4fc3f7", marker: "line" },
   { label: "FullD", color: "#f48fb1", dash: true, marker: "line" },
   { label: "RSI(13)", color: "#ffcc80", marker: "line" },
+  { label: "MoneyFlowIndex", color: "#facc15", marker: "line" },
 ]
 
 function Swatch({ item }: { item: LegendItem }) {

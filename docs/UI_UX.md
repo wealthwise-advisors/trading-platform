@@ -75,15 +75,16 @@ about to be committed is visible before it is committed.
 
 ## 4. The chart
 
-`web/src/components/charts/CandlestickChart.tsx` (react-plotly.js). Four
-stacked rows:
+`web/src/components/charts/CandlestickChart.tsx` (react-plotly.js). Five
+stacked rows, each oscillator row switched on or off from the chart strip:
 
 | Row | Height | Content |
 |---|---|---|
-| 1 | 55% | Candles, EMA(9), EMA(21), ZigZag overlay, trade markers |
-| 2 | 15% | RSI(2), with threshold lines |
-| 3 | 15% | StochRSI FullK/FullD |
-| 4 | 15% | RSI(13) |
+| 1 | 68% | Candles, EMA(9), EMA(21), ZigZag overlay, trade markers |
+| 2 | 8% | RSI(2), with threshold lines |
+| 3 | 8% | StochRSI FullK/FullD |
+| 4 | 8% | RSI(13) |
+| 5 | 8% | MoneyFlowIndex — empty without volume |
 
 The exported HTML report uses the same layout from `api/report/charts.py`.
 The two are kept in step deliberately: a report that looks different from the

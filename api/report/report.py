@@ -22,7 +22,9 @@ from api.report.charts import (
     _calc_rsi, _calc_stochrsi,
 )
 from datetime import time as time_type
-from src.analysis.indicators import calc_vwap_bands, calc_volume_profile, compute_rangebreaks
+from src.analysis.indicators import (
+    calc_vwap_bands, calc_volume_profile, calc_mfi, compute_rangebreaks,
+)
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
 
@@ -123,15 +125,15 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     trades = results.trades
     ts_set = set(df.index)
 
-    # ── 4-panel layout: Price / RSI(2) / StochRSI / RSI(13) ─────────────────
+    # ── 5-panel layout: Price / RSI(2) / StochRSI / RSI(13) / MFI ───────────
     # Price row raised 0.55 -> 0.68 and spacing tightened 0.035 -> 0.028, to
     # match web/src/components/charts/CandlestickChart.tsx. The dashboard and
     # this exported report draw the same chart from separate code, so a change
     # to one that skips the other leaves the two looking different for the
     # same backtest -- which is exactly what happened on the first pass.
     fig = make_subplots(
-        rows=4, cols=1, shared_xaxes=True,
-        row_heights=[0.68, 0.1067, 0.1067, 0.1067],
+        rows=5, cols=1, shared_xaxes=True,
+        row_heights=[0.68, 0.08, 0.08, 0.08, 0.08],
         vertical_spacing=0.028,
     )
 
@@ -302,6 +304,19 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     fig.add_hline(y=70, line=dict(color=_R, width=0.8, dash="dash"), row=4, col=1)
     fig.add_hline(y=30, line=dict(color=_G, width=0.8, dash="dash"), row=4, col=1)
 
+    # Row 5 — MoneyFlowIndex (length 20, levels 80/20). Needs volume: without a
+    # volume column calc_mfi returns all-NaN and no line is drawn, the same rule
+    # VWAP follows above. The level lines stay, so an empty panel still reads as
+    # MFI rather than as a panel that failed to render.
+    mfi = calc_mfi(df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None)
+    if mfi.notna().any():
+        fig.add_trace(go.Scatter(
+            x=df.index, y=mfi, line=dict(color="#facc15", width=1.2),
+            name="MoneyFlowIndex", showlegend=True,
+        ), row=5, col=1)
+    fig.add_hline(y=80, line=dict(color=_R, width=0.8, dash="dash"), row=5, col=1)
+    fig.add_hline(y=20, line=dict(color=_G, width=0.8, dash="dash"), row=5, col=1)
+
     # ── ZigZag swing overlay ──────────────────────────────────────────────────
     has_headers = False
     try:
@@ -371,8 +386,8 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 hovertemplate="<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
             ), row=1, col=1)
 
-            # Swing circles on RSI(2), StochRSI, RSI(13) panels
-            for row_n, row_y in [(2, rsi2), (3, stochrsi_k), (4, rsi13)]:
+            # Swing circles on RSI(2), StochRSI, RSI(13), MFI panels
+            for row_n, row_y in [(2, rsi2), (3, stochrsi_k), (4, rsi13), (5, mfi)]:
                 vals = row_y.reindex(zz.index)
                 fig.add_trace(go.Scatter(
                     x=zz.index, y=vals, mode="markers+text",
@@ -435,7 +450,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     # paper-sized offset through the row's share keeps "same strip as the
     # modebar" true at any row split. t drops with it: the buttons now sit on
     # the toolbar's row instead of occupying a band of their own.
-    _PRICE_ROW_FRACTION = 0.68 * (1 - 3 * 0.028)
+    _PRICE_ROW_FRACTION = 0.68 * (1 - 4 * 0.028)
     _rangebreaks = compute_rangebreaks(df.index)
     _t = 120 if has_headers else 55
     _rs_y = (1 + 0.115 / _PRICE_ROW_FRACTION) if has_headers else 1.02
@@ -468,15 +483,18 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
         xaxis2=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         xaxis3=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         xaxis4=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
+        xaxis5=dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
         yaxis =dict(gridcolor=_GRID, title=dict(text="Price",   **_ylabel), fixedrange=False),
         yaxis2=dict(gridcolor=_GRID, title=dict(text="RSI(2)",  **_ylabel), fixedrange=True, range=[-5, 105]),
-        yaxis3=dict(gridcolor=_GRID, title=dict(text="Stoch",   **_ylabel), fixedrange=True, range=[-5, 105]),
+        yaxis3=dict(gridcolor=_GRID, title=dict(text="StochRSI", **_ylabel), fixedrange=True, range=[-5, 105]),
         yaxis4=dict(gridcolor=_GRID, title=dict(text="RSI(13)", **_ylabel), fixedrange=True, range=[-5, 105]),
+        yaxis5=dict(gridcolor=_GRID, title=dict(text="MFI",     **_ylabel), fixedrange=True, range=[-5, 105]),
     )
     # Reversed overlay axis for the profile; 4x cap keeps it to <= 1/4 width.
+    # Axis 9, not 5: the price row and four oscillator rows use axes 1 to 5.
     if _vp["prices"]:
         _vmax = max(_vp["volumes"]) or 1
-        fig.update_layout(xaxis5=dict(
+        fig.update_layout(xaxis9=dict(
             overlaying="x", side="top", anchor="y",
             range=[_vmax * 4, 0], showgrid=False, zeroline=False,
             showticklabels=False, fixedrange=True,

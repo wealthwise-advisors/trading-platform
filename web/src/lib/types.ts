@@ -124,6 +124,10 @@ export interface IndicatorSeries {
   /** StochRSI (RSI 14, K 3, D 3, Wilder's): FullK and FullD. */
   stochrsi_k: (number | null)[]
   stochrsi_d: (number | null)[]
+  /** Money Flow Index (length 20). All-null when the dataset has no volume,
+   *  like VWAP. Optional so a cached response from before it existed still
+   *  type-checks. */
+  mfi?: (number | null)[]
   /** Session VWAP and its ±2σ bands. All-null when the dataset has no volume
    *  column — VWAP is undefined without volume, so the chart draws nothing
    *  rather than a fabricated line. Optional so an older cached response

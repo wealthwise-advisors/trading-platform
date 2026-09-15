@@ -12,7 +12,7 @@ import pandas as pd
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
 from src.analysis.indicators import (
-    calc_rsi, calc_stochrsi, calc_vwap_bands, calc_volume_profile,
+    calc_rsi, calc_stochrsi, calc_mfi, calc_vwap_bands, calc_volume_profile,
 )
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 
@@ -113,6 +113,9 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
     # function with the same defaults; tests/test_oscillator_report_parity.py
     # holds the two to identical values.
     stochrsi_k, stochrsi_d = calc_stochrsi(df["close"])
+    # Money Flow Index (length 20). All-NaN without volume, like VWAP below --
+    # the chart then draws no MFI line. The report uses the same call.
+    mfi = calc_mfi(df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None)
     # Session VWAP ±2σ. Comes back all-NaN when the dataset carries no volume
     # column, which serialises to nulls -- the chart then simply has nothing to
     # draw rather than plotting a fake line.
@@ -133,6 +136,7 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
         "rsi13": series_to_list(rsi13),
         "stochrsi_k": series_to_list(stochrsi_k),
         "stochrsi_d": series_to_list(stochrsi_d),
+        "mfi": series_to_list(mfi),
         "vwap": series_to_list(vwap),
         "vwap_upper": series_to_list(vwap_u),
         "vwap_lower": series_to_list(vwap_l),

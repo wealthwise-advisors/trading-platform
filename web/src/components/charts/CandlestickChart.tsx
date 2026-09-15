@@ -129,7 +129,8 @@ export function CandlestickChart({
   const setVpPlot = (key: PlotKey, patch: Partial<PlotStyle>) =>
     setVpPlots((s) => ({ ...s, [key]: { ...s[key], ...patch } }))
   // Oscillator panels as opt-in studies, the way VWAP and Volume Profile work.
-  // Each starts as it was drawn before; MFI is listed but cannot be switched on.
+  // RSI(2), StochRSI and RSI(13) start on. MFI starts off: four oscillator rows
+  // at once are too short to read, which is why each has its own checkbox.
   const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: false })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
@@ -264,12 +265,12 @@ export function CandlestickChart({
   const candleBars = resampleOHLC(bars, displayBucketMinutes(bars, displayWindowMs))
 
   // Row layout is built dynamically: price is always row 1, then one row per
-  // oscillator switched on, in the order RSI(2) / StochRSI / RSI(13). Axis
+  // oscillator switched on, in the order RSI(2) / StochRSI / RSI(13) / MFI. Axis
   // suffixes are assigned by position, so a row below one that is switched off
   // moves up a slot. See lib/oscillatorStudies.ts.
   const indicatorRows = activeOscillatorRows(osc)
   const totalRows = 1 + indicatorRows.length
-  const axisSuffix = ["", "2", "3", "4"].slice(0, totalRows)
+  const axisSuffix = ["", "2", "3", "4", "5"].slice(0, totalRows)
   const rowIndexOf = (name: (typeof indicatorRows)[number]) => 1 + indicatorRows.indexOf(name)
   const suffixOf = (name: (typeof indicatorRows)[number]) => axisSuffix[rowIndexOf(name)]
 
@@ -389,7 +390,7 @@ export function CandlestickChart({
   }
 
   // ── Volume Profile ────────────────────────────────────────────────────
-  // Drawn on its own x-axis (xaxis5) that OVERLAYS the price row rather than
+  // Drawn on its own x-axis (xaxis9) that OVERLAYS the price row rather than
   // taking a subplot column of its own. A column would cost ~15% of the chart
   // width permanently and force the three indicator rows to shrink to match,
   // or they would misalign with the candles above them. Overlaying keeps the
@@ -441,7 +442,8 @@ export function CandlestickChart({
       },
       name: "Volume Profile",
       hovertemplate: "<b>Volume Profile</b><br>%{y:.2f}: %{x:,.0f}<extra></extra>",
-      xaxis: "x5", yaxis: "y", showlegend: true,
+      // Axis 9, not 5: the price row and four oscillator rows use axes 1 to 5.
+      xaxis: "x9", yaxis: "y", showlegend: true,
     } as unknown as Data)
   }
 
@@ -683,6 +685,7 @@ export function CandlestickChart({
     const borderColors = zz10.map((p) => (p.type === "H" ? RED : GREEN))
     const panelValues: Record<(typeof indicatorRows)[number], (number | null)[]> = {
       rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
+      mfi: indicators.mfi ?? [],
     }
     for (const name of indicatorRows) {
       const suffix = suffixOf(name)
@@ -739,7 +742,7 @@ export function CandlestickChart({
     } as unknown as Data)
   }
 
-  // ── RSI(2) / StochRSI / RSI(13) -- a trace only for a row that exists ──
+  // ── RSI(2) / StochRSI / RSI(13) / MFI -- a trace only for a row that exists ──
   // suffixOf() on a row that is not drawn resolves to the PRICE axis, which
   // would lay an oscillator line across the candles. So every trace is guarded
   // by its row actually being in indicatorRows.
@@ -769,6 +772,17 @@ export function CandlestickChart({
       type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)",
       line: { color: "#ffcc80", width: 1.1 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
       xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
+    } as unknown as Data)
+  }
+  // Money Flow Index needs volume. Without it the series is all empty and, like
+  // VWAP, no line is drawn -- the row keeps its 80/20 lines and nothing else.
+  const mfiHasData = (indicators.mfi ?? []).some((v) => v != null)
+  if (indicatorRows.includes("mfi") && mfiHasData) {
+    const mfiSuffix = suffixOf("mfi")
+    data.push({
+      type: "scatter", mode: "lines", x: t, y: indicators.mfi, name: "MoneyFlowIndex",
+      line: { color: "#facc15", width: 1.1 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
+      xaxis: `x${mfiSuffix}`, yaxis: `y${mfiSuffix}`,
     } as unknown as Data)
   }
 
@@ -940,7 +954,7 @@ export function CandlestickChart({
   // Axis definitions are built per active row (price + whichever oscillator
   // rows are on) instead of hardcoded blocks, so whichever row is last takes
   // over the bottom-axis role (tick labels, automargin).
-  const rowTitles: Record<string, string> = { price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)" }
+  const rowTitles: Record<string, string> = { price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)", mfi: "MFI" }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
   const rangebreaks = useMemo(() => computeRangebreaks(bars.map((b) => b.t)), [bars])
@@ -1061,7 +1075,7 @@ export function CandlestickChart({
   // right edge; capped so the histogram occupies at most a third of the width.
   if (vpVisible) {
     const maxVol = Math.max(...vpLocal.volumes, 1)
-    dynamicAxes["xaxis5"] = {
+    dynamicAxes["xaxis9"] = {
       overlaying: "x", side: "top", anchor: "y",
       range: [maxVol * 4, 0],       // reversed; 4x cap => bars use <= 1/4 width
       showgrid: false, zeroline: false, showticklabels: false,
@@ -1203,9 +1217,7 @@ export function CandlestickChart({
 
         {/* Oscillator panels, switched on and configured the same way as VWAP
             and Volume Profile. Switching one off removes its row, handing the
-            space to price and the rest. MFI is listed so the strip matches the
-            reference stack, but it cannot be switched on until it is built --
-            and it says so rather than doing nothing. */}
+            space to price and the rest. */}
         {OSC_ORDER.map((key) => {
           const info = OSC_STUDIES[key]
           return (

@@ -58,6 +58,45 @@ def calc_stochrsi(close: pd.Series, rsi_length: int = 14, stoch_length: int = 14
     return k, d
 
 
+def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
+             volume: pd.Series | None, length: int = 20) -> pd.Series:
+    """
+    Money Flow Index, length 20 by default (confirmed 2026-09-15; levels 80/20).
+
+        typical price  tp   = (high + low + close) / 3
+        money flow     flow = tp * volume
+        positive flow       = flow on bars where tp rose from the previous bar
+        negative flow       = flow on bars where tp fell   (unchanged: neither)
+        MFI                 = 100 * sum(positive) / (sum(positive) + sum(negative))
+                              over the last `length` bars
+
+    Written as a share of total directional flow rather than the textbook
+    100 - 100 / (1 + positive / negative). The two are identical whenever there
+    is any negative flow; the share form gives 100 when there is only buying,
+    and leaves a window with no directional flow at all as NaN instead of
+    dividing by zero. The first bar has no previous typical price, so it is not
+    classified, and the first value appears once `length` bars have been.
+
+    Volume is handled exactly as calc_vwap_bands handles it: no volume column
+    returns all-NaN, and a window whose volume is zero is NaN. MFI is undefined
+    without volume; treating each bar as volume 1 would draw a plausible line
+    that is not MFI. Callers draw nothing for NaN.
+    """
+    empty = pd.Series(np.nan, index=close.index)
+    if volume is None:
+        return empty
+    vol = pd.to_numeric(volume, errors="coerce").astype("float64").fillna(0.0)
+    tp = (high.astype("float64") + low.astype("float64") + close.astype("float64")) / 3.0
+    flow = tp * vol
+    change = tp.diff()
+    positive = flow.where(change > 0, 0.0).where(change.notna())
+    negative = flow.where(change < 0, 0.0).where(change.notna())
+    pos_sum = positive.rolling(length).sum()
+    neg_sum = negative.rolling(length).sum()
+    total = (pos_sum + neg_sum).replace(0, np.nan)
+    return 100.0 * pos_sum / total
+
+
 def calc_vwap_bands(
     high: pd.Series,
     low: pd.Series,

@@ -716,8 +716,9 @@ def test_the_provider_builds_the_same_bars_the_replay_does(tf, anchor):
 #
 # StochRSI replaced the price Stochastic (%K/%D) on 2026-09-15. It is a different
 # calculation -- the stochastic formula applied to RSI values, not to price -- so
-# it has its own longhand case below rather than inheriting the old one. The app
-# has no MFI yet; when it is added it needs its own case here.
+# it has its own longhand case below rather than inheriting the old one. Money
+# Flow Index, added the same day, has its own case too, including what it does
+# when there is no volume.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("period", [2, 13])
@@ -841,6 +842,73 @@ def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
             compared += 1
     if compared == 0:
         pytest.skip(f"{tf}: too few bars for StochRSI to warm up")
+
+
+# Same three stretches of the saw-tooth as StochRSI.
+@pytest.mark.parametrize("offset", [0, 137, 911])
+@pytest.mark.parametrize("tf", TIMEFRAMES)
+def test_money_flow_index_matches_a_longhand_recompute(tf, offset):
+    """
+    MFI(20): typical price (H+L+C)/3, money flow = typical price * volume,
+    positive where typical price rose from the previous bar, negative where it
+    fell, MFI = 100 * positive / (positive + negative) over 20 bars. Recomputed
+    here in plain Python; the warm-up must agree as well as the values.
+    """
+    from src.analysis.indicators import calc_mfi
+
+    anchor = time(18, 0)
+    length = 20
+    minute = _minute_bars(pd.Timestamp("2026-08-11 18:00"), 60 * 48 + offset).iloc[offset:]
+    df = resample_ohlcv(minute, tf, anchor)
+
+    got = calc_mfi(df["high"], df["low"], df["close"], df["volume"], length)
+
+    hi, lo, cl, vo = (df[c].tolist() for c in ("high", "low", "close", "volume"))
+    tp = [(h + low + c) / 3.0 for h, low, c in zip(hi, lo, cl)]
+    pos, neg = [None], [None]            # the first bar has nothing to compare with
+    for i in range(1, len(tp)):
+        flow = tp[i] * vo[i]
+        pos.append(flow if tp[i] > tp[i - 1] else 0.0)
+        neg.append(flow if tp[i] < tp[i - 1] else 0.0)
+
+    nan = float("nan")
+    compared = 0
+    for i in range(len(df)):
+        if i < length:
+            mine = nan
+        else:
+            p = sum(pos[i + 1 - length: i + 1])
+            q = sum(neg[i + 1 - length: i + 1])
+            mine = nan if p + q == 0 else 100.0 * p / (p + q)
+        assert pd.isna(got.iloc[i]) == math.isnan(mine), f"{tf} +{offset} MFI bar {i}: empty on one side only"
+        if math.isnan(mine):
+            continue
+        assert abs(got.iloc[i] - mine) < 1e-6, f"{tf} +{offset} MFI bar {i}: app {got.iloc[i]} vs longhand {mine}"
+        assert -1e-9 <= got.iloc[i] <= 100 + 1e-9
+        compared += 1
+    if compared == 0:
+        pytest.skip(f"{tf}: too few bars for MFI to warm up")
+
+
+def test_money_flow_index_draws_nothing_without_volume():
+    """No volume column, or volume that is all zero: empty throughout, never a
+    line computed as if every bar had volume 1."""
+    from src.analysis.indicators import calc_mfi
+
+    idx = pd.date_range("2026-08-11 18:00", periods=80, freq="5min")
+    close = pd.Series([5000.0 + (i % 7) for i in range(80)], index=idx)
+    assert calc_mfi(close + 1, close - 1, close, None).isna().all()
+    assert calc_mfi(close + 1, close - 1, close, pd.Series(0.0, index=idx)).isna().all()
+
+
+def test_money_flow_index_is_100_when_there_is_only_buying():
+    from src.analysis.indicators import calc_mfi
+
+    idx = pd.date_range("2026-08-11 18:00", periods=60, freq="5min")
+    close = pd.Series([5000.0 + i for i in range(60)], index=idx)
+    mfi = calc_mfi(close + 1, close - 1, close, pd.Series(100.0, index=idx))
+    assert mfi.iloc[:20].isna().all()
+    assert (mfi.iloc[20:] == 100.0).all()
 
 
 # ---------------------------------------------------------------------------

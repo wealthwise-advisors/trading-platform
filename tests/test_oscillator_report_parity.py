@@ -65,6 +65,7 @@ def _empty(v):
     ("FullK", "stochrsi_k"),
     ("FullD", "stochrsi_d"),
     ("RSI(13)", "rsi13"),
+    ("MoneyFlowIndex", "mfi"),
 ])
 def test_report_plots_exactly_what_the_chart_is_sent(live, report_fig, report_name, api_key):
     chart = live[api_key]
@@ -83,6 +84,22 @@ def test_the_price_stochastic_is_gone_from_both(live, report_fig):
     assert "stoch_k" not in live and "stoch_d" not in live
     names = {t.name for t in report_fig.data}
     assert not ({"%K", "%D"} & names), f"report still draws the price Stochastic: {names & {'%K', '%D'}}"
+
+
+def test_mfi_levels_are_80_20_in_the_report(report_fig):
+    levels = sorted(s.y0 for s in report_fig.layout.shapes
+                    if s.type == "line" and s.yref in ("y5", "y5 domain") and s.y0 == s.y1)
+    assert levels == [20, 80], levels
+
+
+def test_without_volume_neither_the_chart_nor_the_report_draws_mfi(results):
+    import copy
+    bare = copy.copy(results)
+    bare.price_data = results.price_data.drop(columns=["volume"])
+    chart = price_data_to_response(bare.price_data)["indicators"]["mfi"]
+    assert chart and all(v is None for v in chart), "chart is sent MFI values without volume"
+    fig = _candlestick_chart(bare)
+    assert not [t for t in fig.data if t.name == "MoneyFlowIndex"], "report draws MFI without volume"
 
 
 def test_stochrsi_levels_are_80_20_in_the_report(report_fig):

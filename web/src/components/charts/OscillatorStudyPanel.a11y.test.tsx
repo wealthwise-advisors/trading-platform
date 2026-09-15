@@ -23,7 +23,7 @@ describe("Oscillator study panel", () => {
     expect(r.violations.map((v) => v.id)).toEqual([])
   })
 
-  it.each([["rsi2", "94", "2"], ["stochrsi", "80", "20"], ["rsi13", "70", "30"]])(
+  it.each([["rsi2", "94", "2"], ["stochrsi", "80", "20"], ["rsi13", "70", "30"], ["mfi", "80", "20"]])(
     "%s shows the levels actually drawn (%s / %s), read-only",
     (study, ob, os) => {
       render(<OscillatorStudyPanel study={study as OscKey} onClose={() => {}} />)
@@ -33,13 +33,6 @@ describe("Oscillator study panel", () => {
       expect(dialog.querySelectorAll("input, select, textarea").length).toBe(0)
     },
   )
-
-  it("MFI says it is not built and shows no values", () => {
-    render(<OscillatorStudyPanel study="mfi" onClose={() => {}} />)
-    const dialog = screen.getByRole("dialog")
-    expect(dialog.textContent).toMatch(/not built yet/)
-    expect(dialog.textContent).not.toMatch(/overbought/)
-  })
 
   it("focuses its close button on open; Escape and the button both close it", () => {
     const onClose = vi.fn()

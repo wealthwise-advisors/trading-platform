@@ -93,6 +93,7 @@ class IndicatorSeries(BaseModel):
     rsi13: list[Optional[float]]
     stochrsi_k: list[Optional[float]]
     stochrsi_d: list[Optional[float]]
+    mfi: list[Optional[float]]
 
 
 class PriceDataResponse(BaseModel):

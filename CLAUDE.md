@@ -498,15 +498,22 @@ Key parameters:
 
 The live candlestick chart is `web/src/components/charts/CandlestickChart.tsx` (React,
 react-plotly.js) -- it's a full-fidelity port of the old `candlestick_with_trades()`.
-The static HTML export version lives at `api/report/charts.py` (same 4-row layout, used
-only by the "Export Report" button). Both render 4 rows:
+The exported report is built by `api/report/report.py` (what the "Export Report"
+button returns); `api/report/charts.py` holds the same layout. All render 5 rows:
 
 | Row | Content |
 |-----|---------|
-| 1 (55%) | Candlestick + EMA(9) + EMA(21) + ZigZag overlay + trade markers |
-| 2 (15%) | RSI(2) — purple, lines at 94 (red) and 2 (green) |
-| 3 (15%) | StochRSI FullK/FullD (RSI 14, K 3, D 3, Wilder's) — lines at 80/20 |
-| 4 (15%) | RSI(13) — amber, lines at 70/30 |
+| 1 (68%) | Candlestick + EMA(9) + EMA(21) + ZigZag overlay + trade markers |
+| 2 (8%) | RSI(2) — purple, lines at 94 (red) and 2 (green) |
+| 3 (8%) | StochRSI FullK/FullD (RSI 14, K 3, D 3, Wilder's) — lines at 80/20 |
+| 4 (8%) | RSI(13) — amber, lines at 70/30 |
+| 5 (8%) | MoneyFlowIndex (length 20) — lines at 80/20; empty without volume |
+
+On the live chart each of the four oscillator rows has its own checkbox and
+settings gear in the chart strip, so a row only takes space when it is on;
+RSI(2), StochRSI and RSI(13) start on and MFI starts off. The exported report
+always draws all five. `tests/test_oscillator_report_parity.py` holds the chart
+and the report to identical values.
 
 ### ZigZag overlay
 

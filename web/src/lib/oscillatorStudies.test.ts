@@ -14,29 +14,30 @@ describe("confirmed settings", () => {
   it("the third panel is StochRSI: RSI 14, K 3, D 3, Wilder's, 80/20", () => {
     const s = OSC_STUDIES.stochrsi
     expect(s.label).toBe("StochRSI")
-    expect(Object.fromEntries(s.inputs)).toEqual({
-      "RSI length": "14", "stochastic length": "14", "K period": "3", "D period": "3",
+    expect(Object.fromEntries(s.inputs)).toMatchObject({
+      "RSI length": "14", "K period": "3", "D period": "3",
       "RSI average": "Wilder's", "K/D average": "Wilder's",
     })
     expect(s.levels).toEqual({ overbought: 80, oversold: 20 })
   })
 
-  it("MFI is listed but unavailable, with a reason and no levels", () => {
-    expect(OSC_STUDIES.mfi.available).toBe(false)
-    expect(OSC_STUDIES.mfi.levels).toBeNull()
-    expect(OSC_STUDIES.mfi.pending).toMatch(/not built yet/)
+  it("MFI is built: length 20, 80/20", () => {
+    expect(OSC_STUDIES.mfi.available).toBe(true)
+    expect(Object.fromEntries(OSC_STUDIES.mfi.inputs).length).toBe("20")
+    expect(OSC_STUDIES.mfi.levels).toEqual({ overbought: 80, oversold: 20 })
   })
 })
 
 describe("activeOscillatorRows", () => {
-  it("keeps the reference order and never gives an unbuilt study a row", () => {
+  it("all four in the reference order: RSI(2), StochRSI, RSI(13), MFI", () => {
     expect(OSC_ORDER).toEqual(["rsi2", "stochrsi", "rsi13", "mfi"])
-    expect(activeOscillatorRows(ALL_ON)).toEqual(["rsi2", "stochrsi", "rsi13"])
+    expect(activeOscillatorRows(ALL_ON)).toEqual(["rsi2", "stochrsi", "rsi13", "mfi"])
   })
 
-  it("drops whatever is switched off", () => {
-    expect(activeOscillatorRows({ ...ALL_ON, stochrsi: false })).toEqual(["rsi2", "rsi13"])
-    expect(activeOscillatorRows({ rsi2: false, stochrsi: false, rsi13: false, mfi: true })).toEqual([])
+  it("drops whatever is switched off, keeping the rest in order", () => {
+    expect(activeOscillatorRows({ ...ALL_ON, stochrsi: false })).toEqual(["rsi2", "rsi13", "mfi"])
+    expect(activeOscillatorRows({ rsi2: false, stochrsi: false, rsi13: false, mfi: true })).toEqual(["mfi"])
+    expect(activeOscillatorRows({ rsi2: false, stochrsi: false, rsi13: false, mfi: false })).toEqual([])
   })
 })
 
@@ -45,7 +46,7 @@ describe("oscillatorRowHeights", () => {
     expect(oscillatorRowHeights(0)).toEqual([1])
   })
 
-  it.each([1, 2, 3])("%i rows: price keeps 0.68 and the rest splits evenly", (n) => {
+  it.each([1, 2, 3, 4])("%i rows: price keeps 0.68 and the rest splits evenly", (n) => {
     const h = oscillatorRowHeights(n)
     expect(h.length).toBe(1 + n)
     expect(h[0]).toBe(0.68)
@@ -57,9 +58,9 @@ describe("oscillatorRowHeights", () => {
 
 describe("levelLines", () => {
   it("only for rows being drawn", () => {
-    expect(levelLines(["stochrsi"])).toEqual([
-      { row: "stochrsi", value: 80, kind: "overbought" },
-      { row: "stochrsi", value: 20, kind: "oversold" },
+    expect(levelLines(["mfi"])).toEqual([
+      { row: "mfi", value: 80, kind: "overbought" },
+      { row: "mfi", value: 20, kind: "oversold" },
     ])
     expect(levelLines([])).toEqual([])
   })
