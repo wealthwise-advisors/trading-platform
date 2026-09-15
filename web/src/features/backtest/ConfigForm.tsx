@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/select"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
-import { startDateForTimeframe } from "@/lib/chartSetup"
+import {
+  ALL_CHART_TIMEFRAMES, startDateForTimeframe,
+} from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -27,7 +29,7 @@ import {
   Section, Panel, Choice, FieldRow, SliderField, ToggleSwitch, QuickPresets,
 } from "./ConfigParts"
 import {
-  Settings2, Database, FileSpreadsheet, LineChart, Radio, 
+  Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock,
   Wallet, Layers, Percent, Play, ChevronsLeft, ChevronsUpDown,
 } from "lucide-react"
 
@@ -202,10 +204,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Interval Picker" accent="iris">
-        <IntervalPicker
+      <Section icon="timeframe" label="Timeframe Selector" accent="iris">
+        <Select
           value={cfg.timeframe}
-          onChange={(v) => {
+          onValueChange={(v) => {
             cfg.setField("timeframe", v)
             // Move the START back, keeping the end date where it is: the
             // preset is "the last N days", and the end is usually the most
@@ -214,6 +216,48 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             //
             // A timeframe with no preset leaves the range untouched rather
             // than falling back to a number nobody chose.
+            const start = startDateForTimeframe(cfg.endDate, v)
+            if (start) cfg.setField("startDate", start)
+          }}
+        >
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          {/* position="popper" opens the list BELOW the box. The default,
+              item-aligned, slides the list up so the current value sits over
+              the box -- which covered this section's own heading and left the
+              SYMBOL heading above it, so the timeframe list read as a symbol
+              list. */}
+          <SelectContent position="popper">
+            {/* Same eleven the Live Replay grid offers. This was five, so a backtest
+                could not use the intervals a replay could -- and asking for one
+                that the provider had no alias for surfaced as a 500. */}
+            {/* The interval only. The day count each timeframe loads is still
+                applied when one is picked (see onValueChange above) -- it is
+                just no longer printed beside the option. */}
+            {ALL_CHART_TIMEFRAMES.map((tf) => (
+              <SelectItem key={tf} value={tf}>
+                <span className="flex items-center gap-2 w-full">
+                  <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
+                  {tf}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Section>
+
+      {/* ── interval picker ──────────────────────────────────────────────── */}
+      {/* A second control for the SAME setting as the Timeframe Selector above,
+          styled after thinkorswim's interval selector: favorites, a custom
+          order, and the day count beside each row. Both read cfg.timeframe, so
+          they always agree, and picking in either one runs the same two steps.
+          Keep this handler identical to the Selector's onValueChange -- if one
+          changes and the other does not, the two controls stop being one
+          setting. */}
+      <Section icon="timeframe" label="Interval Picker" accent="iris">
+        <IntervalPicker
+          value={cfg.timeframe}
+          onChange={(v) => {
+            cfg.setField("timeframe", v)
             const start = startDateForTimeframe(cfg.endDate, v)
             if (start) cfg.setField("startDate", start)
           }}

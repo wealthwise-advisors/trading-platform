@@ -6,8 +6,10 @@
 // same table that already moves the start date when an interval is picked.
 // Favorites holds the starred rows. "Customize list..." reorders and hides rows.
 //
-// Picking a row does exactly what the dropdown this replaces did: it reports
-// the interval, and the caller sets both the interval and its lookback range.
+// It sits BELOW the Timeframe Selector as a second control for the same
+// setting, not a replacement: the caller wires it to cfg.timeframe exactly as
+// the Selector is, so picking a row sets the interval and its lookback range
+// and the two controls always show the same value.
 // Stars, order and hidden rows are per browser and never reach the config or a
 // request -- see lib/intervalPicker.ts for why.
 
