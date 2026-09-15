@@ -597,6 +597,97 @@ input:focus-visible {
   background: transparent;
 }
 
+/* --- 5b. Backtest Config palette ----------------------------------------
+   Requested 2026-09-15: the Backtest Config panel as a professional dark
+   trading terminal. Colour marks meaning; everything else stays neutral grey.
+
+   Scoped to .cfg-scope, which sits on the panel and on every popup it opens
+   (dropdowns, the calendar, the instrument dialog, the interval picker). The
+   Market Grid, the results tabs and the header buttons use the same shared
+   components and render exactly as before: nothing outside .cfg-scope is
+   touched, and the shared components' own source is unchanged.
+
+   Unlayered, so these beat the Tailwind utilities they override without
+   !important. */
+.cfg-scope {
+  --primary: #3b82f6;
+  --ring: #3b82f6;
+  --accent: #60a5fa;
+  --color-primary: var(--primary);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  /* A slider takes its section's colour unless a field sets its own. */
+  --slider-accent: #60a5fa;
+}
+
+/* Sliders: only the filled part of the track and the thumb carry colour, and
+   neither glows. The empty track stays the component's neutral grey. */
+.cfg-scope [data-slot="slider-range"] {
+  background: var(--slider-accent);
+  box-shadow: none;
+}
+.cfg-scope [data-slot="slider-thumb"] {
+  border-color: var(--slider-accent);
+  box-shadow: none;
+  --tw-ring-color: color-mix(in srgb, var(--slider-accent) 35%, transparent);
+}
+
+/* Dropdowns: the chosen row, and its tick, in the restrained blue. */
+.cfg-scope [data-slot="select-item"][data-state="checked"] {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #dbeafe;
+}
+.cfg-scope [data-slot="select-item"] .text-violet-400 { color: #60a5fa; }
+
+/* Tabs (the interval picker's Favorites / Time frame): no gradient, no glow. */
+.cfg-scope [data-slot="tabs-trigger"][data-state="active"],
+.cfg-scope [data-slot="tabs-trigger"][data-active] {
+  background-image: none;
+  background-color: rgba(127, 182, 204, 0.12);
+  border-color: rgba(127, 182, 204, 0.38);
+  box-shadow: none;
+}
+
+/* Inputs: a faint glow on focus only, in blue rather than violet. */
+.cfg-scope [data-slot="input"]:focus-visible {
+  --tw-shadow: 0 0 10px -5px rgba(59, 130, 246, 0.5);
+}
+
+/* Primary buttons (the instrument dialog's Done): blue, no glow. Run Backtest
+   sets its own solid blue with bg-none, so it is left to that. */
+.cfg-scope [data-slot="button"][data-variant="default"]:not(.bg-none) {
+  background-image: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: none;
+}
+.cfg-scope [data-slot="button"][data-variant="default"]:not(.bg-none):hover {
+  box-shadow: none;
+}
+
+/* Secondary buttons (Save, Load): a grey border on hover, no coloured glow. */
+.cfg-scope [data-slot="button"][data-variant="secondary"]:hover {
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: none;
+}
+
+/* Instrument trigger and dialog: the instrument is teal, like its section. */
+.cfg-scope .instr-trigger:hover { border-color: rgba(148, 163, 184, 0.35); }
+.cfg-scope .cat-chip-on {
+  background: rgba(45, 212, 191, 0.10);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #ccfbf1;
+}
+.cfg-scope .instr-row-on { background: rgba(45, 212, 191, 0.08); box-shadow: inset 2px 0 0 #2dd4bf; }
+.cfg-scope .instr-row-on:hover { background: rgba(45, 212, 191, 0.12); }
+.cfg-scope .exch-tag-on { background: rgba(45, 212, 191, 0.16); color: #ccfbf1; }
+
+/* Session hours: the chosen AM / PM as an orange outline, not a filled glow. */
+.cfg-scope .ampm-seg-on {
+  background: rgba(233, 162, 107, 0.10);
+  border-color: rgba(233, 162, 107, 0.55);
+  color: #f3c19b;
+  box-shadow: none;
+}
+
 /* --- 6. Text selection -------------------------------------------------- */
 ::selection {
   background: color-mix(in srgb, var(--primary) 38%, transparent);

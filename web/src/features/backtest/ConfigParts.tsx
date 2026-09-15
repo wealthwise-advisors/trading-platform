@@ -16,7 +16,7 @@
  *     a number you can read at a glance while dragging
  */
 
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { Slider } from "@/components/ui/slider"
 import {
   Database, CandlestickChart, Clock, Target, SlidersHorizontal, ShieldCheck,
@@ -33,19 +33,25 @@ import {
  * A name that lies about its own value is worse than no name: it is the one
  * thing a reader will not think to check.
  *
- * All five are cool. The panel sits over a warm gold photograph, and the whole
- * point of the interface palette is to be the OTHER thing on screen -- an
- * amber heading would have dissolved straight into the background.
+ * The palette is a dark trading terminal's, as requested on 2026-09-15: cool
+ * blue as the main accent, and teal, green, orange and a single small purple
+ * only where they separate one kind of setting from another. No yellow or
+ * gold. The colour marks the heading and its icon; the controls beneath stay
+ * neutral grey, apart from a slider's filled track and thumb. Each value is a
+ * 400-weight tint, bright enough for small bold uppercase text on the panel.
  */
 export type Accent =
-  "iris" | "sky" | "lavender" | "periwinkle" | "indigo"
+  "blue" | "sky" | "teal" | "steel" | "green" | "orange" | "ember" | "violet"
 
-const ACCENT: Record<Accent, string> = {
-  iris:       "text-[#7c6cf5]",   // the primary. Structure: source, timing, strategy.
-  sky:        "text-[#56b6e8]",   // the one cool blue. Reserved for the instrument.
-  lavender:   "text-[#b4a6ff]",   // the numbers you tune.
-  periwinkle: "text-[#8fa6ff]",   // the window being tested.
-  indigo:     "text-[#6b78e8]",   // filters applied on top of the data.
+const ACCENT: Record<Accent, { text: string; hex: string }> = {
+  blue:   { text: "text-[#60a5fa]", hex: "#60a5fa" },  // structure: Timeframe Selector, Capital & Risk
+  sky:    { text: "text-[#38bdf8]", hex: "#38bdf8" },  // where the data comes from
+  teal:   { text: "text-[#2dd4bf]", hex: "#2dd4bf" },  // what and when: Symbol, Date Range
+  steel:  { text: "text-[#7fb6cc]", hex: "#7fb6cc" },  // Interval Picker -- muted, so it reads apart from the Selector
+  green:  { text: "text-[#34d399]", hex: "#34d399" },  // Strategy
+  orange: { text: "text-[#fb923c]", hex: "#fb923c" },  // the numbers you tune
+  ember:  { text: "text-[#e9a26b]", hex: "#e9a26b" },  // Session Hours -- orange, restrained
+  violet: { text: "text-[#a78bfa]", hex: "#a78bfa" },  // ZigZag Swings -- the one purple, kept small
 }
 
 export const SECTION_ICON = {
@@ -73,14 +79,17 @@ interface SectionProps {
  * One labelled group. The heading is the only place a section name is styled, so
  * they cannot diverge.
  */
-export function Section({ icon, label, accent = "iris", children, aside }: SectionProps) {
+export function Section({ icon, label, accent = "blue", children, aside }: SectionProps) {
   const Icon = SECTION_ICON[icon]
+  const { text, hex } = ACCENT[accent]
   return (
-    <section className="space-y-2.5">
+    // --slider-accent: a slider in this section fills in the section's colour
+    // unless the field sets its own (see .cfg-scope in index.css).
+    <section className="space-y-2.5" style={{ "--slider-accent": hex } as CSSProperties}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${ACCENT[accent]}`} aria-hidden />
-          <h3 className={`text-[11px] font-bold uppercase tracking-[0.14em] ${ACCENT[accent]}`}>
+          <Icon className={`h-4 w-4 ${text}`} aria-hidden />
+          <h3 className={`text-[11px] font-bold uppercase tracking-[0.14em] ${text}`}>
             {label}
           </h3>
         </div>
@@ -161,7 +170,7 @@ export function FieldRow({
  * slider pixel by pixel.
  */
 export function SliderField({
-  label, help, value, onChange, min, max, step, dot, format,
+  label, help, value, onChange, min, max, step, dot, color, format,
 }: {
   label: string
   help?: string
@@ -170,12 +179,15 @@ export function SliderField({
   min: number
   max: number
   step: number
-  /** A coloured dot before the label, matching a series on the chart. */
+  /** A coloured dot before the label, marking which series the field sets. */
   dot?: string
+  /** The slider's filled track and thumb. Omitted, the section's colour. */
+  color?: string
   format?: (v: number) => string
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5"
+         style={color ? ({ "--slider-accent": color } as CSSProperties) : undefined}>
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-1.5 text-sm">
           {dot && (
@@ -200,7 +212,7 @@ export function SliderField({
           }}
           className="w-[86px] shrink-0 rounded-lg border border-white/12 bg-white/[0.03]
                      px-3 py-2 text-center text-sm tabular-nums
-                     focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                     focus:border-white/25 focus:outline-none focus:ring-2 focus:ring-blue-400/25"
           aria-label={label}
         />
       </div>
@@ -247,8 +259,8 @@ export function ToggleSwitch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50
-                    disabled:opacity-50 ${checked ? "bg-violet-500" : "bg-white/15"}`}
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50
+                    disabled:opacity-50 ${checked ? "bg-[#2563eb]" : "bg-white/15"}`}
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform
@@ -279,7 +291,7 @@ export function QuickPresets({
           onClick={() => onPick(days)}
           className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1
                      text-[11px] font-medium text-muted-foreground transition-colors
-                     hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-300"
+                     hover:border-teal-400/40 hover:bg-teal-400/10 hover:text-teal-200"
         >
           {label}
         </button>

@@ -156,7 +156,9 @@ export function SavedConfigsPanel() {
             <SelectTrigger className="w-full" aria-label="Saved configurations">
               <SelectValue placeholder="Load saved config…" />
             </SelectTrigger>
-            <SelectContent>
+            {/* cfg-scope: the list opens outside the panel, so it carries the
+                panel's palette itself -- see index.css. */}
+            <SelectContent className="cfg-scope">
               {saved.map((c) => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>

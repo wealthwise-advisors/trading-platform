@@ -41,7 +41,7 @@ function IntervalRow({
 }) {
   const range = rangeLabel(tf)
   return (
-    <li className={cn("flex items-center gap-1 rounded-md", selected && "bg-violet-500/15")}>
+    <li className={cn("flex items-center gap-1 rounded-md", selected && "bg-[#7fb6cc]/10")}>
       <button
         type="button"
         aria-label={rowName(tf)}
@@ -51,13 +51,13 @@ function IntervalRow({
                    hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
       >
         <span aria-hidden className="w-9 shrink-0 rounded bg-white/[0.06] px-1 py-px text-center
-                                     text-[11px] font-semibold tabular-nums text-violet-200">
+                                     text-[11px] font-semibold tabular-nums text-slate-200">
           {tf}
         </span>
         {/* TOS reads range first: "2 D : 1m". An interval with no specified day
             count shows its name alone rather than a number nobody chose. */}
         <span aria-hidden className="flex-1 tabular-nums">{range ? `${range} : ${tf}` : tf}</span>
-        {selected && <Check aria-hidden className="h-3.5 w-3.5 text-violet-300" />}
+        {selected && <Check aria-hidden className="h-3.5 w-3.5 text-[#7fb6cc]" />}
       </button>
       <button
         type="button"
@@ -123,7 +123,7 @@ export function IntervalPicker({
                      dark:bg-input/30 dark:hover:bg-input/50"
         >
           <span className="flex items-center gap-2">
-            <Clock aria-hidden className="h-3.5 w-3.5 text-violet-400/70" />
+            <Clock aria-hidden className="h-3.5 w-3.5 text-[#7fb6cc]/80" />
             {value}
           </span>
           <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
@@ -136,7 +136,7 @@ export function IntervalPicker({
           side="bottom"
           align="start"
           sideOffset={4}
-          className="z-50 w-(--radix-popover-trigger-width) min-w-64 rounded-xl border border-white/10
+          className="cfg-scope z-50 w-(--radix-popover-trigger-width) min-w-64 rounded-xl border border-white/10
                      bg-[#0d1420] p-1.5 text-popover-foreground shadow-2xl shadow-black/60 ring-1
                      ring-black/40 outline-none"
         >
@@ -187,7 +187,7 @@ export function IntervalPicker({
                 <button
                   type="button"
                   onClick={() => setView("list")}
-                  className="rounded px-2 py-0.5 text-xs font-semibold text-violet-300 hover:text-violet-200
+                  className="rounded px-2 py-0.5 text-xs font-semibold text-[#7fb6cc] hover:text-[#a9d2e0]
                              outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                 >
                   Done

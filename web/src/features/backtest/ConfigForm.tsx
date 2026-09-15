@@ -42,6 +42,17 @@ const SOURCE_META: Record<string, { Icon: typeof Database; note: string }> = {
 }
 
 
+/**
+ * A strategy parameter's slider colour, where the name says what it is: an
+ * overbought level in red and an oversold level in green, the colours the
+ * chart draws those two lines in. Anything else takes the section's orange.
+ */
+function paramColor(name: string): string | undefined {
+  if (/overbought/i.test(name)) return "#f87171"
+  if (/oversold/i.test(name)) return "#34d399"
+  return undefined
+}
+
 /** `onCollapse` is display-only: it hides the panel, and changes nothing about
  *  the configuration or the request. Omitted, the chevron is not rendered. */
 export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
@@ -127,12 +138,14 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
   })
 
   return (
-    <div className="space-y-5">
+    // cfg-scope: this panel's palette, and the same class on every popup it
+    // opens -- see "Backtest Config palette" in index.css.
+    <div className="cfg-scope space-y-5">
       {/* ── panel header ─────────────────────────────────────────────────── */}
       <header className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
-                         border border-violet-400/25 bg-violet-500/10">
-          <Settings2 className="h-5 w-5 text-violet-300" aria-hidden />
+                         border border-blue-400/25 bg-blue-500/10">
+          <Settings2 className="h-5 w-5 text-blue-300" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold leading-tight">Backtest Config</h2>
@@ -154,10 +167,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <div className="h-px bg-white/8" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
-      <Section icon="source" label="Data Source" accent="iris">
+      <Section icon="source" label="Data Source" accent="sky">
         <Select value={cfg.dataSource} onValueChange={(v) => cfg.setField("dataSource", v)}>
           <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectContent className="cfg-scope">
             {(dataSources ?? []).map((ds) => {
               const d = SOURCE_META[ds.id] ?? { Icon: Database, note: "" }
               return (
@@ -177,7 +190,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {cfg.dataSource === "schwab" && <SchwabAuthWidget />}
 
       {/* ── symbol ───────────────────────────────────────────────────────── */}
-      <Section icon="symbol" label="Symbol" accent="sky">
+      <Section icon="symbol" label="Symbol" accent="teal">
         {/* A dropdown was fine at five symbols. Schwab offers twenty-one across
             five asset classes, which is a list you hunt rather than scan --
             hence a searchable dialog with the same row markup inside. */}
@@ -200,11 +213,12 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           value={cfg.symbol}
           onSelect={(v) => cfg.setField("symbol", v)}
           sourceLabel={(dataSources ?? []).find((d) => d.id === cfg.dataSource)?.label}
+          className="cfg-scope"
         />
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe Selector" accent="iris">
+      <Section icon="timeframe" label="Timeframe Selector" accent="blue">
         <Select
           value={cfg.timeframe}
           onValueChange={(v) => {
@@ -226,7 +240,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               the box -- which covered this section's own heading and left the
               SYMBOL heading above it, so the timeframe list read as a symbol
               list. */}
-          <SelectContent position="popper">
+          <SelectContent position="popper" className="cfg-scope">
             {/* Same eleven the Live Replay grid offers. This was five, so a backtest
                 could not use the intervals a replay could -- and asking for one
                 that the provider had no alias for surfaced as a 500. */}
@@ -236,7 +250,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             {ALL_CHART_TIMEFRAMES.map((tf) => (
               <SelectItem key={tf} value={tf}>
                 <span className="flex items-center gap-2 w-full">
-                  <Clock className="h-3.5 w-3.5 text-violet-400/70" aria-hidden />
+                  <Clock className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                   {tf}
                 </span>
               </SelectItem>
@@ -253,7 +267,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           Keep this handler identical to the Selector's onValueChange -- if one
           changes and the other does not, the two controls stop being one
           setting. */}
-      <Section icon="timeframe" label="Interval Picker" accent="iris">
+      <Section icon="timeframe" label="Interval Picker" accent="steel">
         <IntervalPicker
           value={cfg.timeframe}
           onChange={(v) => {
@@ -265,7 +279,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}
-      <Section icon="strategy" label="Strategy" accent="iris">
+      <Section icon="strategy" label="Strategy" accent="green">
         <Select
           value={cfg.strategyId}
           onValueChange={(v) => {
@@ -275,7 +289,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           }}
         >
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectContent className="cfg-scope">
             {(strategies ?? []).map((s) => {
               return (
                 <SelectItem key={s.id} value={s.id}>
@@ -292,12 +306,13 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── strategy parameters ──────────────────────────────────────────── */}
       {currentStrategy && currentStrategy.params.length > 0 && (
-        <Section icon="params" label="Strategy Parameters" accent="lavender">
+        <Section icon="params" label="Strategy Parameters" accent="orange">
           <Panel>
             {currentStrategy.params.map((p) => (
               <SliderField
                 key={p.name}
                 label={p.label}
+                color={paramColor(p.name)}
                 help={`Range ${p.min}–${p.max}, step ${p.step} · default ${p.default}`}
                 value={cfg.params[p.name] ?? p.default}
                 onChange={(v) => cfg.setParam(p.name, v)}
@@ -315,17 +330,17 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       )}
 
       {/* ── capital & risk ───────────────────────────────────────────────── */}
-      <Section icon="capital" label="Capital & Risk" accent="lavender">
+      <Section icon="capital" label="Capital & Risk" accent="blue">
         <Panel>
-          <FieldRow icon={<Wallet className="h-4 w-4 text-violet-300" />} label="Initial Capital ($)">
+          <FieldRow icon={<Wallet className="h-4 w-4 text-[#60a5fa]" />} label="Initial Capital ($)">
             <Input type="number" step={10000} value={cfg.initialCapital}
                    onChange={(e) => cfg.setField("initialCapital", Number(e.target.value))} />
           </FieldRow>
-          <FieldRow icon={<Layers className="h-4 w-4 text-violet-300" />} label="Contracts per Trade">
+          <FieldRow icon={<Layers className="h-4 w-4 text-[#2dd4bf]" />} label="Contracts per Trade">
             <Input type="number" min={1} max={10} value={cfg.contractsPerTrade}
                    onChange={(e) => cfg.setField("contractsPerTrade", Number(e.target.value))} />
           </FieldRow>
-          <FieldRow icon={<Percent className="h-4 w-4 text-violet-300" />} label="Commission / Contract ($)">
+          <FieldRow icon={<Percent className="h-4 w-4 text-[#fb7185]" />} label="Commission / Contract ($)">
             <Input type="number" step={0.25} value={cfg.commission}
                    onChange={(e) => cfg.setField("commission", Number(e.target.value))} />
           </FieldRow>
@@ -333,17 +348,17 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── date range ───────────────────────────────────────────────────── */}
-      <Section icon="dates" label="Date Range" accent="periwinkle">
+      <Section icon="dates" label="Date Range" accent="teal">
         <Panel>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Start Date</Label>
-              <DateField label="Start date" value={cfg.startDate}
+              <DateField label="Start date" value={cfg.startDate} tone="teal" popoverClassName="cfg-scope"
                          onChange={(v) => cfg.setField("startDate", v)} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">End Date</Label>
-              <DateField label="End date" value={cfg.endDate}
+              <DateField label="End date" value={cfg.endDate} tone="teal" popoverClassName="cfg-scope"
                          onChange={(v) => cfg.setField("endDate", v)} />
             </div>
           </div>
@@ -391,7 +406,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── session hours ────────────────────────────────────────────────── */}
-      <Section icon="session" label="Session Hours (EST)" accent="indigo">
+      <Section icon="session" label="Session Hours (EST)" accent="ember">
         <Panel>
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
@@ -402,7 +417,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             label="24 hours"
             hint="(keep every bar — crypto, pre/post-market)"
           />
-          <div className={`grid grid-cols-2 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}>
+          {/* --primary here is Session Hours' restrained orange: the AM / PM
+              toggle and the hover border inside TimeField draw in primary. */}
+          <div className={`grid grid-cols-2 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}
+               style={{ "--primary": "#e9a26b" } as React.CSSProperties}>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
               <TimeField value={cfg.sessionStart} disabled={cfg.session24h}
@@ -420,11 +438,12 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── zigzag ───────────────────────────────────────────────────────── */}
-      <Section icon="zigzag" label="ZigZag Swings" accent="indigo">
+      <Section icon="zigzag" label="ZigZag Swings" accent="violet">
         <Panel>
-          {/* The dots match the chart's dotted lines exactly -- #f0c040 for the
-              3-leg series and #2196f3 for the 10-leg -- so it is clear which
-              slider moves which line.
+          {/* The dots tell the two sliders apart. The 10-leg dot is the chart's
+              #2196f3. The 3-leg dot is the section's purple rather than the
+              chart's #f0c040 line: the config palette carries no yellow or gold
+              (2026-09-15), so the help text names the line's colour instead.
 
               Range from a measured sweep on ES 5m (see src/analysis/zigzag.py):
               at 0.05% (~3.9pt) a session yields ~4-5 minor pivots per major
@@ -433,8 +452,8 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               against a units bug that made every value 100x weaker than it read. */}
           <SliderField
             label="3-Leg Deviation %"
-            dot="#f0c040"
-            help="Minimum move, as a percentage, before a new 3-leg swing is recorded. Matches the yellow dotted line on the chart."
+            dot="#a78bfa"
+            help="Minimum move, as a percentage, before a new 3-leg swing is recorded. Drawn on the chart as the yellow dotted line."
             value={cfg.zigzagDev3}
             onChange={(v) => cfg.setField("zigzagDev3", v)}
             min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
@@ -442,6 +461,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           <SliderField
             label="10-Leg Deviation %"
             dot="#2196f3"
+            color="#2196f3"
             help="Minimum move, as a percentage, before a new 10-leg swing is recorded. Matches the blue dotted line on the chart."
             value={cfg.zigzagDev10}
             onChange={(v) => cfg.setField("zigzagDev10", v)}
@@ -452,9 +472,11 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── run ──────────────────────────────────────────────────────────── */}
       <Button
-        className="w-full h-12 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8]
+        // bg-none and hover:shadow-lg: the Button's default variant paints a
+        // violet gradient and glow over any background colour set here.
+        className="w-full h-12 rounded-xl bg-none bg-[#2563eb] hover:bg-[#1d4ed8]
                    text-white text-base font-semibold
-                   shadow-lg shadow-blue-900/40 transition-colors"
+                   shadow-lg shadow-blue-900/40 hover:shadow-lg transition-colors"
         size="lg"
         disabled={runMutation.isPending || !rangeIsValid}
         onClick={() => runMutation.mutate()}

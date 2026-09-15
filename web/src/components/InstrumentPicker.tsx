@@ -48,7 +48,7 @@ const CATEGORIES: { id: string; label: string; match: (s: SymbolMeta) => boolean
 ]
 
 export function InstrumentPicker({
-  open, onOpenChange, symbols, value, onSelect, sourceLabel,
+  open, onOpenChange, symbols, value, onSelect, sourceLabel, className,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
@@ -57,6 +57,8 @@ export function InstrumentPicker({
   onSelect: (symbol: string) => void
   /** Name of the data source this list came from. */
   sourceLabel?: string
+  /** Added to the dialog, which renders outside the caller's own elements. */
+  className?: string
 }) {
   const [q, setQ] = useState("")
   const [cat, setCat] = useState("all")
@@ -107,7 +109,8 @@ export function InstrumentPicker({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title="Select instrument"
-                     description="Search and choose the instrument to run against">
+                     description="Search and choose the instrument to run against"
+                     className={className}>
         {/* search */}
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="relative">

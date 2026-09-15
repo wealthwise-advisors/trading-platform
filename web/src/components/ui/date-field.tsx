@@ -50,6 +50,28 @@ function monthGrid(year: number, month: number): (Date | null)[] {
   return cells
 }
 
+/**
+ * The field's accent. Violet is the default and what every existing caller
+ * gets, unchanged; the Backtest Config panel asks for teal, its Date Range
+ * colour. The class names are written out in full so Tailwind finds them.
+ */
+const TONES = {
+  violet: {
+    trigger: "hover:border-violet-500/40 focus-visible:ring-violet-500/40",
+    icon: "text-violet-400",
+    selected: "bg-violet-500 text-white hover:bg-violet-500",
+    today: "ring-1 ring-violet-500/50",
+    todayButton: "hover:border-violet-500/40 hover:text-violet-300",
+  },
+  teal: {
+    trigger: "hover:border-teal-400/40 focus-visible:ring-teal-400/40",
+    icon: "text-teal-400",
+    selected: "bg-teal-700 text-white hover:bg-teal-700",
+    today: "ring-1 ring-teal-400/50",
+    todayButton: "hover:border-teal-400/40 hover:text-teal-300",
+  },
+} as const
+
 interface Props {
   value: string
   onChange: (iso: string) => void
@@ -57,9 +79,15 @@ interface Props {
   label: string
   disabled?: boolean
   className?: string
+  tone?: keyof typeof TONES
+  /** Added to the calendar popup, which renders outside the field's parent. */
+  popoverClassName?: string
 }
 
-export function DateField({ value, onChange, label, disabled, className }: Props) {
+export function DateField({
+  value, onChange, label, disabled, className, tone = "violet", popoverClassName,
+}: Props) {
+  const t = TONES[tone]
   const [open, setOpen] = React.useState(false)
   const selected = parseISO(value)
   // The month on show. Starts at the selected date, and follows it when the value
@@ -87,12 +115,12 @@ export function DateField({ value, onChange, label, disabled, className }: Props
           className={cn(
             "flex h-9 w-full items-center gap-2 rounded-lg border border-input",
             "bg-transparent px-2.5 text-sm transition-colors",
-            "hover:border-violet-500/40 focus:outline-none focus-visible:ring-2",
-            "focus-visible:ring-violet-500/40 disabled:opacity-50",
+            "focus:outline-none focus-visible:ring-2 disabled:opacity-50",
+            t.trigger,
             className,
           )}
         >
-          <CalendarDays className="h-4 w-4 shrink-0 text-violet-400" aria-hidden />
+          <CalendarDays className={cn("h-4 w-4 shrink-0", t.icon)} aria-hidden />
           <span className="min-w-0 flex-1 truncate text-left tabular-nums">
             {pretty(value)}
           </span>
@@ -108,8 +136,8 @@ export function DateField({ value, onChange, label, disabled, className }: Props
         <PopoverPrimitive.Content
           align="start"
           sideOffset={6}
-          className="z-50 w-[260px] rounded-xl border border-white/10 bg-[#0d1420] p-3
-                     shadow-2xl shadow-black/60"
+          className={cn("z-50 w-[260px] rounded-xl border border-white/10 bg-[#0d1420] p-3",
+                        "shadow-2xl shadow-black/60", popoverClassName)}
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" onClick={() => shift(-1)} aria-label="Previous month"
@@ -143,8 +171,8 @@ export function DateField({ value, onChange, label, disabled, className }: Props
                   className={cn(
                     "rounded-md py-1.5 text-sm tabular-nums transition-colors",
                     "hover:bg-white/[0.08]",
-                    isSelected && "bg-violet-500 text-white hover:bg-violet-500",
-                    !isSelected && isToday && "ring-1 ring-violet-500/50",
+                    isSelected && t.selected,
+                    !isSelected && isToday && t.today,
                   )}
                 >
                   {d.getUTCDate()}
@@ -156,9 +184,8 @@ export function DateField({ value, onChange, label, disabled, className }: Props
           <button
             type="button"
             onClick={() => { onChange(todayISO); setOpen(false) }}
-            className="mt-2 w-full rounded-lg border border-white/10 py-1.5 text-xs
-                       text-muted-foreground transition-colors
-                       hover:border-violet-500/40 hover:text-violet-300"
+            className={cn("mt-2 w-full rounded-lg border border-white/10 py-1.5 text-xs",
+                          "text-muted-foreground transition-colors", t.todayButton)}
           >
             Today
           </button>
