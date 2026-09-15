@@ -1,8 +1,8 @@
 /**
  * Per-plot styling for the Volume Profile study: POC, ProfileHigh, ProfileLow,
- * VAHigh and VALow, each with Draw as / Style / Width / Colour and Show plot /
- * Show bubble / Show title -- the tab strip of the reference platform's study
- * dialog.
+ * VAHigh and VALow, each with Values / Draw as / Style / Width / Colour and
+ * Show plot / Show bubble / Show title -- the tab strip of the reference
+ * platform's study dialog.
  *
  * DEFAULTS
  * --------
@@ -12,14 +12,14 @@
  *
  * Show bubble and Show title default to ON for every plot, as confirmed against
  * the reference study dialog, where both are ticked. They only draw for a plot
- * that is itself shown, so the hidden profile edges add nothing. Whether plot
- * names and input names should also default to on is still open.
+ * that is itself shown, so the hidden profile edges add nothing.
  *
- * WHAT IS NOT HERE
- * ----------------
- * The reference dialog's "Values" field is not implemented -- whether it is
- * needed is awaiting a decision, and a control that does nothing would be worse
- * than no control.
+ * THE VALUE AREA IS ONE THING IN TWO HALVES
+ * -----------------------------------------
+ * VAHigh and VALow are the two edges of the value area, and the reference
+ * dialog has a single "show value area" input for them. Show plot on either tab
+ * therefore moves both -- see applyPlotPatch -- so the input and the two tabs
+ * can never disagree about whether the value area is on.
  */
 import type { Annotations, Data } from "plotly.js"
 import type { ProfileLevelToggles } from "./volumeProfileShapes"
@@ -32,6 +32,16 @@ export const PLOT_ORDER: PlotKey[] = ["poc", "profileHigh", "profileLow", "vah",
 export const PLOT_LABEL: Record<PlotKey, string> = {
   poc: "POC", profileHigh: "ProfileHigh", profileLow: "ProfileLow", vah: "VAHigh", val: "VALow",
 }
+
+/**
+ * The reference dialog's "Values" field. Its screenshot shows one option,
+ * Numerical -- the plot's price, which is what the bubble and the title carry.
+ * No other option is invented here; if the reference offers more, they go in
+ * this list with the behaviour they actually have.
+ */
+export const VALUES = ["numerical"] as const
+export type ValuesMode = (typeof VALUES)[number]
+export const VALUES_LABEL: Record<ValuesMode, string> = { numerical: "Numerical" }
 
 export const DRAW_AS = ["line", "points", "squares", "triangles"] as const
 export type DrawAs = (typeof DRAW_AS)[number]
@@ -50,6 +60,7 @@ export const WIDTHS = [1, 2, 3, 4, 5] as const
 
 export interface PlotStyle {
   show: boolean
+  values: ValuesMode
   drawAs: DrawAs
   style: LineStyle
   width: number
@@ -60,17 +71,20 @@ export interface PlotStyle {
 export type PlotStyles = Record<PlotKey, PlotStyle>
 
 const DEFAULTS: PlotStyles = {
-  poc:         { show: true,  drawAs: "line", style: "solid", width: 1, color: "#38bdf8", bubble: true, title: true },
-  profileHigh: { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
-  profileLow:  { show: false, drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
-  vah:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
-  val:         { show: true,  drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
+  poc:         { show: true,  values: "numerical", drawAs: "line", style: "solid", width: 1, color: "#38bdf8", bubble: true, title: true },
+  profileHigh: { show: false, values: "numerical", drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
+  profileLow:  { show: false, values: "numerical", drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
+  vah:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
+  val:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
 }
 
 /** A fresh copy every call, so no caller can mutate the defaults. */
 export function defaultPlotStyles(): PlotStyles {
   return Object.fromEntries(PLOT_ORDER.map((k) => [k, { ...DEFAULTS[k] }])) as PlotStyles
 }
+
+/** The two halves of the value area, which are shown and hidden together. */
+export const VALUE_AREA_KEYS: PlotKey[] = ["vah", "val"]
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v)
@@ -82,6 +96,9 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
  * from when these were plain checkboxes. It seeds `show` so a saved default
  * survives the upgrade; a `plots` entry, when present, wins. Anything invalid
  * falls back to the default for that one field rather than discarding the rest.
+ *
+ * A saved default from when VAHigh and VALow could be shown separately is
+ * reconciled here: the value area is on if either half was.
  */
 export function normalizePlotStyles(raw: unknown, legacyShow?: unknown): PlotStyles {
   const out = defaultPlotStyles()
@@ -92,6 +109,7 @@ export function normalizePlotStyles(raw: unknown, legacyShow?: unknown): PlotSty
     const p = isObj(r[key]) ? r[key] : {}
     if (typeof legacy[key] === "boolean") d.show = legacy[key] as boolean
     if (typeof p.show === "boolean") d.show = p.show
+    if (typeof p.values === "string" && (VALUES as readonly string[]).includes(p.values)) d.values = p.values as ValuesMode
     if (typeof p.drawAs === "string" && (DRAW_AS as readonly string[]).includes(p.drawAs)) d.drawAs = p.drawAs as DrawAs
     if (typeof p.style === "string" && (LINE_STYLES as readonly string[]).includes(p.style)) d.style = p.style as LineStyle
     if (typeof p.width === "number" && (WIDTHS as readonly number[]).includes(p.width)) d.width = p.width
@@ -99,7 +117,31 @@ export function normalizePlotStyles(raw: unknown, legacyShow?: unknown): PlotSty
     if (typeof p.bubble === "boolean") d.bubble = p.bubble
     if (typeof p.title === "boolean") d.title = p.title
   }
+  const valueArea = out.vah.show || out.val.show
+  for (const k of VALUE_AREA_KEYS) out[k].show = valueArea
   return out
+}
+
+/**
+ * Change one plot. Showing or hiding either half of the value area moves both,
+ * so the single "show value area" input and the two tabs stay in step.
+ */
+export function applyPlotPatch(styles: PlotStyles, key: PlotKey, patch: Partial<PlotStyle>): PlotStyles {
+  const next: PlotStyles = { ...styles, [key]: { ...styles[key], ...patch } }
+  if (patch.show !== undefined && VALUE_AREA_KEYS.includes(key)) {
+    for (const k of VALUE_AREA_KEYS) next[k] = { ...next[k], show: patch.show }
+  }
+  return next
+}
+
+/** Is the value area shown? Both halves always agree -- see applyPlotPatch. */
+export function showValueArea(styles: PlotStyles): boolean {
+  return styles.vah.show || styles.val.show
+}
+
+/** The single "show value area" input. */
+export function setShowValueArea(styles: PlotStyles, on: boolean): PlotStyles {
+  return applyPlotPatch(styles, "vah", { show: on })
 }
 
 /** The five show flags, for code that only needs to know what is visible. */

@@ -14,8 +14,9 @@ import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
-  PLOT_LABEL, bubbleAnnotation, defaultPlotStyles, levelTrace, normalizePlotStyles,
-  plotToggles, titleEntries, type PlotKey, type PlotStyle, type PlotStyles,
+  PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
+  normalizePlotStyles, plotToggles, setShowValueArea, showValueArea, titleEntries,
+  type PlotKey, type PlotStyle, type PlotStyles,
 } from "@/lib/vpPlotStyles"
 import {
   OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
@@ -126,8 +127,11 @@ export function CandlestickChart({
   // defaults are the look these levels always had -- see lib/vpPlotStyles.ts.
   const [vpPlots, setVpPlots] = useState<PlotStyles>(defaultPlotStyles)
   const vpShow = plotToggles(vpPlots)
+  // applyPlotPatch, not a plain merge: showing or hiding either edge of the
+  // value area moves both, so the "show value area" input below and the VAHigh
+  // and VALow tabs can never disagree.
   const setVpPlot = (key: PlotKey, patch: Partial<PlotStyle>) =>
-    setVpPlots((s) => ({ ...s, [key]: { ...s[key], ...patch } }))
+    setVpPlots((s) => applyPlotPatch(s, key, patch))
   // Oscillator panels as opt-in studies, the way VWAP and Volume Profile work.
   // RSI(2), StochRSI and RSI(13) start on. MFI starts off: four oscillator rows
   // at once are too short to read, which is why each has its own checkbox.
@@ -141,8 +145,9 @@ export function CandlestickChart({
   const [vpOnExpansion, setVpOnExpansion] = useState(true)
   // Options column of the reference dialog.
   const [vpShowStudy, setVpShowStudy] = useState(true)
-  const [vpShowPlotNames, setVpShowPlotNames] = useState(false)
-  const [vpShowInputNames, setVpShowInputNames] = useState(false)
+  // Both on by default, as in the reference dialog.
+  const [vpShowPlotNames, setVpShowPlotNames] = useState(true)
+  const [vpShowInputNames, setVpShowInputNames] = useState(true)
   const [vpLeftAxis, setVpLeftAxis] = useState(true)
   const [vpSavedNote, setVpSavedNote] = useState("")
 
@@ -155,7 +160,7 @@ export function CandlestickChart({
     rowHeight: 1, timePer: "CHART" as TimePerProfile, multiplier: 1,
     maxProfiles: 1000, onExpansion: true,
     plots: defaultPlotStyles(),
-    showStudy: true, showPlotNames: false, showInputNames: false, leftAxis: true,
+    showStudy: true, showPlotNames: true, showInputNames: true, leftAxis: true,
   }
   const VP_STORE_KEY = "autotrader.volumeProfile.defaults"
 
@@ -1104,7 +1109,7 @@ export function CandlestickChart({
     // its on-chart label, e.g. VolumeProfile(AUTOMATIC, 1.0, CHART, 1, ...).
     title: { text: `${symbol} — ${strategyName} · ${dateLabel}` + (
       vpOn && vpShowStudy && vpShowInputNames
-        ? `<br><span style="font-size:10px;color:#7dd3fc">VolumeProfile(${vpRowMode}, ${vpRowHeight}, ${vpTimePer}, ${vpMultiplier}, ${vpOnExpansion ? "Yes" : "No"}, ${vpMaxProfiles}, ${vpShow.poc ? "Yes" : "No"}, ${(vpShow.vah || vpShow.val) ? "Yes" : "No"}, ${vpValueArea}, ${vpOpacity})</span>`
+        ? `<br><span style="font-size:10px;color:#7dd3fc">VolumeProfile(${vpRowMode}, ${vpRowHeight}, ${vpTimePer}, ${vpMultiplier}, ${vpOnExpansion ? "Yes" : "No"}, ${vpMaxProfiles}, ${vpShow.poc ? "Yes" : "No"}, ${showValueArea(vpPlots) ? "Yes" : "No"}, ${vpValueArea}, ${vpOpacity})</span>`
         : ""), font: { size: 14, color: "#d4d6e4" },
              xref: "paper", yref: "paper", x: 0.5, xanchor: "center",
              // Gap above the header base (1.015) widened 0.06 -> 0.11
@@ -1267,6 +1272,19 @@ export function CandlestickChart({
               <p className="text-[#7dd3fc]">{vpSavedNote}</p>
             )}
 
+            {/* The reference dialog's single input for the value area. Both
+                edges follow it, and so do the VAHigh and VALow tabs below. */}
+            <label className="flex items-center gap-2">
+              <span className="w-32 text-muted-foreground">show value area</span>
+              <select value={showValueArea(vpPlots) ? "Yes" : "No"} aria-label="show value area"
+                      onChange={(e) => setVpPlots((s) => setShowValueArea(s, e.target.value === "Yes"))}
+                      className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                                 text-foreground">
+                {["Yes", "No"].map((v) => (
+                  <option key={v} value={v} className="bg-[#14151c] text-[#e6edf3]">{v}</option>
+                ))}
+              </select>
+            </label>
             <label className="flex items-center gap-2">
               <span className="w-32 text-muted-foreground">value area percent</span>
               <input type="number" min={1} max={100} step={5} value={vpValueArea}

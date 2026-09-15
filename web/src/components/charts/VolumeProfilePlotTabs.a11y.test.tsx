@@ -38,13 +38,14 @@ describe("Volume Profile plot tabs", () => {
 
   it("every field in a tab has a name a screen reader can read", () => {
     setup()
-    for (const name of ["Draw as", "Style", "Width", "Colour", "Show plot", "Show bubble", "Show title"]) {
+    for (const name of ["Values", "Draw as", "Style", "Width", "Colour", "Show plot", "Show bubble", "Show title"]) {
       expect(screen.getByLabelText(name)).toBeTruthy()
     }
   })
 
   it("opens on POC showing the defaults", () => {
     setup()
+    expect((screen.getByLabelText("Values") as HTMLSelectElement).value).toBe("numerical")
     expect((screen.getByLabelText("Draw as") as HTMLSelectElement).value).toBe("line")
     expect((screen.getByLabelText("Style") as HTMLSelectElement).value).toBe("solid")
     expect((screen.getByLabelText("Width") as HTMLSelectElement).value).toBe("1")

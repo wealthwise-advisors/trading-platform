@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
-  MAX_LEVEL_MARKERS, PLOT_ORDER, bubbleAnnotation, defaultPlotStyles, levelTrace,
-  lineWidthPx, normalizePlotStyles, plotToggles, titleEntries,
+  MAX_LEVEL_MARKERS, PLOT_ORDER, applyPlotPatch, bubbleAnnotation, defaultPlotStyles,
+  levelTrace, lineWidthPx, normalizePlotStyles, plotToggles, setShowValueArea,
+  showValueArea, titleEntries,
 } from "./vpPlotStyles"
 
 type AnyTrace = {
@@ -38,6 +39,10 @@ describe("defaults", () => {
     }
   })
 
+  it("Values is Numerical, the one option the reference dialog shows", () => {
+    for (const k of PLOT_ORDER) expect(d[k].values).toBe("numerical")
+  })
+
   it("hands out copies, so a caller cannot change the defaults", () => {
     const a = defaultPlotStyles()
     a.poc.color = "#000000"
@@ -60,8 +65,9 @@ describe("normalizePlotStyles", () => {
 
   it("keeps valid fields and replaces invalid ones individually", () => {
     const s = normalizePlotStyles({
-      vah: { drawAs: "squares", style: "zigzag", width: 9, color: "#ABCDEF", bubble: true, title: "yes" },
+      vah: { values: "graphical", drawAs: "squares", style: "zigzag", width: 9, color: "#ABCDEF", bubble: true, title: "yes" },
     })
+    expect(s.vah.values).toBe("numerical")   // unknown option -> the default
     expect(s.vah.drawAs).toBe("squares")
     expect(s.vah.style).toBe("dash")
     expect(s.vah.width).toBe(1)
@@ -79,6 +85,38 @@ describe("normalizePlotStyles", () => {
   it("survives garbage", () => {
     expect(normalizePlotStyles("nope", 7)).toEqual(defaultPlotStyles())
     expect(normalizePlotStyles([1, 2], [])).toEqual(defaultPlotStyles())
+  })
+})
+
+describe("the value area is one thing in two halves", () => {
+  it("hiding either edge hides both", () => {
+    const s = applyPlotPatch(defaultPlotStyles(), "vah", { show: false })
+    expect([s.vah.show, s.val.show]).toEqual([false, false])
+    expect(showValueArea(s)).toBe(false)
+    const back = applyPlotPatch(s, "val", { show: true })
+    expect([back.vah.show, back.val.show]).toEqual([true, true])
+  })
+
+  it("the single input sets both", () => {
+    const off = setShowValueArea(defaultPlotStyles(), false)
+    expect(plotToggles(off)).toMatchObject({ vah: false, val: false, poc: true })
+    expect(showValueArea(setShowValueArea(off, true))).toBe(true)
+  })
+
+  it("other fields still change only their own plot", () => {
+    const s = applyPlotPatch(defaultPlotStyles(), "vah", { color: "#ff8800" })
+    expect(s.vah.color).toBe("#ff8800")
+    expect(s.val.color).toBe("#7dd3fc")
+  })
+
+  it("a saved default where only one edge was shown comes back with both on", () => {
+    const s = normalizePlotStyles({ vah: { show: true }, val: { show: false } })
+    expect([s.vah.show, s.val.show]).toEqual([true, true])
+  })
+
+  it("and with neither shown, both stay off", () => {
+    const s = normalizePlotStyles({ vah: { show: false }, val: { show: false } })
+    expect([s.vah.show, s.val.show]).toEqual([false, false])
   })
 })
 

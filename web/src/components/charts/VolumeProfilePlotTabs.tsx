@@ -1,12 +1,13 @@
 // The Plots section of the Volume Profile study dialog: one tab per plot, each
-// with Draw as / Style / Width / Colour and Show plot / Show bubble / Show title.
-// Pure presentation over lib/vpPlotStyles.ts; the chart owns the state and the
-// saving.
+// with Values / Draw as / Style / Width / Colour and Show plot / Show bubble /
+// Show title. Pure presentation over lib/vpPlotStyles.ts; the chart owns the
+// state and the saving.
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  DRAW_AS, DRAW_AS_LABEL, LINE_STYLES, LINE_STYLE_LABEL, PLOT_LABEL, PLOT_ORDER, WIDTHS,
-  type DrawAs, type LineStyle, type PlotKey, type PlotStyle, type PlotStyles,
+  DRAW_AS, DRAW_AS_LABEL, LINE_STYLES, LINE_STYLE_LABEL, PLOT_LABEL, PLOT_ORDER,
+  VALUES, VALUES_LABEL, VALUE_AREA_KEYS, WIDTHS,
+  type DrawAs, type LineStyle, type PlotKey, type PlotStyle, type PlotStyles, type ValuesMode,
 } from "@/lib/vpPlotStyles"
 
 const FIELD = "flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-foreground disabled:opacity-40"
@@ -30,8 +31,16 @@ export function VolumeProfilePlotTabs({
         const s = styles[k]
         const id = `vp-plot-${k}`
         const isLine = s.drawAs === "line"
+        const isValueArea = VALUE_AREA_KEYS.includes(k)
         return (
           <TabsContent key={k} value={k} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor={`${id}-values`} className="w-16 text-muted-foreground">Values</label>
+              <select id={`${id}-values`} value={s.values} className={FIELD}
+                      onChange={(e) => onChange(k, { values: e.target.value as ValuesMode })}>
+                {VALUES.map((v) => <option key={v} value={v} className={OPTION}>{VALUES_LABEL[v]}</option>)}
+              </select>
+            </div>
             <div className="flex items-center gap-2">
               <label htmlFor={`${id}-drawas`} className="w-16 text-muted-foreground">Draw as</label>
               <select id={`${id}-drawas`} value={s.drawAs} className={FIELD}
@@ -68,13 +77,22 @@ export function VolumeProfilePlotTabs({
                 ["bubble", "Show bubble"],
                 ["title", "Show title"],
               ] as const).map(([field, label]) => (
-                <label key={field} className="flex items-center gap-1.5 cursor-pointer">
+                <label key={field} className="flex items-center gap-1.5 cursor-pointer"
+                       title={field === "show" && isValueArea
+                         ? "VAHigh and VALow are the two edges of the value area and show together"
+                         : undefined}>
                   <input type="checkbox" checked={s[field]}
                          onChange={(e) => onChange(k, { [field]: e.target.checked })} />
                   <span>{label}</span>
                 </label>
               ))}
             </div>
+            {isValueArea && (
+              <p className="text-[11px] text-muted-foreground">
+                Shown together with the other edge of the value area, and by the
+                “show value area” input above.
+              </p>
+            )}
           </TabsContent>
         )
       })}
