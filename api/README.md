@@ -53,7 +53,7 @@
 | [`oauth.py`](oauth.py) | 🌐 The four providers — Google · LinkedIn · GitHub · X — PKCE, token exchange, profile normalising. | 403 |
 | [`verification.py`](verification.py) | ✉️ Resend delivery: confirmation, password reset, username reminder. | 347 |
 | [`captcha.py`](captcha.py) | 🛡 Cloudflare Turnstile. Dormant without keys, and fails **closed** with them. | 127 |
-| [`serializers.py`](serializers.py) | Turns engine objects into the JSON the UI expects. | 345 |
+| [`serializers.py`](serializers.py) | Turns engine objects into the JSON the UI expects; blanks VWAP on daily and weekly bars, which have no session to anchor it to. | 359 |
 | [`main.py`](main.py) | The app object: routers, CORS, logging, and the unhandled-error handler. | 144 |
 | [`store.py`](store.py) | Result cache keyed by **(user_id, backtest_id)** — a hit returns before any query, so the owner must be in the key. | 132 |
 | [`strategy_registry.py`](strategy_registry.py) | The list of strategies and their parameter grids, shared by the runner and the optimiser. | 98 |

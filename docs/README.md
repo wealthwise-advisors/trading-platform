@@ -18,7 +18,7 @@
 | 📋 **Planning** | [`PRD.md`](PRD.md) ➜ [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) ➜ [`Design Document.md`](Design%20Document.md) ➜ [`Implementation Plan.md`](Implementation%20Plan.md) |
 | 🔒 **Security** | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) |
 | 📁 **Path** | `docs/` |
-| 📦 **Holds** | `18` files · `6,595` lines · `1` subfolders |
+| 📦 **Holds** | `19` files · `6,771` lines · `1` subfolders |
 
 
 ---
@@ -52,10 +52,10 @@
 | [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#requirements) | 🌊 Requirements for the wave engine. | 1,251 |
 | [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#architecture) | 🌊 How the 13 modules interlock. | 639 |
 | [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#implementation) | 🌊 The build baseline. | 456 |
-| [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) | 📋 System requirements. | 279 |
-| [`PRD.md`](PRD.md) | 📋 Product requirements. | 169 |
+| [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) | 📋 System requirements. | 287 |
+| [`PRD.md`](PRD.md) | 📋 Product requirements. | 174 |
 | [`Implementation Plan.md`](Implementation%20Plan.md) | 📋 Phases, dependencies and what is left. | 221 |
-| [`UI_UX.md`](UI_UX.md) | 🎨 Interface decisions. | 198 |
+| [`UI_UX.md`](UI_UX.md) | 🎨 Interface decisions. | 199 |
 | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) | 🔒 Findings and what was done. | 138 |
 | [`RELEASE.md`](RELEASE.md#audit) | ✅ Pre-release checks. | 320 |
 | [`RELEASE.md`](RELEASE.md) | 📝 What shipped, and the checks behind it. | 435 |

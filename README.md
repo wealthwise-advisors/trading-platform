@@ -398,10 +398,10 @@ it matches
 <tr>
 <td width="50%" valign="top">
 
-### ⏱️ Thirteen timeframes, one clock
+### ⏱️ Fifteen timeframes, one clock
 
 <ol type="I">
-<li><p>Panes advance off a shared market clock measured in market time, not in bars.</p></li>
+<li><p>1m through 1w. The thirteen intraday ones replay in the Market Grid, where panes advance off a shared market clock measured in market time, not in bars.</p></li>
 <li><p>So a 1m pane and a 1h pane always show the same instant.</p></li>
 </ol>
 
@@ -636,7 +636,7 @@ non-determinism the shared aggregator exists to kill.
 
 - ➜ **Fills are charged, not assumed** — commission per contract, slippage in ticks, prices rounded to the instrument's real increment
 - ➜ **Contract specifications per instrument** — tick size, tick value and point value for ES, NQ, MES, CL and others, so P&L lands in real currency
-- ➜ **Session-aware** — RTH, Globex (18:00–17:00) or 24-hour, with VWAP anchored to the session open rather than to midnight
+- ➜ **Session-aware** — RTH, Globex (18:00–17:00) or 24-hour, entered in ET, CT, MT or PT and always stored as Eastern, with VWAP anchored to the session open rather than to midnight. Intraday only: a `1d` or `1w` bar already is a session, so it skips the filter and carries no VWAP
 - ➜ **Deterministic** — the same inputs produce the same output every time, which is what makes a rebuilt result comparable to the one it replaced
 
 ### ◆ One clock, thirteen timeframes
@@ -1030,7 +1030,7 @@ See [api/routers/](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |
 |               |------------▶  <a href="web/src/components">components/</a>   <i>shared UI</i>  <b>34</b>
 |
-|               └------------▶  <a href="web/src/lib">lib/</a>   <i>pure logic, unit-tested away from React</i>  <b>31</b>
+|               └------------▶  <a href="web/src/lib">lib/</a>   <i>pure logic, unit-tested away from React</i>  <b>49</b>
 |                               |- - - ▶  <a href="web/src/lib/api.ts">api.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/bandAgreement.test.ts">bandAgreement.test.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/bandAgreement.ts">bandAgreement.ts</a>
@@ -1039,15 +1039,16 @@ See [api/routers/](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |                               |- - - ▶  <a href="web/src/lib/clock.ts">clock.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/dayRange.test.ts">dayRange.test.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/dayRange.ts">dayRange.ts</a>
-|                               └- - - ▶  <i>+22 more</i>
-|------------▶  <a href="tests">tests/</a>   <i>what every number on screen rests on</i>  <b>26</b>
+|                               └- - - ▶  <i>+41 more</i>
+|------------▶  <a href="tests">tests/</a>   <i>what every number on screen rests on</i>  <b>37</b>
 |               |- - - ▶  <a href="tests/test_api_provider_errors.py">test_api_provider_errors.py</a>
 |               |- - - ▶  <a href="tests/test_engine.py">test_engine.py</a>
 |               |- - - ▶  <a href="tests/test_follow_live_matrix.py">test_follow_live_matrix.py</a>
 |               |- - - ▶  <a href="tests/test_indicator_correctness.py">test_indicator_correctness.py</a>
 |               |- - - ▶  <a href="tests/test_multi_replay.py">test_multi_replay.py</a>
 |               |- - - ▶  <a href="tests/test_provider_timeframes.py">test_provider_timeframes.py</a>
-|               └- - - ▶  <i>+7 more</i>
+|               |- - - ▶  <a href="tests/test_daily_weekly.py">test_daily_weekly.py</a>
+|               └- - - ▶  <i>+30 more</i>
 |------------▶  <a href="docs">docs/</a>   <i>architecture, rules and guides</i>  <b>22</b>
 |               |- - - ▶  <a href="docs/API_GUIDE.md">API_GUIDE.md</a>
 |               |- - - ▶  <a href="docs/Design Document.md">Design Document.md</a>
@@ -1226,7 +1227,7 @@ Four checks. Each answers a different question, and none substitutes for another
 | Area | ➜ The guarantee |
 |:---|:---|
 | 📡 **Follow-live** | All **thirteen** timeframes · every position within a bar · seven combinations · five dates, including both DST switches and a leap day |
-| ⏱ **Bar aggregation** | **One** aggregator, session-anchored — so no two code paths can disagree about what a bar is |
+| ⏱ **Bar aggregation** | **One** aggregator — so no two code paths can disagree about what a bar is. Minutes tile from the exchange midnight; `1d` and `1w` group by trading date, where an 18:00 ET open belongs to the next day |
 | 🔁 **Determinism** | A session grown bar by bar is **byte-identical** to one handed all the data at once |
 | 🌊 **Elliott Wave** | A count that breaks a rule is **rejected**, not drawn |
 | 🚧 **Isolation** | One account cannot reach another's data — routes swept from the app's own OpenAPI schema |

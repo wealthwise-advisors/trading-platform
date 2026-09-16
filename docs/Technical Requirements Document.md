@@ -129,7 +129,11 @@ defect.
 
 **FR-4.4** Coarser timeframes shall be resampled from finer source bars, and
 the aggregation shall be shared with the live path so that a 5-minute bar is
-built identically in both.
+built identically in both. Two grouping rules exist: intraday bars tile from
+the exchange's own midnight, while daily and weekly bars group by *trading
+date*, where a session opening at 18:00 ET belongs to the following date. A
+provider that serves daily or weekly natively may be used in place of folding
+minutes.
 
 **FR-4.5** Schwab access tokens shall refresh automatically. The 7-day refresh
 token shall surface its expiry in the UI, since only an interactive sign-in
@@ -178,7 +182,11 @@ swing and label data for identical input.
 ## 7. Sessions
 
 **FR-6.1** A session filter shall accept a start and end time and drop bars
-outside it after loading, before the strategy runs.
+outside it after loading, before the strategy runs. The two times are **Eastern
+exchange time**, whatever clock the interface offers for entering them, and
+they apply to intraday timeframes only: a daily or weekly bar is a whole
+session or more and is exempt, since it carries no meaningful clock time to
+filter on.
 
 **FR-6.2** Providers shall load the full day; trimming is the engine's job, so
 that changing session hours does not require re-downloading data.
@@ -266,7 +274,7 @@ one just built, and fail if it is not.
 |---|---|---|
 | Engine and fills | FR-1.x, FR-2.x | `test_engine.py` |
 | Replay / follow-live | FR-3.x | `test_replay_*.py`, `test_follow_live_matrix.py`, `test_multi_replay.py` |
-| Data providers | FR-4.x | `test_provider_timeframes.py`, `test_api_provider_errors.py`, `test_symbol_universe.py` |
+| Data providers | FR-4.x | `test_provider_timeframes.py`, `test_api_provider_errors.py`, `test_symbol_universe.py`, `test_daily_weekly.py` |
 | Analysis | FR-5.x | `test_indicator_correctness.py`, `test_swing_zigzag_regression.py`, `test_vwap_bands.py` |
 | Sessions | FR-6.x | `test_replay_session_message.py` |
 | Schwab auth | FR-4.5 | `test_schwab_redirect_parsing.py` |

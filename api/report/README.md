@@ -39,7 +39,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`report.py`](report.py) | Assembles the full HTML report — sections, tables, verdicts. | 1,188 |
+| [`report.py`](report.py) | Assembles the full HTML report — sections, tables, verdicts. Draws no VWAP row for daily or weekly bars, matching the chart. | 1,191 |
 | [`chart_settings_draw.py`](chart_settings_draw.py) | Draws the oscillator rows and Volume Profile with the live chart's own settings. | 407 |
 | [`charts.py`](charts.py) | Indicator helpers the report imports, plus an older fixed layout no export uses. | 669 |
 

@@ -46,7 +46,9 @@ explicit slippage, never at the signal bar's close.
 
 **G3 — Charts that match the broker's.** Bars, VWAP and session boundaries must
 agree with the platform the trader already watches, or the tool is worse than
-useless — it is actively misleading.
+useless — it is actively misleading. VWAP and session boundaries are intraday
+concepts: a daily or weekly bar already spans a whole session, so it carries
+neither, and only its open, high, low, close and volume are compared.
 
 **G4 — Reproducible results.** The same input produces the same output. A run
 can be re-executed and compared.
@@ -63,8 +65,11 @@ Run a strategy over a symbol and date range, and get back trades, an equity
 curve, and performance metrics (Sharpe, Sortino, drawdown, win rate, profit
 factor). Results are explorable in the browser and exportable.
 
-Configuration covers symbol, timeframe, date range, strategy and its
-parameters, starting capital, slippage, and an optional session-hours filter.
+Configuration covers symbol, timeframe (fifteen, from 1m to 1w), date range,
+strategy and its parameters, starting capital, slippage, and an optional
+session-hours filter. Session hours may be entered in Eastern, Central,
+Mountain or Pacific; they are always stored and applied as Eastern, and they
+apply to intraday timeframes only.
 
 ### 4.2 Market Grid (bar-by-bar replay)
 
@@ -117,7 +122,7 @@ UI, rather than failing at run time with a stack trace.
 | # | Criterion |
 |---|---|
 | S1 | A strategy runs unmodified in backtest and replay and produces the same trades over the same bars |
-| S2 | Bars and VWAP match the trader's reference platform for the same symbol, timeframe and session |
+| S2 | Bars and VWAP match the trader's reference platform for the same symbol, intraday timeframe and session. For daily and weekly, which carry no VWAP, the bars alone must match |
 | S3 | No fill is ever priced using information from the bar that produced the signal |
 | S4 | A report opens correctly on a machine with no project dependencies installed |
 | S5 | An unavailable data source is visibly unavailable before a run is attempted |

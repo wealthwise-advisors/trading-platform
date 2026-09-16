@@ -19,7 +19,7 @@
 | 🧪 **Testing** | Each `X.ts` has an `X.test.ts` beside it |
 | ⚠️ **`types.ts` is a mirror** | It must match [`api/schemas`](../../../api/schemas) or the UI drops fields silently |
 | 📁 **Path** | `web/src/lib/` |
-| 📦 **Holds** | `30` files · `4,379` lines |
+| 📦 **Holds** | `48` files · `6,652` lines |
 
 
 ---
@@ -33,6 +33,7 @@
    pure functions, each with an X.test.ts beside it:
      clock · dayRange · resample · rangebreaks · chartAxis
      followLive · deviationColors · volumeProfile · priceFormat
+     sessionZone ──► ET/CT/MT/PT. Display only; storage stays Eastern
 
    ╳ no JSX here. If it renders, it is a component.
 ```
@@ -51,7 +52,8 @@
 | [`volumeProfile.ts`](volumeProfile.ts) | 📊 Volume Profile, computed in the browser. | 216 |
 | [`clock.ts`](clock.ts) | 🕐 Pure clock arithmetic for the time field. | 140 |
 | [`resample.ts`](resample.ts) | ⏱ Display-only aggregation into wider candles. | 112 |
-| [`dayRange.ts`](dayRange.ts) | 📅 Day counting over an inclusive date range. | 111 |
+| [`dayRange.ts`](dayRange.ts) | 📅 Day counting over an inclusive date range. | 122 |
+| [`sessionZone.ts`](sessionZone.ts) | 🕓 Which clock Session Hours are typed in — ET/CT/MT/PT. Converts for display and entry only; what is stored and sent stays Eastern. | 111 |
 | [`rangebreaks.ts`](rangebreaks.ts) | ✂️ Hides non-trading hours so candles sit flush. | 57 |
 | [`isoTime.ts`](isoTime.ts) | 🕰 ISO timestamp helpers. | 36 |
 | [`priceFormat.ts`](priceFormat.ts) | 💲 Per-instrument decimal places. | 35 |
@@ -73,6 +75,7 @@
 | [`priceFormat.test.ts`](priceFormat.test.ts) | 🧪 Tests for [`priceFormat.ts`](priceFormat.ts). | 56 |
 | [`rangebreaks.test.ts`](rangebreaks.test.ts) | 🧪 Tests for [`rangebreaks.ts`](rangebreaks.ts). | 88 |
 | [`resample.test.ts`](resample.test.ts) | 🧪 Tests for [`resample.ts`](resample.ts). | 234 |
+| [`sessionZone.test.ts`](sessionZone.test.ts) | 🧪 Tests for [`sessionZone.ts`](sessionZone.ts). | 124 |
 | [`volumeProfileShapes.test.ts`](volumeProfileShapes.test.ts) | 🧪 Tests for [`volumeProfileShapes.ts`](volumeProfileShapes.ts). | 122 |
 
 

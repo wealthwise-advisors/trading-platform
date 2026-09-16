@@ -44,7 +44,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`CandlestickChart.tsx`](CandlestickChart.tsx) | 🕯 The main price chart — candles, VWAP, volume profile, swings, trades. | 1,420 |
+| [`CandlestickChart.tsx`](CandlestickChart.tsx) | 🕯 The main price chart — candles, VWAP, volume profile, swings, trades. Axis labels carry the year once bars are a day or longer. | 1,529 |
 | [`ElliottWaveChart.tsx`](ElliottWaveChart.tsx) | 🌊 Wave structures drawn over price. | 517 |
 | [`EquityChart.tsx`](EquityChart.tsx) | 💹 Equity curve and drawdown. | 66 |
 | [`PnlDistributionChart.tsx`](PnlDistributionChart.tsx) | 📊 Trade P&L distribution. | 55 |
