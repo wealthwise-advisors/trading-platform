@@ -189,11 +189,11 @@ commit it claims**
 **◆ If you build software and want to read the engine;**
 
 <ol type="I">
-<li><p>Start with <a href="src"><code>src/</code></a>.</p></li>
-<li><p><a href="src"><code>src/</code></a> is the whole engine and imports nothing from <code>api/</code> or <code>web/</code>.</p></li>
+<li><p>Start with <a href="src"><code>src</code></a>.</p></li>
+<li><p><a href="src"><code>src</code></a> is the whole engine and imports nothing from <code>api</code> or <code>web</code>.</p></li>
 <li><p>It runs from a test, a script or a server unchanged.</p></li>
 <li><p><a href="docs/Design Document.md">Architecture</a> explains the seams.</p></li>
-<li><p><a href="src/analysis"><code>src/analysis/</code></a> is where the market reading lives.</p></li>
+<li><p><a href="src/analysis"><code>analysis</code></a> is where the market reading lives.</p></li>
 </ol>
 
 </td></tr>
@@ -205,7 +205,7 @@ commit it claims**
 > <ol type="I">
 > <li><p>Five minutes: <a href="#-quick-look">Quick Look</a> and <a href="#-why-it-exists">Why It Exists</a>, the four bugs that shaped it.</p></li>
 > <li><p>An hour: <a href="docs/QUICKSTART.md">Quickstart</a> and a real backtest.</p></li>
-> <li><p>A day: <a href="docs"><code>docs/</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/Technical Requirements Document.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE.md">Elliott Wave rule inventory</a>.</p></li>
+> <li><p>A day: <a href="docs"><code>docs</code></a> carries the <a href="docs/PRD.md">product requirements</a>, the <a href="docs/Technical Requirements Document.md">requirements spec</a> and the <a href="docs/ELLIOTT_WAVE.md">Elliott Wave rule inventory</a>.</p></li>
 > </ol>
 
 <br>
@@ -473,7 +473,7 @@ it matches
 
 **Key points**
 
-- Engine is file/transport agnostic
+- Engine does not care where bars come from, or how they arrive
 - Single analysis path for all sources
 - Deterministic replay with shared clock
 
