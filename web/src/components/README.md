@@ -16,7 +16,7 @@
 | 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features/`](../features) |
 | 🎨 **Base kit** | shadcn/ui in [`ui/`](ui) — do not edit those by hand |
 | 📁 **Path** | `web/src/components/` |
-| 📦 **Holds** | `22` files · `3,271` lines · `5` subfolders |
+| 📦 **Holds** | `22` files · `3,273` lines · `5` subfolders |
 
 
 ---
@@ -44,7 +44,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`SymbolMark.tsx`](SymbolMark.tsx) | 🏷 The instrument badge. Each contract keeps its own identity colour. | 414 |
-| [`AccountSettings.tsx`](AccountSettings.tsx) | 👤 The account screen — profile, password, and deleting the account. | 262 |
+| [`AccountSettings.tsx`](AccountSettings.tsx) | 👤 The account screen — profile, password, and deleting the account. | 264 |
 | [`InstrumentPicker.tsx`](InstrumentPicker.tsx) | 🔍 Searchable symbol chooser. | 261 |
 | [`IntervalPicker.tsx`](IntervalPicker.tsx) | ⏱ The interval popup — fifteen rows as `days : interval`, starrable and reorderable. | 256 |
 | [`Onboarding.tsx`](Onboarding.tsx) | 👋 The first-run walkthrough. | 203 |

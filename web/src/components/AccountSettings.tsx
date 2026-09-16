@@ -160,7 +160,9 @@ export function AccountSettings({ user }: { user: Me }) {
                 "which version are you on" is the first question every support
                 thread asks, and until now the answer lived only in an API
                 endpoint nothing surfaced. */}
-            <p className="mt-3 text-[11px] font-mono text-muted-foreground/70">
+            {/* Full muted-foreground: at 70% this was below the contrast floor,
+                and it is the string support asks people to read back. */}
+            <p className="mt-3 text-[11px] font-mono text-muted-foreground">
               {build
                 ? `AutoTrader ${build.version} · ${build.commit.slice(0, 7)}`
                 : "AutoTrader · checking build…"}

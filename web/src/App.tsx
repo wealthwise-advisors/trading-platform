@@ -139,7 +139,9 @@ function App({ user }: { user: Me }) {
             {backtestId && (
               <div className="flex items-center gap-1">
                 <Select value={reportFormat} onValueChange={setReportFormat}>
-                  <SelectTrigger className="w-21 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  {/* Sits beside "Export Report" with nothing but "HTML" in it,
+                      so unnamed it announced as the format and not as a choice. */}
+                  <SelectTrigger className="w-21 h-8 text-xs" aria-label="Report format"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {REPORT_FORMATS.map((f) => <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>)}
                   </SelectContent>

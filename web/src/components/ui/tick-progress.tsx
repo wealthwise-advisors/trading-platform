@@ -48,8 +48,13 @@ export function TickProgress({ processed, total, playing = false, detail }: Tick
           <span className="text-foreground/80 font-medium">
             {processed.toLocaleString()}
           </span>
-          <span className="opacity-60" data-testid="replay-ticks" data-processed={processed} data-total={total}> / {total.toLocaleString()} ticks</span>
-          {detail && <span className="opacity-60"> · {detail}</span>}
+          {/* An explicit colour, not an opacity. The readout inherits
+              --muted-foreground, which is already close to the floor on this
+              background, so ANY dimming of it fails: at 60% this measured 3.0,
+              the lowest reading in the app, on the text saying how far along the
+              replay is. slate-400 keeps it visibly secondary at about 6. */}
+          <span className="text-slate-400" data-testid="replay-ticks" data-processed={processed} data-total={total}> / {total.toLocaleString()} ticks</span>
+          {detail && <span className="text-slate-400"> · {detail}</span>}
         </span>
         <span className="tickbar-readout tabular-nums">
           {/* One decimal below 10%: a long replay sits at "0%" for many seconds

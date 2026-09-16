@@ -19,7 +19,7 @@
 | ⚠️ **Regenerating overwrites** | These carry local theming; re-running the generator discards it |
 | 🎨 **Colours** | Driven by tokens in [`index.css`](../../index.css) |
 | 📁 **Path** | `web/src/components/ui/` |
-| 📦 **Holds** | `17` files · `1,612` lines |
+| 📦 **Holds** | `17` files · `1,617` lines |
 
 
 ---
@@ -52,7 +52,7 @@
 | [`dialog.tsx`](dialog.tsx) | 🪟 Modals. | 62 |
 | [`card.tsx`](card.tsx) | 🃏 The card shell. | 103 |
 | [`loader.tsx`](loader.tsx) | ⏳ Loading states. | 138 |
-| [`tick-progress.tsx`](tick-progress.tsx) | 📊 Tick progress. | 75 |
+| [`tick-progress.tsx`](tick-progress.tsx) | 📊 Tick progress. | 80 |
 | [`input.tsx`](input.tsx) | ⌨️ Text input. | 19 |
 | [`label.tsx`](label.tsx) | 🏷 Field label. | 24 |
 | [`badge.tsx`](badge.tsx) | 🔖 Small status pill. | 49 |
