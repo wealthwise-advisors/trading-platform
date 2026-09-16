@@ -49,10 +49,11 @@ import re
 import sys
 
 W = 1080
-# The last panel ("Built With") ends at y=484; the rest is the bottom margin.
-# It was 660 while a status strip sat underneath -- leaving that height behind
-# would have left 150px of empty navy under the logos.
-H = 510
+# The last panel ("Built With") ends at y=388; the rest is the bottom margin.
+# This was 660 when a status strip sat underneath and a "What is AutoTrader?"
+# row sat on top. Both went; leaving the height behind would have left a third
+# of the image as empty navy.
+H = 414
 PAD = 26
 
 BG = "#05080f"
@@ -70,14 +71,6 @@ FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
         "Roboto,Helvetica,Arial,sans-serif")
 
 QUOTE = "Turning trading ideas into data-driven results."
-
-# Broken where it fits the panel, not where a sentence would naturally wrap:
-# SVG text does not wrap, so an overlong line is drawn straight off the edge.
-DEFINITION = [
-    "AutoTrader is a futures trading research platform that lets",
-    "you test, refine and deploy trading strategies using real",
-    "market data with realistic costs.",
-]
 
 # number, label, accent. No descriptions -- see the module docstring.
 STEPS = [
@@ -188,28 +181,25 @@ def build():
     o.append(f'<rect width="{W}" height="{H}" fill="{BG}"/>')
 
     # ── the quotation, and nothing above it ───────────────────────────────
+    # THE BOX IS SIZED FROM THE TEXT, never the other way round. It was a fixed
+    # 428px holding a 48-character line at 25px -- about 620px of text -- so the
+    # quote hung out of both ends of its own border.
+    quote_size = 25
+    quote = "“Turning trading ideas into data-driven results.”"
+    qw = len(quote) * 0.52 * quote_size + 52
     qh = 66
-    panel(o, PAD + 300, 20, W - 2 * PAD - 600, qh, stroke=TEAL + "55", r=10)
+    panel(o, (W - qw) / 2, 20, qw, qh, stroke=TEAL + "55", r=10)
     o.append(f'<text x="{W/2}" y="61" text-anchor="middle" font-family="{FONT}" '
-             f'font-size="25" font-weight="700" fill="{INK}">'
+             f'font-size="{quote_size}" font-weight="700" fill="{INK}">'
              f'“Turning trading ideas into '
              f'<tspan fill="{TEAL}">data-driven results</tspan>.”</text>')
 
-    # ── what it is ────────────────────────────────────────────────────────
-    y = 104
-    hh = 74
-    panel(o, PAD, y, 470, hh)
-    icon(o, "book", PAD + 22, y + 25, TEAL)
-    o.append(f'<text x="{PAD+62}" y="{y+45}" font-family="{FONT}" font-size="21" '
-             f'font-weight="700" fill="{INK}">What is AutoTrader?</text>')
-    arrow(o, PAD + 300, y + 38, TEAL, 26)
-    panel(o, PAD + 486, y, W - PAD - (PAD + 486), hh)
-    for i, ln in enumerate(DEFINITION):
-        o.append(f'<text x="{PAD+508}" y="{y+26+i*19}" font-family="{FONT}" '
-                 f'font-size="14" fill="{DIM}">{esc(ln)}</text>')
-
     # ── how it works ──────────────────────────────────────────────────────
-    y = 200
+    # No "What is AutoTrader?" panel: the sentence it held is the paragraph
+    # directly above this image in the README, and printing it twice made a
+    # reader meet the project twice before learning anything. The picture shows
+    # the shape of the work; the paragraph says what it is.
+    y = 104
     panel(o, PAD, y, W - 2 * PAD, 150)
     icon(o, "gear", PAD + 22, y + 18, TEAL)
     o.append(f'<text x="{PAD+62}" y="{y+38}" font-family="{FONT}" font-size="21" '
@@ -230,8 +220,8 @@ def build():
         if i < len(STEPS) - 1:
             arrow(o, x + bw + 5, by + bh / 2, accent, gap - 10)
 
-    # ── build with ────────────────────────────────────────────────────────
-    y = 368
+    # ── built with ────────────────────────────────────────────────────────
+    y = 272
     panel(o, PAD, y, W - 2 * PAD, 116)
     icon(o, "tools", PAD + 22, y + 34, TEAL)
     o.append(f'<text x="{PAD+62}" y="{y+54}" font-family="{FONT}" font-size="21" '

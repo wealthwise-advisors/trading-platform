@@ -44,12 +44,12 @@
 | [`make_live_tape_svg.py`](make_live_tape_svg.py) | 📡 The live tape diagram. | 882 |
 | [`make_flow_svgs.py`](make_flow_svgs.py) | 🔄 `architecture` · `workflow` · `execution`. | 573 |
 | [`make_one_clock_svg.py`](make_one_clock_svg.py) | 🕐 The shared-clock diagram. | 250 |
-| [`make_pipeline_svg.py`](make_pipeline_svg.py) | ⚙️ The pipeline diagram. | 273 |
+| [`make_pipeline_svg.py`](make_pipeline_svg.py) | ⚙️ The pipeline diagram. | 289 |
 | [`make_deploy_svg.py`](make_deploy_svg.py) | 🚀 The deployment diagram. | 249 |
 | [`make_divergence_svg.py`](make_divergence_svg.py) | 📉 The divergence illustration. | 259 |
 | [`make_ecosystem_svg.py`](make_ecosystem_svg.py) | 🌍 The repository ecosystem map. | 250 |
 | [`make_test_topology_svg.py`](make_test_topology_svg.py) | 🧪 The test topology. | 214 |
-| [`make_overview_svg.py`](make_overview_svg.py) | 👀 The README's opening summary — what it is, how it works, what it is built with. Carries no status numbers; those live in the README's Project Status section, where they can be linked and re-checked. | 260 |
+| [`make_overview_svg.py`](make_overview_svg.py) | 👀 The README's opening summary — what it is, how it works, what it is built with. Carries no status numbers; those live in the README's Project Status section, where they can be linked and re-checked. | 250 |
 | [`make_legal_svgs.py`](make_legal_svgs.py) | ⚖️ The terms and privacy page headers. | 155 |
 
 > ⚠️ **`elliott-wave.svg` has no generator.** It is hand-maintained SVG and is

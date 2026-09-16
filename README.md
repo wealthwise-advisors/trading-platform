@@ -242,7 +242,7 @@ is provisional without saying so.
 across three providers; the copy that forgot to anchor to the session kept
 reintroducing shifted bars.
 
-**➜** One aggregator, in [`src/data/resample.py`](src/data/resample.py).
+**➜** One aggregator, in [`resample.py`](src/data/resample.py).
 
 </td></tr>
 <tr><td align="center" valign="top">
@@ -293,7 +293,7 @@ is a slogan.
 Orders fill at the *next* bar's open, plus slippage in ticks, rounded to the
 instrument's real increment — never the signal bar's close
 
-[![Enforced in src/broker/paper_broker.py](https://img.shields.io/badge/enforced_in-src%2Fbroker%2Fpaper__broker.py-f97316?style=flat-square&labelColor=1e293b)](src/broker/paper_broker.py)
+[![Enforced in paper_broker.py](https://img.shields.io/badge/enforced_in-paper__broker.py-f97316?style=flat-square&labelColor=1e293b)](src/broker/paper_broker.py)
 
 </td>
 <td width="50%" valign="top">
@@ -305,7 +305,7 @@ instrument's real increment — never the signal bar's close
 A single aggregator, session-anchored, shared by the historical and the live
 path — so a 5m bar cannot mean two things
 
-[![Enforced in src/data/resample.py](https://img.shields.io/badge/enforced_in-src%2Fdata%2Fresample.py-2dd4bf?style=flat-square&labelColor=1e293b)](src/data/resample.py)
+[![Enforced in resample.py](https://img.shields.io/badge/enforced_in-resample.py-2dd4bf?style=flat-square&labelColor=1e293b)](src/data/resample.py)
 
 </td>
 </tr>
@@ -331,7 +331,7 @@ data at once
 The pipeline asks the running server which commit it is serving and fails unless
 it matches
 
-[![Enforced in .github/workflows/deploy.yml](https://img.shields.io/badge/enforced_in-.github%2Fworkflows%2Fdeploy.yml-3b82f6?style=flat-square&labelColor=1e293b)](.github/workflows/deploy.yml)
+[![Enforced in deploy.yml](https://img.shields.io/badge/enforced_in-deploy.yml-3b82f6?style=flat-square&labelColor=1e293b)](.github/workflows/deploy.yml)
 
 </td>
 </tr>
@@ -465,7 +465,7 @@ it matches
 <img src="docs/assets/architecture.svg" alt="Data sources feed one core engine, which the interfaces read; the engine imports nothing from them" width="100%">
 </div>
 
-- ➜ **The engine knows nothing about how it is called** — no HTTP, no React, no framework inside [src/](src)
+- ➜ **The engine knows nothing about how it is called** — no HTTP, no React, no framework inside [src](src)
 - ➜ **Same answer from anywhere** — a test, the API and a script all run the identical analysis
 
 <table>
@@ -538,7 +538,7 @@ How a change actually travels from an idea to the live URL.
 <tr><td><b>CI</b></td><td>The workflow's own conclusion on <code>master</code> — lint, type check, unit tests, security audit, frontend tests and a package build</td></tr>
 <tr><td><b>Deploy</b></td><td>Live at <a href="https://3-218-23-37.sslip.io">3-218-23-37.sslip.io</a>. The deploy asserts the commit answering on port 80 equals <code>github.sha</code>, so a green tick cannot hide a stale build</td></tr>
 <tr><td><b>Tests</b></td><td><b>2,709 passing</b> — 2,217 of 2,227 Python (10 skipped) and 492 web. Counted from <code>pytest</code> and <code>vitest</code>, not estimated</td></tr>
-<tr><td><b>Coverage</b></td><td>Line coverage of <code>src/</code> and <code>api/</code>, from the TOTAL row of <code>pytest --cov=src --cov=api</code>. The CI gate is <b>70%</b></td></tr>
+<tr><td><b>Coverage</b></td><td>Line coverage of <code>src</code> and <code>api</code>, from the TOTAL row of <code>pytest --cov=src --cov=api</code>. The CI gate is <b>70%</b></td></tr>
 <tr><td><b>License</b></td><td>Proprietary — see <a href="LICENSE">LICENSE</a></td></tr>
 </table>
 
@@ -558,7 +558,7 @@ How a change actually travels from an idea to the live URL.
 <tr><td valign="top" width="50%">
 
 ### 🌊 Elliott Wave
-[src/analysis/elliott_wave/](src/analysis/elliott_wave)
+[elliott_wave](src/analysis/elliott_wave)
 
 - ➜ [`impulse`](src/analysis/elliott_wave/impulse.py) · [`correction`](src/analysis/elliott_wave/correction.py) · [`diagonal`](src/analysis/elliott_wave/diagonal.py)
 - ➜ [`triangle`](src/analysis/elliott_wave/triangle.py) · [`combination`](src/analysis/elliott_wave/combination.py)
@@ -571,7 +571,7 @@ How a change actually travels from an idea to the live URL.
 </td><td valign="top" width="50%">
 
 ### 📐 Price structure
-[src/analysis/](src/analysis)
+[analysis](src/analysis)
 
 - ➜ [`swing_identification`](src/analysis/swing_identification.py) · [`zigzag`](src/analysis/zigzag.py) — the skeleton of a trend
 - ➜ [`chart_patterns`](src/analysis/chart_patterns.py) — triangles, wedges, head-and-shoulders
@@ -701,9 +701,9 @@ non-determinism the shared aggregator exists to kill.
 
 | | |
 |:---|:---|
-| **File** | `data/autotrader.db` — survives restarts and redeploys |
-| **Schema** | [`db/schema.sql`](db/schema.sql) — `backtests`, `trades` |
-| **Code** | [db/](db/README.md) — routers never see a cursor |
+| **File** | `autotrader.db` — survives restarts and redeploys |
+| **Schema** | [`schema.sql`](db/schema.sql) — `backtests`, `trades` |
+| **Code** | [db](db/README.md) — routers never see a cursor |
 | **Guard** | A test fails the build if a metric has no column |
 
 Query across runs:
@@ -732,7 +732,7 @@ A React 19 single-page application over the FastAPI backend.
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused
-- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 427 of the web suite's 492 tests run without a DOM
+- ➜ **Logic lives in [`lib`](web/src/lib)** — 427 of the web suite's 492 tests run without a DOM
 
 <br>
 
@@ -767,7 +767,7 @@ Open registration. Four ways in, or a password.
 <summary><b>What an account does not grant</b> — the broker stays out of reach</summary>
 <br>
 
-There is exactly one Schwab connection: one `config/credentials.yaml`, one
+There is exactly one Schwab connection: one `credentials.yaml`, one
 `schwab_tokens.json`, no per-user notion anywhere in `schwab_provider.py`. It is
 the operator's own brokerage authorisation, not the application's.
 
@@ -791,7 +791,7 @@ someone should reach somebody else's broker.
 on it, and no repository function takes a default — a forgotten argument is a
 `TypeError`, not a leak.
 
-Scoping the SQL alone was not enough. `api/store.py` held an in-memory cache
+Scoping the SQL alone was not enough. `store.py` held an in-memory cache
 keyed by `backtest_id`, and a cache hit returns **before any query runs** — so a
 second user asking for a cached id would have been handed the first user's
 result without SQLite being consulted. The key is `(user_id, backtest_id)`.
@@ -876,7 +876,7 @@ FastAPI, with interactive documentation at **`/docs`** while running.
 
 </details>
 
-See [api/routers/](api/routers) and the [API Guide](docs/API_GUIDE.md).
+See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 <br>
 
@@ -1116,7 +1116,7 @@ cp config/credentials.yaml.example config/credentials.yaml
 Fill in your Schwab app key and secret.
 
 > [!CAUTION]
-> **`config/credentials.yaml` and `config/schwab_tokens.json` are gitignored and must
+> **`credentials.yaml` and `schwab_tokens.json` are gitignored and must
 > never be committed.** Five predecessor repositories hardcoded live credentials
 > into source files, and every one had to be rotated. That is the cost this rule
 > exists to avoid.
@@ -1131,7 +1131,7 @@ py -3.12 -m uvicorn api.main:app --reload
 cd web && npm run dev
 ```
 
-On Windows, [`scripts/run-autotrader.cmd`](scripts/run-autotrader.cmd) does both —
+On Windows, [`run-autotrader.cmd`](scripts/run-autotrader.cmd) does both —
 frees the ports first and pins the right Python.
 
 > [!TIP]
@@ -1194,9 +1194,9 @@ Four checks. Each answers a different question, and none substitutes for another
 | Suite | Count | ➜ Covers |
 |:---|---:|:---|
 | 🐍 **Python** | **1,730** | Engine · analysis · API · providers · replay · accounts |
-| ⚛️ **Web** | **296** | Pure logic in [`web/src/lib`](web/src/lib) |
+| ⚛️ **Web** | **492** | Pure logic in [`lib`](web/src/lib) |
 | 📦 **Total** | **2,026** | |
-| 📊 **Coverage** | **83.2%** | `src/` and `api/`, measured on every push |
+| 📊 **Coverage** | **83.2%** | `src` and `api`, measured on every push |
 
 </div>
 
@@ -1351,7 +1351,7 @@ had already shipped, and checked against the commit that shipped it.
 
 - ➜ **The code repository stays small.** Cloning this one does not pull 433 MB of bars
 - ➜ **Docker images stay lean.** None of the market data enters a build
-- ➜ **[data/sample/](data/sample) is enough to run everything** — 5,000-row slices ship with the code, so the tests and a first run need no download
+- ➜ **[sample](data/sample) is enough to run everything** — 5,000-row slices ship with the code, so the tests and a first run need no download
 
 <br>
 
@@ -1404,7 +1404,7 @@ had already shipped, and checked against the commit that shipped it.
 - 🏛 [Architecture](docs/Design%20Document.md)
 - 🗄️ [Database](db/README.md)
 - 👩‍💻 [Developer Guide](docs/DEVELOPER_GUIDE.md)
-- 🎨 [UI / UX](docs/UI_UX.md)
+- 🎨 [UI and UX](docs/UI_UX.md)
 - 🔌 [API Guide](docs/API_GUIDE.md)
 - 🌊 Elliott Wave — [rules](docs/ELLIOTT_WAVE.md#rules) · [architecture](docs/ELLIOTT_WAVE.md#architecture) · [implementation](docs/ELLIOTT_WAVE.md#implementation) · [SRS](docs/ELLIOTT_WAVE.md#requirements)
 - 🔒 [Security Audit](docs/SECURITY_AUDIT.md)
@@ -1413,9 +1413,9 @@ had already shipped, and checked against the commit that shipped it.
 </td></tr>
 </table>
 
-Every directory also has its own README — [src/](src/README.md) ·
-[api/](api/README.md) · [web/src/lib/](web/src/lib/README.md) ·
-[tests/](tests/README.md) · [config/](config/README.md) and the rest.
+Every directory also has its own README — [src](src/README.md) ·
+[api](api/README.md) · [lib](web/src/lib/README.md) ·
+[tests](tests/README.md) · [config](config/README.md) and the rest.
 
 <br>
 
