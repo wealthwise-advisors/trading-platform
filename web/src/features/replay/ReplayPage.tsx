@@ -31,6 +31,7 @@ import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
+import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -119,13 +120,11 @@ const SESSION_PRESETS = [
   },
 ] as const
 
-/** Display clocks. The data itself is always Eastern; these only relabel it. */
-const TZ_CHOICES = [
-  { short: "ET", label: "Eastern (data)", offset: 0 },
-  { short: "CT", label: "Central", offset: -60 },
-  { short: "MT", label: "Mountain", offset: -120 },
-  { short: "PT", label: "Pacific", offset: -180 },
-] as const
+/** Display clocks. The data itself is always Eastern; these only relabel it.
+ *  The shared list, not a second copy of it: the Backtest page's Session Hours
+ *  offers the same four, and two tables would be free to drift into meaning
+ *  different things by the same name. */
+const TZ_CHOICES = SESSION_ZONES
 
 // The shared list, not a second copy of it -- a timeframe added in
 // lib/chartSetup.ts would otherwise appear on Backtest and not here. The

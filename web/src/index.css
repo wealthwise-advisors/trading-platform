@@ -1087,6 +1087,18 @@ button, [role="button"] {
   box-shadow: 0 1px 8px -1px rgba(124, 108, 245, 0.6);
 }
 
+/* The same pills inside the Backtest Config panel, where they choose the clock
+   the Session Hours fields are typed in. Violet is the Market Grid's selected
+   colour; in this panel it would be the one violet thing in an orange section,
+   and the 2026-09-15 palette gives each section exactly one accent. Ember, the
+   colour the section header and the AM/PM toggle already use. */
+.cfg-scope .tz-pill-on {
+  background: linear-gradient(180deg, #e9a26b, #c8814a);
+  border-color: rgba(233, 162, 107, 0.55);
+  color: #1b1207;
+  box-shadow: 0 1px 8px -1px rgba(233, 162, 107, 0.45);
+}
+
 /* =========================================================================
    Market Grid — custom session card
    The switch and the two fields it governs, in one box. Violet rather than
