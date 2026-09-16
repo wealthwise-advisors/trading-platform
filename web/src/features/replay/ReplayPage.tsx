@@ -1856,7 +1856,11 @@ export function ReplayPage() {
             <Button
               onClick={changeSetup}
               variant="secondary"
-              className={`border border-primary/50 text-primary hover:bg-primary/10 ${lockPrompt ? "ring-2 ring-primary animate-pulse" : ""}`}
+              // #9b8afb rather than text-primary: the primary violet on this
+              // button's grey measures 4.11 against the required 4.5. This is
+              // the lighter half of the same gradient the default button uses,
+              // so it still reads as the accent -- at 5.7.
+              className={`border border-primary/50 text-[#9b8afb] hover:bg-primary/10 ${lockPrompt ? "ring-2 ring-primary animate-pulse" : ""}`}
               title="Release the session and unlock the setup fields so symbol, strategy, dates and capital can be changed."
             >
               ✎ Change Setup
@@ -2379,7 +2383,11 @@ export function ReplayPage() {
                       browser now refuses anything outside the days on the tape,
                       and jumpToTime says so as well for the paths min/max cannot
                       cover (typing, pasting, autofill). */}
+                  {/* A title is a tooltip, not a name: it is never read by some
+                      screen readers and never shown on a touch device, so the
+                      field needs a real label as well. */}
                   <Input type="date" className="w-40" value={jumpDate}
+                         aria-label="Jump to date"
                          min={tapeDayRange?.[0]} max={tapeDayRange?.[1]}
                          onChange={(e) => setJumpDate(e.target.value)}
                          title={tapeDayRange

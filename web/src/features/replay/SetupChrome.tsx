@@ -49,7 +49,9 @@ export function SummaryChips({
       {items.map((it, i) => (
         <div key={it.label}
              className={i > 0 ? "pl-6 border-l border-white/8 min-w-0" : "min-w-0"}>
-          <div className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-500">
+          {/* slate-400: at 10px on this card slate-500 measures 3.89 against the
+              required 4.5, and these are the labels naming what each value IS. */}
+          <div className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-400">
             {it.label}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold

@@ -17,7 +17,7 @@
 | 🎨 **All styling** | [`index.css`](index.css) — theme tokens live in the `.dark` block |
 | 📐 **Layout rule** | Shared ➜ [`components/`](components) · page-specific ➜ [`features/`](features) · pure logic ➜ [`lib/`](lib) |
 | 📁 **Path** | `web/src/` |
-| 📦 **Holds** | `3` files · `2,093` lines · `5` subfolders |
+| 📦 **Holds** | `3` files · `2,095` lines · `5` subfolders |
 
 
 ---
@@ -44,7 +44,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`App.tsx`](App.tsx) | 🧭 The shell: header, sidebar, and which page is showing. | 181 |
+| [`App.tsx`](App.tsx) | 🧭 The shell: header, sidebar, and which page is showing. | 183 |
 | [`index.css`](index.css) | 🎨 Theme tokens, the app background, and every shared class. | 1,881 |
 | [`main.tsx`](main.tsx) | ▶️ Mounts React onto the page. | 31 |
 
