@@ -4,9 +4,9 @@ Generate docs/assets/overview.svg -- the README's opening summary.
 WHAT IT IS FOR
 --------------
 One picture that answers, in a few seconds and in this order: what is this,
-how does it work, what is it built with, and is it alive. Nothing else. Every
-line of text has to help a first-time reader understand the project; anything
-that only sounds good comes out.
+how does it work, and what is it built with. Nothing else. Every line of text
+has to help a first-time reader understand the project; anything that only
+sounds good comes out.
 
 WHY THE BOXES ARE NEARLY EMPTY
 ------------------------------
@@ -16,7 +16,7 @@ costs", "Sharpe / MaxDD" -- which turned a glance into a read. The detail is
 already in the README sections underneath; the picture's job is the shape of
 the pipeline, not its specification.
 
-The headings work the same way. "Build With ->" and nothing else; the sentence
+The headings work the same way. "Built With ->" and nothing else; the sentence
 that used to follow ("Modern tools for a reliable and scalable platform") said
 nothing the logos beneath it did not.
 
@@ -28,13 +28,20 @@ comes from devicon; the Charles Schwab mark is set as a wordmark because it IS
 one -- italic serif over caps on their blue. Emoji were the previous approach
 and they read as decoration, not as "this project runs on Docker".
 
-THE NUMBERS ARE MEASURED, NEVER TYPED FROM MEMORY
--------------------------------------------------
-Tests and coverage below are read from the tree and from CI, and both had
-drifted badly before this file existed: the README simultaneously claimed 1,864
-and 2,147 tests, and 77% and 78.2% coverage. A number on the first image
-someone sees is the one they will quote back, so STATS carries where each came
-from and how to re-check it.
+NO STATUS NUMBERS IN THE PICTURE
+--------------------------------
+This image used to end with a CI / deploy / tests / coverage strip, and the
+reasoning recorded here was that a number on the first image someone sees is
+the one they will quote back, so it had better be measured. That was right
+about the stakes and wrong about the remedy: the strip read "2,183 PASSING"
+and "78.6%" for months while the suite grew to 2,709 and coverage rose to
+83.2%. A number baked into an image cannot be grepped, cannot be clicked, and
+goes stale silently -- the reader has no way to tell how old it is.
+
+Status now lives in the README's own "Project Status" section, where each
+badge links to the workflow that produced it and a table beside it says what
+the number actually measures. The picture explains the project; the section
+reports its state.
 """
 
 import pathlib
@@ -42,6 +49,10 @@ import re
 import sys
 
 W = 1080
+# The last panel ("Built With") ends at y=484; the rest is the bottom margin.
+# It was 660 while a status strip sat underneath -- leaving that height behind
+# would have left 150px of empty navy under the logos.
+H = 510
 PAD = 26
 
 BG = "#05080f"
@@ -86,14 +97,6 @@ TECH = [
     ("aws", "AWS EC2"), ("schwab", "Schwab"),
 ]
 
-# label, value, colour, where the value came from
-STATS = [
-    ("CI", "PASSING", GREEN, "the CI workflow's own conclusion"),
-    ("DEPLOY", "LIVE", AMBER, "deploy asserts the served commit == github.sha"),
-    ("TESTS", "2,183 PASSING", GREEN,
-     "1,840 from `pytest --collect-only` + 343 from `vitest list`"),
-    ("COVERAGE", "78.6%", BLUE, "CI: pytest --cov=src --cov=api, TOTAL line"),
-]
 
 
 BRAND = pathlib.Path(__file__).resolve().parents[1] / "brand"
@@ -176,14 +179,13 @@ def icon(o, key, x, y, colour):
 def build():
     o = []
     y = 0
-    o.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} 660" '
-             f'width="{W}" height="660" role="img" aria-label="AutoTrader overview: '
+    o.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" '
+             f'width="{W}" height="{H}" role="img" aria-label="AutoTrader overview: '
              f'a futures trading research platform. Market data, prepare, analyze, '
              f'test strategy, simulate trades, results. Built with Python, FastAPI, '
-             f'React, TypeScript, Vite, pandas, Tailwind, Docker, AWS EC2 and Schwab. '
-             f'CI passing, deployed live, 2,183 tests passing, 78.6% coverage, '
-             f'proprietary licence.">')
-    o.append(f'<rect width="{W}" height="660" fill="{BG}"/>')
+             f'React, TypeScript, Vite, pandas, Tailwind, Docker, AWS EC2 and '
+             f'Schwab.">')
+    o.append(f'<rect width="{W}" height="{H}" fill="{BG}"/>')
 
     # ── the quotation, and nothing above it ───────────────────────────────
     qh = 66
@@ -233,7 +235,7 @@ def build():
     panel(o, PAD, y, W - 2 * PAD, 116)
     icon(o, "tools", PAD + 22, y + 34, TEAL)
     o.append(f'<text x="{PAD+62}" y="{y+54}" font-family="{FONT}" font-size="21" '
-             f'font-weight="700" fill="{INK}">Build With</text>')
+             f'font-weight="700" fill="{INK}">Built With</text>')
     arrow(o, PAD + 196, y + 47, TEAL, 26)
 
     tx0 = PAD + 244
@@ -247,47 +249,6 @@ def build():
                  f'font-family="{FONT}" font-size="{fits(label, tw-6, 12):.1f}" '
                  f'fill="{DIM}">{esc(label)}</text>')
 
-    # ── project status + licence ──────────────────────────────────────────
-    y = 502
-    panel(o, PAD, y, W - 2 * PAD, 92)
-    icon(o, "shield", PAD + 22, y + 22, TEAL)
-    o.append(f'<text x="{PAD+62}" y="{y+42}" font-family="{FONT}" font-size="21" '
-             f'font-weight="700" fill="{INK}">Project Status</text>')
-    arrow(o, PAD + 232, y + 35, TEAL, 26)
-
-    sx = PAD + 254
-    for label, value, colour, _src in STATS:
-        lw = len(label) * 6.9 + 12
-        vw = len(value) * 6.7 + 14
-        panel(o, sx, y + 18, lw + vw, 34, stroke=EDGE, fill="#0d1522", r=7)
-        o.append(f'<text x="{sx+lw/2:.1f}" y="{y+40}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="12" fill="{DIM}">{label}</text>')
-        o.append(f'<rect x="{sx+lw}" y="{y+18}" width="{vw}" height="34" rx="7" '
-                 f'fill="{colour}"/>')
-        o.append(f'<text x="{sx+lw+vw/2:.1f}" y="{y+40}" text-anchor="middle" '
-                 f'font-family="{FONT}" font-size="12" font-weight="700" '
-                 f'fill="#04121c">{esc(value)}</text>')
-        sx += lw + vw + 9
-
-    # the licence sits on the same row, after a divider
-    o.append(f'<line x1="{sx+6}" y1="{y+18}" x2="{sx+6}" y2="{y+52}" '
-             f'stroke="{EDGE}" stroke-width="1.4"/>')
-    icon(o, "scales", sx + 18, y + 23, TEAL)
-    o.append(f'<text x="{sx+50}" y="{y+42}" font-family="{FONT}" font-size="18" '
-             f'font-weight="700" fill="{INK}">License</text>')
-    arrow(o, sx + 118, y + 35, TEAL, 20)
-    lx = sx + 146
-    panel(o, lx, y + 18, 64, 34, stroke=EDGE, fill="#0d1522", r=7)
-    o.append(f'<text x="{lx+32}" y="{y+40}" text-anchor="middle" font-family="{FONT}" '
-             f'font-size="11" fill="{DIM}">license</text>')
-    o.append(f'<rect x="{lx+64}" y="{y+18}" width="78" height="34" rx="7" '
-             f'fill="{VIOLET}"/>')
-    o.append(f'<text x="{lx+103}" y="{y+40}" text-anchor="middle" font-family="{FONT}" '
-             f'font-size="11" font-weight="700" fill="#150826">proprietary</text>')
-    # A hard stop: if the row ever grows past the panel the badge is silently
-    # clipped, which is how the first version shipped with "proprietar".
-    assert lx + 142 <= W - PAD, f"status row overflows by {lx + 142 - (W - PAD)}px"
-
     o.append("</svg>")
     return "".join(o)
 
@@ -297,5 +258,3 @@ if __name__ == "__main__":
     svg = build()
     out.write_text(svg, encoding="utf-8")
     print(f"wrote {out}  ({len(svg):,} bytes)", file=sys.stderr)
-    for label, value, _c, src in STATS:
-        print(f"  {label:<9} {value:<14} <- {src}", file=sys.stderr)
