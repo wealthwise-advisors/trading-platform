@@ -4,39 +4,16 @@
 
 <br><br>
 
-### Market data goes in. A number you can defend comes out.
-
 **AutoTrader** is a futures research platform: it reads the market, tests an idea
 against it bar by bar, charges realistic costs for every fill, and follows the live
 tape while it does. Built at **WealthWise Advisors**.
-
-<br>
-
-[![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
-[![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
-[![Tests](https://img.shields.io/badge/tests-2%2C183%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
-[![Coverage](https://img.shields.io/badge/coverage-78.6%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
-
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](api)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](web)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](web/tsconfig.json)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)](web/vite.config.ts)
-[![pandas](https://img.shields.io/badge/pandas-150458?style=flat-square&logo=pandas&logoColor=white)](requirements.txt)
-[![Tailwind](https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](web/package.json)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](Dockerfile)
-[![AWS](https://img.shields.io/badge/AWS_EC2-232F3E?style=flat-square&logo=amazonec2&logoColor=white)](.github/workflows/deploy.yml)
-[![Schwab](https://img.shields.io/badge/Schwab-live_data-00a0df?style=flat-square)](src/data/schwab_provider.py)
-[![Ruff](https://img.shields.io/badge/ruff-clean-D7FF64?style=flat-square&logo=ruff&logoColor=black)](pyproject.toml)
-
-[![License](https://img.shields.io/badge/license-proprietary-64748b?style=flat-square)](LICENSE)
 
 </div>
 
 <br>
 
 <div align="center">
-<img src="docs/assets/overview.svg" alt="AutoTrader overview: a futures trading research platform. Market data, prepare, analyze, test strategy, simulate trades, results. Built with Python, FastAPI, React, TypeScript, Vite, pandas, Tailwind, Docker, AWS EC2 and Schwab. CI passing, deployed live, 2,183 tests passing, 78.6% coverage, proprietary licence." width="100%">
+<img src="docs/assets/overview.svg" alt="AutoTrader overview: a futures trading research platform. Market data, prepare, analyze, test strategy, simulate trades, results. Built with Python, FastAPI, React, TypeScript, Vite, pandas, Tailwind, Docker, AWS EC2 and Schwab. CI passing, deployed live, 2,709 tests passing, 83.2% coverage, proprietary licence." width="100%">
 </div>
 
 <br>
@@ -65,7 +42,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **1,864** | **77%** | **3.12** | **5** |
+| **2,709** | **83.2%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -95,6 +72,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 **◆ How it works**
 - [Architecture](#-architecture)
 - [Project Workflow](#-project-workflow)
+- [Project Status](#-project-status)
 - [Market Intelligence](#-market-intelligence)
 - [Strategy Engine](#-strategy-engine)
 - [Backtesting & Execution](#-backtesting--execution)
@@ -175,7 +153,7 @@ price**
 
 <img src="docs/assets/rule-03.svg" alt="" width="100%" height="2">
 
-**➜ 1,864 tests**
+**➜ 2,709 tests**
 
 **➜ Deterministic runs**
 
@@ -534,8 +512,34 @@ How a change actually travels from an idea to the live URL.
 <tr><th width="20%" align="left">Stage</th><th align="left">What has to be true to move on</th></tr>
 <tr><td><b>Research</b></td><td>The problem is <i>measured</i>, not assumed. A reported "2-minute lag" was sampled nine times against the live feed before a line of code changed — which showed the provider was not the cause</td></tr>
 <tr><td><b>Implement</b></td><td>A test exists that <b>fails against the previous commit</b>. A test that passes either way defends nothing</td></tr>
-<tr><td><b>Verify</b></td><td>1,864 tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
+<tr><td><b>Verify</b></td><td>2,227 Python tests, 492 web tests, <code>ruff</code>, and <code>npm run build</code> — <i>not</i> <code>tsc --noEmit</code>, which reports success on broken JSX</td></tr>
 <tr><td><b>Deploy</b></td><td>The running server is asked which commit it serves. Mismatch fails the run</td></tr>
+</table>
+
+<br>
+
+---
+
+## 📌 Project Status
+
+<div align="center">
+
+[![CI](https://img.shields.io/badge/CI-passing-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions/workflows/ci.yml)
+[![Deploy](https://img.shields.io/badge/deploy-live-ff9900?style=for-the-badge&logo=amazonaws&logoColor=white)](../../actions/workflows/deploy.yml)
+[![Tests](https://img.shields.io/badge/tests-2%2C709%20passing-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](#-testing--quality)
+[![Coverage](https://img.shields.io/badge/coverage-83.2%25-2dd4bf?style=for-the-badge&logo=codecov&logoColor=white)](#-testing--quality)
+
+[![License](https://img.shields.io/badge/license-proprietary-64748b?style=flat-square)](LICENSE)
+
+</div>
+
+<table>
+<tr><th width="18%" align="left">Signal</th><th align="left">What it actually measures</th></tr>
+<tr><td><b>CI</b></td><td>The workflow's own conclusion on <code>master</code> — lint, type check, unit tests, security audit, frontend tests and a package build</td></tr>
+<tr><td><b>Deploy</b></td><td>Live at <a href="https://3-218-23-37.sslip.io">3-218-23-37.sslip.io</a>. The deploy asserts the commit answering on port 80 equals <code>github.sha</code>, so a green tick cannot hide a stale build</td></tr>
+<tr><td><b>Tests</b></td><td><b>2,709 passing</b> — 2,217 of 2,227 Python (10 skipped) and 492 web. Counted from <code>pytest</code> and <code>vitest</code>, not estimated</td></tr>
+<tr><td><b>Coverage</b></td><td>Line coverage of <code>src/</code> and <code>api/</code>, from the TOTAL row of <code>pytest --cov=src --cov=api</code>. The CI gate is <b>70%</b></td></tr>
+<tr><td><b>License</b></td><td>Proprietary — see <a href="LICENSE">LICENSE</a></td></tr>
 </table>
 
 <br>
@@ -728,7 +732,7 @@ A React 19 single-page application over the FastAPI backend.
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused
-- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 270 of the suite's 296 tests run without a browser
+- ➜ **Logic lives in [`web/src/lib`](web/src/lib)** — 427 of the web suite's 492 tests run without a DOM
 
 <br>
 
@@ -1153,10 +1157,10 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-2%2C183-22c55e?style=flat-square)
-![python](https://img.shields.io/badge/python-1%2C840-3776AB?style=flat-square&logo=python&logoColor=white)
-![web](https://img.shields.io/badge/web-296-61DAFB?style=flat-square&logo=react&logoColor=white)
-![coverage](https://img.shields.io/badge/coverage-78.6%25-0ea5e9?style=flat-square)
+![tests](https://img.shields.io/badge/tests-2%2C719-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-2%2C227-3776AB?style=flat-square&logo=python&logoColor=white)
+![web](https://img.shields.io/badge/web-492-61DAFB?style=flat-square&logo=react&logoColor=white)
+![coverage](https://img.shields.io/badge/coverage-83.2%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 
 </div>
@@ -1192,11 +1196,11 @@ Four checks. Each answers a different question, and none substitutes for another
 | 🐍 **Python** | **1,730** | Engine · analysis · API · providers · replay · accounts |
 | ⚛️ **Web** | **296** | Pure logic in [`web/src/lib`](web/src/lib) |
 | 📦 **Total** | **2,026** | |
-| 📊 **Coverage** | **78.6%** | `src/` and `api/`, measured on every push |
+| 📊 **Coverage** | **83.2%** | `src/` and `api/`, measured on every push |
 
 </div>
 
-- ➜ **Gated at 70%**, deliberately below the current 78.6% — a threshold pinned to today's number gets lowered the first time it fails
+- ➜ **Gated at 70%**, deliberately below the current 83.2% — a threshold pinned to today's number gets lowered the first time it fails
 - ➜ **Excludes the vendored Schwab client**, as [`ruff`](pyproject.toml) and `mypy` already do — it is third-party code nobody here will change
 - ➜ **Runs in the same CI step as the tests**, so coverage cannot silently stop being measured
 

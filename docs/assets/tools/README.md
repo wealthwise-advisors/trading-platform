@@ -17,7 +17,7 @@
 | 📤 **Writes to** | [`docs/assets/`](..) |
 | 🎯 **Why scripts** | A diagram that must stay in step with the code has to be rebuildable |
 | 📁 **Path** | `docs/assets/tools/` |
-| 📦 **Holds** | `8` generators · `1` render harness |
+| 📦 **Holds** | `10` generators · `1` render harness |
 
 
 ---
@@ -49,6 +49,8 @@
 | [`make_divergence_svg.py`](make_divergence_svg.py) | 📉 The divergence illustration. | 259 |
 | [`make_ecosystem_svg.py`](make_ecosystem_svg.py) | 🌍 The repository ecosystem map. | 250 |
 | [`make_test_topology_svg.py`](make_test_topology_svg.py) | 🧪 The test topology. | 214 |
+| [`make_overview_svg.py`](make_overview_svg.py) | 👀 The README's opening summary — what it is, how it works, what it is built with. Carries no status numbers; those live in the README's Project Status section, where they can be linked and re-checked. | 260 |
+| [`make_legal_svgs.py`](make_legal_svgs.py) | ⚖️ The terms and privacy page headers. | 155 |
 
 > ⚠️ **`elliott-wave.svg` has no generator.** It is hand-maintained SVG and is
 > edited in place at [`../elliott-wave.svg`](../elliott-wave.svg). Looking for
