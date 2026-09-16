@@ -46,7 +46,7 @@
 |:--|:--|--:|
 | [`swing_identification.py`](swing_identification.py) | ⛰ Swing (pivot) detection for price-action and divergence. | 401 |
 | [`zigzag.py`](zigzag.py) | 📐 ZigZag pivots and per-swing decimal labelling (1.1, 1.2 …). | 301 |
-| [`indicators.py`](indicators.py) | 📊 RSI, Stochastic and friends. | 300 |
+| [`indicators.py`](indicators.py) | 📊 RSI, Stochastic and friends, plus the chart's axis rangebreaks — including the weekend cut daily bars get when none fall on a weekend. | 368 |
 | [`candlestick_patterns.py`](candlestick_patterns.py) | 🕯 Doji · Hammer · Engulfing · Morning/Evening Star. | 160 |
 | [`chart_patterns.py`](chart_patterns.py) | 📈 Classic patterns built on confirmed swing pivots. | 145 |
 | [`regime.py`](regime.py) | 🌤 Trending up, trending down, or choppy. | 82 |

@@ -17,7 +17,7 @@
 | 🔐 **Guarded** | All of these except `auth.py`, `oauth.py` and `meta.py` |
 | 📐 **Rule** | Business logic belongs in `src/`, not in a route |
 | 📁 **Path** | `api/routers/` |
-| 📦 **Holds** | `8` files · `2,275` lines |
+| 📦 **Holds** | `9` files · `2,946` lines |
 
 
 ---
@@ -50,12 +50,13 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`replay.py`](replay.py) | ▶️ Live replay: create a session, then drive it bar-by-bar over a WebSocket. | 561 |
-| [`auth.py`](auth.py) | 🔐 Sign in · register · sign out · password reset · username reminder · email verification. | 524 |
+| [`auth.py`](auth.py) | 🔐 Sign in · register · sign out · password reset · username reminder · email verification. | 1,044 |
 | [`oauth.py`](oauth.py) | 🌐 `/providers`, `/{name}/start`, `/{name}/callback` — the whole redirect dance. | 324 |
-| [`backtests.py`](backtests.py) | 📊 Run a backtest, then fetch its trades, equity, patterns and waves. | 347 |
+| [`backtests.py`](backtests.py) | 📊 Run a backtest, then fetch its trades, equity, patterns and waves. | 390 |
 | [`meta.py`](meta.py) | ❤️ Health, version, symbols, timeframes and other reference data. | 254 |
 | [`optimize.py`](optimize.py) | 🎯 Sweeps a strategy's own parameter grid and ranks the runs. | 117 |
-| [`data_export.py`](data_export.py) | 📤 Raw OHLC export — symbol, range, source ➜ CSV/Excel/PDF/Word. | 84 |
+| [`data_export.py`](data_export.py) | 📤 Raw OHLC export — symbol, range, source ➜ CSV/Excel/PDF/Word. Session hours apply to intraday only. | 89 |
+| [`account.py`](account.py) | 👤 The signed-in account: its data, and deleting it. | 103 |
 | [`schwab.py`](schwab.py) | 🏦 Schwab OAuth2, a thin wrapper over the provider's own auth methods. | 64 |
 
 

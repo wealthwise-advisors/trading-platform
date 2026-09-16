@@ -554,9 +554,9 @@ ZigZag is **display only** — it does not affect strategy signals. Red dots = s
 
 ## Session Time Filter
 
-`BacktestEngine` accepts `session_start` and `session_end` (`datetime.time` objects). When set, bars outside the window are dropped after loading but before strategy runs. The provider always loads midnight-to-midnight; the engine trims to session hours.
+`BacktestEngine` accepts `session_start` and `session_end` (`datetime.time` objects). When set, bars outside the window are dropped after loading but before strategy runs. The provider always loads midnight-to-midnight; the engine trims to session hours. Daily and weekly bars are exempt (`is_daily_or_longer`): each already spans a whole session and is stamped at midnight, so a 09:30–16:00 window would drop every one.
 
-The React sidebar (`ConfigForm.tsx`) has a "Session Hours (EST)" section defaulting to 09:30–16:00.
+The React sidebar (`ConfigForm.tsx`) has a "Session Hours (ZONE)" section defaulting to 09:30–16:00, where the zone is one of ET, CT, MT or PT. The zone is display only — the two times are always stored and sent as **Eastern**, which is what anchors VWAP and what a saved config holds. See `web/src/lib/sessionZone.ts`.
 
 ---
 
