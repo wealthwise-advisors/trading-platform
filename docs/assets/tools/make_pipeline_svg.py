@@ -58,8 +58,18 @@ GAP = 24
 COLS = 6
 CARD_W = (W - 2 * PAD - GAP * (COLS - 1)) // COLS
 CARD_H = 123          # 156 held two description lines that are no longer drawn
-CARD_Y = 34
-H = CARD_Y + CARD_H + 34
+
+# A HEADING, BECAUSE SIX NOUNS ARE NOT SELF-EXPLANATORY.
+# The image used to open straight onto "Market Data / Resample / Analysis /
+# Strategy / Paper Broker / Scored Result" with nothing saying what the row
+# was. A reader who does not already know the pipeline cannot tell whether
+# they are looking at stages, features or modules.
+TITLE = "How a run works"
+SUBTITLE = ("Market data in, a scored result out — every backtest and every live "
+            "replay walks these six stages, in this order")
+HEAD_Y = 30
+CARD_Y = 76
+H = CARD_Y + CARD_H + 30
 
 FONT = ("ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',"
         "Roboto,Helvetica,Arial,sans-serif")
@@ -192,6 +202,12 @@ def build() -> str:
     o.append(f'<rect width="{W}" height="{H}" rx="16" fill="url(#pbg)"/>')
     o.append(f'<rect x="0.5" y="0.5" width="{W-1}" height="{H-1}" rx="16" '
              f'fill="none" stroke="#1e2a44"/>')
+
+    # ── heading ───────────────────────────────────────────────────────────
+    o.append(f'<text x="{PAD+4}" y="{HEAD_Y}" font-family="{FONT}" font-size="19" '
+             f'font-weight="700" fill="{INK}">{esc(TITLE)}</text>')
+    o.append(f'<text x="{PAD+4}" y="{HEAD_Y+22}" font-family="{FONT}" font-size="13" '
+             f'fill="{DIM}">{esc(SUBTITLE)}</text>')
 
     mid = CARD_Y + 62          # the line the connectors run along
 
