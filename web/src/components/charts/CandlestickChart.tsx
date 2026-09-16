@@ -1078,10 +1078,12 @@ export function CandlestickChart({
       // Time only suits intraday bars, where a view spans hours. From 2h bars
       // up the default view spans weeks and every tick lands on the same
       // session open, so the ticks read "09:30 09:30 09:30" -- those carry the
-      // date instead.
+      // date instead. Daily and weekly views span months to years, so theirs
+      // carry the year too.
       ...(isBottom
         ? { automargin: true, tickfont: { size: 11 },
-            tickformat: barStepMs(t) >= DEFAULT_WINDOW_MS ? "%b %d" : "%H:%M" }
+            tickformat: barStepMs(t) >= 20 * 3_600_000 ? "%b %d, %Y"
+              : barStepMs(t) >= DEFAULT_WINDOW_MS ? "%b %d" : "%H:%M" }
         : {}),
       ...spikeAxis,
     }

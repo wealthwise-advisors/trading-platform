@@ -259,6 +259,13 @@ def compute_rangebreaks(index: pd.DatetimeIndex, gap_factor: float = 8.0,
         return []
 
     out: list[dict] = []
+    # Daily bars: a weekend is two missing days against one-day spacing, which
+    # no gap factor catches, so an equity or futures daily chart would show an
+    # empty Saturday and Sunday every week. Skip weekends by day of week -- but
+    # only when no bar falls on one, because crypto trades them.
+    day_ns = 86_400 * 10**9
+    if 20 * 3600 * 10**9 <= step < 6 * day_ns and not (index.dayofweek >= 5).any():
+        out.append({"bounds": ["sat", "mon"]})
     prev = index[0]
     for cur in index[1:]:
         if len(out) >= max_breaks:

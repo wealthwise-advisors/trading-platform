@@ -74,6 +74,36 @@ describe("computeRangebreaks", () => {
     expect(lo).toBe(Date.parse("2026-08-10T16:05:00"))
   })
 
+  it("skips weekends on a daily chart with no weekend bars", () => {
+    // Four weeks of weekday daily bars, Mon 3 Aug 2026 onwards.
+    const times: string[] = []
+    for (let d = 0; d < 28; d++) {
+      const day = new Date(Date.UTC(2026, 7, 3 + d))
+      const dow = day.getUTCDay()
+      if (dow !== 0 && dow !== 6) times.push(`${day.toISOString().slice(0, 10)}T00:00:00`)
+    }
+    expect(computeRangebreaks(times)).toContainEqual({ bounds: ["sat", "mon"] })
+  })
+
+  it("keeps weekends when bars fall on them, as crypto's do", () => {
+    const times = Array.from({ length: 28 }, (_, d) =>
+      `${new Date(Date.UTC(2026, 7, 1 + d)).toISOString().slice(0, 10)}T00:00:00`)
+    expect(computeRangebreaks(times)).not.toContainEqual({ bounds: ["sat", "mon"] })
+  })
+
+  it("never adds a weekend break to intraday bars", () => {
+    expect(computeRangebreaks(twoSessions())).not.toContainEqual({ bounds: ["sat", "mon"] })
+  })
+
+  it("reads each bar's weekday from its own date, whatever the viewer's time zone", () => {
+    // A Monday-to-Friday series stamped at 00:00: in a time zone west of UTC,
+    // a clock-based weekday would put every bar on the day before, Sunday
+    // included, and the weekend break would silently disappear.
+    const times = ["2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07",
+                   "2026-08-10", "2026-08-11", "2026-08-12"].map((d) => `${d}T00:00:00`)
+    expect(computeRangebreaks(times)).toContainEqual({ bounds: ["sat", "mon"] })
+  })
+
   it("handles Z-suffixed input by keeping that convention", () => {
     const zoned = twoSessions().map((t) => new Date(Date.parse(t)).toISOString())
     const breaks = computeRangebreaks(zoned)

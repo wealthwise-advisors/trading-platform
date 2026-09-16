@@ -1,14 +1,15 @@
 /**
- * The ten specified numbers are the point of this module, so each is
+ * The twelve specified numbers are the point of this module, so each is
  * asserted on its own line rather than looped over. A loop that reads the
  * table and checks itself against the table proves nothing; if a value is
  * edited by accident, these say which one.
  */
 import { describe, expect, it } from "vitest"
 import {
-  ALL_CHART_TIMEFRAMES, daysFor, daysForSet, isSpecified,
-  startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
+  ALL_CHART_TIMEFRAMES, INTRADAY_TIMEFRAMES, daysFor, daysForSet, isDailyOrLonger, isMaxHistory,
+  isSpecified, maxRangeDaysFor, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
 } from "./chartSetup"
+import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS } from "./dayRange"
 
 describe("the specified table", () => {
   it("loads 2 days for 1m", () => expect(daysFor("1m")).toBe(2))
@@ -21,13 +22,21 @@ describe("the specified table", () => {
   it("loads 25 days for 1h", () => expect(daysFor("1h")).toBe(25))
   it("loads 180 days for 2h", () => expect(daysFor("2h")).toBe(180))
   it("loads 180 days for 4h", () => expect(daysFor("4h")).toBe(180))
+  it("loads the maximum history, twenty years, for 1d", () => expect(daysFor("1d")).toBe(MAX_HISTORY_DAYS))
+  it("loads the maximum history, twenty years, for 1w", () => expect(daysFor("1w")).toBe(MAX_HISTORY_DAYS))
+
+  it("twenty years is 7305 days", () => expect(MAX_HISTORY_DAYS).toBe(7305))
+
+  it("marks exactly 1d and 1w as Max", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isMaxHistory)).toEqual(["1d", "1w"])
+  })
 
   it("gives 1m and 5m the same value, which is intended and not a typo", () => {
     expect(daysFor("1m")).toBe(daysFor("5m"))
   })
 
-  it("holds exactly ten entries — nothing inferred has been added", () => {
-    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(10)
+  it("holds exactly twelve entries — nothing inferred has been added", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(12)
   })
 })
 
@@ -52,8 +61,8 @@ describe("timeframes the table does not cover", () => {
 
 describe("an unknown timeframe", () => {
   it("returns null rather than inventing a default", () => {
-    expect(daysFor("1d")).toBeNull()
-    expect(daysFor("1w")).toBeNull()
+    expect(daysFor("3h")).toBeNull()
+    expect(daysFor("1mo")).toBeNull()
     expect(daysFor("")).toBeNull()
   })
 })
@@ -81,10 +90,24 @@ describe("a set of timeframes sharing one range", () => {
 })
 
 describe("the timeframe list", () => {
-  it("covers every interval both pages offer, in bar-interval order", () => {
+  it("covers every interval Backtest and Export Data offer, in bar-interval order", () => {
     expect(ALL_CHART_TIMEFRAMES).toEqual([
+      "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
+    ])
+  })
+
+  it("gives Market Grid everything but daily and weekly, which it cannot replay", () => {
+    expect(INTRADAY_TIMEFRAMES).toEqual([
       "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
     ])
+  })
+
+  it("knows which are daily or longer, and how far each can reach", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isDailyOrLonger)).toEqual(["1d", "1w"])
+    expect(maxRangeDaysFor("1d")).toBe(MAX_HISTORY_DAYS)
+    expect(maxRangeDaysFor("1w")).toBe(MAX_HISTORY_DAYS)
+    expect(maxRangeDaysFor("4h")).toBe(MAX_RANGE_DAYS)
+    expect(maxRangeDaysFor("2m")).toBe(MAX_RANGE_DAYS)
   })
 })
 
@@ -103,6 +126,15 @@ describe("the start date a timeframe change produces", () => {
     expect(startDateForTimeframe(END, "1h")).toBe("2026-08-08")    // 25 days
     expect(startDateForTimeframe(END, "2h")).toBe("2026-03-06")    // 180 days
     expect(startDateForTimeframe(END, "4h")).toBe("2026-03-06")    // 180 days
+    expect(startDateForTimeframe(END, "1d")).toBe("2006-09-02")    // 7305 days, twenty years
+    expect(startDateForTimeframe(END, "1w")).toBe("2006-09-02")
+  })
+
+  it("shortens a range too long for the new timeframe, as after Daily's twenty years", () => {
+    // 2m has no day count, so its range normally stays -- but not at 20 years.
+    expect(startDateForTimeframe(END, "2m", "2006-09-02")).toBe("2026-03-06")   // 180 days
+    // A range it can serve is left exactly as it was.
+    expect(startDateForTimeframe(END, "2m", "2026-08-20")).toBeNull()
   })
 
   it("gives 1m and 5m the same start, as the table intends", () => {
@@ -110,7 +142,7 @@ describe("the start date a timeframe change produces", () => {
   })
 
   it("moves nothing for a timeframe the table does not cover", () => {
-    for (const tf of ["2m", "25m", "35m", "1d"]) {
+    for (const tf of ["2m", "25m", "35m", "3h"]) {
       expect(startDateForTimeframe(END, tf)).toBeNull()
     }
   })

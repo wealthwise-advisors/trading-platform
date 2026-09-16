@@ -26,6 +26,7 @@ from src.analysis.indicators import (
     calc_vwap_bands, calc_mfi, compute_rangebreaks,
 )
 from api.schemas.chart_settings import ChartSettings
+from src.data.resample import bars_are_daily_or_longer
 from api.report.chart_settings_draw import (
     OSC_LEVELS, OSC_TITLE, ROW_SPACING,
     active_oscillator_rows, draw_volume_profile, oscillator_row_heights,
@@ -174,7 +175,9 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
         df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
         session_start=session_start,
     )
-    if _vwap.notna().any():
+    # Not on daily or weekly bars, where each bar is a whole session and VWAP
+    # would only retrace it -- the same rule api/serializers.py applies.
+    if _vwap.notna().any() and not bars_are_daily_or_longer(df.index):
         # Three solid lines of comparable weight, each its own colour --
         # matching CandlestickChart.tsx and the broker-platform treatment of
         # VWAP / UpperBand / LowerBand. Dotted bands with a fill between them

@@ -64,6 +64,36 @@ TF_ALIAS: dict[str, str] = {
     "2h": "2h", "4h": "4h",
 }
 
+#: Daily and weekly bars, as days per bar. Kept apart from TF_MINUTES on
+#: purpose: that table is the INTRADAY set -- the one Market Grid replays from
+#: 1-minute bars and every session-grid test iterates -- and a weekly bar spans
+#: five sessions, so it cannot sit on a session grid. These are built from whole
+#: session days instead (see _resample_days).
+BAR_DAYS: dict[str, int] = {"1d": 1, "1w": 7}
+
+#: Every timeframe a backtest, the optimizer or a data export accepts.
+ALL_TIMEFRAMES: tuple[str, ...] = (*TF_MINUTES, *BAR_DAYS)
+
+
+def is_daily_or_longer(timeframe: str) -> bool:
+    """A daily or weekly timeframe label."""
+    return timeframe in BAR_DAYS
+
+
+def bars_are_daily_or_longer(index: pd.DatetimeIndex) -> bool:
+    """
+    Whether bars sit a day or more apart, judged by their spacing.
+
+    For code that holds the bars but not the timeframe label -- the chart
+    payload and the exported report. The median gap, so weekends and holidays
+    between daily bars do not change the answer.
+    """
+    if len(index) < 2:
+        return False
+    gaps = pd.Series(index).diff().dt.total_seconds().dropna()
+    gaps = gaps[gaps > 0]
+    return not gaps.empty and float(gaps.median()) >= 20 * 3600
+
 OHLCV_AGG = {"open": "first", "high": "max", "low": "min",
              "close": "last", "volume": "sum"}
 
@@ -149,6 +179,23 @@ def bar_anchor(symbol: str | None) -> dt_time:
     return dt_time(hour=(-hours) % 24)
 
 
+def day_session_anchor(symbol: str | None) -> dt_time:
+    """
+    When a trading day starts, for daily and weekly bars, on the data's Eastern
+    clock.
+
+    18:00 for CME Group futures (CME, CBOT, NYMEX, COMEX): Globex opens at
+    17:00 CT the evening before the date it trades for. Midnight for anything
+    else -- equities, crypto, and anything unrecognised.
+
+    Not bar_anchor(), which is where INTRADAY bars tile from (exchange midnight).
+    A daily bar from that anchor would cut the Globex session at 01:00 ET and
+    hand the Sunday evening to a Sunday bar.
+    """
+    exchange = _SYMBOL_EXCHANGE.get((symbol or "").upper(), "")
+    return dt_time(18, 0) if _EXCHANGE_TZ_OFFSET_FROM_ET.get(exchange) == -1 else dt_time(0, 0)
+
+
 def _vwap_price(chunk: pd.DataFrame) -> float:
     """
     One bar's own volume-weighted price, from the finer bars inside it.
@@ -188,6 +235,38 @@ def _vwap_price(chunk: pd.DataFrame) -> float:
     return float((price * vol).sum() / vol.sum())
 
 
+def _resample_days(df: pd.DataFrame, timeframe: str, session_start=None) -> pd.DataFrame:
+    """
+    One bar per trading day, or per Monday-start week of trading days.
+
+    A trading day is one session, from `session_start` to the next, so an
+    overnight Globex session is one day rather than two halves split at
+    midnight. It is DATED by the day it trades for, which is how a broker dates a
+    futures daily bar: a session that opens in the evening belongs to the next
+    date -- Globex opens 18:00 ET on Sunday for Monday -- and one that opens in
+    the morning belongs to its own. Each bar is stamped 00:00 on that date, and
+    a week 00:00 on its Monday.
+
+    Dated by the open instead, the Sunday-evening session became a Sunday bar
+    and a one-day week of its own.
+    """
+    agg = {k: v for k, v in OHLCV_AGG.items() if k in df.columns}
+    if df.empty:
+        return df.iloc[0:0]
+    anchor = (pd.Timedelta(0) if session_start is None else
+              pd.Timedelta(hours=session_start.hour, minutes=session_start.minute,
+                           seconds=getattr(session_start, "second", 0)))
+    trading_date = (df.index - anchor).normalize()
+    if session_start is not None and session_start.hour >= 12:
+        trading_date = trading_date + pd.Timedelta(days=1)
+    key = trading_date
+    if timeframe == "1w":
+        key = trading_date - pd.to_timedelta(trading_date.dayofweek, unit="D")
+    out = df.groupby(key, sort=True).agg(agg).dropna(subset=["open"])
+    out.index = pd.DatetimeIndex(out.index, name=df.index.name)
+    return out
+
+
 def resample_ohlcv(df: pd.DataFrame, timeframe: str, session_start=None,
                    with_vwap_price: bool = False) -> pd.DataFrame:
     """
@@ -202,7 +281,14 @@ def resample_ohlcv(df: pd.DataFrame, timeframe: str, session_start=None,
 
     `session_start=None` keeps the plain calendar-day behaviour, which is what a
     24-hour chart wants.
+
+    Daily and weekly timeframes are whole session days, not a bin width, and go
+    to _resample_days.
     """
+    if timeframe in BAR_DAYS:
+        if with_vwap_price:
+            raise ValueError(f"{timeframe}: the per-bar VWAP price is an intraday (Market Grid) feature")
+        return _resample_days(df, timeframe, session_start)
     if timeframe not in TF_ALIAS:
         raise ValueError(f"Unsupported timeframe {timeframe!r}; expected one of {list(TF_ALIAS)}")
     agg = {k: v for k, v in OHLCV_AGG.items() if k in df.columns}

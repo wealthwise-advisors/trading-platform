@@ -7,8 +7,8 @@
  *
  *     1m → 2 days     20m → 5 days      2h → 180 days
  *     5m → 2 days     30m → 10 days     4h → 180 days
- *     10m → 3 days    45m → 15 days
- *     15m → 4 days     1h → 25 days
+ *     10m → 3 days    45m → 15 days     1d → Max (20 years)
+ *     15m → 4 days     1h → 25 days     1w → Max (20 years)
  *
  * 1m and 5m share 2 days deliberately. That is not a transcription slip, and
  * the surrounding numbers are not a curve with a gap in it: they are separate
@@ -28,6 +28,11 @@
  * for the 30-minute bars both are built from (see INTRADAY_LOOKBACK_DAYS in
  * src/data/schwab_provider.py).
  *
+ * 1d and 1w were added on 2026-09-16 as "Max", the reference platform's own
+ * entry for them, also by approval. Max is MAX_HISTORY_DAYS (twenty years): a
+ * concrete range the date fields can show. Neither is offered by Market Grid,
+ * which replays from 1-minute bars -- see INTRADAY_TIMEFRAMES.
+ *
  * WHAT IT DOES
  * ------------
  * Selecting a timeframe loads that many days -- automatically, every time, not
@@ -38,18 +43,16 @@
  *
  * TIMEFRAMES THIS TABLE DOES NOT COVER
  * ------------------------------------
- * The app offers thirteen; the table covers ten. 2m, 25m and 35m have no
+ * The app offers fifteen; the table covers twelve. 2m, 25m and 35m have no
  * entry, and deliberately get none: `daysFor` returns null and the caller
- * leaves the range exactly as the user had it. Proposed values for those three
- * are in UNSPECIFIED below, awaiting a decision -- they are NOT applied.
- *
- * The app has no Daily or Weekly timeframe, so there is nothing to decide for
- * those. If either is added it lands here with no entry, changes no range, and
- * shows as unset until someone gives it a number.
+ * leaves the range exactly as the user had it -- unless it is longer than that
+ * timeframe can be served (see startDateForTimeframe). Proposed values for
+ * those three are in UNSPECIFIED below, awaiting a decision -- they are NOT
+ * applied.
  */
-import { startDateForDays } from "./dayRange"
+import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS, daysInRange, startDateForDays } from "./dayRange"
 
-/** Exactly as specified. Ten entries; do not add an eleventh by inference. */
+/** Exactly as specified. Twelve entries; do not add a thirteenth by inference. */
 const SPECIFIED: Record<string, number> = {
   "1m": 2,
   "5m": 2,
@@ -61,6 +64,8 @@ const SPECIFIED: Record<string, number> = {
   "1h": 25,
   "2h": 180,
   "4h": 180,
+  "1d": MAX_HISTORY_DAYS,
+  "1w": MAX_HISTORY_DAYS,
 }
 
 /**
@@ -84,14 +89,36 @@ export const UNSPECIFIED: Record<string, number> = {
   "35m": 10,
 }
 
-/** Every timeframe both pages offer, in bar-interval order. */
+/** Every timeframe Backtest and Export Data offer, in bar-interval order. */
 export const ALL_CHART_TIMEFRAMES = [
-  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
+  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
 ] as const
+
+/** Daily and weekly bars -- whole trading days, not a bin within one. */
+export function isDailyOrLonger(timeframe: string): boolean {
+  return timeframe === "1d" || timeframe === "1w"
+}
+
+/**
+ * The timeframes Market Grid offers: every one but daily and weekly. It builds
+ * every pane from 1-minute bars, which cannot reach back the years a daily bar
+ * is for (see _source_timeframe in api/routers/replay.py).
+ */
+export const INTRADAY_TIMEFRAMES: string[] = ALL_CHART_TIMEFRAMES.filter((tf) => !isDailyOrLonger(tf))
+
+/** The longest date range a timeframe can be served over. */
+export function maxRangeDaysFor(timeframe: string): number {
+  return isDailyOrLonger(timeframe) ? MAX_HISTORY_DAYS : MAX_RANGE_DAYS
+}
 
 /** Does this timeframe have a specified day count? */
 export function isSpecified(timeframe: string): boolean {
   return timeframe in SPECIFIED
+}
+
+/** Is its specified range "Max" -- all the history offered? */
+export function isMaxHistory(timeframe: string): boolean {
+  return daysFor(timeframe) === MAX_HISTORY_DAYS
 }
 
 /**
@@ -136,9 +163,21 @@ export function daysForSet(timeframes: readonly string[]): number | null {
  * writes nothing in either case, rather than writing a date derived from a
  * number nobody chose or from a string that is not yet a date.
  */
-export function startDateForTimeframe(endISO: string, timeframe: string): string | null {
+export function startDateForTimeframe(
+  endISO: string, timeframe: string, currentStartISO?: string,
+): string | null {
   const days = daysFor(timeframe)
-  return days == null ? null : startDateForDays(endISO, days)
+  const max = maxRangeDaysFor(timeframe)
+  if (days != null) return startDateForDays(endISO, days, max)
+  // No day count: the range stays as it is -- unless it is longer than this
+  // timeframe can be served, as after switching from Daily's twenty years to
+  // 2m. Then it shortens to the longest this timeframe allows, rather than
+  // asking for twenty years of 2-minute bars.
+  if (currentStartISO) {
+    const span = daysInRange(currentStartISO, endISO)
+    if (span != null && span > max) return startDateForDays(endISO, max, max)
+  }
+  return null
 }
 
 /** The same for a SET of timeframes sharing one range -- see daysForSet. */

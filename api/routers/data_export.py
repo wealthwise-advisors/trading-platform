@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN, get_contract_spec
 from api.export import formats
 from api.routers.backtests import _build_provider
+from src.data.resample import is_daily_or_longer
 
 router = APIRouter(prefix="/data", tags=["data-export"])
 
@@ -50,7 +51,9 @@ def export_data(
     # overnight window (session_end < session_start, e.g. 16:00-15:00 for a
     # near-24h futures session) wraps past midnight, so the valid window is
     # time >= start OR time <= end there, not AND.
-    if not df.empty and (session_start or session_end):
+    # Not for daily or weekly bars, which are whole sessions -- see
+    # BacktestEngine.run().
+    if not df.empty and (session_start or session_end) and not is_daily_or_longer(timeframe):
         bar_times = df.index.time
         if session_start and session_end:
             if session_start <= session_end:

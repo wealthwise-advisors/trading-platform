@@ -30,7 +30,7 @@ import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
-import { ALL_CHART_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
+import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -128,8 +128,10 @@ const TZ_CHOICES = [
 ] as const
 
 // The shared list, not a second copy of it -- a timeframe added in
-// lib/chartSetup.ts would otherwise appear on Backtest and not here.
-const ALL_TIMEFRAMES = ALL_CHART_TIMEFRAMES
+// lib/chartSetup.ts would otherwise appear on Backtest and not here. The
+// intraday part of it: daily and weekly bars cannot be replayed from the
+// 1-minute bars every pane is built from.
+const ALL_TIMEFRAMES = INTRADAY_TIMEFRAMES
 const TF_MINUTES: Record<string, number> = {
   "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
   "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60, "2h": 120, "4h": 240,

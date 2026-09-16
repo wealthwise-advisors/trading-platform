@@ -28,6 +28,14 @@ export interface Rangebreak {
   bounds: [string, string]
 }
 
+const DAY_MS = 86_400_000
+
+/** Saturday or Sunday, by the date written in the timestamp -- not the viewer's clock. */
+function isWeekend(t: string): boolean {
+  const dow = new Date(`${t.slice(0, 10)}T00:00:00Z`).getUTCDay()
+  return dow === 0 || dow === 6
+}
+
 export function computeRangebreaks(times: string[]): Rangebreak[] {
   if (times.length < 3) return []
   const ms = times.map((t) => Date.parse(t))
@@ -46,6 +54,14 @@ export function computeRangebreaks(times: string[]): Rangebreak[] {
   const fmt = formatterFor(times[0])
   const iso = (n: number) => fmt(n).slice(0, 19).replace("T", " ")
   const out: Rangebreak[] = []
+  // Daily bars: a weekend is two missing days against one-day spacing, which no
+  // gap factor catches, so an equity or futures daily chart would show an empty
+  // Saturday and Sunday every week. Skip weekends by day of week -- but only
+  // when no bar falls on one, because crypto trades them. Mirrors
+  // compute_rangebreaks in src/analysis/indicators.py.
+  if (step >= 20 * 3_600_000 && step < 6 * DAY_MS && !times.some(isWeekend)) {
+    out.push({ bounds: ["sat", "mon"] })
+  }
   for (let i = 1; i < ms.length && out.length < MAX_BREAKS; i++) {
     if (ms[i] - ms[i - 1] > step * GAP_FACTOR) {
       // Start one step after the last bar so it keeps its full width, and end

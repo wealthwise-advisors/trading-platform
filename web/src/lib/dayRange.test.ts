@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   daysInRange, endDateForDays, startDateForDays, clampDays, steppedEndDate,
-  MIN_RANGE_DAYS, MAX_RANGE_DAYS,
+  MIN_RANGE_DAYS, MAX_RANGE_DAYS, MAX_HISTORY_DAYS,
 } from "./dayRange"
 
 describe("day count is inclusive of both dates", () => {
@@ -108,6 +108,37 @@ describe("clamping", () => {
     expect(endDateForDays("2026-08-12", 0)).toBe("2026-08-12")
     expect(endDateForDays("2026-08-12", -9)).toBe("2026-08-12")
     expect(endDateForDays("2026-08-12", 9999)).toBe(endDateForDays("2026-08-12", MAX_RANGE_DAYS))
+  })
+})
+
+describe("daily and weekly bars reach twenty years", () => {
+  it("the history limit is twenty years, and the intraday limit is unchanged", () => {
+    expect(MAX_HISTORY_DAYS).toBe(7305)
+    expect(MAX_RANGE_DAYS).toBe(180)
+  })
+
+  it("clamps to whichever limit it is given, and to the intraday one by default", () => {
+    expect(clampDays(7305, MAX_HISTORY_DAYS)).toBe(7305)
+    expect(clampDays(100_000, MAX_HISTORY_DAYS)).toBe(MAX_HISTORY_DAYS)
+    expect(clampDays(7305)).toBe(MAX_RANGE_DAYS)
+  })
+
+  it("counts back twenty years, including five leap days", () => {
+    // 2006-09-02 .. 2026-09-01 inclusive is 7305 days.
+    expect(startDateForDays("2026-09-01", MAX_HISTORY_DAYS, MAX_HISTORY_DAYS)).toBe("2006-09-02")
+    expect(daysInRange("2006-09-02", "2026-09-01")).toBe(MAX_HISTORY_DAYS)
+    // Without the daily limit the same count stops at the intraday 180.
+    expect(startDateForDays("2026-09-01", MAX_HISTORY_DAYS)).toBe("2026-03-06")
+  })
+
+  it("the stepper goes past 180 under the daily limit and stops at twenty years", () => {
+    let end = "2026-08-12"
+    for (let i = 0; i < 400; i++) end = steppedEndDate("2026-08-12", end, +1, MAX_HISTORY_DAYS)
+    expect(daysInRange("2026-08-12", end)).toBe(401)
+    const nearTop = endDateForDays("2006-09-02", MAX_HISTORY_DAYS - 1, MAX_HISTORY_DAYS)!
+    let top = nearTop
+    for (let i = 0; i < 5; i++) top = steppedEndDate("2006-09-02", top, +1, MAX_HISTORY_DAYS)
+    expect(daysInRange("2006-09-02", top)).toBe(MAX_HISTORY_DAYS)
   })
 })
 

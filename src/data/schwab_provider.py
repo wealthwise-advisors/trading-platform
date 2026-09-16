@@ -84,9 +84,15 @@ _TF_MAP: dict[str, tuple[str, int]] = {
 # build_timeframe still raised "Unsupported timeframe '2m'".
 _NATIVE_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "30m": 30}
 
+#: Daily and weekly bars, which Schwab serves natively. Unlike minute bars they
+#: go back years, so they are fetched in one request, not 30-day chunks.
+_DAY_PLANS: dict[str, tuple[str, int]] = {"1d": ("daily", 1), "1w": ("weekly", 1)}
+
 
 def _fetch_plan(timeframe: str):
     """(frequencyType, frequency, resample_alias_or_None) for a timeframe."""
+    if timeframe in _DAY_PLANS:
+        return (*_DAY_PLANS[timeframe], None)
     if timeframe in _TF_MAP and timeframe != "1h":
         return (*_TF_MAP[timeframe], None)
     if timeframe not in _TF_MINUTES:
@@ -334,12 +340,18 @@ class SchwabDataProvider(DataProvider):
         schwab_sym = self._to_schwab_symbol(symbol)
         logger.info(f"Schwab: {schwab_sym} {timeframe} bars {start.date()} → {end.date()}")
 
-        # Chunk into 30-day windows (Schwab minute data limit ≈ 47 days)
+        # Minute bars in 30-day windows (Schwab minute data limit ≈ 47 days).
+        # Daily and weekly bars in one request: they span years, and Schwab only
+        # accepts those frequencies with a month or year period type.
+        intraday = freq_type == "minute"
+        window = datetime.timedelta(days=30) if intraday else (end - start) + datetime.timedelta(seconds=1)
+        period_type = None if intraday else "year"
         frames: list[pd.DataFrame] = []
         chunk_start = start
         while chunk_start < end:
-            chunk_end = min(chunk_start + datetime.timedelta(days=30), end)
-            chunk = self._fetch_chunk(schwab_sym, freq_type, freq, chunk_start, chunk_end)
+            chunk_end = min(chunk_start + window, end)
+            chunk = self._fetch_chunk(schwab_sym, freq_type, freq, chunk_start, chunk_end,
+                                      period_type=period_type)
             if not chunk.empty:
                 frames.append(chunk)
             chunk_start = chunk_end + datetime.timedelta(seconds=1)
@@ -347,7 +359,7 @@ class SchwabDataProvider(DataProvider):
         if not frames:
             oldest = datetime.datetime.now() - datetime.timedelta(days=INTRADAY_LOOKBACK_DAYS)
             hint = ""
-            if start < oldest:
+            if intraday and start < oldest:
                 hint = (
                     f"\nThat start date is {(datetime.datetime.now() - start).days} days back. "
                     f"Schwab serves roughly the last {INTRADAY_LOOKBACK_DAYS} days of intraday "
@@ -382,6 +394,7 @@ class SchwabDataProvider(DataProvider):
         freq: int,
         start: datetime.datetime,
         end: datetime.datetime,
+        period_type: str | None = None,
     ) -> pd.DataFrame:
         from zoneinfo import ZoneInfo
         _ET = ZoneInfo("America/New_York")
@@ -389,6 +402,9 @@ class SchwabDataProvider(DataProvider):
         # in schwabdev produces the correct UTC epoch regardless of machine timezone.
         start_et = start.replace(tzinfo=_ET)
         end_et   = end.replace(tzinfo=_ET)
+        # periodType only for daily/weekly: minute requests have always gone
+        # without one, and stay exactly as they were.
+        extra = {"periodType": period_type} if period_type else {}
         resp = self._client.price_history(
             symbol=symbol,
             frequencyType=freq_type,
@@ -396,6 +412,7 @@ class SchwabDataProvider(DataProvider):
             startDate=start_et,
             endDate=end_et,
             needExtendedHoursData=True,
+            **extra,
         )
         if not resp.ok:
             logger.warning(f"Schwab API {resp.status_code}: {resp.text[:200]}")

@@ -14,7 +14,7 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import {
-  ALL_CHART_TIMEFRAMES, startDateForTimeframe,
+  ALL_CHART_TIMEFRAMES, maxRangeDaysFor, startDateForTimeframe,
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
@@ -229,8 +229,9 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             // would walk the window off the live edge.
             //
             // A timeframe with no preset leaves the range untouched rather
-            // than falling back to a number nobody chose.
-            const start = startDateForTimeframe(cfg.endDate, v)
+            // than falling back to a number nobody chose -- unless the range is
+            // longer than it can be served (after Daily's twenty years).
+            const start = startDateForTimeframe(cfg.endDate, v, cfg.startDate)
             if (start) cfg.setField("startDate", start)
           }}
         >
@@ -272,7 +273,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           value={cfg.timeframe}
           onChange={(v) => {
             cfg.setField("timeframe", v)
-            const start = startDateForTimeframe(cfg.endDate, v)
+            const start = startDateForTimeframe(cfg.endDate, v, cfg.startDate)
             if (start) cfg.setField("startDate", start)
           }}
         />
@@ -380,11 +381,13 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           <DayCountStepper
             startDate={cfg.startDate}
             endDate={cfg.endDate}
+            maxDays={maxRangeDaysFor(cfg.timeframe)}
             onStep={(delta) => {
               // getState() rather than the rendered props: zustand applies
               // each set synchronously, so a burst of clicks composes.
               const live = useConfigStore.getState()
-              cfg.setField("endDate", steppedEndDate(live.startDate, live.endDate, delta))
+              cfg.setField("endDate",
+                steppedEndDate(live.startDate, live.endDate, delta, maxRangeDaysFor(live.timeframe)))
             }}
           />
         </Panel>

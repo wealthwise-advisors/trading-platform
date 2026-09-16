@@ -1,8 +1,10 @@
 """
 Every timeframe the UI offers must work on every endpoint that takes one.
 
-The Backtest form, the Market Grid and (now) the Export page all offer the
-timeframes in web/src/lib/chartSetup.ts -- thirteen since 2h and 4h were added. The synthetic data path in
+The Backtest form and (now) the Export page offer the timeframes in
+web/src/lib/chartSetup.ts -- fifteen since 2h, 4h, 1d and 1w were added; the
+Market Grid replays from 1m bars and so offers the thirteen intraday ones only.
+The synthetic data path in
 api/routers/backtests.py::_build_provider carried its own five-entry minutes
 table, so 2m, 10m, 20m, 25m, 35m and 45m raised a KeyError there. That escaped
 as a bare 500 "Internal Server Error" -- no hint which input was wrong -- and
@@ -22,7 +24,7 @@ from api.main import app
 
 client = TestClient(app)
 
-UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h"]
+UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w"]
 
 #: The six that used to fail.
 FORMERLY_BROKEN = ["2m", "10m", "20m", "25m", "35m", "45m"]
