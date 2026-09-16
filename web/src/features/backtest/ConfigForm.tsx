@@ -17,6 +17,9 @@ import {
   ALL_CHART_TIMEFRAMES, maxRangeDaysFor, startDateForTimeframe,
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
+import {
+  SESSION_ZONES, fromZone, loadZoneOffset, saveZoneOffset, toZone, zoneShort,
+} from "@/lib/sessionZone"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
 import { DateField } from "@/components/ui/date-field"
@@ -58,6 +61,15 @@ function paramColor(name: string): string | undefined {
 export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
   const cfg = useConfigStore()
   const queryClient = useQueryClient()
+  /**
+   * Which clock the two Session Hours fields are typed and shown in.
+   *
+   * Display only: cfg.sessionStart / cfg.sessionEnd stay EASTERN, because that
+   * is what the backend filters on and what anchors VWAP. See lib/sessionZone.
+   * Read from storage once, on the initialiser, so a reload keeps the choice
+   * without a second render that flashes Eastern first.
+   */
+  const [zoneOffset, setZoneOffset] = useState(loadZoneOffset)
 
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: api.strategies })
   const { data: dataSources } = useQuery({ queryKey: ["data-sources"], queryFn: api.dataSources })
@@ -409,7 +421,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── session hours ────────────────────────────────────────────────── */}
-      <Section icon="session" label="Session Hours (EST)" accent="ember">
+      <Section icon="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember">
         <Panel>
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
@@ -420,23 +432,59 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             label="24 hours"
             hint="(keep every bar — crypto, pre/post-market)"
           />
+          {/* WHICH CLOCK THE TWO FIELDS SPEAK.
+              The same four pills as the Market Grid's tape, from the same list,
+              so ET/CT/MT/PT mean one thing across the app. Choosing a zone
+              RELABELS this window rather than moving it: the stored pair stays
+              Eastern (lib/sessionZone explains why), so switching to CT cannot
+              quietly change which bars the next backtest runs on. */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+              Times in
+            </span>
+            <div className="flex gap-1">
+              {SESSION_ZONES.map((z) => (
+                <button
+                  key={z.short} type="button"
+                  aria-pressed={zoneOffset === z.offset}
+                  aria-label={`times in ${z.short}`}
+                  title={z.label}
+                  className={`tz-pill${zoneOffset === z.offset ? " tz-pill-on" : ""}`}
+                  onClick={() => { setZoneOffset(z.offset); saveZoneOffset(z.offset) }}
+                >
+                  {z.short}
+                </button>
+              ))}
+            </div>
+          </div>
           {/* --primary here is Session Hours' restrained orange: the AM / PM
               toggle and the hover border inside TimeField draw in primary. */}
           <div className={`grid grid-cols-2 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}
                style={{ "--primary": "#e9a26b" } as React.CSSProperties}>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
-              <TimeField value={cfg.sessionStart} disabled={cfg.session24h}
+              <TimeField value={toZone(cfg.sessionStart, zoneOffset)} disabled={cfg.session24h}
                          label="Session start"
-                         onChange={(v) => cfg.setField("sessionStart", v)} />
+                         onChange={(v) => cfg.setField("sessionStart", fromZone(v, zoneOffset))} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">To</Label>
-              <TimeField value={cfg.sessionEnd} disabled={cfg.session24h}
+              <TimeField value={toZone(cfg.sessionEnd, zoneOffset)} disabled={cfg.session24h}
                          label="Session end"
-                         onChange={(v) => cfg.setField("sessionEnd", v)} />
+                         onChange={(v) => cfg.setField("sessionEnd", fromZone(v, zoneOffset))} />
             </div>
           </div>
+          {/* Shown only off Eastern, and it states the pair actually sent. The
+              report, a saved config and the VWAP anchor all speak Eastern, so
+              someone working in CT needs to see both numbers to reconcile them
+              -- otherwise a report reading 09:30 looks like it ignored the
+              08:30 that was typed. */}
+          {zoneOffset !== 0 && !cfg.session24h && (
+            <p className="text-[11px] text-muted-foreground">
+              Runs as <span className="font-mono">{cfg.sessionStart}–{cfg.sessionEnd} ET</span>
+              {" "}— the exchange clock the results and VWAP are anchored to.
+            </p>
+          )}
         </Panel>
       </Section>
 
