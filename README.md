@@ -951,8 +951,8 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 
 <pre>
 <a href=".">trading-platform</a>
-|------------▶  <a href="src">src/</a>   <i>the engine — no HTTP, no React, no framework</i>  <b>61</b>
-|               |------------▶  <a href="src/analysis">analysis/</a>   <i>reading the market</i>  <b>22</b>
+|------------▶  <a href="src">src</a>   <i>the engine — no HTTP, no React, no framework</i>  <b>61</b>
+|               |------------▶  <a href="src/analysis">analysis</a>   <i>reading the market</i>  <b>22</b>
 |               |               |- - - ▶  <a href="src/analysis/candlestick_patterns.py">candlestick_patterns.py</a>
 |               |               |- - - ▶  <a href="src/analysis/chart_patterns.py">chart_patterns.py</a>
 |               |               |- - - ▶  <a href="src/analysis/indicators.py">indicators.py</a>
@@ -960,7 +960,7 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |               |- - - ▶  <a href="src/analysis/swing_identification.py">swing_identification.py</a>
 |               |               └- - - ▶  <a href="src/analysis/zigzag.py">zigzag.py</a>
 |
-|               |               └------------▶  <a href="src/analysis/elliott_wave">elliott_wave/</a>   <i>wave detection, rules and hierarchy</i>  <b>14</b>
+|               |               └------------▶  <a href="src/analysis/elliott_wave">elliott_wave</a>   <i>wave detection, rules and hierarchy</i>  <b>14</b>
 |               |                               |- - - ▶  <a href="src/analysis/elliott_wave/combination.py">combination.py</a>
 |               |                               |- - - ▶  <a href="src/analysis/elliott_wave/correction.py">correction.py</a>
 |               |                               |- - - ▶  <a href="src/analysis/elliott_wave/diagonal.py">diagonal.py</a>
@@ -974,7 +974,7 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |                               |- - - ▶  <a href="src/analysis/elliott_wave/triangle.py">triangle.py</a>
 |               |                               └- - - ▶  <a href="src/analysis/elliott_wave/validation.py">validation.py</a>
 |
-|               |------------▶  <a href="src/strategies">strategies/</a>   <i>turning a reading into a decision</i>  <b>8</b>
+|               |------------▶  <a href="src/strategies">strategies</a>   <i>turning a reading into a decision</i>  <b>8</b>
 |               |               |- - - ▶  <a href="src/strategies/base_strategy.py">base_strategy.py</a>
 |               |               |- - - ▶  <a href="src/strategies/breakout.py">breakout.py</a>
 |               |               |- - - ▶  <a href="src/strategies/ma_crossover.py">ma_crossover.py</a>
@@ -982,7 +982,7 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |               |- - - ▶  <a href="src/strategies/rsi_divergence.py">rsi_divergence.py</a>
 |               |               └- - - ▶  <a href="src/strategies/rsi_mean_reversion.py">rsi_mean_reversion.py</a>
 |
-|               |------------▶  <a href="src/backtesting">backtesting/</a>   <i>replay engine and the shared market clock</i>  <b>8</b>
+|               |------------▶  <a href="src/backtesting">backtesting</a>   <i>replay engine and the shared market clock</i>  <b>8</b>
 |               |               |- - - ▶  <a href="src/backtesting/engine.py">engine.py</a>
 |               |               |- - - ▶  <a href="src/backtesting/metrics.py">metrics.py</a>
 |               |               |- - - ▶  <a href="src/backtesting/multi_replay.py">multi_replay.py</a>
@@ -990,12 +990,12 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |               |- - - ▶  <a href="src/backtesting/results.py">results.py</a>
 |               |               └- - - ▶  <a href="src/backtesting/trade_quality.py">trade_quality.py</a>
 |
-|               |------------▶  <a href="src/broker">broker/</a>   <i>what a fill actually costs</i>  <b>5</b>
+|               |------------▶  <a href="src/broker">broker</a>   <i>what a fill actually costs</i>  <b>5</b>
 |               |               |- - - ▶  <a href="src/broker/base_broker.py">base_broker.py</a>
 |               |               |- - - ▶  <a href="src/broker/paper_broker.py">paper_broker.py</a>
 |               |               └- - - ▶  <a href="src/broker/rithmic_broker.py">rithmic_broker.py</a>
 |
-|               |------------▶  <a href="src/data">data/</a>   <i>providers, and one shared resampler</i>  <b>12</b>
+|               |------------▶  <a href="src/data">data</a>   <i>providers, and one shared resampler</i>  <b>12</b>
 |               |               |- - - ▶  <a href="src/data/base_provider.py">base_provider.py</a>
 |               |               |- - - ▶  <a href="src/data/csv_provider.py">csv_provider.py</a>
 |               |               |- - - ▶  <a href="src/data/external_csv_provider.py">external_csv_provider.py</a>
@@ -1004,10 +1004,10 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |               |- - - ▶  <a href="src/data/sample_data.py">sample_data.py</a>
 |               |               └- - - ▶  <a href="src/data/schwab_provider.py">schwab_provider.py</a>
 |
-|               └------------▶  <a href="src/live">live/</a>   <i>live loop (experimental)</i>  <b>3</b>
+|               └------------▶  <a href="src/live">live</a>   <i>live loop (experimental)</i>  <b>3</b>
 |                               └- - - ▶  <a href="src/live/trader.py">trader.py</a>
-|------------▶  <a href="api">api/</a>   <i>the FastAPI service</i>  <b>32</b>
-|               |------------▶  <a href="api/routers">routers/</a>   <i>REST endpoints and the replay socket</i>  <b>8</b>
+|------------▶  <a href="api">api</a>   <i>the FastAPI service</i>  <b>32</b>
+|               |------------▶  <a href="api/routers">routers</a>   <i>REST endpoints and the replay socket</i>  <b>8</b>
 |               |               |- - - ▶  <a href="api/routers/backtests.py">backtests.py</a>
 |               |               |- - - ▶  <a href="api/routers/data_export.py">data_export.py</a>
 |               |               |- - - ▶  <a href="api/routers/meta.py">meta.py</a>
@@ -1015,26 +1015,26 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |               |- - - ▶  <a href="api/routers/replay.py">replay.py</a>
 |               |               └- - - ▶  <a href="api/routers/schwab.py">schwab.py</a>
 |
-|               |------------▶  <a href="api/schemas">schemas/</a>   <i>request and response models</i>  <b>7</b>
+|               |------------▶  <a href="api/schemas">schemas</a>   <i>request and response models</i>  <b>7</b>
 |               |               |- - - ▶  <a href="api/schemas/backtest.py">backtest.py</a>
 |               |               |- - - ▶  <a href="api/schemas/elliott_wave.py">elliott_wave.py</a>
 |               |               |- - - ▶  <a href="api/schemas/optimize.py">optimize.py</a>
 |               |               |- - - ▶  <a href="api/schemas/replay.py">replay.py</a>
 |               |               └- - - ▶  <a href="api/schemas/schwab.py">schwab.py</a>
 |
-|               |------------▶  <a href="api/report">report/</a>   <i>charts rendered on the server</i>  <b>4</b>
+|               |------------▶  <a href="api/report">report</a>   <i>charts rendered on the server</i>  <b>4</b>
 |               |               |- - - ▶  <a href="api/report/charts.py">charts.py</a>
 |               |               └- - - ▶  <a href="api/report/report.py">report.py</a>
 |
-|               └------------▶  <a href="api/export">export/</a>   <i>CSV · XLSX · PDF · DOCX</i>  <b>4</b>
+|               └------------▶  <a href="api/export">export</a>   <i>CSV · XLSX · PDF · DOCX</i>  <b>4</b>
 |                               |- - - ▶  <a href="api/export/formats.py">formats.py</a>
 |                               └- - - ▶  <a href="api/export/report_export.py">report_export.py</a>
-|------------▶  <a href="web">web/</a>   <i>the React dashboard</i>  <b>92</b>
-|               |------------▶  <a href="web/src/features">features/</a>   <i>replay, backtest and export pages</i>  <b>5</b>
+|------------▶  <a href="web">web</a>   <i>the React dashboard</i>  <b>92</b>
+|               |------------▶  <a href="web/src/features">features</a>   <i>replay, backtest and export pages</i>  <b>5</b>
 |
-|               |------------▶  <a href="web/src/components">components/</a>   <i>shared UI</i>  <b>34</b>
+|               |------------▶  <a href="web/src/components">components</a>   <i>shared UI</i>  <b>34</b>
 |
-|               └------------▶  <a href="web/src/lib">lib/</a>   <i>pure logic, unit-tested away from React</i>  <b>49</b>
+|               └------------▶  <a href="web/src/lib">lib</a>   <i>pure logic, unit-tested away from React</i>  <b>49</b>
 |                               |- - - ▶  <a href="web/src/lib/api.ts">api.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/bandAgreement.test.ts">bandAgreement.test.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/bandAgreement.ts">bandAgreement.ts</a>
@@ -1044,7 +1044,7 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |                               |- - - ▶  <a href="web/src/lib/dayRange.test.ts">dayRange.test.ts</a>
 |                               |- - - ▶  <a href="web/src/lib/dayRange.ts">dayRange.ts</a>
 |                               └- - - ▶  <i>+41 more</i>
-|------------▶  <a href="tests">tests/</a>   <i>what every number on screen rests on</i>  <b>37</b>
+|------------▶  <a href="tests">tests</a>   <i>what every number on screen rests on</i>  <b>37</b>
 |               |- - - ▶  <a href="tests/test_api_provider_errors.py">test_api_provider_errors.py</a>
 |               |- - - ▶  <a href="tests/test_engine.py">test_engine.py</a>
 |               |- - - ▶  <a href="tests/test_follow_live_matrix.py">test_follow_live_matrix.py</a>
@@ -1053,7 +1053,7 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |- - - ▶  <a href="tests/test_provider_timeframes.py">test_provider_timeframes.py</a>
 |               |- - - ▶  <a href="tests/test_daily_weekly.py">test_daily_weekly.py</a>
 |               └- - - ▶  <i>+30 more</i>
-|------------▶  <a href="docs">docs/</a>   <i>architecture, rules and guides</i>  <b>22</b>
+|------------▶  <a href="docs">docs</a>   <i>architecture, rules and guides</i>  <b>22</b>
 |               |- - - ▶  <a href="docs/API_GUIDE.md">API_GUIDE.md</a>
 |               |- - - ▶  <a href="docs/Design Document.md">Design Document.md</a>
 |               |- - - ▶  <a href="docs/CONFIGURATION.md">CONFIGURATION.md</a>
@@ -1061,21 +1061,21 @@ See [routers](api/routers) and the [API Guide](docs/API_GUIDE.md).
 |               |- - - ▶  <a href="docs/ELLIOTT_WAVE.md">ELLIOTT_WAVE.md</a>
 |               |- - - ▶  <a href="docs/ELLIOTT_WAVE.md">ELLIOTT_WAVE.md</a>
 |               └- - - ▶  <i>+10 more</i>
-|------------▶  <a href="config">config/</a>   <i>settings and credential templates</i>  <b>3</b>
+|------------▶  <a href="config">config</a>   <i>settings and credential templates</i>  <b>3</b>
 |               |- - - ▶  <a href="config/credentials.yaml.example">credentials.yaml.example</a>
 |               └- - - ▶  <a href="config/settings.yaml">settings.yaml</a>
-|------------▶  <a href="db">db/</a>   <i>SQLite schema, connection and the result repository</i>  <b>5</b>
+|------------▶  <a href="db">db</a>   <i>SQLite schema, connection and the result repository</i>  <b>5</b>
 |               |- - - ▶  <a href="db/schema.sql">schema.sql</a>
 |               |- - - ▶  <a href="db/connection.py">connection.py</a>
 |               └- - - ▶  <a href="db/backtests.py">backtests.py</a>
-|------------▶  <a href="data">data/</a>   <i>bundled samples, downloads, and saved results</i>  <b>18</b>
-|------------▶  <a href="scripts">scripts/</a>   <i>CLI entry points and the local launcher</i>  <b>5</b>
+|------------▶  <a href="data">data</a>   <i>bundled samples, downloads, and saved results</i>  <b>18</b>
+|------------▶  <a href="scripts">scripts</a>   <i>CLI entry points and the local launcher</i>  <b>5</b>
 |               |- - - ▶  <a href="scripts/download_rithmic_data.py">download_rithmic_data.py</a>
 |               |- - - ▶  <a href="scripts/generate_data.py">generate_data.py</a>
 |               |- - - ▶  <a href="scripts/run-autotrader.cmd">run-autotrader.cmd</a>
 |               └- - - ▶  <a href="scripts/run_backtest.py">run_backtest.py</a>
-|------------▶  <a href="reports">reports/</a>   <i>generated output</i>  <b>3</b>
-                └------------▶  <a href=".github/workflows">workflows/</a>   <i>CI and deploy</i>  <b>3</b>
+|------------▶  <a href="reports">reports</a>   <i>generated output</i>  <b>3</b>
+                └------------▶  <a href=".github/workflows">workflows</a>   <i>CI and deploy</i>  <b>3</b>
                                 |- - - ▶  <a href=".github/workflows/ci.yml">ci.yml</a>
                                 |- - - ▶  <a href=".github/workflows/deploy.yml">deploy.yml</a>
                                 └- - - ▶  <a href=".github/workflows/oauth-logs.yml">oauth-logs.yml</a>
