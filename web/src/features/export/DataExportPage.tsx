@@ -87,7 +87,10 @@ export function DataExportPage() {
             <div className="space-y-2">
               <Label>Symbol</Label>
               <Select value={symbol} onValueChange={setSymbol}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                {/* The <Label> above is not associated with a Radix trigger --
+                    it is a button, not a labelable control -- so without this it
+                    announces only the chosen value. */}
+                <SelectTrigger className="w-full" aria-label="Symbol"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(symbols ?? [{ symbol: "ES", name: "E-mini S&P 500", has_spec: true }]).map((s) => (
                     <SelectItem key={s.symbol} value={s.symbol}>
@@ -103,7 +106,7 @@ export function DataExportPage() {
             <div className="space-y-2">
               <Label>Timeframe</Label>
               <Select value={timeframe} onValueChange={setTimeframe}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full" aria-label="Timeframe"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TIMEFRAMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
@@ -114,18 +117,18 @@ export function DataExportPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Start Date</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input type="date" aria-label="Start date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>End Date</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <Input type="date" aria-label="End date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Data Source</Label>
             <Select value={dataSource} onValueChange={setDataSource}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full" aria-label="Data source"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(dataSources ?? []).map((ds) => (
                   <SelectItem key={ds.id} value={ds.id} disabled={!ds.available}>

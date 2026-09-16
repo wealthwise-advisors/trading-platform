@@ -61,10 +61,15 @@ export function DayCountStepper({
         >
           &minus;
         </Button>
+        {/* role="status" rather than a bare span: ARIA prohibits aria-label on an
+            element with no role, and a live region named "number of days" can be
+            announced as those words INSTEAD of the number that changed. The name
+            now carries the value, so a step announces "31 days". */}
         <span
           className="min-w-[2.5rem] text-center font-mono text-sm tabular-nums"
+          role="status"
           aria-live="polite"
-          aria-label="number of days"
+          aria-label={known ? `${days} days` : "day count unavailable"}
         >
           {known ? days : "—"}
         </span>

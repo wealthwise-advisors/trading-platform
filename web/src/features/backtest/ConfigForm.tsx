@@ -181,7 +181,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {/* ── data source ──────────────────────────────────────────────────── */}
       <Section icon="source" label="Data Source" accent="sky">
         <Select value={cfg.dataSource} onValueChange={(v) => cfg.setField("dataSource", v)}>
-          <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
+          {/* A Radix select trigger is a button whose only content is the chosen
+              value, so without a label it announces as that value and nothing
+              else -- "Synthetic Data", with no clue what it sets. */}
+          <SelectTrigger className="w-full h-auto py-2" aria-label="Data source"><SelectValue /></SelectTrigger>
           <SelectContent className="cfg-scope">
             {(dataSources ?? []).map((ds) => {
               const d = SOURCE_META[ds.id] ?? { Icon: Database, note: "" }
@@ -247,7 +250,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             if (start) cfg.setField("startDate", start)
           }}
         >
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full" aria-label="Timeframe"><SelectValue /></SelectTrigger>
           {/* position="popper" opens the list BELOW the box. The default,
               item-aligned, slides the list up so the current value sits over
               the box -- which covered this section's own heading and left the
@@ -301,7 +304,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             if (s) cfg.setParams(Object.fromEntries(s.params.map((p) => [p.name, p.default])))
           }}
         >
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full" aria-label="Strategy"><SelectValue /></SelectTrigger>
           <SelectContent className="cfg-scope">
             {(strategies ?? []).map((s) => {
               return (
@@ -346,15 +349,15 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <Section icon="capital" label="Capital & Risk" accent="blue">
         <Panel>
           <FieldRow icon={<Wallet className="h-4 w-4 text-[#60a5fa]" />} label="Initial Capital ($)">
-            <Input type="number" step={10000} value={cfg.initialCapital}
+            <Input type="number" step={10000} aria-label="Initial capital in dollars" value={cfg.initialCapital}
                    onChange={(e) => cfg.setField("initialCapital", Number(e.target.value))} />
           </FieldRow>
           <FieldRow icon={<Layers className="h-4 w-4 text-[#2dd4bf]" />} label="Contracts per Trade">
-            <Input type="number" min={1} max={10} value={cfg.contractsPerTrade}
+            <Input type="number" min={1} max={10} aria-label="Contracts per trade" value={cfg.contractsPerTrade}
                    onChange={(e) => cfg.setField("contractsPerTrade", Number(e.target.value))} />
           </FieldRow>
           <FieldRow icon={<Percent className="h-4 w-4 text-[#fb7185]" />} label="Commission / Contract ($)">
-            <Input type="number" step={0.25} value={cfg.commission}
+            <Input type="number" step={0.25} aria-label="Commission per contract in dollars" value={cfg.commission}
                    onChange={(e) => cfg.setField("commission", Number(e.target.value))} />
           </FieldRow>
         </Panel>

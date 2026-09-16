@@ -75,9 +75,12 @@ export function StepSection({
             </span>
           )}
 
-          <h3 className="text-[13px] font-bold uppercase tracking-[0.11em] text-slate-100">
+          {/* h2, not h3: the page's only heading above these is the h1, so an h3
+              skipped a level and left anyone navigating by heading unable to tell
+              whether a step was nested inside something they had missed. */}
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.11em] text-slate-100">
             {title}
-          </h3>
+          </h2>
 
           {hint && (
             <span className="ml-auto flex items-center gap-2 rounded-lg border border-violet-400/20

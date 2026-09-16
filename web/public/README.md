@@ -19,7 +19,7 @@
 | 🔒 **Self-contained** | Styles are inline, so app theming **cannot** change them |
 | ⚠️ **Also on the Desktop** | [`scripts/run_local.py`](../../scripts/run_local.py) prefers the Desktop copies — edit both, or the local rig shows a stale page |
 | 📁 **Path** | `web/public/` |
-| 📦 **Holds** | `9` files · `5,023` lines |
+| 📦 **Holds** | `9` files · `3,059` lines |
 
 
 ---
@@ -43,11 +43,11 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`autotrader_signin.html`](autotrader_signin.html) | 🔐 Sign in · forgot password · reset password. | 1,032 |
-| [`autotrader_signup.html`](autotrader_signup.html) | 📝 Create an account. | 1,109 |
-| [`terms.html`](terms.html) | 📜 Terms of Service. | 159 |
-| [`privacy.html`](privacy.html) | 🔏 Privacy Policy. | 167 |
-| [`help.html`](help.html) | 💬 Help Center. | 135 |
+| [`autotrader_signin.html`](autotrader_signin.html) | 🔐 Sign in · forgot password · reset password. | 1,354 |
+| [`autotrader_signup.html`](autotrader_signup.html) | 📝 Create an account. | 1,147 |
+| [`terms.html`](terms.html) | 📜 Terms of Service. | 169 |
+| [`privacy.html`](privacy.html) | 🔏 Privacy Policy. | 196 |
+| [`help.html`](help.html) | 💬 Help Center. | 193 |
 | [`trading-office.jpg`](trading-office.jpg) | 🌃 The photograph behind the sign-in card. | 1,786 |
 | [`TwemojiCountryFlags.woff2`](TwemojiCountryFlags.woff2) | 🏳 Flag font for the 234-country picker. | 610 |
 | [`icons.svg`](icons.svg) | Sprite sheet. | 24 |

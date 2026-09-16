@@ -18,7 +18,7 @@
 | 📋 **Planning** | [`PRD.md`](PRD.md) ➜ [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) ➜ [`Design Document.md`](Design%20Document.md) ➜ [`Implementation Plan.md`](Implementation%20Plan.md) |
 | 🔒 **Security** | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) |
 | 📁 **Path** | `docs/` |
-| 📦 **Holds** | `19` files · `6,771` lines · `1` subfolders |
+| 📦 **Holds** | `18` files · `6,679` lines · `1` subfolders |
 
 
 ---
@@ -43,24 +43,24 @@
 |:--|:--|--:|
 | [`QUICKSTART.md`](QUICKSTART.md) | 🚀 Running in five minutes. | 41 |
 | [`INSTALLATION.md`](INSTALLATION.md) | 📦 Full setup, including Python 3.12. | 92 |
-| [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | 🛠 How to work in this codebase. | 233 |
+| [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | 🛠 How to work in this codebase. | 265 |
 | [`Design Document.md`](Design%20Document.md) | 🏗 How the pieces fit. | 293 |
 | [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md) | 🌊 **The whole wave engine** — rules, requirements, architecture, build record. | 3,536 |
 | [`CONFIGURATION.md`](CONFIGURATION.md) | ⚙️ Every setting explained. | 133 |
 | [`API_GUIDE.md`](API_GUIDE.md) | 🔌 The endpoints. | 91 |
-| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#rules) | 🌊 **The specification.** Every rule a structure must satisfy. | 1,152 |
-| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#requirements) | 🌊 Requirements for the wave engine. | 1,251 |
-| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#architecture) | 🌊 How the 13 modules interlock. | 639 |
-| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#implementation) | 🌊 The build baseline. | 456 |
+| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#rules) | 🌊 **The specification.** Every rule a structure must satisfy. | 3,536 |
+| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#requirements) | 🌊 Requirements for the wave engine. | 3,536 |
+| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#architecture) | 🌊 How the 13 modules interlock. | 3,536 |
+| [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#implementation) | 🌊 The build baseline. | 3,536 |
 | [`Technical Requirements Document.md`](Technical%20Requirements%20Document.md) | 📋 System requirements. | 287 |
 | [`PRD.md`](PRD.md) | 📋 Product requirements. | 174 |
-| [`Implementation Plan.md`](Implementation%20Plan.md) | 📋 Phases, dependencies and what is left. | 221 |
+| [`Implementation Plan.md`](Implementation%20Plan.md) | 📋 Phases, dependencies and what is left. | 229 |
 | [`UI_UX.md`](UI_UX.md) | 🎨 Interface decisions. | 199 |
 | [`SECURITY_AUDIT.md`](SECURITY_AUDIT.md) | 🔒 Findings and what was done. | 138 |
-| [`RELEASE.md`](RELEASE.md#audit) | ✅ Pre-release checks. | 320 |
+| [`RELEASE.md`](RELEASE.md#audit) | ✅ Pre-release checks. | 435 |
 | [`RELEASE.md`](RELEASE.md) | 📝 What shipped, and the checks behind it. | 435 |
-| [`BETA_TESTING.md`](BETA_TESTING.md) | 🧪 Test accounts, critical flows, bug reporting. | 174 |
-| [`RELEASE.md`](RELEASE.md#notes) | 📝 What changed. | 93 |
+| [`BETA_TESTING.md`](BETA_TESTING.md) | 🧪 Test accounts, critical flows, bug reporting. | 211 |
+| [`RELEASE.md`](RELEASE.md#notes) | 📝 What changed. | 435 |
 | [`VERIFICATION_REPORT.md`](VERIFICATION_REPORT.md) | 🔬 Correctness evidence. | 235 |
 | [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | 🔧 When it will not start. | 63 |
 | [`FAQ.md`](FAQ.md) | ❓ Short answers. | 22 |

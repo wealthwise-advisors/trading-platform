@@ -17,7 +17,7 @@
 | 👤 **Manage accounts** | `py -3.12 scripts/manage_users.py list` |
 | 🐍 **Python** | **Must be 3.12.** 3.14 breaks `pandas_ta` and fakes a test failure |
 | 📁 **Path** | `scripts/` |
-| 📦 **Holds** | `6` files · `771` lines |
+| 📦 **Holds** | `8` files · `1,060` lines |
 
 
 ---
@@ -40,7 +40,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`run_local.py`](run_local.py) | 🖥 Serves the sign-in pages, the built dashboard and the API on **one** port, so local matches production. | 203 |
-| [`manage_users.py`](manage_users.py) | 👤 Create, inspect, disable and link accounts. | 310 |
+| [`manage_users.py`](manage_users.py) | 👤 Create, inspect, disable and link accounts. | 367 |
 | [`run_backtest.py`](run_backtest.py) | ⏱ Run a backtest from the terminal, no browser. | 109 |
 | [`generate_data.py`](generate_data.py) | 🎲 Write synthetic bars. | 34 |
 | [`download_rithmic_data.py`](download_rithmic_data.py) | 📡 Pull history from Rithmic. | 70 |

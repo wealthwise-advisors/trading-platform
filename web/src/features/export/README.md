@@ -16,7 +16,7 @@
 | 🎯 **Does** | Symbol + range + source ➜ CSV · Excel · PDF · Word |
 | 🔗 **Talks to** | `GET /api/data/export` |
 | 📁 **Path** | `web/src/features/export/` |
-| 📦 **Holds** | `1` files · `188` lines |
+| 📦 **Holds** | `1` files · `191` lines |
 
 
 ---
@@ -39,7 +39,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`DataExportPage.tsx`](DataExportPage.tsx) | 📤 The form and the download — all fifteen timeframes, 1d and 1w included. | 188 |
+| [`DataExportPage.tsx`](DataExportPage.tsx) | 📤 The form and the download — all fifteen timeframes, 1d and 1w included. | 191 |
 
 
 ---

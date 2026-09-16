@@ -17,7 +17,7 @@
 | 🧪 **Guarded by** | [`tests/test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) — 1,069 lines |
 | 📐 **Rule** | Pure functions on a frame. No I/O, no state |
 | 📁 **Path** | `src/analysis/` |
-| 📦 **Holds** | `6` files · `1,389` lines · `1` subfolders |
+| 📦 **Holds** | `6` files · `1,457` lines · `1` subfolders |
 
 
 ---

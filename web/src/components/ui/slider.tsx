@@ -11,6 +11,15 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  // THE NAME HAS TO REACH THE THUMB.
+  // `role="slider"` is on the thumb, not the root, so an aria-label spread onto
+  // the root names an element that has no role to be named -- and a screen
+  // reader announces the control as just "slider". Pulled out of props here and
+  // put on each thumb instead. axe reported this as aria-input-field-name on
+  // five thumbs in the backtest panel, every one of which already passed a
+  // label in.
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const _values = React.useMemo(
@@ -49,6 +58,12 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
+          // A range slider's two thumbs would otherwise share one name, leaving
+          // them indistinguishable in a screen reader's list of controls.
+          aria-label={
+            ariaLabel && _values.length > 1 ? `${ariaLabel} ${index + 1}` : ariaLabel
+          }
+          aria-labelledby={ariaLabelledBy}
           className="relative block size-4 shrink-0 rounded-full border-2 border-[#9b8afb] bg-white ring-[#9b8afb]/40 shadow-[0_0_12px_rgba(124,108,245,0.7)] transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
         />
       ))}

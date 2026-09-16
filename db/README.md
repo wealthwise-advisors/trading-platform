@@ -19,7 +19,7 @@
 | 🔑 **Never stores a secret in the clear** | Passwords are argon2id; sessions and links are stored as their SHA-256 |
 | 📐 **Rule** | No repository function takes a default `user_id` — a forgotten argument is a `TypeError`, not a leak |
 | 📁 **Path** | `db/` |
-| 📦 **Holds** | `4` files · `1,409` lines |
+| 📦 **Holds** | `4` files · `1,954` lines |
 
 
 ---
@@ -42,10 +42,10 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`users.py`](users.py) | 👥 Accounts, sessions, OAuth identities and email tokens — everything about **people**. | 601 |
-| [`schema.sql`](schema.sql) | 🧱 The tables. Every statement is `IF NOT EXISTS`, so applying it is idempotent. | 309 |
-| [`connection.py`](connection.py) | 🔌 Opening the file, the PRAGMAs, and applying + versioning the schema. | 236 |
-| [`backtests.py`](backtests.py) | 📊 The only module that knows the backtest table layout. | 263 |
+| [`users.py`](users.py) | 👥 Accounts, sessions, OAuth identities and email tokens — everything about **people**. | 1,056 |
+| [`schema.sql`](schema.sql) | 🧱 The tables. Every statement is `IF NOT EXISTS`, so applying it is idempotent. | 375 |
+| [`connection.py`](connection.py) | 🔌 Opening the file, the PRAGMAs, and applying + versioning the schema. | 243 |
+| [`backtests.py`](backtests.py) | 📊 The only module that knows the backtest table layout. | 280 |
 
 
 ---

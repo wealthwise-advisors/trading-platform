@@ -41,14 +41,14 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`make_live_tape_svg.py`](make_live_tape_svg.py) | 📡 The live tape diagram. | 884 |
-| [`make_flow_svgs.py`](make_flow_svgs.py) | 🔄 `architecture` · `workflow` · `execution`. | 564 |
-| [`make_one_clock_svg.py`](make_one_clock_svg.py) | 🕐 The shared-clock diagram. | 264 |
-| [`make_pipeline_svg.py`](make_pipeline_svg.py) | ⚙️ The pipeline diagram. | 261 |
+| [`make_live_tape_svg.py`](make_live_tape_svg.py) | 📡 The live tape diagram. | 882 |
+| [`make_flow_svgs.py`](make_flow_svgs.py) | 🔄 `architecture` · `workflow` · `execution`. | 573 |
+| [`make_one_clock_svg.py`](make_one_clock_svg.py) | 🕐 The shared-clock diagram. | 250 |
+| [`make_pipeline_svg.py`](make_pipeline_svg.py) | ⚙️ The pipeline diagram. | 273 |
 | [`make_deploy_svg.py`](make_deploy_svg.py) | 🚀 The deployment diagram. | 249 |
-| [`make_divergence_svg.py`](make_divergence_svg.py) | 📉 The divergence illustration. | 243 |
-| [`make_ecosystem_svg.py`](make_ecosystem_svg.py) | 🌍 The repository ecosystem map. | 226 |
-| [`make_test_topology_svg.py`](make_test_topology_svg.py) | 🧪 The test topology. | 208 |
+| [`make_divergence_svg.py`](make_divergence_svg.py) | 📉 The divergence illustration. | 259 |
+| [`make_ecosystem_svg.py`](make_ecosystem_svg.py) | 🌍 The repository ecosystem map. | 250 |
+| [`make_test_topology_svg.py`](make_test_topology_svg.py) | 🧪 The test topology. | 214 |
 
 > ⚠️ **`elliott-wave.svg` has no generator.** It is hand-maintained SVG and is
 > edited in place at [`../elliott-wave.svg`](../elliott-wave.svg). Looking for

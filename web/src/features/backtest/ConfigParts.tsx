@@ -195,8 +195,13 @@ export function SliderField({
           )}
           {label}
           {help && (
-            <span title={help} className="cursor-help text-muted-foreground" aria-label={help}>
-              <Info className="h-3.5 w-3.5" />
+            // aria-label on a bare span names an element with no role to carry a
+            // name -- ARIA prohibits it, and axe flagged all five of these. The
+            // text now lives in the DOM instead: visible to a screen reader,
+            // shown on hover by the title, and hidden from sight.
+            <span title={help} className="cursor-help text-muted-foreground">
+              <Info className="h-3.5 w-3.5" aria-hidden />
+              <span className="sr-only">{help}</span>
             </span>
           )}
         </label>
