@@ -1,13 +1,13 @@
 """Backtest run + result sub-resource endpoints."""
 
-from datetime import datetime, time as time_type
+from datetime import datetime, time as time_type, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
-from src.data.resample import TF_MINUTES
+from src.data.resample import ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, is_daily_or_longer
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
@@ -82,16 +82,31 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
     # -- 2m, 10m, 20m, 25m, 35m, 45m -- died here with a KeyError that
     # reached the user as a bare "Internal Server Error". The Optimizer and
     # the data export share this function, so they failed the same way.
-    if timeframe not in TF_MINUTES:
+    if timeframe not in ALL_TIMEFRAMES:
         raise HTTPException(
             400, f"Unsupported timeframe {timeframe!r}. "
-                 f"Supported: {', '.join(TF_MINUTES)}.")
-    tf_min = TF_MINUTES[timeframe]
-    total_minutes = (end_date - start_date).days * 6.5 * 60
-    bars = max(int(total_minutes / tf_min), 100)
+                 f"Supported: {', '.join(ALL_TIMEFRAMES)}.")
+    start = datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30)
+    if is_daily_or_longer(timeframe):
+        # One bar per weekday, or per week. The intraday count below assumes 6.5
+        # trading hours a day, which for daily bars would fill a fraction of the
+        # range -- 20 years would come out as the first eight. A weekly series
+        # starts on a Monday: the generator skips weekend timestamps, and a
+        # 7-day step from a Saturday would never land on anything else.
+        span_days = (end_date - start_date).days + 1
+        tf_min = BAR_DAYS[timeframe] * 1440
+        if timeframe == "1w":
+            start += timedelta(days=(7 - start.weekday()) % 7)
+            bars = max(span_days // 7 + 1, 100)
+        else:
+            bars = max(span_days * 5 // 7 + 1, 100)
+    else:
+        tf_min = TF_MINUTES[timeframe]
+        total_minutes = (end_date - start_date).days * 6.5 * 60
+        bars = max(int(total_minutes / tf_min), 100)
     generate_sample_data(
         symbol=symbol,
-        start=datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30),
+        start=start,
         bars=bars,
         timeframe_minutes=tf_min,
         base_price=BASE_PRICES.get(symbol, 4500.0),

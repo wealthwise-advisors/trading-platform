@@ -15,6 +15,7 @@ from src.analysis.indicators import (
     calc_rsi, calc_stochrsi, calc_mfi, calc_vwap_bands, calc_volume_profile,
 )
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
+from src.data.resample import bars_are_daily_or_longer
 
 
 def _safe(x):
@@ -125,6 +126,12 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
         df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
         session_start=session_start,
     )
+    # Daily and weekly bars: VWAP resets every session and each of these bars is
+    # a whole session, so the line would only retrace each bar's own price. Sent
+    # empty, which the chart already treats as nothing to draw. The exported
+    # report skips it the same way.
+    if bars_are_daily_or_longer(df.index):
+        vwap = vwap_u = vwap_l = pd.Series(np.nan, index=df.index)
 
     def series_to_list(s: pd.Series) -> list:
         return [_safe(float(v)) if pd.notna(v) else None for v in s]

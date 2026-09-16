@@ -16,9 +16,9 @@
  * rows are hidden, and which are starred. Those are conveniences -- like the
  * instrument picker's favourites they never reach the config store, a saved
  * config, or a request. A user cannot add an interval (the backend serves only
- * these thirteen) or edit a day count (that would override the specified table).
+ * these fifteen) or edit a day count (that would override the specified table).
  */
-import { ALL_CHART_TIMEFRAMES, daysFor } from "./chartSetup"
+import { ALL_CHART_TIMEFRAMES, daysFor, isMaxHistory } from "./chartSetup"
 
 export const FAV_KEY = "interval-favourites"
 export const LAYOUT_KEY = "interval-list-layout"
@@ -136,8 +136,9 @@ export function favouriteRows(layout: Layout, favs: string[]): string[] {
   return layout.order.filter((tf) => favs.includes(tf))
 }
 
-/** "2 D" for an interval with a specified day count, null otherwise. */
+/** "2 D" for an interval with a specified day count, "Max" for all history, null otherwise. */
 export function rangeLabel(tf: string): string | null {
   const days = daysFor(tf)
-  return days == null ? null : `${days} D`
+  if (days == null) return null
+  return isMaxHistory(tf) ? "Max" : `${days} D`
 }

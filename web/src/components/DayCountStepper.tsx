@@ -28,10 +28,12 @@ interface Props {
    * The number keeps its own aria-label, so nothing is lost to a screen reader.
    */
   hideLabel?: boolean
+  /** The longest range offered. Intraday by default; daily and weekly bars go further. */
+  maxDays?: number
 }
 
 export function DayCountStepper({
-  startDate, endDate, onStep, disabled, disabledReason, hideLabel,
+  startDate, endDate, onStep, disabled, disabledReason, hideLabel, maxDays = MAX_RANGE_DAYS,
 }: Props) {
   // null when either date is mid-edit and unparseable; the stepper then shows a
   // dash rather than inventing a number and rewriting the other field.
@@ -44,7 +46,7 @@ export function DayCountStepper({
   }
 
   const atMin = known && days <= MIN_RANGE_DAYS
-  const atMax = known && days >= MAX_RANGE_DAYS
+  const atMax = known && days >= maxDays
 
   return (
     <div className="space-y-1" title={disabled ? disabledReason : undefined}>
@@ -78,7 +80,9 @@ export function DayCountStepper({
       </div>
       <p className="text-[11px] text-muted-foreground">
         {atMax
-          ? `${MAX_RANGE_DAYS} is the furthest intraday history the provider serves`
+          ? (maxDays > MAX_RANGE_DAYS
+              ? `${maxDays} days (20 years) is the furthest daily history offered`
+              : `${MAX_RANGE_DAYS} is the furthest intraday history the provider serves`)
           : "calendar days, both dates included"}
       </p>
     </div>

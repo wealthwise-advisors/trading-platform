@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Popover } from "radix-ui"
 import { Check, ChevronDown, ChevronUp, Clock, Star } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { daysFor } from "@/lib/chartSetup"
+import { daysFor, isMaxHistory } from "@/lib/chartSetup"
 import {
   defaultLayout, favouriteRows, loadFavourites, loadLayout, moveInterval,
   rangeLabel, saveFavourites, saveLayout, toggleFavourite, toggleHidden, visibleRows,
@@ -27,7 +27,8 @@ import { cn } from "@/lib/utils"
 /** The row's accessible name: the interval, then its lookback when it has one. */
 function rowName(tf: string): string {
   const days = daysFor(tf)
-  return days == null ? tf : `${tf}, ${days} days`
+  if (days == null) return tf
+  return isMaxHistory(tf) ? `${tf}, maximum history` : `${tf}, ${days} days`
 }
 
 function IntervalRow({

@@ -31,6 +31,16 @@
  */
 export const MAX_RANGE_DAYS = 180
 
+/**
+ * Largest span for daily and weekly bars: twenty years.
+ *
+ * The 180 above is an INTRADAY limit. Daily history goes back decades, and the
+ * reference platform's interval list offers it as "Max". Twenty years stands in
+ * for that as a concrete range a date field can show. Every helper below takes
+ * the limit that applies, and defaults to the intraday one.
+ */
+export const MAX_HISTORY_DAYS = 7305
+
 /** Smallest span: start and end on the same day. */
 export const MIN_RANGE_DAYS = 1
 
@@ -47,9 +57,9 @@ function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function clampDays(days: number): number {
+export function clampDays(days: number, max: number = MAX_RANGE_DAYS): number {
   if (!Number.isFinite(days)) return MIN_RANGE_DAYS
-  return Math.min(MAX_RANGE_DAYS, Math.max(MIN_RANGE_DAYS, Math.trunc(days)))
+  return Math.min(max, Math.max(MIN_RANGE_DAYS, Math.trunc(days)))
 }
 
 /**
@@ -73,10 +83,10 @@ export function daysInRange(startISO: string, endISO: string): number | null {
  * days = 1 returns start itself; days = 4 returns start + 3, which is four
  * calendar days inclusive.
  */
-export function endDateForDays(startISO: string, days: number): string | null {
+export function endDateForDays(startISO: string, days: number, max: number = MAX_RANGE_DAYS): string | null {
   const s = parseISODate(startISO)
   if (!s) return null
-  const d = new Date(s.getTime() + (clampDays(days) - 1) * MS_PER_DAY)
+  const d = new Date(s.getTime() + (clampDays(days, max) - 1) * MS_PER_DAY)
   return toISODate(d)
 }
 
@@ -84,10 +94,10 @@ export function endDateForDays(startISO: string, days: number): string | null {
  * The start date that makes the range exactly `days` long, counting back from
  * end. Used where the end is the fixed edge (the most recent data available).
  */
-export function startDateForDays(endISO: string, days: number): string | null {
+export function startDateForDays(endISO: string, days: number, max: number = MAX_RANGE_DAYS): string | null {
   const e = parseISODate(endISO)
   if (!e) return null
-  const d = new Date(e.getTime() - (clampDays(days) - 1) * MS_PER_DAY)
+  const d = new Date(e.getTime() - (clampDays(days, max) - 1) * MS_PER_DAY)
   return toISODate(d)
 }
 
@@ -104,8 +114,9 @@ export function steppedEndDate(
   startISO: string,
   currentEndISO: string,
   delta: number,
+  max: number = MAX_RANGE_DAYS,
 ): string {
   const days = daysInRange(startISO, currentEndISO)
   if (days == null) return currentEndISO
-  return endDateForDays(startISO, clampDays(days + delta)) ?? currentEndISO
+  return endDateForDays(startISO, clampDays(days + delta, max), max) ?? currentEndISO
 }

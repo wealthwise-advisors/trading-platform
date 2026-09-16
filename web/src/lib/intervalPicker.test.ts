@@ -25,7 +25,7 @@ describe("rangeLabel reads the specified table and invents nothing", () => {
   it.each([
     ["1m", "2 D"], ["5m", "2 D"], ["10m", "3 D"], ["15m", "4 D"],
     ["20m", "5 D"], ["30m", "10 D"], ["45m", "15 D"], ["1h", "25 D"],
-    ["2h", "180 D"], ["4h", "180 D"],
+    ["2h", "180 D"], ["4h", "180 D"], ["1d", "Max"], ["1w", "Max"],
   ])("%s -> %s", (tf, label) => {
     expect(rangeLabel(tf)).toBe(label)
   })

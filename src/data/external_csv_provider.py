@@ -32,7 +32,7 @@ import pandas as pd
 from loguru import logger
 
 from .base_provider import DataProvider, Bar
-from .resample import bar_anchor, resample_ohlcv
+from .resample import bar_anchor, day_session_anchor, is_daily_or_longer, resample_ohlcv
 from ..config import resolve_config_dir
 
 
@@ -44,7 +44,7 @@ _TF_ALIAS = {
     "1m": "1min", "2m": "2min", "3m": "3min", "5m": "5min", "8m": "8min",
     "10m": "10min", "15m": "15min", "20m": "20min", "25m": "25min",
     "30m": "30min", "35m": "35min", "40m": "40min", "45m": "45min",
-    "1h": "1h", "2h": "2h", "4h": "4h", "1d": "1D",
+    "1h": "1h", "2h": "2h", "4h": "4h", "1d": "1D", "1w": "1W",
 }
 
 
@@ -235,7 +235,10 @@ class ExternalCSVProvider(DataProvider):
                 f"Unknown timeframe '{timeframe}'. "
                 f"Supported: {list(_TF_ALIAS.keys())}"
             )
-        return resample_ohlcv(df, timeframe, bar_anchor(symbol))
+        # Daily and weekly bars are whole trading days, which start at the
+        # session open (18:00 ET for CME futures), not where intraday bars tile.
+        anchor = day_session_anchor(symbol) if is_daily_or_longer(timeframe) else bar_anchor(symbol)
+        return resample_ohlcv(df, timeframe, anchor)
 
     # ------------------------------------------------------------------
     # Streaming (not supported for CSV)

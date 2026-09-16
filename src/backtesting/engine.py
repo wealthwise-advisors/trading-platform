@@ -80,7 +80,12 @@ class BacktestEngine:
         # near-24h futures session like copper) wraps past midnight -- the valid
         # window there is time >= start OR time <= end, not AND, since no single
         # bar's clock time can satisfy both bounds within the same day otherwise.
-        if self.session_start or self.session_end:
+        # Not for daily or weekly bars. Session hours pick bars by their clock
+        # time, which such a bar has no meaningful value for -- Schwab stamps a
+        # daily candle at midnight, so a 09:30-16:00 window would drop every
+        # one. Each of those bars already is a whole session or more.
+        from src.data.resample import is_daily_or_longer
+        if (self.session_start or self.session_end) and not is_daily_or_longer(self.timeframe):
             # Captured before filtering so a "no bars remain" error can show what
             # the data provider actually returned -- a session-window mismatch
             # (bars exist, just outside the window, e.g. a Sunday-evening Globex

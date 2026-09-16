@@ -398,7 +398,7 @@ it matches
 <tr>
 <td width="50%" valign="top">
 
-### ⏱️ Eleven timeframes, one clock
+### ⏱️ Thirteen timeframes, one clock
 
 <ol type="I">
 <li><p>Panes advance off a shared market clock measured in market time, not in bars.</p></li>
