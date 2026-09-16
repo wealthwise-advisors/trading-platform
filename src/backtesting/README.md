@@ -17,7 +17,7 @@
 | ⚖️ **Two modes** | **Backtest** runs to completion · **Replay** advances one bar at a time |
 | 💰 **Costs** | Every fill is priced by [`src/broker`](../broker) — never at the close |
 | 📁 **Path** | `src/backtesting/` |
-| 📦 **Holds** | `6` files · `1,539` lines |
+| 📦 **Holds** | `6` files · `1,544` lines |
 
 
 ---
@@ -39,7 +39,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`engine.py`](engine.py) | ▶️ The event-driven backtest engine. | 313 |
+| [`engine.py`](engine.py) | ▶️ The event-driven backtest engine. | 318 |
 | [`replay_engine.py`](replay_engine.py) | ⏯ Step-by-step replay, one bar per call. | 308 |
 | [`multi_replay.py`](multi_replay.py) | 🕐 Several replay engines advanced off **one shared clock**. | 655 |
 | [`trade_quality.py`](trade_quality.py) | ⭐ A 0–100 setup score from entry-time context — never from the outcome. | 137 |

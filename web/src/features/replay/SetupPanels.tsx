@@ -121,10 +121,16 @@ export function ParamCard({
           min={min} max={max} step={step}
           value={[value]} disabled={disabled} title={title}
           onValueChange={([v]) => onChange(v)}
+          // Without this the thumb announces as a bare "slider": the label above
+          // it is a span, which names nothing.
+          aria-label={label}
         />
       </div>
 
-      <div className="mt-1.5 flex justify-between text-[10.5px] font-medium text-slate-500 tabular-nums">
+      {/* slate-400, not slate-500: at 10.5px on this card slate-500 measures 3.89
+          against the required 4.5, so the min/mid/max marks were the hardest
+          numbers on the panel to read. */}
+      <div className="mt-1.5 flex justify-between text-[10.5px] font-medium text-slate-400 tabular-nums">
         <span>{min}</span>
         <span>{Math.round((min + max) / 2)}</span>
         <span>{max}</span>

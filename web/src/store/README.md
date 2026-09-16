@@ -17,7 +17,7 @@
 | 📦 **Library** | Zustand — one store, no provider tree |
 | 🚫 **Not for** | Server data. That is React Query's job, in [`lib/api.ts`](../lib/api.ts) |
 | 📁 **Path** | `web/src/store/` |
-| 📦 **Holds** | `1` files · `131` lines |
+| 📦 **Holds** | `2` files · `148` lines |
 
 
 ---

@@ -17,7 +17,7 @@
 | 📦 **Library** | Plotly, loaded once and shared |
 | 🎨 **Colours** | Cool for chrome; red and green kept for **meaning** |
 | 📁 **Path** | `web/src/components/charts/` |
-| 📦 **Holds** | `6` files · `2,149` lines |
+| 📦 **Holds** | `10` files · `2,562` lines |
 
 
 ---

@@ -1397,7 +1397,7 @@ export function ReplayPage() {
           <div className="space-y-1" title={lockTitle("data")}>
             <Label className="cfg-h">Data Source</Label>
             <Select value={dataSource} onValueChange={setDataSource} disabled={ready}>
-              <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full h-auto py-2" aria-label="Data source"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(dataSources ?? [{ id: "synthetic", label: "Synthetic Data", available: true }]).map((d) => (
                   <SelectItem key={d.id} value={d.id} disabled={!d.available}>
@@ -1429,7 +1429,7 @@ export function ReplayPage() {
                 if (s) setParams(Object.fromEntries(s.params.map((p) => [p.name, p.default])))
               }}
             >
-              <SelectTrigger className="w-full h-auto py-2"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full h-auto py-2" aria-label="Strategy"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {(strategies ?? []).map((s) => (
                   <SelectItem key={s.id} value={s.id}>
@@ -1767,20 +1767,20 @@ export function ReplayPage() {
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-4">
           <IconField label="Initial capital ($)" Icon={DollarSign}>
-            <Input type="number" step={10000} value={initialCapital} title={lockTitle("money")} disabled={ready}
+            <Input type="number" step={10000} aria-label="Initial capital in dollars" value={initialCapital} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setInitialCapital(Number(e.target.value))} />
           </IconField>
           <IconField label="Contracts / trade" Icon={Boxes}>
-            <Input type="number" min={1} max={10} value={contractsPerTrade} title={lockTitle("money")} disabled={ready}
+            <Input type="number" min={1} max={10} aria-label="Contracts per trade" value={contractsPerTrade} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setContractsPerTrade(Number(e.target.value))} />
           </IconField>
           <IconField label="Commission / contract ($)" Icon={Link2}>
-            <Input type="number" step={0.5} value={commission} title={lockTitle("money")} disabled={ready}
+            <Input type="number" step={0.5} aria-label="Commission per contract in dollars" value={commission} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setCommission(Number(e.target.value))} />
           </IconField>
           <IconField label="Speed" Icon={GaugeIcon}>
             <Select value={String(speed)} onValueChange={(v) => changeSpeed(Number(v))}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full" aria-label="Speed"><SelectValue /></SelectTrigger>
               <SelectContent>{SPEED_OPTIONS.map((o) => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
             </Select>
           </IconField>

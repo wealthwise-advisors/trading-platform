@@ -20,7 +20,7 @@
 | 🎨 **Theme** | Graphite + violet-blue. Warm colours are reserved for **meaning** — red for a loss |
 | 📄 **`public/` is copied verbatim** | The sign-in pages live there and never load `index.css` |
 | 📁 **Path** | `web/` |
-| 📦 **Holds** | `9` files · `495` lines · `2` subfolders |
+| 📦 **Holds** | `9` files · `612` lines · `2` subfolders |
 
 
 ---
@@ -41,13 +41,13 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`nginx.conf`](nginx.conf) | 🌐 Port 80. **Changes here must also go in `ssl.conf.template`.** | 152 |
-| [`ssl.conf.template`](ssl.conf.template) | 🔒 Port 443 — a **separate** server block, hence the warning above. | 88 |
-| [`Dockerfile`](Dockerfile) | 🐳 Builds the static bundle and the nginx image. | 31 |
+| [`nginx.conf`](nginx.conf) | 🌐 Port 80. **Changes here must also go in `ssl.conf.template`.** | 197 |
+| [`ssl.conf.template`](ssl.conf.template) | 🔒 Port 443 — a **separate** server block, hence the warning above. | 134 |
+| [`Dockerfile`](Dockerfile) | 🐳 Builds the static bundle and the nginx image. | 34 |
 | [`40-enable-ssl.sh`](40-enable-ssl.sh) | 🔑 Turns on TLS at container start. | 89 |
-| [`vite.config.ts`](vite.config.ts) | ⚡ Build and dev-proxy config. | 26 |
-| [`vitest.config.ts`](vitest.config.ts) | 🧪 Frontend test config. | 23 |
-| [`package.json`](package.json) | 📦 Dependencies and scripts. | 47 |
+| [`vite.config.ts`](vite.config.ts) | ⚡ Build and dev-proxy config. | 34 |
+| [`vitest.config.ts`](vitest.config.ts) | 🧪 Frontend test config. | 29 |
+| [`package.json`](package.json) | 📦 Dependencies and scripts. | 56 |
 | [`index.html`](index.html) | The SPA shell. | 14 |
 | [`components.json`](components.json) | shadcn/ui generator config. | 25 |
 

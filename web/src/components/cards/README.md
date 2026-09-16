@@ -16,7 +16,7 @@
 | 🎯 **Does** | Consistent framing for stats and notes |
 | 🎨 **Accents** | `ACCENTS` in [`StatCard.tsx`](StatCard.tsx) — all cool, by design |
 | 📁 **Path** | `web/src/components/cards/` |
-| 📦 **Holds** | `4` files · `374` lines |
+| 📦 **Holds** | `4` files · `375` lines |
 
 
 ---
@@ -42,7 +42,7 @@
 | [`StatCard.tsx`](StatCard.tsx) | 📊 One headline number, with an icon and an accent. | 54 |
 | [`StatTile.tsx`](StatTile.tsx) | 🔢 A denser tile for grids of numbers. | 155 |
 | [`InfoCard.tsx`](InfoCard.tsx) | 📋 Performance summary, backtest details and insights. | 89 |
-| [`ChartLegendCard.tsx`](ChartLegendCard.tsx) | 🏷 Explains what a chart's colours mean. | 76 |
+| [`ChartLegendCard.tsx`](ChartLegendCard.tsx) | 🏷 Explains what a chart's colours mean. | 77 |
 
 
 ---

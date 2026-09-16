@@ -17,7 +17,7 @@
 | 📘 **Specification** | [`docs/ELLIOTT_WAVE.md`](../../docs/ELLIOTT_WAVE.md#rules) |
 | 🚨 **Route count** | [`test_pipeline_and_api.py`](test_pipeline_and_api.py) asserts an exact API route count — it fails on purpose when a route is added |
 | 📁 **Path** | `tests/test_elliott_wave/` |
-| 📦 **Holds** | `10` files · `2,509` lines |
+| 📦 **Holds** | `10` files · `2,546` lines |
 
 
 ---
@@ -46,7 +46,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`test_guards.py`](test_guards.py) | 🚦 The rule gates. A structure that breaks a rule is not a wave. | 437 |
-| [`test_pipeline_and_api.py`](test_pipeline_and_api.py) | ▶️ End-to-end pipeline, plus the API route-count guard. | 285 |
+| [`test_pipeline_and_api.py`](test_pipeline_and_api.py) | ▶️ End-to-end pipeline, plus the API route-count guard. | 322 |
 | [`test_structures.py`](test_structures.py) | 🧱 Every structure type enumerates correctly. | 274 |
 | [`test_combination.py`](test_combination.py) | 🔗 W-X-Y and W-X-Y-X-Z. | 271 |
 | [`test_impulse_rules.py`](test_impulse_rules.py) | 📈 The three impulse rules. | 241 |

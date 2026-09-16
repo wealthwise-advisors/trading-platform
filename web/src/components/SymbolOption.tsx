@@ -36,7 +36,7 @@ export function SymbolOption({ s }: { s: SymbolMeta }) {
 
       {s.exchange && (
         <span className="ml-auto shrink-0 pl-3 text-[10.5px] font-semibold
-                         tracking-[0.06em] text-slate-500">
+                         tracking-[0.06em] text-slate-400">
           {s.exchange}
         </span>
       )}

@@ -19,7 +19,7 @@
 | ⚠️ **Regenerating overwrites** | These carry local theming; re-running the generator discards it |
 | 🎨 **Colours** | Driven by tokens in [`index.css`](../../index.css) |
 | 📁 **Path** | `web/src/components/ui/` |
-| 📦 **Holds** | `16` files · `1,493` lines |
+| 📦 **Holds** | `17` files · `1,612` lines |
 
 
 ---
@@ -44,10 +44,10 @@
 |:--|:--|--:|
 | [`button.tsx`](button.tsx) | 🔘 Every button variant. | 68 |
 | [`select.tsx`](select.tsx) | 🔽 Dropdowns. | 190 |
-| [`gauge.tsx`](gauge.tsx) | 🎛 The radial gauge. | 188 |
-| [`date-field.tsx`](date-field.tsx) | 📅 Date input and calendar. | 169 |
+| [`gauge.tsx`](gauge.tsx) | 🎛 The radial gauge. | 186 |
+| [`date-field.tsx`](date-field.tsx) | 📅 Date input and calendar. | 196 |
 | [`time-field.tsx`](time-field.tsx) | 🕐 Time input. | 111 |
-| [`slider.tsx`](slider.tsx) | 🎚 Parameter sliders. | 59 |
+| [`slider.tsx`](slider.tsx) | 🎚 Parameter sliders. | 74 |
 | [`tabs.tsx`](tabs.tsx) | 🗂 Tab bars. | 94 |
 | [`dialog.tsx`](dialog.tsx) | 🪟 Modals. | 62 |
 | [`card.tsx`](card.tsx) | 🃏 The card shell. | 103 |
