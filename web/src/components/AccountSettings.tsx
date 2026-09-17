@@ -59,8 +59,24 @@ function bugReportHref(build: { version: string; commit: string } | null): strin
 }
 
 
-export function AccountSettings({ user }: { user: Me }) {
-  const [open, setOpen] = useState(false)
+/**
+ * `open`/`onOpenChange` are optional: left out, the dialog keeps its own
+ * trigger button and its own state exactly as before. Passed in, the trigger
+ * is dropped and the caller owns it — which is how the avatar menu opens this
+ * without a second "Account" button sitting in the header bar.
+ */
+export function AccountSettings({ user, open: openProp, onOpenChange }: {
+  user: Me
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [openSelf, setOpenSelf] = useState(false)
+  const controlled = openProp !== undefined
+  const open = controlled ? openProp : openSelf
+  const setOpen = (v: boolean) => {
+    if (controlled) onOpenChange?.(v)
+    else setOpenSelf(v)
+  }
   const [armed, setArmed] = useState(false)
   const [confirm, setConfirm] = useState("")
   const [password, setPassword] = useState("")
@@ -113,11 +129,13 @@ export function AccountSettings({ user }: { user: Me }) {
         if (!next) reset()               // never reopen mid-confirmation
       }}
     >
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" title="Account settings">
-          Account
-        </Button>
-      </DialogTrigger>
+      {!controlled && (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline" title="Account settings">
+            Account
+          </Button>
+        </DialogTrigger>
+      )}
 
       <DialogContent
         title="Account"

@@ -211,6 +211,46 @@
 
 /* ── Stat cards — accent left-border + colored glow, matching the
    validated palette carried over from the Streamlit build ── */
+/* ── header navigation pills ───────────────────────────────────────────────
+   Quiet until chosen. The selected one is the only lit thing in the bar, so
+   "where am I" is answerable without reading any label. */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+.nav-pill:hover { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+.nav-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.nav-pill-on {
+  background: linear-gradient(180deg, #7c6cf5, #5a49d8);
+  color: #ffffff;
+  box-shadow: 0 1px 10px -2px rgba(124, 108, 245, 0.65);
+}
+.nav-pill-on:hover { background: linear-gradient(180deg, #8a7bf7, #6353de); color: #fff; }
+
+/* ── the status bar ────────────────────────────────────────────────────────
+   One line at the bottom answering what was run, when, and whether it
+   finished -- the questions a screenshot of this app cannot otherwise
+   answer. */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+  border-top: 1px solid var(--hairline);
+  background: #0b0c11;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 /* ── right rail cards ──────────────────────────────────────────────────────
    Watchlist, Market Summary and Trade Statistics. Deliberately quieter than
    .stat-card: the rail sits beside the chart all day, so it gets a flat
@@ -574,6 +614,12 @@ input:focus-visible {
   flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
+  /* START, not centre. TabsList ships with justify-content: center, and a
+     CENTRED flex row that overflows puts its first items at a negative offset
+     that scrolling cannot reach -- the browser clamps scrollLeft at 0 and the
+     overflow on the left stays unreachable. With nine tabs in a narrowed
+     column that hid "Chart" completely: not scrolled past, unreachable. */
+  justify-content: flex-start;
   /* Fade the two edges instead of slicing a tab in half. A scrollable row that
      hard-clips "Price & Trades" to "rice & Trades" looks like a bug; a fade
      reads as "there is more this way", which is the actual situation. */

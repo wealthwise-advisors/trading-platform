@@ -27,12 +27,19 @@ interface ConfigState {
   backtestId: string | null
   lastRunAt: string | null
   page: "backtest" | "replay" | "export"
+  /** Which results tab is showing. Lifted out of the Tabs component so a
+   *  header link can open the view it names -- "Strategy Lab" that lands on
+   *  the page but not the optimiser has not taken you anywhere. */
+  resultsTab: string
 
   setField: <K extends keyof ConfigState>(key: K, value: ConfigState[K]) => void
   setParam: (name: string, value: number) => void
   setParams: (params: Record<string, number>) => void
   setBacktestId: (id: string | null) => void
   setPage: (page: "backtest" | "replay" | "export") => void
+  setResultsTab: (tab: string) => void
+  /** Go to a page and, on the results page, a specific tab in one step. */
+  goTo: (page: "backtest" | "replay" | "export", tab?: string) => void
   setLastRunAt: (iso: string | null) => void
   getSnapshot: () => ConfigSnapshot
   loadSnapshot: (snapshot: ConfigSnapshot) => void
@@ -116,12 +123,15 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   backtestId: null,
   lastRunAt: null,
   page: "backtest",
+  resultsTab: "price",
 
   setField: (key, value) => set({ [key]: value } as Pick<ConfigState, typeof key>),
   setParam: (name, value) => set((s) => ({ params: { ...s.params, [name]: value } })),
   setParams: (params) => set({ params }),
   setBacktestId: (id) => set({ backtestId: id }),
   setPage: (page) => set({ page }),
+  setResultsTab: (resultsTab) => set({ resultsTab }),
+  goTo: (page, tab) => set(tab ? { page, resultsTab: tab } : { page }),
   setLastRunAt: (iso) => set({ lastRunAt: iso }),
   getSnapshot: () => {
     const s = get()
