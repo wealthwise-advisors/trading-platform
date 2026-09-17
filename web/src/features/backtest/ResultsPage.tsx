@@ -19,6 +19,7 @@ import {
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
   ClipboardList, BarChart3, CalendarDays, Activity, Shapes, Sparkles, Waves,
+  Sigma, Hash, ArrowUpRight, ArrowDownRight,
 } from "lucide-react"
 
 /**
@@ -55,6 +56,18 @@ const PnlDistributionChart = lazy(() =>
 function ChartLoading() {
   return <LoadingBlock label="Loading chart" hint="preparing the plot" />
 }
+
+/**
+ * Signed dollars, with the minus BEFORE the symbol: -$18.60, not $-18.60.
+ *
+ * `avg_loss` is the mean of every P&L at or below zero (see
+ * src/backtesting/metrics.py), so it arrives negative and a naive `$${n}`
+ * prints the sign in the middle of the number.
+ */
+const money = (n: number) =>
+  `${n < 0 ? "-" : ""}$${Math.abs(n).toLocaleString(undefined, {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  })}`
 
 
 export function ResultsPage() {
@@ -153,6 +166,24 @@ export function ResultsPage() {
   const retColor = s.total_return_pct >= 0 ? GOOD : CRITICAL
   const winColor = s.win_rate >= 50 ? GOOD : NEUTRAL
 
+  /**
+   * Profit factor, read from the trade counts rather than the number.
+   *
+   * With no losing trades the engine computes float("inf") — the best possible
+   * outcome — and api/serializers.py turns non-finite values into None and then
+   * `None or 0.0` into a plain 0.0. So the API reports the best case as 0.00,
+   * which is also what a total wipeout would report. Nothing on screen showed
+   * this field before, so the collision never surfaced.
+   *
+   * winning_trades and losing_trades are exact, so they decide the wording:
+   * wins and no losses is infinite, no trades at all is nothing to divide.
+   */
+  const pf = s.losing_trades === 0
+    ? (s.winning_trades > 0
+        ? { text: "∞", color: GOOD, sub: "no losing trades" }
+        : { text: "—", color: NEUTRAL, sub: "no trades" })
+    : { text: s.profit_factor.toFixed(2), color: s.profit_factor >= 1 ? GOOD : CRITICAL, sub: undefined }
+
   return (
     // Root fills the bounded height App.tsx hands down (its scroll div is
     // flex-1 min-h-0). KPI row/toolbar/footer stay natural height
@@ -165,11 +196,24 @@ export function ResultsPage() {
            the freed vertical space straight to the chart below via the
            existing flex-1 hero row -- same mechanism every prior round
            used, just less content generating the height this time.
-           items-start (not items-stretch) -- .stat-card isn't a flex
-           container, so stretching it to match a taller row just left the
-           label+value sitting at the top with dead space below; each card
-           now takes only its own natural (tiny) height instead. ── */}
-      <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-start">
+           items-stretch, and .stat-card centres its own content. This was
+           items-start for exactly one reason -- a stretched card used to
+           leave its label and value stranded at the top with dead space
+           under them -- but that was a symptom of the card not being a flex
+           column, not a reason to let a row hold three different heights. ── */}
+      {/* ── NINE CELLS, ONE GRID ──────────────────────────────────────────
+           Profit Factor, Total Trades, Avg Win and Avg Loss used to be
+           readable only inside the Trade Log and the exported report, even
+           though the summary already carries all four. They are cards now,
+           in the SAME grid as the other five and using the same .stat-card
+           markup, which is what makes them identical in height, width and
+           padding -- a second container beside this one is exactly how a
+           KPI row ends up misaligned with itself.
+
+           Columns step 2 -> 3 -> 5 -> 9 so the row never has to squeeze:
+           below 1536px the nine wrap to a tidy 5 + 4 rather than shrinking
+           to the point where a label truncates. ── */}
+      <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-9 gap-2 items-stretch">
         <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
                   valueColor={retColor} />
@@ -180,6 +224,24 @@ export function ResultsPage() {
                   value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor} />
         <WinLossDonut wins={winLossQ.data?.wins ?? 0} losses={winLossQ.data?.losses ?? 0}
                       winRate={winLossQ.data?.win_rate ?? 0} />
+        {/* Every value below comes from the same summary the other cards read
+            (`profit_factor`, `total_trades`, `avg_win`, `avg_loss`) — nothing
+            is recomputed here, so a card cannot disagree with the report. */}
+        <StatCard label="Profit Factor" icon={<Sigma className="h-4 w-4" />} accent={ACCENTS[5]}
+                  value={pf.text} valueColor={pf.color} sub={pf.sub} />
+        <StatCard label="Total Trades" icon={<Hash className="h-4 w-4" />} accent={ACCENTS[2]}
+                  value={s.total_trades.toLocaleString()} />
+        {/* Green and red here are meaning, not decoration: an average win is a
+            gain and an average loss is a loss, the same convention the trade
+            table and the P&L bars use. Which is exactly why a $0.00 average
+            loss must NOT be red — with no losing trades nothing was lost, and
+            painting that red says the opposite of what happened. */}
+        <StatCard label="Avg Win" icon={<ArrowUpRight className="h-4 w-4" />} accent={ACCENTS[3]}
+                  value={money(s.avg_win)} valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
+                  sub={s.winning_trades === 0 ? "no winning trades" : undefined} />
+        <StatCard label="Avg Loss" icon={<ArrowDownRight className="h-4 w-4" />} accent={ACCENTS[0]}
+                  value={money(s.avg_loss)} valueColor={s.losing_trades > 0 ? CRITICAL : NEUTRAL}
+                  sub={s.losing_trades === 0 ? "no losing trades" : undefined} />
       </div>
 
       <Tabs defaultValue="price" className="flex-1 min-h-0 flex flex-col gap-0">
