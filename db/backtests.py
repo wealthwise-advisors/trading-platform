@@ -76,6 +76,18 @@ def insert(backtest_id: str, results: BacktestResults, data_source: str,
         price_rows = len(results.price_data)
 
     row = {n: _iso(getattr(results, n)) for n in RESULT_COLUMNS}
+
+    # NaN is the profit factor of a run with nothing to divide -- no trades, or
+    # trades that all closed exactly flat. SQLite turns a NaN REAL into NULL on
+    # the way in, so writing it straight at a NOT NULL column raises
+    # IntegrityError and the whole run is lost. The state goes in its own
+    # column and the placeholder is never read back as a number; see
+    # schema.sql and _profit_factor_from_row below.
+    pf_undefined = row["profit_factor"] != row["profit_factor"]
+    if pf_undefined:
+        row["profit_factor"] = 0.0
+    row["profit_factor_undefined"] = int(pf_undefined)
+
     row.update(
         id=backtest_id,
         created_at=datetime.now().isoformat(timespec="seconds"),
@@ -129,6 +141,22 @@ def insert(backtest_id: str, results: BacktestResults, data_source: str,
 
 
 # ── read ─────────────────────────────────────────────────────────────────────
+def _profit_factor_from_row(row) -> float:
+    """The stored profit factor, with "undefined" restored as NaN.
+
+    The placeholder written beside the flag is 0.0, and 0.0 is a real and very
+    different answer -- it is what a run that lost on every trade reports. It
+    must never reach a caller, so the flag is checked here, in the one place
+    every read passes through, rather than at each call site.
+    """
+    # .keys() rather than a try: a row from a file that predates v11 should not
+    # be a crash. connect() migrates on every connection, so the column is
+    # there in practice; this covers a caller holding an older cursor.
+    if "profit_factor_undefined" in row.keys() and row["profit_factor_undefined"]:
+        return float("nan")
+    return row["profit_factor"]
+
+
 def fetch(backtest_id: str, user_id: int, db: Path | None = None):
     """One result, or None. Returns (results, data_source, session_start, session_end).
 
@@ -155,6 +183,7 @@ def fetch(backtest_id: str, user_id: int, db: Path | None = None):
         conn.close()
 
     scalars = {n: row[n] for n in RESULT_COLUMNS}
+    scalars["profit_factor"] = _profit_factor_from_row(row)
     for name in _DATE_FIELDS:
         if scalars.get(name):
             scalars[name] = datetime.fromisoformat(scalars[name])

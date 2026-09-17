@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { api } from "@/lib/api"
+import { profitFactorText } from "@/lib/profitFactor"
 import { useConfigStore } from "@/store/configStore"
 import { Button } from "@/components/ui/button"
 import {
@@ -104,7 +105,9 @@ export function OptimizerPanel() {
                     <td className="p-2 text-right">{c.sharpe_ratio.toFixed(2)}</td>
                     <td className="p-2 text-right" style={{ color: c.win_rate >= 50 ? GOOD : CRITICAL }}>{c.win_rate.toFixed(0)}%</td>
                     <td className="p-2 text-right">{c.total_trades}</td>
-                    <td className="p-2 text-right">{c.profit_factor.toFixed(2)}</td>
+                    {/* A combination carries no win/loss split, so trades > 0
+                        is what separates unbounded from undefined here. */}
+                    <td className="p-2 text-right">{profitFactorText(c.profit_factor, c.total_trades)}</td>
                     <td className="p-2 text-right">{c.max_drawdown_pct.toFixed(1)}%</td>
                   </tr>
                 ))}

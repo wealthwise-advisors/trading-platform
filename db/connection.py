@@ -35,8 +35,11 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: v5 added users.email_verified and made a non-empty email unique;
 #: v6 added oauth_pending for sign-ups that need a username before they exist;
 #: v7 added email_tokens.purpose so a reset and a verification cannot
-#: cancel or impersonate each other.
-SCHEMA_VERSION = 10
+#: cancel or impersonate each other;
+#: v11 added backtests.profit_factor_undefined, because NaN -- the float
+#: that means "no trades to divide" -- becomes NULL in SQLite and cannot
+#: be stored in the NOT NULL column beside it.
+SCHEMA_VERSION = 11
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:
@@ -66,6 +69,10 @@ _ADDED_COLUMNS = [
     # Defaults to 1: every account that existed before v7 was made with a real
     # password, so the default is correct for all of them.
     ("users", "has_password", "INTEGER NOT NULL DEFAULT 1"),
+    # v11. Defaults to 0: every row written before v11 holds a finite
+    # profit factor or an infinity, both of which are real answers. Only
+    # rows written from here on can be flagged undefined.
+    ("backtests", "profit_factor_undefined", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

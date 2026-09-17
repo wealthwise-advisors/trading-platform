@@ -32,7 +32,10 @@ class OptimizeCombo(BaseModel):
     sharpe_ratio: float
     win_rate: float
     total_trades: int
-    profit_factor: float
+    #: null when the run has no finite profit factor -- winners and no losers
+    #: (unbounded), or nothing won and nothing lost (undefined). total_trades
+    #: beside it distinguishes the two.
+    profit_factor: Optional[float] = None
     max_drawdown_pct: float
 
 

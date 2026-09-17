@@ -17,6 +17,7 @@ from plotly.subplots import make_subplots
 import plotly.io as pio
 
 from src.backtesting.results import BacktestResults
+from api.serializers import profit_factor_label
 from api.report.charts import (
     _calc_zigzag, _assign_swing_labels, _calc_nested_zigzag, _SWING_COLORS,
     _calc_rsi, _calc_stochrsi,
@@ -1093,7 +1094,9 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         _metric_card("Sharpe Ratio",  f"{r.sharpe_ratio:.2f}",         r.sharpe_ratio >= 1),
         _metric_card("Max Drawdown",  f"{r.max_drawdown_pct:.1f}%",    False),
         _metric_card("Win Rate",      f"{r.win_rate:.0f}%",            r.win_rate >= 50),
-        _metric_card("Profit Factor", f"{r.profit_factor:.2f}",        r.profit_factor >= 1.5),
+        # >= 1.5 is still the "good" test: inf passes it and nan fails it,
+        # which is exactly right for unbounded and undefined respectively.
+        _metric_card("Profit Factor", profit_factor_label(r.profit_factor), r.profit_factor >= 1.5),
         _metric_card("Total Trades",  str(r.total_trades)),
         _metric_card("Avg Win",       f"${r.avg_win:,.0f}",            True),
         _metric_card("Avg Loss",      f"${r.avg_loss:,.0f}",           False),

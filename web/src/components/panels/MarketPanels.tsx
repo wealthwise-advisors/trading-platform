@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Activity, BarChart3, Plus, Star } from "lucide-react"
 
 import { api } from "@/lib/api"
+import { useConfigStore } from "@/store/configStore"
 import type { BacktestSummary, Quote } from "@/lib/types"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
 
@@ -147,6 +148,10 @@ function useQuotes(symbols: string[], key: string) {
 }
 
 export function WatchlistPanel() {
+  // The instrument the backtest is configured for, highlighted in the list —
+  // the reference marks the active row, and it answers "which of these am I
+  // actually testing" without reading the sidebar.
+  const activeSymbol = useConfigStore((s) => s.symbol)
   const [symbols, setSymbols] = useState<string[]>(loadWatchlist)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState("")
@@ -212,7 +217,10 @@ export function WatchlistPanel() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.symbol} className="group border-t border-white/5">
+              <tr key={r.symbol}
+                  aria-current={r.symbol === activeSymbol ? "true" : undefined}
+                  className={`group border-t border-white/5 ${
+                    r.symbol === activeSymbol ? "bg-sky-500/10" : ""}`}>
                 <td className="py-1.5 font-semibold text-slate-200"
                     title={r.contract ? `Quoting ${r.contract}` : undefined}>
                   {r.symbol}
@@ -324,7 +332,6 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
   // factor earned in size.
   const p = s.win_rate / 100
   const expectancy = p * s.avg_win + (1 - p) * s.avg_loss
-  const noLosses = s.losing_trades === 0
 
   const rows: Array<[string, React.ReactNode]> = [
     ["Total Trades", s.total_trades.toLocaleString()],
@@ -334,10 +341,9 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
     ["Avg Win", <span style={{ color: s.winning_trades ? GOOD : undefined }}>{money(s.avg_win)}</span>],
     ["Avg Loss", <span style={{ color: s.losing_trades ? CRITICAL : undefined }}>{money(s.avg_loss)}</span>],
     ["Expectancy", <span style={{ color: expectancy >= 0 ? GOOD : CRITICAL }}>{money(expectancy)}</span>],
-    // Same reasoning as the KPI card: with no losing trades the engine's
-    // factor is infinite and the API flattens it to 0.0, which reads as the
-    // worst possible result instead of the best.
-    ["Profit Factor", noLosses
+    // null means "no finite ratio"; the counts say whether that was unbounded
+    // (winners, no losers) or undefined (nothing won and nothing lost).
+    ["Profit Factor", s.profit_factor == null
       ? (s.winning_trades > 0 ? <span style={{ color: GOOD }}>∞</span> : "—")
       : s.profit_factor.toFixed(2)],
     ["Max Drawdown", <span style={{ color: CRITICAL }}>{s.max_drawdown_pct.toFixed(1)}%</span>],

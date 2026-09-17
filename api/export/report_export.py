@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from api.serializers import profit_factor_label
 from src.backtesting.results import BacktestResults
 
 
@@ -25,7 +26,8 @@ def build_metrics_df(results: BacktestResults) -> pd.DataFrame:
         ("Sortino Ratio", f"{r.sortino_ratio:.2f}"),
         ("Max Drawdown %", f"{r.max_drawdown_pct:.2f}%"),
         ("Win Rate %", f"{r.win_rate:.1f}%"),
-        ("Profit Factor", f"{r.profit_factor:.2f}"),
+        # Words, not a glyph: these rows end up in a PDF whose font has no ∞.
+        ("Profit Factor", profit_factor_label(r.profit_factor, unicode=False)),
         ("Total Trades", r.total_trades),
         ("Winning Trades", r.winning_trades),
         ("Losing Trades", r.losing_trades),

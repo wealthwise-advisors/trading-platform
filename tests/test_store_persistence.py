@@ -256,3 +256,51 @@ def test_schema_covers_every_field_on_the_dataclass(tmp_store):
         f"Trade has {sorted(trade_missing)} but the trades table does not. "
         "Add the column to db/schema.sql and bump SCHEMA_VERSION."
     )
+
+
+# ── the three states of profit factor ────────────────────────────────────────
+#
+# SQLite stores a float, and a float has three things to say here: a ratio, an
+# infinity, and NaN for "there was nothing to divide". It handles the first two
+# and silently converts the third to NULL, which the NOT NULL column rejects --
+# so an entire run was lost with an IntegrityError because it happened to have
+# no closing trades. db/schema.sql v11 records the state in its own column;
+# these hold the round trip for all three.
+@pytest.mark.parametrize("value", [1.9, 0.0, float("inf")])
+def test_a_finite_or_infinite_profit_factor_round_trips(tmp_store, value):
+    original = _results()
+    original.profit_factor = value
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
+    tmp_store._store.clear()
+    assert tmp_store.get(bid, user_id=OWNER).results.profit_factor == value
+
+
+def test_an_undefined_profit_factor_saves_and_comes_back_undefined(tmp_store):
+    """A run with nothing to divide must persist, and must not come back as
+    0.0 -- that is what a run that lost on every trade reports."""
+    import math
+    original = _results()
+    original.profit_factor = float("nan")
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
+    tmp_store._store.clear()
+    got = tmp_store.get(bid, user_id=OWNER).results
+    assert math.isnan(got.profit_factor), f"came back as {got.profit_factor!r}"
+
+
+def test_the_undefined_flag_is_off_for_a_real_number(tmp_store):
+    """The flag is what tells 'undefined' from a stored 0.0, so it must not be
+    set by anything else. Read straight from SQL rather than through fetch(),
+    which is the code under test."""
+    original = _results()
+    original.profit_factor = 0.0
+    bid = tmp_store.save(original, "synthetic", time(9, 30), time(16, 0), user_id=OWNER)
+    conn = connection.connect()
+    try:
+        row = conn.execute(
+            "SELECT profit_factor, profit_factor_undefined FROM backtests WHERE id = ?",
+            (bid,),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["profit_factor"] == 0.0
+    assert row["profit_factor_undefined"] == 0

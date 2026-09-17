@@ -101,7 +101,10 @@ export interface BacktestSummary {
   sortino_ratio: number
   max_drawdown_pct: number
   win_rate: number
-  profit_factor: number
+  /** null when there is no finite profit factor: winners and no losers
+   *  (unbounded), or nothing won and nothing lost (undefined). Read
+   *  winning_trades / losing_trades to tell those two apart. */
+  profit_factor: number | null
   avg_win: number
   avg_loss: number
   total_trades: number
@@ -485,7 +488,8 @@ export interface OptimizeCombo {
   sharpe_ratio: number
   win_rate: number
   total_trades: number
-  profit_factor: number
+  /** null for a combination with no finite profit factor — see BacktestSummary. */
+  profit_factor: number | null
   max_drawdown_pct: number
 }
 

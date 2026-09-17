@@ -4,6 +4,7 @@
 // generateInsights/generateAiInsight functions (lib/insights.ts) -- no LLM.
 
 import type { BacktestSummary } from "@/lib/types"
+import { profitFactorText } from "@/lib/profitFactor"
 import { generateInsights, generateAiInsight } from "@/lib/insights"
 import type { ReactNode } from "react"
 import {
@@ -29,7 +30,7 @@ export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
         <BarChart3 className="h-4 w-4" aria-hidden /> Performance Summary</div>
       <Row icon={<Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
       <Row icon={<Hash className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Total Trades" value={String(s.total_trades)} />
-      <Row icon={<Scale className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Profit Factor" value={s.profit_factor.toFixed(2)} />
+      <Row icon={<Scale className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Profit Factor" value={profitFactorText(s.profit_factor, s.winning_trades)} />
       <Row icon={<ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Average Win" value={`$${s.avg_win.toFixed(2)}`} />
       <Row icon={<ArrowDownRight className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Average Loss" value={`$${s.avg_loss.toFixed(2)}`} />
       <Row icon={<TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Max Drawdown" value={`${s.max_drawdown_pct.toFixed(1)}%`} />

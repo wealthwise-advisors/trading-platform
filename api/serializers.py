@@ -40,6 +40,24 @@ def _safe(x):
     return x
 
 
+def profit_factor_label(value: float, *, unicode: bool = True) -> str:
+    """Profit factor as text, for a report rather than for JSON.
+
+    `f"{v:.2f}"` prints a non-finite float as the literal "inf" or "nan", which
+    in a PDF headed "Profit Factor" reads as a broken export rather than as an
+    unbounded result.
+
+    `unicode=False` for the CSV/Excel/PDF/Word writers: reportlab's standard
+    fonts are WinAnsi-encoded and have no U+221E, so the glyph would come out
+    as a black box. The HTML report has a web font and can show the symbol.
+    """
+    if value != value:                      # NaN -- nothing to divide
+        return "—" if unicode else "Undefined"
+    if math.isinf(value):                   # won something, lost nothing
+        return "∞" if unicode else "Infinite"
+    return f"{value:.2f}"
+
+
 def results_to_summary(backtest_id: str, results: BacktestResults, data_source: str,
                        session_start, session_end) -> dict:
     r = results
@@ -61,7 +79,12 @@ def results_to_summary(backtest_id: str, results: BacktestResults, data_source: 
         "sortino_ratio": _safe(r.sortino_ratio) or 0.0,
         "max_drawdown_pct": r.max_drawdown_pct,
         "win_rate": r.win_rate,
-        "profit_factor": _safe(r.profit_factor) or 0.0,
+        # NOT `or 0.0`. An infinite profit factor -- winners and no losers --
+        # is the BEST possible outcome, and zero is what a total wipeout
+        # reports; collapsing one into the other inverted the meaning. null
+        # says "not a finite number", and winning_trades / losing_trades
+        # beside it say whether that was unbounded or undefined.
+        "profit_factor": _safe(r.profit_factor),
         "avg_win": r.avg_win,
         "avg_loss": r.avg_loss,
         "total_trades": r.total_trades,

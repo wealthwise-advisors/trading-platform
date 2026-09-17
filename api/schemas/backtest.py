@@ -51,7 +51,12 @@ class BacktestSummary(BaseModel):
     sortino_ratio: float
     max_drawdown_pct: float
     win_rate: float
-    profit_factor: float
+    # Nullable on purpose. gross_win/gross_loss has no finite value when there
+    # were no losers (unbounded) or no trades at all (undefined), and both of
+    # those are answers -- collapsing either to 0.0 reports the best and the
+    # emptiest run as the worst one. winning_trades and losing_trades beside it
+    # say which of the two a null means.
+    profit_factor: Optional[float]
     avg_win: float
     avg_loss: float
     total_trades: int

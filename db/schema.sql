@@ -53,6 +53,21 @@ CREATE TABLE IF NOT EXISTS backtests (
     max_drawdown_pct        REAL    NOT NULL,
     win_rate                REAL    NOT NULL,
     profit_factor           REAL    NOT NULL,
+    -- Profit factor has three states, and SQLite can only store two of
+    -- them in a REAL column. gross_win/gross_loss is a number; winners
+    -- and no losers is +inf, which SQLite stores and returns unchanged;
+    -- but "no trades" and "every trade closed exactly flat" are
+    -- UNDEFINED -- there is nothing to divide -- and the float that says
+    -- so is NaN, which SQLite silently converts to NULL on the way in.
+    -- Against NOT NULL that is an IntegrityError, and relaxing the
+    -- constraint on the databases that already exist means rebuilding
+    -- the table under a CASCADE foreign key. So the state is recorded
+    -- beside the number instead: 1 means the value above is a
+    -- placeholder and the real answer is "undefined". Additive, so
+    -- _ADDED_COLUMNS upgrades an existing file in place, and legible to
+    -- anyone reading the table directly rather than a bare 0.0 that
+    -- reads as a total wipeout.
+    profit_factor_undefined INTEGER NOT NULL DEFAULT 0,
     avg_win                 REAL    NOT NULL,
     avg_loss                REAL    NOT NULL,
     total_trades            INTEGER NOT NULL,

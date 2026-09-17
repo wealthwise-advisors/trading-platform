@@ -86,22 +86,36 @@ def run_optimizer(req: OptimizeRequest, user=PROTECTED):
             continue
 
         metric_value = getattr(results, req.metric) or 0.0
-        results_list.append(OptimizeCombo(
+        results_list.append((metric_value, OptimizeCombo(
             params=params,
             total_return_pct=serializers._safe(results.total_return_pct) or 0.0,
             sharpe_ratio=serializers._safe(results.sharpe_ratio) or 0.0,
             win_rate=results.win_rate,
             total_trades=results.total_trades,
-            profit_factor=serializers._safe(results.profit_factor) or 0.0,
+            # null, not 0.0 -- see api/serializers.py. Sent as-is so the table
+            # reports what the run actually produced.
+            profit_factor=serializers._safe(results.profit_factor),
             max_drawdown_pct=results.max_drawdown_pct,
-        ))
-        if best is None or metric_value > best[0]:
+        )))
+        # NaN never wins, and never blocks a winner either. `nan > x` is False
+        # for every x, so once a NaN candidate landed in `best` -- which the
+        # first one always did -- no later combination could ever displace it,
+        # and the optimiser returned an undefined run as the best of the grid.
+        if metric_value == metric_value and (best is None or metric_value > best[0]):
             best = (metric_value, params, results)
 
     if not results_list:
         raise HTTPException(400, "No combination produced a valid backtest — check the date range and data source.")
 
-    results_list.sort(key=lambda c: getattr(c, req.metric), reverse=True)
+    # Rank on the RAW metric, not on the serialised row. An infinite profit
+    # factor serialises to null, and sorting the rows by that put the single
+    # flawless combination last in the table while best_backtest_id pointed
+    # straight at it -- the summary and the ranking disagreeing about the same
+    # run. NaN is undefined rather than worst, but it cannot be ordered, so it
+    # is placed last explicitly instead of landing wherever the sort leaves it.
+    results_list.sort(key=lambda pair: (pair[0] == pair[0], pair[0] if pair[0] == pair[0] else 0.0),
+                      reverse=True)
+    ranked = [combo for _, combo in results_list]
 
     best_backtest_id = None
     if best is not None:
@@ -111,7 +125,7 @@ def run_optimizer(req: OptimizeRequest, user=PROTECTED):
 
     return OptimizeResponse(
         metric=req.metric,
-        combos_tested=len(results_list),
-        results=results_list[:10],
+        combos_tested=len(ranked),
+        results=ranked[:10],
         best_backtest_id=best_backtest_id,
     )
