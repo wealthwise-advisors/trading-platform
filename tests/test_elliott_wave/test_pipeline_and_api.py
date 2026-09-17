@@ -319,4 +319,13 @@ class TestExistingApiUnchanged:
         # prerequisite for ever DELIVERING anything to a number: `users.phone`
         # has always been a string somebody typed at sign-up that nothing
         # checked. See tests/test_phone_verification.py.
-        assert len(paths) == 46, sorted(paths)
+        # +1 for /api/quotes: last price and session change for the watchlist
+        # and the market summary, read from Schwab through the vendored client.
+        # It needs a session like every other data route -- a quote is market
+        # data the ACCOUNT is entitled to through its own Schwab link, not a
+        # public feed -- and tests/test_auth.py's sweep is what proves it
+        # refuses an anonymous caller. With no Schwab login it answers 200 with
+        # `connected: false` rather than failing, because a watchlist that
+        # cannot reach its source is a normal state and a 500 would take the
+        # whole results page down with it. See tests/test_quotes.py.
+        assert len(paths) == 47, sorted(paths)

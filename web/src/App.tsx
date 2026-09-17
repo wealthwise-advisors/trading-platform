@@ -11,12 +11,14 @@ import { Button } from "@/components/ui/button"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { api, auth, SIGN_IN_PAGE, type Me } from "@/lib/api"
+import { api, type Me } from "@/lib/api"
 import { AccountSettings } from "@/components/AccountSettings"
+import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
+import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { BarChart3, Zap, Upload, Download, Rocket } from "lucide-react"
+import { Upload, Download, Rocket } from "lucide-react"
 
 const REPORT_FORMATS = [
   { id: "html", label: "HTML" },
@@ -35,6 +37,9 @@ function App({ user }: { user: Me }) {
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
   const [reportFormat, setReportFormat] = useState("html")
+  // The account dialog is opened from the avatar menu now, so the page owns
+  // whether it is showing rather than the dialog's own trigger button.
+  const [accountOpen, setAccountOpen] = useState(false)
   // Sent with Export Report so the report draws what the price chart shows.
   const chartSettings = useChartSettingsStore((s) => s.settings)
 
@@ -57,6 +62,7 @@ function App({ user }: { user: Me }) {
           config sidebar -- every input, slider and dropdown -- before reaching
           the results they came for, on every single page load. */}
       <a href="#main-content" className="skip-link">Skip to main content</a>
+      <AccountSettings user={user} open={accountOpen} onOpenChange={setAccountOpen} />
       {page === "backtest" && configOpen && (
         <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
                style={{ background: "linear-gradient(180deg, #16171f 0%, #0d0e13 100%)" }}>
@@ -82,13 +88,25 @@ function App({ user }: { user: Me }) {
               className="h-9 w-9 shrink-0 rounded-lg object-cover
                          ring-1 ring-violet-400/20 shadow-lg shadow-violet-900/30"
             />
-            <h1 className="min-w-0">
-              <img
-                src={brandWordmark}
-                alt="AutoTrader"
-                className="h-6 sm:h-7 w-auto object-contain"
-              />
-            </h1>
+            <div className="min-w-0">
+              <h1 className="min-w-0">
+                <img
+                  src={brandWordmark}
+                  alt="AutoTrader"
+                  className="h-6 sm:h-7 w-auto object-contain"
+                />
+              </h1>
+              {/* What the product is, in four words, for someone who has just
+                  been sent a link to it. */}
+              <p className="hidden sm:block text-[10.5px] leading-tight text-slate-500">
+                Research. Backtest. Trade Smarter.
+              </p>
+            </div>
+          </div>
+
+          {/* The sections, in the middle, where a trading terminal puts them. */}
+          <div className="order-last w-full xl:order-none xl:w-auto xl:flex-1 xl:justify-center flex">
+            <HeaderNav />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Sign out. Calls the backend so the SESSION is revoked, not just
@@ -101,18 +119,12 @@ function App({ user }: { user: Me }) {
                 button on the app". It was there the whole time and did not look
                 like it. The only way out of a signed-in app is not the place to
                 be subtle. */}
-            <AccountSettings user={user} />
-            <Button
-              size="sm"
-              variant="outline"
-              title="Sign out of AutoTrader"
-              onClick={async () => {
-                await auth.logout()
-                window.location.assign(SIGN_IN_PAGE)
-              }}
-            >
-              Sign out
-            </Button>
+            {/* Sign out and Account moved into the avatar menu, where the
+                reference design puts them and where they stop competing with
+                the section links for the eye. Nothing was removed: both are
+                one click away, and the sign-out still calls the backend so the
+                SESSION is revoked rather than the cookie merely cleared. */}
+            <SymbolSearch />
             {/* The way back, so collapsing the panel is never a one-way door. */}
             {page === "backtest" && !configOpen && (
               <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
@@ -120,20 +132,8 @@ function App({ user }: { user: Me }) {
                 Config
               </Button>
             )}
-            <Button size="sm" variant={page === "backtest" ? "default" : "secondary"} onClick={() => setPage("backtest")}>
-              <BarChart3 className="h-3.5 w-3.5" aria-hidden /> Backtest
-            </Button>
-            {/* Market Grid: single visible button (a second one used to live in
-                ResultsPage's toolbar, calling this exact same setPage("replay") --
-                hidden there, not removed in function, since this one already
-                covers every case that one did). Same gap-2 as every other header
-                button now, for a balanced/uniform look. Renamed from "Live Replay" --
-                the page serves live data and replay both, so "Replay" alone
-                undersold it. Route id, folder and API path stay "replay". */}
-            <Button size="sm" variant={page === "replay" ? "default" : "secondary"} onClick={() => setPage("replay")}>
-              <Zap className="h-3.5 w-3.5" aria-hidden /> Market Grid
-            </Button>
-            <Button size="sm" variant={page === "export" ? "default" : "secondary"} onClick={() => setPage("export")}>
+            <Button size="sm" variant={page === "export" ? "default" : "secondary"}
+                    onClick={() => setPage("export")} title="Export raw OHLC bars">
               <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
             {backtestId && (
@@ -157,6 +157,7 @@ function App({ user }: { user: Me }) {
             <Button size="sm" disabled title="Live trading deployment isn't implemented yet">
               <Rocket className="h-3.5 w-3.5" aria-hidden /> Deploy
             </Button>
+            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
           </div>
         </header>
         {/* key={page} remounts this on every switch, which replays the
@@ -175,6 +176,9 @@ function App({ user }: { user: Me }) {
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}
         </div>
+        {/* Outside the scroll container: what was run and whether it finished
+            should not scroll away with the thing it describes. */}
+        <div className="shrink-0"><StatusBar /></div>
       </main>
     </div>
   )

@@ -8,7 +8,7 @@ import type {
   TradeRecord, PriceDataResponse, EquityPoint, ZigZagResponse, WinLoss,
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
-  OptimizeRequest, OptimizeResponse, ElliottWaveResponse,
+  OptimizeRequest, OptimizeResponse, ElliottWaveResponse, QuotesResponse,
 } from "./types"
 import type { ChartExportSettings } from "./chartExportSettings"
 
@@ -235,6 +235,11 @@ export const api = {
   // with no data behind it.
   symbols: (dataSource: string) =>
     request<SymbolMeta[]>(`/symbols?data_source=${encodeURIComponent(dataSource)}`),
+
+  /** Live quotes. `connected` is false when Schwab has no tokens — the caller
+   *  shows `reason`, never a zero standing in for a price. */
+  quotes: (symbols: string[]) =>
+    request<QuotesResponse>(`/quotes?symbols=${encodeURIComponent(symbols.join(","))}`),
 
   // Loading bars and running an engine legitimately takes minutes on a wide
   // date range, so this gets the long budget rather than the default 30s.

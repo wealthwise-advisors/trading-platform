@@ -4,7 +4,7 @@
 
 **Every HTTP route, and the accounts system that guards them.**
 
-![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?style=flat-square&logo=fastapi&logoColor=white) ![auth](https://img.shields.io/badge/auth-argon2id-7c6cf5?style=flat-square) ![routes](https://img.shields.io/badge/routes-38-0ea5e9?style=flat-square)
+![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?style=flat-square&logo=fastapi&logoColor=white) ![auth](https://img.shields.io/badge/auth-argon2id-7c6cf5?style=flat-square) ![routes](https://img.shields.io/badge/routes-49-0ea5e9?style=flat-square)
 
 </div>
 

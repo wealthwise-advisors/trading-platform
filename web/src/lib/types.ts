@@ -29,6 +29,26 @@ export interface DateWindow {
   end: string
 }
 
+/** One live quote. Mirrors api/schemas/quotes.py. */
+export interface Quote {
+  symbol: string
+  last: number
+  change: number
+  change_pct: number
+  /** The contract a futures root resolved to — "/ESZ26" for ES. Schwab keys
+   *  its reply by this, and a watchlist row is more honest naming it. */
+  contract?: string
+}
+
+export interface QuotesResponse {
+  /** False when Schwab has no tokens or the upstream failed. The panels show
+   *  `reason` in that case rather than prices, because a 0.00 beside ES reads
+   *  as a crash rather than as missing data. */
+  connected: boolean
+  quotes: Quote[]
+  reason?: string | null
+}
+
 export interface SymbolMeta {
   symbol: string
   name: string
