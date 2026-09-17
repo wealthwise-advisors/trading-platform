@@ -288,7 +288,7 @@ export function QuickPresets({
   ]
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-muted-foreground mr-0.5">Quick presets</span>
+      <span className="text-[11px] text-muted-foreground mr-0.5">Quick in</span>
       {PRESETS.map(([label, days]) => (
         <button
           key={label}

@@ -322,12 +322,16 @@
    micro-text at 0.56rem gave every card the same visual weight; a dashboard
    should let you read the numbers in one downward sweep. */
 .stat-card .stat-label {
-  font-size: 0.625rem;
-  font-weight: 600;
+  /* Title case at 11.5px, not 10px uppercase with wide tracking. The
+     reference sets these as ordinary words -- "Total Return", not
+     "TOTAL RETURN" -- which reads faster and stops long labels like
+     "Profit Factor" and "Win % / Loss %" wrapping to a second line in a
+     narrow card. */
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.075em;
-  margin-bottom: 3px;
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
 }
 .stat-card .stat-value {
   font-size: 1.35rem;

@@ -18,7 +18,7 @@ import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { Upload, Download, Rocket } from "lucide-react"
+import { Upload, Download, Rocket, Settings } from "lucide-react"
 
 const REPORT_FORMATS = [
   { id: "html", label: "HTML" },
@@ -44,7 +44,17 @@ function App({ user }: { user: Me }) {
   const chartSettings = useChartSettingsStore((s) => s.settings)
 
   return (
-    // Stack sidebar above content on small screens; side-by-side from md up.
+    // Stack sidebar above content on small screens; side-by-side from lg up.
+    //
+    // lg, not md. The sidebar is a fixed 384px, so at the md breakpoint (768px)
+    // it took half the viewport and left the chart, the nine KPI cards and the
+    // three market panels to share the other 384px -- measured at 768px, the
+    // Total Trades card and the Avg Win card literally overlapped, and the
+    // chart came out 342px wide. Below lg the three columns are stacked and
+    // the PAGE scrolls (lg:h-screen / lg:overflow-hidden rather than the
+    // unconditional pair), because the viewport-locked terminal layout only
+    // makes sense once everything fits in the viewport to begin with.
+    //
     // Sidebar stays fixed-width and sticky on desktop; content column uses
     // min-w-0 so a wide chart can never force the whole page to overflow
     // horizontally (the classic flexbox "child ignores parent width" bug).
@@ -56,7 +66,7 @@ function App({ user }: { user: Me }) {
     // the first time, which is what finally lets the chart's flex-1 chain
     // resolve to "fill remaining viewport space" instead of an arbitrary
     // fixed pixel guess.
-    <div className="app-shell h-screen text-foreground flex flex-col md:flex-row overflow-hidden">
+    <div className="app-shell min-h-screen lg:h-screen text-foreground flex flex-col lg:flex-row lg:overflow-hidden">
       {/* First focusable thing on the page, and invisible until it is focused.
           Without it a keyboard or screen-reader user tabs through the entire
           config sidebar -- every input, slider and dropdown -- before reaching
@@ -64,16 +74,21 @@ function App({ user }: { user: Me }) {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <AccountSettings user={user} open={accountOpen} onOpenChange={setAccountOpen} />
       {page === "backtest" && configOpen && (
-        <aside className="w-full md:w-96 shrink-0 border-b md:border-b-0 md:border-r border-white/6 p-4 overflow-y-auto md:h-screen md:sticky md:top-0"
+        <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-white/6 p-4 lg:overflow-y-auto lg:h-screen lg:sticky lg:top-0"
                style={{ background: "linear-gradient(180deg, #16171f 0%, #0d0e13 100%)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
-      <main className="flex-1 min-w-0 h-screen flex flex-col overflow-hidden">
+      <main className="flex-1 min-w-0 lg:h-screen flex flex-col lg:overflow-hidden">
         {/* Above the header and shrink-0, so losing the network pushes the app
             down by one strip rather than covering any of it. It renders
             nothing at all while the connection is fine. */}
         <div className="shrink-0"><OfflineBanner /></div>
+        {/* TWO EXPLICIT ROWS, as the reference has them: identity, sections,
+            search and account on the first; the export and deploy actions
+            right-aligned on the second, above the KPI row. This was one
+            wrapping row, which put the search box and the export buttons on
+            the same line and pushed the sections to their own. */}
         <header className="p-3 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
           {/* The brand artwork rather than the name in text. The monogram and the
               wordmark are separate crops of the same poster: dropping the whole
@@ -108,23 +123,23 @@ function App({ user }: { user: Me }) {
           <div className="order-last w-full xl:order-none xl:w-auto xl:flex-1 xl:justify-center flex">
             <HeaderNav />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Sign out. Calls the backend so the SESSION is revoked, not just
-                the cookie cleared -- clearing only the cookie leaves a live
-                session on the server that a copied cookie could still use.
-
-                variant="outline", not "ghost". Ghost renders a borderless
-                transparent control, so this sat among four real buttons looking
-                like a text label -- and was reported as "there is no sign out
-                button on the app". It was there the whole time and did not look
-                like it. The only way out of a signed-in app is not the place to
-                be subtle. */}
-            {/* Sign out and Account moved into the avatar menu, where the
-                reference design puts them and where they stop competing with
-                the section links for the eye. Nothing was removed: both are
-                one click away, and the sign-out still calls the backend so the
-                SESSION is revoked rather than the cookie merely cleared. */}
+          {/* Row one, right: find an instrument, reach the account. Sign out
+              and Account live in the avatar menu, where the reference puts
+              them; nothing was removed and the sign-out still revokes the
+              session server-side rather than only clearing the cookie. */}
+          <div className="flex items-center gap-2">
             <SymbolSearch />
+            <Button size="sm" variant="secondary" className="px-2"
+                    onClick={() => setAccountOpen(true)} title="Account settings">
+              <Settings className="h-4 w-4" aria-hidden />
+              <span className="sr-only">Account settings</span>
+            </Button>
+            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
+          </div>
+        </header>
+
+        {/* Row two: the actions, right-aligned above the KPI row. */}
+        <div className="px-3 pt-2 flex items-center justify-end gap-2 flex-wrap shrink-0">
             {/* The way back, so collapsing the panel is never a one-way door. */}
             {page === "backtest" && !configOpen && (
               <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
@@ -157,9 +172,7 @@ function App({ user }: { user: Me }) {
             <Button size="sm" disabled title="Live trading deployment isn't implemented yet">
               <Rocket className="h-3.5 w-3.5" aria-hidden /> Deploy
             </Button>
-            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
-          </div>
-        </header>
+        </div>
         {/* key={page} remounts this on every switch, which replays the
             entrance. The class goes HERE rather than on a wrapper inside:
             ResultsPage's root is h-full, so it needs a parent with a real
@@ -171,7 +184,7 @@ function App({ user }: { user: Me }) {
             the document, and the next Tab goes straight back into the sidebar
             the link existed to skip. */}
         <div id="main-content" tabIndex={-1} key={page}
-             className="flex-1 min-h-0 overflow-y-auto page-swap">
+             className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto page-swap">
           {page === "backtest" && <ResultsPage />}
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}

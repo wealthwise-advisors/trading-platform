@@ -53,6 +53,10 @@ const SOURCE_META: Record<string, { Icon: typeof Database; note: string }> = {
 function paramColor(name: string): string | undefined {
   if (/overbought/i.test(name)) return "#f87171"
   if (/oversold/i.test(name)) return "#34d399"
+  // A lookback is a window, not a level: blue rather than the section accent,
+  // matching the reference and keeping red and green for the two that mean
+  // "too high" and "too low".
+  if (/lookback|period|length|window/i.test(name)) return "#38bdf8"
   return undefined
 }
 

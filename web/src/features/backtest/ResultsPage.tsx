@@ -170,21 +170,14 @@ export function ResultsPage() {
   const winColor = s.win_rate >= 50 ? GOOD : NEUTRAL
 
   /**
-   * Profit factor, read from the trade counts rather than the number.
-   *
-   * With no losing trades the engine computes float("inf") — the best possible
-   * outcome — and api/serializers.py turns non-finite values into None and then
-   * `None or 0.0` into a plain 0.0. So the API reports the best case as 0.00,
-   * which is also what a total wipeout would report. Nothing on screen showed
-   * this field before, so the collision never surfaced.
-   *
-   * winning_trades and losing_trades are exact, so they decide the wording:
-   * wins and no losses is infinite, no trades at all is nothing to divide.
+   * Profit factor. The API sends null when there is no finite ratio, and the
+   * trade counts say which kind of "no finite ratio" it was: winners with no
+   * losers is unbounded, nothing won and nothing lost is undefined.
    */
-  const pf = s.losing_trades === 0
+  const pf = s.profit_factor == null
     ? (s.winning_trades > 0
         ? { text: "∞", color: GOOD, sub: "no losing trades" }
-        : { text: "—", color: NEUTRAL, sub: "no trades" })
+        : { text: "—", color: NEUTRAL, sub: s.total_trades === 0 ? "no trades" : "no wins or losses" })
     : { text: s.profit_factor.toFixed(2), color: s.profit_factor >= 1 ? GOOD : CRITICAL, sub: undefined }
 
   return (
@@ -198,8 +191,19 @@ export function ResultsPage() {
     // rail moves UNDER the chart as a row of three -- the same components, one
     // instance. Rendering a second hidden copy for small screens would poll
     // Schwab twice every fifteen seconds to show one of them.
-    <div className="h-full flex flex-col xl:flex-row gap-3 p-3 w-full max-w-none">
-    <div className="min-h-0 flex-1 min-w-0 flex flex-col gap-2">
+    //
+    // xl:h-full, not h-full. Below xl this column stack is TALLER than the
+    // viewport -- config panel, nine cards, a chart and three market panels --
+    // and h-full told it otherwise. Its children then overflowed a box that
+    // claimed to be the right size, which is not a scroll: measured at 768px,
+    // the Total Trades card and the Avg Win card overlapped by 65px and the
+    // chart was squeezed to nothing. Above xl the rail is a real column beside
+    // the chart, everything fits, and the viewport-bound flex chain that lets
+    // the chart claim the leftover height is exactly right -- so it is kept,
+    // and only there. The same reasoning is why flex-1/min-h-0/overflow-y-auto
+    // are xl:-prefixed all the way down this file.
+    <div className="xl:h-full flex flex-col xl:flex-row gap-3 p-3 w-full max-w-none">
+    <div className="xl:min-h-0 xl:flex-1 min-w-0 flex flex-col gap-2">
       {/* ── KPI row — sparklines/donut removed per explicit request (numbers
            only, no graphs) so this row is as short as possible, handing
            the freed vertical space straight to the chart below via the
@@ -227,7 +231,7 @@ export function ResultsPage() {
            better beside the trade statistics anyway.
 
            Columns step 2 -> 3 -> 4 -> 7 so the row never has to squeeze. ── */}
-      <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-2 items-stretch">
+      <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-2 items-stretch auto-rows-fr">
         <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
                   valueColor={retColor} />
@@ -251,7 +255,7 @@ export function ResultsPage() {
           Analytics links open the view they name, which they cannot do if the
           tab strip owns its own state. */}
       <Tabs value={resultsTab} onValueChange={setResultsTab}
-            className="flex-1 min-h-0 flex flex-col gap-0">
+            className="xl:flex-1 xl:min-h-0 flex flex-col gap-0">
         {/* ── Tab bar. Export Report + Live Replay now live in the header (App.tsx),
              next to each other with the requested ~56px gap -- removed the
              duplicates that used to sit here to avoid two visible "Live Replay"
@@ -280,9 +284,11 @@ export function ResultsPage() {
              pitfall: a flex-row's children stretch to the container's full
              cross-size by default, so flex-1 on the chart column now
              actually reaches the bottom of the available viewport space. ── */}
-        <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-2">
-          <div className="min-w-0 flex-1 flex flex-col space-y-2 overflow-y-auto">
-            <TabsContent value="price" className="mt-0 flex-1 flex flex-col min-h-0">
+        <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-2">
+          <div className="min-w-0 xl:flex-1 flex flex-col space-y-2 xl:overflow-y-auto">
+            {/* h-[60vh] below xl: with no flex-1 chain to inherit from, a chart
+                 whose only height instruction is "fill the parent" fills nothing. */}
+            <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
@@ -339,7 +345,7 @@ export function ResultsPage() {
                 <OptimizerPanel />
               </Card>
             </TabsContent>
-            <TabsContent value="elliottwave" className="mt-0 flex-1 flex flex-col min-h-0">
+            <TabsContent value="elliottwave" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && (
                   <div className="flex-1 min-h-0">
@@ -363,14 +369,14 @@ export function ResultsPage() {
         </div>
       </Tabs>
     </div>
-      <aside className="shrink-0 grid grid-cols-1 sm:grid-cols-3 gap-3
+      <aside className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
                         xl:flex xl:flex-col xl:w-[266px] xl:overflow-y-auto"
              aria-label="Market and trade panels">
         {/* The pair that heads the rail. Same .stat-card as the KPI row, so
             they are the same object in two columns rather than a lookalike.
             Green and red are meaning here: a $0.00 average loss with no losing
             trades is NOT red, because nothing was lost. */}
-        <div className="grid grid-cols-2 gap-2 sm:col-span-3 xl:col-span-1">
+        <div className="grid grid-cols-2 gap-2 lg:col-span-3 xl:col-span-1">
           <StatCard label="Avg Win" icon={<ArrowUpRight className="h-4 w-4" />} accent={ACCENTS[3]}
                     value={money(s.avg_win)} valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
                     sub={s.winning_trades === 0 ? "no winning trades" : undefined} />
