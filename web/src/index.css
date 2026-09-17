@@ -214,6 +214,15 @@
 .stat-card {
   position: relative;
   overflow: hidden;
+  /* EQUAL HEIGHT ACROSS A ROW.
+     The KPI grid stretches its cells, so a card whose label wraps to two lines
+     no longer leaves its neighbours short: measured at 1024px the same row held
+     cards of 60px, 75px and 97px. Centring the content is what makes the extra
+     height read as padding rather than as dead space at the bottom -- which is
+     why the grid used items-start before, and why that was the wrong lever. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   /* Restrained on purpose. These cards used to carry a 1.5px saturated border
      plus a 28px coloured bloom each, so five of them side by side read as five
      competing neon frames -- the single most dated thing on the page. The
