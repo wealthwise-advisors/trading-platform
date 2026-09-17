@@ -5,6 +5,7 @@ import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
 } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
+import { WatchlistPanel, MarketSummaryPanel, TradeStatsPanel } from "@/components/panels/MarketPanels"
 import { WinLossDonut } from "@/components/charts/WinLossDonut"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
 import { CandlestickPatternsTable } from "@/components/tables/CandlestickPatternsTable"
@@ -190,7 +191,13 @@ export function ResultsPage() {
     // (shrink-0); the hero row below is the ONE flex-1 element, so it --
     // and the chart's already-flex-1 chain inside it -- finally resolves
     // against a real viewport-derived number instead of a guessed minHeight.
-    <div className="h-full flex flex-col gap-2 p-3 w-full max-w-none">
+    // A three-column page: the config rail is App.tsx's left aside, this is
+    // the centre, and the market rail is the column on the right. Below xl the
+    // rail moves UNDER the chart as a row of three -- the same components, one
+    // instance. Rendering a second hidden copy for small screens would poll
+    // Schwab twice every fifteen seconds to show one of them.
+    <div className="h-full flex flex-col xl:flex-row gap-3 p-3 w-full max-w-none">
+    <div className="min-h-0 flex-1 min-w-0 flex flex-col gap-2">
       {/* ── KPI row — sparklines/donut removed per explicit request (numbers
            only, no graphs) so this row is as short as possible, handing
            the freed vertical space straight to the chart below via the
@@ -355,6 +362,14 @@ export function ResultsPage() {
           </div>
         </div>
       </Tabs>
+    </div>
+      <aside className="shrink-0 grid grid-cols-1 sm:grid-cols-3 gap-3
+                        xl:flex xl:flex-col xl:w-[266px] xl:overflow-y-auto"
+             aria-label="Market and trade panels">
+        <WatchlistPanel />
+        <MarketSummaryPanel />
+        <TradeStatsPanel s={s} />
+      </aside>
     </div>
   )
 }

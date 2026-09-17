@@ -30,7 +30,7 @@ from api import auth as auth_mod
 from api import captcha, verification
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, account,
+                         schwab, optimize, data_export, account, quotes,
                          oauth as oauth_router)
 
 try:
@@ -198,3 +198,6 @@ app.include_router(data_export.router, prefix="/api", dependencies=[PROTECTED])
 # The account's own saved configurations. Under PROTECTED like the rest, and
 # every handler additionally scopes its query by the resolved user's id.
 app.include_router(account.router, prefix="/api", dependencies=[PROTECTED])
+# Protected like every other data route: a quote is market data the account
+# is entitled to through ITS Schwab link, not a public feed.
+app.include_router(quotes.router, prefix="/api", dependencies=[PROTECTED])

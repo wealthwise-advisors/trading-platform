@@ -324,6 +324,72 @@ class SchwabDataProvider(DataProvider):
         return symbol
 
     # ------------------------------------------------------------------
+    # Quotes
+    # ------------------------------------------------------------------
+
+    def quotes(self, symbols: list[str]) -> list[dict]:
+        """Last price and session change per symbol, as Schwab reports them.
+
+        THE KEY IS NOT THE SYMBOL YOU ASKED FOR. Ask for "/ES" and the reply
+        is keyed "/ESZ26" -- Schwab resolves a futures root to the active
+        contract. Looking the root up directly finds nothing, which is how the
+        first version of this returned an empty watchlist against a live,
+        authenticated account. Indices keep the symbol they were given
+        ("$SPX"), so both are handled: exact key first, then the one whose key
+        or reported symbol starts with the root.
+
+        THE FIELD NAMES ARE NOT ONE SHAPE EITHER. Verified against the live
+        API: a FUTURE reports its move as `futurePercentChange` and has no
+        `netPercentChange` at all, while an INDEX reports `netPercentChange`
+        and no `futurePercentChange`. A symbol the account cannot see comes
+        back under "errors" with no quote block.
+
+        Anything without a usable price is ABSENT from the result rather than
+        reported as zero: 0.00 beside ES reads as a market that has crashed,
+        not as a field this code failed to find.
+        """
+        self._ensure_client()
+        wire = [self._to_schwab_symbol(s) for s in symbols]
+        resp = self._client.quotes(wire)
+        payload = resp.json() if hasattr(resp, "json") else resp
+
+        def pick(block: dict, *names):
+            for n in names:
+                v = block.get(n)
+                if isinstance(v, (int, float)):
+                    return float(v)
+            return None
+
+        def entry_for(sent: str, asked: str) -> dict:
+            if sent in payload:
+                return payload[sent]
+            if asked in payload:
+                return payload[asked]
+            for key, val in payload.items():
+                if key.startswith(sent) or str(val.get("symbol", "")).startswith(sent):
+                    return val
+            return {}
+
+        out: list[dict] = []
+        for asked, sent in zip(symbols, wire):
+            entry = entry_for(sent, asked)
+            q = entry.get("quote") or {}
+            last = pick(q, "lastPrice", "mark", "closePrice", "lastPriceInDouble")
+            if last is None:
+                continue
+            out.append({
+                "symbol": asked,
+                "last": last,
+                "change": pick(q, "netChange", "netChangeInDouble") or 0.0,
+                "change_pct": pick(q, "futurePercentChange", "netPercentChange",
+                                   "netPercentChangeInDouble") or 0.0,
+                # The contract the root resolved to, so a watchlist row can say
+                # WHICH ES it is quoting rather than implying the root trades.
+                "contract": entry.get("symbol") or sent,
+            })
+        return out
+
+    # ------------------------------------------------------------------
     # DataProvider.load()
     # ------------------------------------------------------------------
 
