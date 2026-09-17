@@ -2,13 +2,18 @@
 // portfolio value with a fill, and drawdown % below it.
 
 import Plot from "@/lib/plot"
+import { chartTheme } from "@/lib/chartTheme"
+import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout } from "plotly.js"
 import type { EquityPoint } from "@/lib/types"
 
 const BLUE = "#7c6cf5"
 const RED = "#f0576b"
-const BG = "#14151c"
-const GRID = "#1a2340"
+// Chart chrome comes from the theme, not from a literal here. BG and GRID used
+// to be module constants, which meant a light theme still painted a near-black
+// rectangle in the middle of a white page -- a Plotly layout is a JavaScript
+// object and no stylesheet can reach it. Series colours are NOT themed: see
+// the note in lib/chartTheme.ts for why a trader's hues must not move.
 
 interface EquityChartProps {
   points: EquityPoint[]
@@ -16,6 +21,11 @@ interface EquityChartProps {
 }
 
 export function EquityChart({ points, initialCapital }: EquityChartProps) {
+  // Subscribing (rather than only calling chartTheme()) is what makes the
+  // header toggle repaint an open chart: without it the plot keeps the
+  // palette it was first built with until something else re-renders it.
+  useThemeStore((st) => st.theme)
+  const { paper: BG, grid: GRID, ink: INK, hover: HOVER } = chartTheme()
   const t = points.map((p) => p.t)
   const equity = points.map((p) => p.equity)
   const drawdown = points.map((p) => p.drawdown_pct)
@@ -34,10 +44,10 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: "Equity Curve & Drawdown", font: { size: 14, color: "#d4d6e4" } },
-    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#d4d6e4" },
+    title: { text: "Equity Curve & Drawdown", font: { size: 14, color: INK } },
+    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: INK },
     dragmode: "pan", hovermode: "x unified",
-    legend: { bgcolor: "rgba(0,0,0,0.3)", borderwidth: 0 },
+    legend: { bgcolor: HOVER, borderwidth: 0 },
     margin: { l: 55, r: 20, t: 45, b: 55 },
     height: 480, autosize: true,
     shapes: [{

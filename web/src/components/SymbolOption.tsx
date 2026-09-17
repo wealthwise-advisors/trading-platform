@@ -27,7 +27,7 @@ export function SymbolOption({ s }: { s: SymbolMeta }) {
       {!s.has_spec && (
         <span
           className="shrink-0 rounded px-1 py-px text-[9.5px] font-bold tracking-wide
-                     bg-amber-500/12 text-amber-400 ring-1 ring-amber-400/25"
+                     bg-amber-500/12 text-amber-800 dark:text-amber-400 ring-1 ring-amber-400/25"
           title="No contract economics configured — P&L falls back to E-mini defaults"
         >
           NO SPEC
@@ -36,7 +36,7 @@ export function SymbolOption({ s }: { s: SymbolMeta }) {
 
       {s.exchange && (
         <span className="ml-auto shrink-0 pl-3 text-[10.5px] font-semibold
-                         tracking-[0.06em] text-slate-400">
+                         tracking-[0.06em] text-muted-foreground">
           {s.exchange}
         </span>
       )}

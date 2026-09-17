@@ -133,7 +133,7 @@ export function SavedConfigsPanel() {
         </Button>
       </div>
 
-      {notice && <p role="status" aria-live="polite" className="text-xs text-green-400">{notice}</p>}
+      {notice && <p role="status" aria-live="polite" className="text-xs text-green-800 dark:text-green-400">{notice}</p>}
       {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
 
       {busy === "loading" ? (

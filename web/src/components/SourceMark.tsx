@@ -28,11 +28,11 @@ export function sourceKindOf(id: string): SourceKind {
 }
 
 const TONE: Record<SourceKind, string> = {
-  synthetic: "text-blue-400",
-  file: "text-slate-300",
-  live: "text-emerald-400",
-  market: "text-sky-400",
-  other: "text-slate-400",
+  synthetic: "text-blue-800 dark:text-blue-400",
+  file: "text-foreground",
+  live: "text-emerald-800 dark:text-emerald-400",
+  market: "text-sky-800 dark:text-sky-400",
+  other: "text-muted-foreground",
 }
 
 function Glyph({ kind }: { kind: SourceKind }) {

@@ -15,8 +15,8 @@ export function LiveBadge({ on }: { on: boolean }) {
         "inline-flex items-center gap-1.5 rounded px-1.5 py-0.5",
         "text-[10px] font-bold tracking-[0.1em] uppercase",
         on
-          ? "bg-emerald-500/12 text-emerald-300 ring-1 ring-emerald-400/30"
-          : "bg-white/5 text-slate-500 ring-1 ring-white/10",
+          ? "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-400/30"
+          : "bg-[color:var(--raise-3)] text-muted-foreground/75 ring-1 ring-[color:var(--hairline-mid)]",
       )}
     >
       {/* Static, not pulsing. A throbbing dot is looping attention-seeking
@@ -46,14 +46,14 @@ export function SectionHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5
-                    border-b border-white/8 bg-[#131419]">
+                    border-b border-[color:var(--hairline-soft)] bg-[var(--surface-2)]">
       <h3 className="text-[13px] font-bold uppercase tracking-[0.09em]
-                     text-violet-300 whitespace-nowrap">
+                     text-violet-800 dark:text-violet-300 whitespace-nowrap">
         {title}
       </h3>
       {live !== undefined && <LiveBadge on={live} />}
       {meta && (
-        <span className="text-xs text-slate-500 font-normal min-w-0">{meta}</span>
+        <span className="text-xs text-muted-foreground/75 font-normal min-w-0">{meta}</span>
       )}
       {right && <div className="ml-auto flex items-center gap-2">{right}</div>}
     </div>

@@ -1383,7 +1383,7 @@ export function ReplayPage() {
               {currentSymbol
                 ? <SymbolOption s={currentSymbol} />
                 : <span className="text-muted-foreground">{symbol || "Choose an instrument…"}</span>}
-              <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-slate-500" />
+              <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-muted-foreground/75" />
             </button>
             <InstrumentPicker
               open={pickerOpen}
@@ -1450,7 +1450,7 @@ export function ReplayPage() {
                      Icon={CalendarRange}
                      hint={
                        <>
-                         <CalendarRange size={13} className="text-violet-400" />
+                         <CalendarRange size={13} className="text-violet-800 dark:text-violet-400" />
                          <CountUp value={dayCount} />{dayCount === 1 ? " Day" : " Days"}
                          <span className="opacity-40">·</span>
                          <CountUp value={timeframes.length} />
@@ -1698,7 +1698,7 @@ export function ReplayPage() {
               had is still there when you switch back on. */}
           <div className="custom-session cfg-col" data-on={session24h ? "false" : "true"}>
             <div className="custom-session-head">
-              <Clock size={14} strokeWidth={2.2} className="text-violet-300" />
+              <Clock size={14} strokeWidth={2.2} className="text-violet-800 dark:text-violet-300" />
               <span className="custom-session-title">Custom session</span>
               <button
                 type="button"
@@ -1738,7 +1738,7 @@ export function ReplayPage() {
               <Info size={12} strokeWidth={2.2} />
               {session24h
                 ? <span>Off — every bar kept, all 24 hours</span>
-                : <span>Session length: <b className="text-slate-200">{sessionLabel}</b></span>}
+                : <span>Session length: <b className="text-foreground">{sessionLabel}</b></span>}
             </div>
           </div>
           </div>
@@ -1789,7 +1789,7 @@ export function ReplayPage() {
         </StepSection>
       </div>
 
-      <Card className="p-4 border border-white/6 w-full space-y-3">
+      <Card className="p-4 border border-[color:var(--hairline-soft)] w-full space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
           {/* Left of the transport, because it undoes the FORM rather than the
               run. Disabled while a session is loaded: the fields are locked
@@ -1856,11 +1856,11 @@ export function ReplayPage() {
             <Button
               onClick={changeSetup}
               variant="secondary"
-              // #9b8afb rather than text-primary: the primary violet on this
+              // var(--accent) rather than text-primary: the primary violet on this
               // button's grey measures 4.11 against the required 4.5. This is
               // the lighter half of the same gradient the default button uses,
               // so it still reads as the accent -- at 5.7.
-              className={`border border-primary/50 text-[#9b8afb] hover:bg-primary/10 ${lockPrompt ? "ring-2 ring-primary animate-pulse" : ""}`}
+              className={`border border-primary/50 text-[var(--accent)] hover:bg-primary/10 ${lockPrompt ? "ring-2 ring-primary animate-pulse" : ""}`}
               title="Release the session and unlock the setup fields so symbol, strategy, dates and capital can be changed."
             >
               ✎ Change Setup
@@ -1873,7 +1873,7 @@ export function ReplayPage() {
                and its transport state. */
             <span className="text-sm text-muted-foreground ml-2 flex items-center gap-2">
               <span className="text-foreground/80">{strategyName}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full border border-white/10 bg-white/[0.03]">
+              <span className="text-xs px-2 py-0.5 rounded-full border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)]">
                 {done ? "✓ Complete"
                   : status === "playing" ? "▶ Playing"
                     : status === "paused" ? "⏸ Paused" : "Ready"}
@@ -1960,7 +1960,7 @@ export function ReplayPage() {
           resolution is not instant -- so the ring holds the space the tables
           are about to occupy rather than leaving the page apparently empty. */}
       {status === "loading" && (
-        <Card className="border border-white/6">
+        <Card className="border border-[color:var(--hairline-soft)]">
           <LoadingBlock
             label="Loading market data…"
             hint={`${symbol} · ${timeframes.join(" · ")} · ${startDate} to ${endDate}`}
@@ -2056,7 +2056,7 @@ export function ReplayPage() {
               offering those would be dead controls. Every value here re-derives
               the columns client-side, so changes apply to the already-streamed
               bars with no reload. */}
-          <Card className="p-3 border border-white/6">
+          <Card className="p-3 border border-[color:var(--hairline-soft)]">
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <label className="flex items-center gap-2">
@@ -2091,7 +2091,7 @@ export function ReplayPage() {
             </div>
 
             {settingsOpen && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3 pt-3 border-t border-white/6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3 pt-3 border-t border-[color:var(--hairline-soft)]">
                 {/* Multi-select, the same pattern as the timeframe buttons.
                     Every checked level gets its own pair of band columns in both
                     tables, so +/-1 and +/-2 can be read side by side instead of
@@ -2166,7 +2166,7 @@ export function ReplayPage() {
               by the deviation settings, and Volume Profile is computed in the
               browser from each pane's accumulated bars. Both therefore react
               to the settings panel instantly. */}
-          <Card className="p-0 border border-white/6 overflow-hidden">
+          <Card className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden">
               <SectionHeader
                 title="Live state — all timeframes"
                 live={status === "playing"}
@@ -2190,7 +2190,7 @@ export function ReplayPage() {
                      it sits on the first of them rather than inside the tape
                      it used to be buried in. */
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                    <span className="text-[11px] text-muted-foreground/75 font-medium whitespace-nowrap">
                       Times in
                     </span>
                     <div className="flex gap-1">
@@ -2210,7 +2210,7 @@ export function ReplayPage() {
                   </div>
                 }
               />
-              <div className="px-4 py-2 text-sm border-b border-white/8 empty:hidden">
+              <div className="px-4 py-2 text-sm border-b border-[color:var(--hairline-soft)] empty:hidden">
                 {/* THE DATA IS A SNAPSHOT, AND NOTHING USED TO SAY SO.
                     Bars are fetched once, at Load Data. On a live date the feed
                     keeps producing bars afterwards, and playback can only replay
@@ -2274,7 +2274,7 @@ export function ReplayPage() {
                       const vp = profileFor(pane)
                       const num = price
                       return (
-                        <tr key={tf} className="border-t border-white/6">
+                        <tr key={tf} className="border-t border-[color:var(--hairline-soft)]">
                           <td className="p-2 font-semibold">
                             {tf}
                             {tf === baseTimeframe && (
@@ -2345,7 +2345,7 @@ export function ReplayPage() {
               </div>
             </Card>
 
-            <Card className="p-0 border border-white/6 overflow-hidden">
+            <Card className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden">
               {/* The count moved into the header's right slot. It had a row of
                   its own holding one short phrase, which cost a full band of
                   vertical space on every screen to say something that belongs
@@ -2509,7 +2509,7 @@ export function ReplayPage() {
                       const d = r.c - r.o
                         const vp = profileAtRow(r)
                       return (
-                        <tr key={`${r.t}-${r.tf}`} className="border-t border-white/6">
+                        <tr key={`${r.t}-${r.tf}`} className="border-t border-[color:var(--hairline-soft)]">
                           <td className="p-2 font-mono text-xs">{closeInTz(r.t, TF_MINUTES[r.tf])}</td>
                           <td className="p-2 font-mono text-xs text-muted-foreground">{inTz(r.t)}</td>
                           <td className="p-2">
@@ -2594,7 +2594,7 @@ export function ReplayPage() {
               </div>
             </Card>
           {completedTrades.length > 0 && (
-            <Card className="p-0 border border-white/6 w-full overflow-hidden">
+            <Card className="p-0 border border-[color:var(--hairline-soft)] w-full overflow-hidden">
               <SectionHeader
                 title={`Recent trades — ${focusedTimeframe} pane`}
                 live={status === "playing"}
@@ -2614,13 +2614,13 @@ export function ReplayPage() {
                   </thead>
                   <tbody>
                     {completedTrades.slice(-10).reverse().map((t, i) => (
-                      <tr key={i} className="border-t border-white/6">
+                      <tr key={i} className="border-t border-[color:var(--hairline-soft)]">
                         <td className="p-2">{t.entry_time.replace("T", " ").slice(0, 16)}</td>
                         <td className="p-2">{t.exit_time ? t.exit_time.replace("T", " ").slice(0, 16) : "OPEN"}</td>
-                        <td className={`p-2 ${t.direction === "LONG" ? "text-green-400" : "text-red-400"}`}>{t.direction}</td>
+                        <td className={`p-2 ${t.direction === "LONG" ? "text-green-800 dark:text-green-400" : "text-red-800 dark:text-red-400"}`}>{t.direction}</td>
                         <td className="p-2 text-right">{price(t.entry_price)}</td>
                         <td className="p-2 text-right">{price(t.exit_price)}</td>
-                        <td className={`p-2 text-right font-semibold ${t.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        <td className={`p-2 text-right font-semibold ${t.pnl >= 0 ? "text-green-800 dark:text-green-400" : "text-red-800 dark:text-red-400"}`}>
                           {t.pnl >= 0 ? "+" : ""}${t.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </td>
                       </tr>
@@ -2637,7 +2637,7 @@ export function ReplayPage() {
         <SetupFooterHint active={status === "loading"}>
           {status === "loading"
             ? <>Fetching {symbol} bars from {sourceLabel}…</>
-            : <>Press <b className="text-violet-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
+            : <>Press <b className="text-violet-800 dark:text-violet-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
         </SetupFooterHint>
       )}
     </div>

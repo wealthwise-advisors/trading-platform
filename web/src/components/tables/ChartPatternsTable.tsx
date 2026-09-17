@@ -23,9 +23,9 @@ export function ChartPatternsTable({ patterns }: { patterns: ChartPatternRecord[
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-white/6 max-h-[480px] overflow-y-auto">
+      <div className="overflow-x-auto rounded-lg border border-[color:var(--hairline-soft)] max-h-[480px] overflow-y-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[#1a1c24] text-muted-foreground sticky top-0">
+          <thead className="bg-[var(--surface-2)] text-muted-foreground sticky top-0">
             <tr>
               <th className="text-left p-2 font-medium">Pattern</th>
               <th className="text-left p-2 font-medium">Direction</th>
@@ -37,7 +37,7 @@ export function ChartPatternsTable({ patterns }: { patterns: ChartPatternRecord[
           </thead>
           <tbody>
             {patterns.map((p, i) => (
-              <tr key={i} className="border-t border-white/6">
+              <tr key={i} className="border-t border-[color:var(--hairline-soft)]">
                 <td className="p-2">{PATTERN_LABELS[p.pattern] ?? p.pattern}</td>
                 <td className="p-2">
                   <Badge style={{ background: `color-mix(in srgb, ${directionColor(p.direction)} 25%, transparent)`, color: directionColor(p.direction) }}>

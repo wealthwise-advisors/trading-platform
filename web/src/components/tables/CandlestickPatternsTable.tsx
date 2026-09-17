@@ -38,9 +38,9 @@ export function CandlestickPatternsTable({ patterns }: { patterns: CandlestickPa
       {!filtered.length ? (
         <p className="text-muted-foreground p-4">No candlestick patterns at this confidence threshold.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/6 max-h-[480px] overflow-y-auto">
+        <div className="overflow-x-auto rounded-lg border border-[color:var(--hairline-soft)] max-h-[480px] overflow-y-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#1a1c24] text-muted-foreground sticky top-0">
+            <thead className="bg-[var(--surface-2)] text-muted-foreground sticky top-0">
               <tr>
                 <th className="text-left p-2 font-medium">Time</th>
                 <th className="text-left p-2 font-medium">Pattern</th>
@@ -50,7 +50,7 @@ export function CandlestickPatternsTable({ patterns }: { patterns: CandlestickPa
             </thead>
             <tbody>
               {filtered.map((p, i) => (
-                <tr key={i} className="border-t border-white/6">
+                <tr key={i} className="border-t border-[color:var(--hairline-soft)]">
                   <td className="p-2">{p.timestamp.replace("T", " ").slice(0, 16)}</td>
                   <td className="p-2">{PATTERN_LABELS[p.pattern] ?? p.pattern}</td>
                   <td className="p-2">

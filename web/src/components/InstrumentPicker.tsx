@@ -115,7 +115,7 @@ export function InstrumentPicker({
         <div className="px-5 pt-4 pb-3 shrink-0">
           <div className="relative">
             <Search size={16} strokeWidth={2}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/75 pointer-events-none" />
             <Input
               autoFocus
               value={q}
@@ -152,8 +152,8 @@ export function InstrumentPicker({
         </div>
 
         {sourceLabel && (
-          <p className="px-5 pb-3 -mt-1 text-[11.5px] text-slate-500 shrink-0">
-            Showing what <b className="text-slate-300 font-semibold">{sourceLabel}</b> can serve.
+          <p className="px-5 pb-3 -mt-1 text-[11.5px] text-muted-foreground/75 shrink-0">
+            Showing what <b className="text-foreground font-semibold">{sourceLabel}</b> can serve.
             {!hasSpot && " Equities and crypto come from Schwab, Rithmic or your CSV archive."}
           </p>
         )}
@@ -164,14 +164,14 @@ export function InstrumentPicker({
             -- so on a 320px phone the columns are wider than the panel. Without
             a horizontal scroller the app shell's own overflow-hidden CLIPS
             them, which loses the content rather than letting anyone reach it. */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto border-y border-white/8">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto border-y border-[color:var(--hairline-soft)]">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-[#0d1526] text-slate-400">
+            <thead className="sticky top-0 z-10 bg-[var(--grid-head)] text-muted-foreground">
               <tr>
                 <th className="text-left py-2.5 pl-5 pr-2 font-bold text-[10.5px]
                                uppercase tracking-[0.08em] w-[150px]">
                   <button type="button" onClick={() => setAsc((v) => !v)}
-                          className="inline-flex items-center gap-1.5 hover:text-slate-100
+                          className="inline-flex items-center gap-1.5 hover:text-foreground
                                      transition-colors duration-150"
                           title={`Sort ${asc ? "Z to A" : "A to Z"}`}>
                     Symbol <ArrowUpDown size={12} strokeWidth={2.2} />
@@ -204,14 +204,14 @@ export function InstrumentPicker({
                         <span className="font-bold tabular-nums">{s.symbol}</span>
                       </span>
                     </td>
-                    <td className="py-2.5 px-2 text-slate-300">{s.name}</td>
+                    <td className="py-2.5 px-2 text-foreground">{s.name}</td>
                     <td className="py-2.5 px-2">
                       {s.exchange && (
                         <span className={cn("exch-tag", on && "exch-tag-on")}>{s.exchange}</span>
                       )}
                       {!s.has_spec && (
                         <span className="ml-1.5 rounded px-1 py-px text-[9.5px] font-bold
-                                         bg-amber-500/12 text-amber-400 ring-1 ring-amber-400/25"
+                                         bg-amber-500/12 text-amber-800 dark:text-amber-400 ring-1 ring-amber-400/25"
                               title="No contract economics configured — P&L falls back to E-mini defaults">
                           NO SPEC
                         </span>
@@ -233,8 +233,8 @@ export function InstrumentPicker({
               })}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-500 text-[13px]">
-                    Nothing matches {q ? <b className="text-slate-300">“{q}”</b> : "that filter"}.
+                  <td colSpan={4} className="py-12 text-center text-muted-foreground/75 text-[13px]">
+                    Nothing matches {q ? <b className="text-foreground">“{q}”</b> : "that filter"}.
                   </td>
                 </tr>
               )}
@@ -244,7 +244,7 @@ export function InstrumentPicker({
 
         {/* footer */}
         <div className="flex items-center gap-3 px-5 py-3.5 shrink-0">
-          <span className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-slate-500 tabular-nums">
+          <span className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-muted-foreground/75 tabular-nums">
             {rows.length} of {symbols.length} instruments
           </span>
           <Button variant="secondary" className="ml-auto"

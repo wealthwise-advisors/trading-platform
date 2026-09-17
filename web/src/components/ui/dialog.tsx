@@ -33,9 +33,9 @@ function DialogContent({
         className={cn("dlg-panel", className)}
         {...props}
       >
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[color:var(--hairline-soft)] shrink-0">
           <DialogPrimitive.Title asChild>
-            <h2 className="text-[14px] font-bold uppercase tracking-[0.11em] text-slate-100">
+            <h2 className="text-[14px] font-bold uppercase tracking-[0.11em] text-foreground">
               {title}
             </h2>
           </DialogPrimitive.Title>
@@ -45,9 +45,9 @@ function DialogContent({
           <DialogPrimitive.Close
             onClick={onClose}
             aria-label="Close"
-            className="ml-auto grid place-items-center h-9 w-9 rounded-lg border border-white/10
-                       bg-white/[0.03] text-slate-400 transition-colors duration-200
-                       hover:bg-white/8 hover:text-slate-100
+            className="ml-auto grid place-items-center h-9 w-9 rounded-lg border border-[color:var(--hairline-mid)]
+                       bg-[color:var(--raise-1)] text-muted-foreground transition-colors duration-200
+                       hover:bg-[color:var(--raise-4)] hover:text-foreground
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
           >
             <X size={17} strokeWidth={2.2} />

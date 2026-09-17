@@ -68,16 +68,16 @@ export function StatusBar() {
       <span className="inline-flex items-center gap-1.5">
         <Database className="h-3 w-3 shrink-0" aria-hidden />
         Data:{" "}
-        <span className={synthetic ? "text-amber-300" : "text-slate-200"}>{source}</span>
+        <span className={synthetic ? "text-amber-800 dark:text-amber-300" : "text-foreground"}>{source}</span>
       </span>
 
       <span className="inline-flex items-center gap-1.5">
         <Hash className="h-3 w-3 shrink-0" aria-hidden />
-        <span className="text-slate-200">{symbol}</span>
+        <span className="text-foreground">{symbol}</span>
         <span>{timeframe}</span>
         <span>{startDate} → {endDate}</span>
         {trades != null && (
-          <span className="text-slate-200">
+          <span className="text-foreground">
             {trades.toLocaleString()} {trades === 1 ? "trade" : "trades"}
           </span>
         )}
@@ -85,14 +85,14 @@ export function StatusBar() {
 
       <span className="ml-auto inline-flex items-center gap-1.5">
         <Clock className="h-3 w-3 shrink-0" aria-hidden />
-        {ran ? <>Last run: <span className="text-slate-200">{ran}</span></> : "Not run yet"}
+        {ran ? <>Last run: <span className="text-foreground">{ran}</span></> : "Not run yet"}
       </span>
 
       {/* Green only for a run that actually produced a result. "Completed"
           next to an empty page would be the app congratulating itself. */}
       <span className={`rounded-md px-2 py-0.5 ${backtestId
-          ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25"
-          : "bg-white/5 text-slate-400 ring-1 ring-white/10"}`}>
+          ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-400/25"
+          : "bg-[color:var(--raise-3)] text-muted-foreground ring-1 ring-[color:var(--hairline-mid)]"}`}>
         {backtestId ? "Completed" : "Idle"}
       </span>
 
@@ -100,7 +100,7 @@ export function StatusBar() {
           installed as a package)", and printing that in the corner of the
           dashboard reads as a fault rather than as a dev build. */}
       {/^\d/.test(versionQ.data?.version ?? "") && (
-        <span className="text-slate-500">v{versionQ.data!.version}</span>
+        <span className="text-muted-foreground/75">v{versionQ.data!.version}</span>
       )}
     </footer>
   )

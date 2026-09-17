@@ -26,13 +26,18 @@
 
 import { useMemo, useState } from "react"
 import Plot from "@/lib/plot"
+import { chartTheme } from "@/lib/chartTheme"
+import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Annotations } from "plotly.js"
 import type { ElliottWaveResponse, EWWave, OHLCVRecord } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { LoadingBlock } from "@/components/ui/loader"
 
-const BG = "#14151c"
-const GRID = "#1a2340"
+// Chart chrome comes from the theme, not from a literal here. BG and GRID used
+// to be module constants, which meant a light theme still painted a near-black
+// rectangle in the middle of a white page -- a Plotly layout is a JavaScript
+// object and no stylesheet can reach it. Series colours are NOT themed: see
+// the note in lib/chartTheme.ts for why a trader's hues must not move.
 
 // A native <select> inherits the app's light-on-dark text, but the popup list
 // it opens is painted by the OS with its own (light) background -- so the
@@ -40,8 +45,8 @@ const GRID = "#1a2340"
 // control looked fine, which is why it read as "the dropdown text is white".
 // Both the control and the options therefore need explicit colours.
 const SELECT_CLS =
-  "bg-white/5 border border-white/10 rounded px-2 py-1 text-foreground"
-const OPTION_CLS = "bg-[#14151c] text-[#e6edf3]"
+  "bg-[color:var(--raise-3)] border border-[color:var(--hairline-mid)] rounded px-2 py-1 text-foreground"
+const OPTION_CLS = "bg-[var(--surface-1)] text-[#e6edf3]"
 const UP = "#2dd4bf"
 const DOWN = "#f0576b"
 
@@ -100,6 +105,11 @@ export function ElliottWaveChart({
   symbol, strategyName, bars, data, isLoading, error,
   scaleFilter, onScaleFilter,
 }: Props) {
+  // Subscribing (rather than only calling chartTheme()) is what makes the
+  // header toggle repaint an open chart: without it the plot keeps the
+  // palette it was first built with until something else re-renders it.
+  useThemeStore((st) => st.theme)
+  const { paper: BG, grid: GRID, ink: INK, hover: HOVER } = chartTheme()
   const [showUndecidable, setShowUndecidable] = useState(true)
   const [maxDepth, setMaxDepth] = useState(2)
 
@@ -235,7 +245,7 @@ export function ElliottWaveChart({
           arrowcolor: color, opacity: undecided ? 0.55 : 1,
           ax: 0, ay: up ? -(26 - depth * 6) : (26 - depth * 6),
           font: { color, size: depth === 0 ? 12 : 10, family: "Arial" },
-          bgcolor: "rgba(20,21,28,0.72)", borderpad: 1,
+          bgcolor: HOVER, borderpad: 1,
         })
         labelled++
 
@@ -257,7 +267,7 @@ export function ElliottWaveChart({
           showarrow: true, arrowhead: 0, arrowwidth: 1, arrowcolor: C_PARENT,
           ax: 22, ay: 0,
           font: { color: C_PARENT, size: 11, family: "Arial" },
-          bgcolor: "rgba(20,21,28,0.72)", borderpad: 1,
+          bgcolor: HOVER, borderpad: 1,
         })
       }
     }
@@ -265,7 +275,7 @@ export function ElliottWaveChart({
     roots.forEach((n) => emit(n, 0, null))
 
     return { traces, annotations, roots, scales, labelled, unlabelledLegs, nested }
-  }, [data, bars, scaleFilter, showUndecidable, maxDepth])
+  }, [data, bars, scaleFilter, showUndecidable, maxDepth, BG, HOVER])
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full">
@@ -302,10 +312,10 @@ export function ElliottWaveChart({
   const layout: Partial<Layout> = {
     title: {
       text: `${symbol} — ${strategyName} · Elliott Wave (engine ${data.engine_version})`,
-      font: { size: 14, color: "#d4d6e4" },
+      font: { size: 14, color: INK },
     },
     paper_bgcolor: BG, plot_bgcolor: BG,
-    font: { color: "#d4d6e4", size: 11 },
+    font: { color: INK, size: 11 },
     dragmode: "pan", hovermode: "closest",
     margin: { l: 58, r: 12, t: 44, b: 40 },
     annotations: built.annotations,
@@ -325,7 +335,7 @@ export function ElliottWaveChart({
           { step: "all", label: "All" },
         ],
         bgcolor: BG, activecolor: "#3a3a48",
-        font: { color: "#d4d6e4", size: 11 }, x: 0, y: 1.02, xanchor: "left",
+        font: { color: INK, size: 11 }, x: 0, y: 1.02, xanchor: "left",
       },
     },
     yaxis: initialY
@@ -395,8 +405,8 @@ export function ElliottWaveChart({
               apart rather than sharing one message. */}
           {built.roots.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="pointer-events-auto max-w-md rounded-lg border border-white/10
-                              bg-[#14151c]/92 px-5 py-4 text-center shadow-lg">
+              <div className="pointer-events-auto max-w-md rounded-lg border border-[color:var(--hairline-mid)]
+                              bg-[var(--surface-1)]/92 px-5 py-4 text-center shadow-lg">
                 {data.counts.structures === 0 ? (
                   <>
                     <p className="text-sm font-semibold text-foreground">
@@ -432,7 +442,7 @@ export function ElliottWaveChart({
         </div>
       </div>
 
-      <aside className="xl:w-80 shrink-0 overflow-y-auto text-xs space-y-3 border-t xl:border-t-0 xl:border-l border-white/6 pt-3 xl:pt-0 xl:pl-3">
+      <aside className="xl:w-80 shrink-0 overflow-y-auto text-xs space-y-3 border-t xl:border-t-0 xl:border-l border-[color:var(--hairline-soft)] pt-3 xl:pt-0 xl:pl-3">
         {/* At-a-glance figures only. The methodology behind them -- why legs go
             unlabelled, what "undecidable" means, the scope notes and the full
             blocked-rule inventory -- is real and still reachable, but it was
@@ -445,18 +455,18 @@ export function ElliottWaveChart({
             ["Nested", String(built.nested.size)],
             ["Labels drawn", String(built.labelled)],
           ] as [string, string][]).map(([k, v]) => (
-            <div key={k} className="flex justify-between border-b border-white/5 pb-1">
+            <div key={k} className="flex justify-between border-b border-[color:var(--hairline-soft)] pb-1">
               <dt className="text-muted-foreground">{k}</dt>
               <dd className="font-semibold text-foreground">{v}</dd>
             </div>
           ))}
-          <div className="flex justify-between border-b border-white/5 pb-1">
+          <div className="flex justify-between border-b border-[color:var(--hairline-soft)] pb-1">
             <dt className="text-muted-foreground">Undecidable</dt>
             <dd className="font-semibold" style={{ color: C_UNLABELLED }}>
               {undecidable}/{gated + undecidable}
             </dd>
           </div>
-          <div className="flex justify-between border-b border-white/5 pb-1">
+          <div className="flex justify-between border-b border-[color:var(--hairline-soft)] pb-1">
             <dt className="text-muted-foreground">Unlabelled legs</dt>
             <dd className="font-semibold" style={{ color: C_UNLABELLED }}>
               {built.unlabelledLegs}
@@ -469,7 +479,7 @@ export function ElliottWaveChart({
           reference rules can’t be evaluated, so some structures stay undecidable.
         </p>
 
-        <details className="rounded border border-white/8 px-2 py-1.5">
+        <details className="rounded border border-[color:var(--hairline-soft)] px-2 py-1.5">
           <summary className="cursor-pointer select-none font-semibold text-sm">
             How to read this
           </summary>
@@ -497,14 +507,14 @@ export function ElliottWaveChart({
           </div>
         </details>
 
-        <details className="rounded border border-white/8 px-2 py-1.5">
+        <details className="rounded border border-[color:var(--hairline-soft)] px-2 py-1.5">
           <summary className="cursor-pointer select-none font-semibold text-sm">
             Unevaluated rules ({data.blocked_rules.length} groups)
           </summary>
           <ul className="mt-2 space-y-1.5">
             {data.blocked_rules.map((b, i) => (
-              <li key={i} className="border border-white/6 rounded p-1.5">
-                <div className="font-mono text-[11px] text-amber-300">{b.oq}</div>
+              <li key={i} className="border border-[color:var(--hairline-soft)] rounded p-1.5">
+                <div className="font-mono text-[11px] text-amber-800 dark:text-amber-300">{b.oq}</div>
                 <div className="text-muted-foreground">{b.rules.join(", ")}</div>
                 <div className="text-muted-foreground/80 mt-0.5">{b.reason}</div>
               </li>

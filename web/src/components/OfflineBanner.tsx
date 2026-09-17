@@ -52,8 +52,8 @@ export function OfflineBanner() {
       className={
         "flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-medium " +
         (online
-          ? "bg-emerald-500/15 text-emerald-300"
-          : "bg-amber-500/15 text-amber-200")
+          ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+          : "bg-amber-500/15 text-amber-800 dark:text-amber-200")
       }
     >
       {online ? (

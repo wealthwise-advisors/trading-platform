@@ -22,9 +22,9 @@ export function TradeLogTable({ trades }: { trades: TradeRecord[] }) {
           proximity to a support/resistance zone — not the trade's outcome. Average: {avgQuality.toFixed(0)}/100
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border border-white/6">
+      <div className="overflow-x-auto rounded-lg border border-[color:var(--hairline-soft)]">
         <table className="w-full text-sm">
-          <thead className="bg-[#1a1c24] text-muted-foreground">
+          <thead className="bg-[var(--surface-2)] text-muted-foreground">
             <tr>
               <th className="text-left p-2 font-medium">#</th>
               <th className="text-left p-2 font-medium">Direction</th>
@@ -39,16 +39,16 @@ export function TradeLogTable({ trades }: { trades: TradeRecord[] }) {
           </thead>
           <tbody>
             {trades.map((t, i) => (
-              <tr key={i} className="border-t border-white/6"
+              <tr key={i} className="border-t border-[color:var(--hairline-soft)]"
                   style={{ background: t.pnl >= 0 ? "rgba(27,67,50,0.35)" : "rgba(74,16,16,0.35)" }}>
                 <td className="p-2">{i + 1}</td>
-                <td className={`p-2 ${t.direction === "LONG" ? "text-green-400" : "text-red-400"}`}>{t.direction}</td>
+                <td className={`p-2 ${t.direction === "LONG" ? "text-green-900 dark:text-green-400" : "text-red-900 dark:text-red-400"}`}>{t.direction}</td>
                 <td className="p-2">{fmtTime(t.entry_time)}</td>
                 <td className="p-2 text-right">{t.entry_price.toFixed(2)}</td>
                 <td className="p-2">{fmtTime(t.exit_time)}</td>
                 <td className="p-2 text-right">{t.exit_price?.toFixed(2) ?? "—"}</td>
                 <td className="p-2 text-right">{t.duration_min ? `${t.duration_min.toFixed(0)}m` : "—"}</td>
-                <td className={`p-2 text-right font-semibold ${t.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <td className={`p-2 text-right font-semibold ${t.pnl >= 0 ? "text-green-900 dark:text-green-400" : "text-red-900 dark:text-red-400"}`}>
                   {t.pnl >= 0 ? "+" : ""}${t.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </td>
                 <td className="p-2 text-right">

@@ -25,7 +25,7 @@ function Row({ icon, label, value }:
 
 export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#7c6cf5" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "var(--primary)" }}>
       <div className="info-title flex items-center gap-2">
         <BarChart3 className="h-4 w-4" aria-hidden /> Performance Summary</div>
       <Row icon={<Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Win Rate" value={`${s.win_rate.toFixed(0)}%`} />
@@ -41,7 +41,7 @@ export function PerformanceSummaryCard({ s }: { s: BacktestSummary }) {
 
 export function BacktestDetailsCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card" style={{ ["--info-accent" as string]: "#9b8afb" }}>
+    <div className="info-card" style={{ ["--info-accent" as string]: "var(--accent)" }}>
       <div className="info-title flex items-center gap-2">
         <Layers className="h-4 w-4" aria-hidden /> Backtest Details</div>
       <Row icon={<CalendarRange className="h-3.5 w-3.5 shrink-0" aria-hidden />} label="Date Range" value={`${s.start_date} → ${s.end_date}`} />
@@ -68,7 +68,7 @@ export function QuickInsightsCard({ s }: { s: BacktestSummary }) {
 
 export function AiInsightCard({ s }: { s: BacktestSummary }) {
   return (
-    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "#9b8afb" }}>
+    <div className="info-card ai-insight" style={{ ["--info-accent" as string]: "var(--accent)" }}>
       <span className="ai-insight-badge">BETA</span>
       <span className="ai-insight-brain" aria-hidden><Sparkles className="h-full w-full" /></span>
       <div className="info-title relative z-10">
@@ -80,8 +80,8 @@ export function AiInsightCard({ s }: { s: BacktestSummary }) {
               fill="url(#ai-wave-gradient)" />
         <defs>
           <linearGradient id="ai-wave-gradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#7c6cf5" />
-            <stop offset="100%" stopColor="#9b8afb" />
+            <stop offset="0%" stopColor="var(--primary)" />
+            <stop offset="100%" stopColor="var(--accent)" />
           </linearGradient>
         </defs>
       </svg>

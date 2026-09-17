@@ -49,10 +49,10 @@ function IntervalRow({
         aria-current={selected ? "true" : undefined}
         onClick={() => onPick(tf)}
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm
-                   hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                   hover:bg-[color:var(--raise-3)] outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
       >
-        <span aria-hidden className="w-9 shrink-0 rounded bg-white/[0.06] px-1 py-px text-center
-                                     text-[11px] font-semibold tabular-nums text-slate-200">
+        <span aria-hidden className="w-9 shrink-0 rounded bg-[color:var(--raise-3)] px-1 py-px text-center
+                                     text-[11px] font-semibold tabular-nums text-foreground">
           {tf}
         </span>
         {/* TOS reads range first: "2 D : 1m". An interval with no specified day
@@ -137,9 +137,9 @@ export function IntervalPicker({
           side="bottom"
           align="start"
           sideOffset={4}
-          className="cfg-scope z-50 w-(--radix-popover-trigger-width) min-w-64 rounded-xl border border-white/10
-                     bg-[#0d1420] p-1.5 text-popover-foreground shadow-2xl shadow-black/60 ring-1
-                     ring-black/40 outline-none"
+          className="cfg-scope z-50 w-(--radix-popover-trigger-width) min-w-64 rounded-xl border border-[color:var(--hairline-mid)]
+                     bg-[var(--popover)] p-1.5 text-popover-foreground shadow-2xl shadow-black/60 ring-1
+                     ring-[color:var(--ring-halo)] outline-none"
         >
           {view === "list" ? (
             <>
@@ -170,7 +170,7 @@ export function IntervalPicker({
                 </TabsContent>
               </Tabs>
 
-              <div className="mt-1.5 border-t border-white/8 pt-1.5">
+              <div className="mt-1.5 border-t border-[color:var(--hairline-soft)] pt-1.5">
                 <button
                   type="button"
                   onClick={() => setView("customize")}
@@ -202,7 +202,7 @@ export function IntervalPicker({
                   const shown = !layout.hidden.includes(tf)
                   const range = rangeLabel(tf)
                   return (
-                    <li key={tf} className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-white/5">
+                    <li key={tf} className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-[color:var(--raise-3)]">
                       <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                         <input
                           type="checkbox"
@@ -218,7 +218,7 @@ export function IntervalPicker({
                         aria-label={`Move ${tf} up`}
                         disabled={i === 0}
                         onClick={() => setLayout((l) => ({ ...l, order: moveInterval(l.order, tf, -1) }))}
-                        className="rounded p-0.5 hover:bg-white/10 disabled:opacity-30
+                        className="rounded p-0.5 hover:bg-[color:var(--raise-4)] disabled:opacity-30
                                    outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                       >
                         <ChevronUp aria-hidden className="h-4 w-4" />
@@ -228,7 +228,7 @@ export function IntervalPicker({
                         aria-label={`Move ${tf} down`}
                         disabled={i === layout.order.length - 1}
                         onClick={() => setLayout((l) => ({ ...l, order: moveInterval(l.order, tf, 1) }))}
-                        className="rounded p-0.5 hover:bg-white/10 disabled:opacity-30
+                        className="rounded p-0.5 hover:bg-[color:var(--raise-4)] disabled:opacity-30
                                    outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                       >
                         <ChevronDown aria-hidden className="h-4 w-4" />
@@ -237,7 +237,7 @@ export function IntervalPicker({
                   )
                 })}
               </ul>
-              <div className="mt-1.5 border-t border-white/8 pt-1.5">
+              <div className="mt-1.5 border-t border-[color:var(--hairline-soft)] pt-1.5">
                 <button
                   type="button"
                   onClick={() => setLayout(defaultLayout())}

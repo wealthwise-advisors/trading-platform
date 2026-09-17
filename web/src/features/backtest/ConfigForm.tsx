@@ -161,7 +161,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <header className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
                          border border-blue-400/25 bg-blue-500/10">
-          <Settings2 className="h-5 w-5 text-blue-300" aria-hidden />
+          <Settings2 className="h-5 w-5 text-blue-800 dark:text-blue-300" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold leading-tight">Backtest Config</h2>
@@ -174,13 +174,13 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             title="Hide the config panel"
             aria-label="Hide the config panel"
             className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors
-                       hover:bg-white/[0.06] hover:text-foreground"
+                       hover:bg-[color:var(--raise-3)] hover:text-foreground"
           >
             <ChevronsLeft className="h-5 w-5" aria-hidden />
           </button>
         )}
       </header>
-      <div className="h-px bg-white/8" />
+      <div className="h-px bg-[color:var(--raise-4)]" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
       <Section icon="source" label="Data Source" accent="sky">
@@ -223,7 +223,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           {current
             ? <SymbolOption s={current} />
             : <span className="text-muted-foreground">Choose an instrument…</span>}
-          <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-slate-500" />
+          <ChevronsUpDown size={15} strokeWidth={2} className="ml-2 shrink-0 text-muted-foreground/75" />
         </button>
         <InstrumentPicker
           open={pickerOpen}
@@ -270,7 +270,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             {ALL_CHART_TIMEFRAMES.map((tf) => (
               <SelectItem key={tf} value={tf}>
                 <span className="flex items-center gap-2 w-full">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                   {tf}
                 </span>
               </SelectItem>
@@ -446,7 +446,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               Eastern (lib/sessionZone explains why), so switching to CT cannot
               quietly change which bars the next backtest runs on. */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+            <span className="text-[11px] text-muted-foreground/75 font-medium whitespace-nowrap">
               Times in
             </span>
             <div className="flex gap-1">

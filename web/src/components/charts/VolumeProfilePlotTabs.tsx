@@ -10,8 +10,8 @@ import {
   type DrawAs, type LineStyle, type PlotKey, type PlotStyle, type PlotStyles, type ValuesMode,
 } from "@/lib/vpPlotStyles"
 
-const FIELD = "flex-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-foreground disabled:opacity-40"
-const OPTION = "bg-[#14151c] text-[#e6edf3]"
+const FIELD = "flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1 text-foreground disabled:opacity-40"
+const OPTION = "bg-[var(--surface-1)] text-[#e6edf3]"
 
 export function VolumeProfilePlotTabs({
   styles, onChange,
@@ -69,7 +69,7 @@ export function VolumeProfilePlotTabs({
               <label htmlFor={`${id}-color`} className="w-16 text-muted-foreground">Colour</label>
               <input id={`${id}-color`} type="color" value={s.color}
                      onChange={(e) => onChange(k, { color: e.target.value })}
-                     className="h-6 w-10 cursor-pointer rounded border border-white/10 bg-transparent" />
+                     className="h-6 w-10 cursor-pointer rounded border border-[color:var(--hairline-mid)] bg-transparent" />
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
               {([

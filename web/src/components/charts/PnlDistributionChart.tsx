@@ -2,15 +2,30 @@
 // P&L, colored green/red per bin so losing vs winning trades read at a glance.
 
 import Plot from "@/lib/plot"
+import { chartTheme } from "@/lib/chartTheme"
+import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout } from "plotly.js"
 import type { TradeRecord } from "@/lib/types"
-import { GOOD, CRITICAL } from "@/components/cards/StatCard"
+// Not imported from StatCard: those are var(--gain)/var(--loss) now, and a
+// Plotly marker colour is written into an SVG attribute where var() resolves
+// to nothing. Bar fills sit on the themed --chart-paper, which is what keeps
+// them readable, so the hues themselves do not need to move.
+const GOOD = "#22C55E"
+const CRITICAL = "#EF4444"
 
-const BG = "#14151c"
-const GRID = "#1a2340"
+// Chart chrome comes from the theme, not from a literal here. BG and GRID used
+// to be module constants, which meant a light theme still painted a near-black
+// rectangle in the middle of a white page -- a Plotly layout is a JavaScript
+// object and no stylesheet can reach it. Series colours are NOT themed: see
+// the note in lib/chartTheme.ts for why a trader's hues must not move.
 const NBINS = 30
 
 export function PnlDistributionChart({ trades }: { trades: TradeRecord[] }) {
+  // Subscribing (rather than only calling chartTheme()) is what makes the
+  // header toggle repaint an open chart: without it the plot keeps the
+  // palette it was first built with until something else re-renders it.
+  useThemeStore((st) => st.theme)
+  const { paper: BG, grid: GRID, ink: INK } = chartTheme()
   if (!trades.length) {
     return <p className="text-muted-foreground p-4">No completed trades to analyze.</p>
   }
@@ -37,8 +52,8 @@ export function PnlDistributionChart({ trades }: { trades: TradeRecord[] }) {
   ]
 
   const layout: Partial<Layout> = {
-    title: { text: "Trade P&L Distribution", font: { size: 14, color: "#d4d6e4" } },
-    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: "#d4d6e4" },
+    title: { text: "Trade P&L Distribution", font: { size: 14, color: INK } },
+    paper_bgcolor: BG, plot_bgcolor: BG, font: { color: INK },
     dragmode: "zoom", showlegend: false,
     margin: { l: 55, r: 20, t: 55, b: 45 },
     height: 380, autosize: true,

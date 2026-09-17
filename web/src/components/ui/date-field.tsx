@@ -58,14 +58,14 @@ function monthGrid(year: number, month: number): (Date | null)[] {
 const TONES = {
   violet: {
     trigger: "hover:border-violet-500/40 focus-visible:ring-violet-500/40",
-    icon: "text-violet-400",
+    icon: "text-violet-800 dark:text-violet-400",
     selected: "bg-violet-500 text-white hover:bg-violet-500",
     today: "ring-1 ring-violet-500/50",
     todayButton: "hover:border-violet-500/40 hover:text-violet-300",
   },
   teal: {
     trigger: "hover:border-teal-400/40 focus-visible:ring-teal-400/40",
-    icon: "text-teal-400",
+    icon: "text-teal-800 dark:text-teal-400",
     selected: "bg-teal-700 text-white hover:bg-teal-700",
     today: "ring-1 ring-teal-400/50",
     todayButton: "hover:border-teal-400/40 hover:text-teal-300",
@@ -136,17 +136,17 @@ export function DateField({
         <PopoverPrimitive.Content
           align="start"
           sideOffset={6}
-          className={cn("z-50 w-[260px] rounded-xl border border-white/10 bg-[#0d1420] p-3",
+          className={cn("z-50 w-[260px] rounded-xl border border-[color:var(--hairline-mid)] bg-[var(--popover)] p-3",
                         "shadow-2xl shadow-black/60", popoverClassName)}
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" onClick={() => shift(-1)} aria-label="Previous month"
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground">
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
             <span className="text-sm font-semibold">{MONTHS[month]} {year}</span>
             <button type="button" onClick={() => shift(1)} aria-label="Next month"
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/[0.06] hover:text-foreground">
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground">
               <ChevronRight className="h-4 w-4" aria-hidden />
             </button>
           </div>
@@ -170,7 +170,7 @@ export function DateField({
                   aria-current={isSelected ? "date" : undefined}
                   className={cn(
                     "rounded-md py-1.5 text-sm tabular-nums transition-colors",
-                    "hover:bg-white/[0.08]",
+                    "hover:bg-[color:var(--raise-4)]",
                     isSelected && t.selected,
                     !isSelected && isToday && t.today,
                   )}
@@ -184,7 +184,7 @@ export function DateField({
           <button
             type="button"
             onClick={() => { onChange(todayISO); setOpen(false) }}
-            className={cn("mt-2 w-full rounded-lg border border-white/10 py-1.5 text-xs",
+            className={cn("mt-2 w-full rounded-lg border border-[color:var(--hairline-mid)] py-1.5 text-xs",
                           "text-muted-foreground transition-colors", t.todayButton)}
           >
             Today

@@ -3,7 +3,7 @@ import { GOOD, CRITICAL } from "@/components/cards/StatCard"
 
 // Diverging: two hues (green/red) + neutral gray midpoint at 0, intensity by
 // magnitude — same rule as the dataviz skill's color-formula for polarity data.
-const NEUTRAL_CELL = "#1a2340"
+const NEUTRAL_CELL = "var(--grid-line)"
 const MAX_MAGNITUDE = 8 // % return at which a cell reaches full saturation
 
 function cellColor(val: number | null): string {

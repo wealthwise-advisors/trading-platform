@@ -96,7 +96,7 @@ function Panel({ icon, title, action, children }: {
     <section className="rail-card">
       <header className="flex items-center gap-2 mb-2">
         <span className="text-[#38bdf8]" aria-hidden>{icon}</span>
-        <h2 className="text-[13px] font-semibold text-slate-100">{title}</h2>
+        <h2 className="text-[13px] font-semibold text-foreground">{title}</h2>
         {action && <span className="ml-auto">{action}</span>}
       </header>
       {children}
@@ -131,7 +131,7 @@ function Delta({ value, suffix = "", digits = 2 }: { value: number; suffix?: str
 
 function Disconnected({ reason }: { reason?: string | null }) {
   return (
-    <p className="text-[11px] leading-relaxed text-slate-400">
+    <p className="text-[11px] leading-relaxed text-muted-foreground">
       {reason || "No live quote source connected."}
     </p>
   )
@@ -181,7 +181,7 @@ export function WatchlistPanel() {
       action={
         <button type="button" onClick={() => setAdding((v) => !v)}
                 className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px]
-                           text-slate-400 hover:text-slate-100 hover:bg-white/5"
+                           text-muted-foreground hover:text-foreground hover:bg-[color:var(--raise-3)]"
                 aria-expanded={adding} aria-label="Add a symbol to the watchlist">
           <Plus className="h-3 w-3" aria-hidden /> Add
         </button>
@@ -193,12 +193,12 @@ export function WatchlistPanel() {
           <input
             autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder="ES, NQ, AAPL…" aria-label="Symbol to add"
-            className="min-w-0 flex-1 rounded-md border border-white/12 bg-white/[0.03]
-                       px-2 py-1 text-[11.5px] outline-none focus:border-white/25"
+            className="min-w-0 flex-1 rounded-md border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)]
+                       px-2 py-1 text-[11.5px] outline-none focus:border-[color:var(--hairline-focus)]"
           />
           <button type="submit"
-                  className="rounded-md border border-white/12 px-2 py-1 text-[11px]
-                             text-slate-200 hover:bg-white/5">
+                  className="rounded-md border border-[color:var(--hairline-mid)] px-2 py-1 text-[11px]
+                             text-foreground hover:bg-[color:var(--raise-3)]">
             Add
           </button>
         </form>
@@ -208,7 +208,7 @@ export function WatchlistPanel() {
       ) : (
         <table className="w-full text-[11.5px]">
           <thead>
-            <tr className="text-slate-500">
+            <tr className="text-muted-foreground/75">
               <th className="text-left font-medium pb-1">Symbol</th>
               <th className="text-right font-medium pb-1">Last</th>
               <th className="text-right font-medium pb-1">Chg</th>
@@ -219,19 +219,19 @@ export function WatchlistPanel() {
             {rows.map((r) => (
               <tr key={r.symbol}
                   aria-current={r.symbol === activeSymbol ? "true" : undefined}
-                  className={`group border-t border-white/5 ${
+                  className={`group border-t border-[color:var(--hairline-soft)] ${
                     r.symbol === activeSymbol ? "bg-sky-500/10" : ""}`}>
-                <td className="py-1.5 font-semibold text-slate-200"
+                <td className="py-1.5 font-semibold text-foreground"
                     title={r.contract ? `Quoting ${r.contract}` : undefined}>
                   {r.symbol}
                   <button type="button" onClick={() => remove(r.symbol)}
                           aria-label={`Remove ${r.symbol} from the watchlist`}
                           className="ml-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100
-                                     text-slate-500 hover:text-slate-200">
+                                     text-muted-foreground/75 hover:text-foreground">
                     ×
                   </button>
                 </td>
-                <td className="py-1.5 text-right tabular-nums text-slate-100">{price(r.last)}</td>
+                <td className="py-1.5 text-right tabular-nums text-foreground">{price(r.last)}</td>
                 <td className="py-1.5 text-right"><Delta value={r.change} /></td>
                 <td className="py-1.5 text-right"><Delta value={r.change_pct} suffix="%" /></td>
               </tr>
@@ -239,13 +239,13 @@ export function WatchlistPanel() {
             {/* A symbol that returns no quote is dropped by the backend, so
                 say which ones rather than leaving a silent gap in the list. */}
             {symbols.filter((sym) => !rows.some((r) => r.symbol === sym)).map((sym) => (
-              <tr key={sym} className="group border-t border-white/5 text-slate-500">
+              <tr key={sym} className="group border-t border-[color:var(--hairline-soft)] text-muted-foreground/75">
                 <td className="py-1.5 font-semibold">
                   {sym}
                   <button type="button" onClick={() => remove(sym)}
                           aria-label={`Remove ${sym} from the watchlist`}
                           className="ml-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100
-                                     hover:text-slate-200">
+                                     hover:text-foreground">
                     ×
                   </button>
                 </td>
@@ -277,8 +277,8 @@ export function MarketSummaryPanel() {
             onClick={() => setTab(t.id)}
             className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
               t.id === tab
-                ? "bg-[#1d4ed8]/25 text-sky-200 ring-1 ring-sky-400/30"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"}`}
+                ? "bg-[#1d4ed8]/25 text-sky-800 dark:text-sky-200 ring-1 ring-sky-400/30"
+                : "text-muted-foreground hover:text-foreground hover:bg-[color:var(--raise-3)]"}`}
           >
             {t.label}
           </button>
@@ -289,7 +289,7 @@ export function MarketSummaryPanel() {
       ) : nothing ? (
         // Connected, asked, and Schwab returned nothing for this set. Usually
         // an entitlement: say that rather than showing four dashes forever.
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-muted-foreground">
           No {active.label.toLowerCase()} quotes available on this Schwab account.
         </p>
       ) : (
@@ -297,11 +297,11 @@ export function MarketSummaryPanel() {
           {active.rows.map(({ symbol, label }) => {
             const r = by.get(symbol)
             return (
-              <li key={symbol} className="flex items-center justify-between gap-2 py-1.5 border-t border-white/5 first:border-t-0">
-                <span className="text-slate-300">{label}</span>
+              <li key={symbol} className="flex items-center justify-between gap-2 py-1.5 border-t border-[color:var(--hairline-soft)] first:border-t-0">
+                <span className="text-foreground">{label}</span>
                 <span className="flex items-center gap-3">
-                  <span className="tabular-nums text-slate-100">{r ? price(r.last) : "—"}</span>
-                  {r ? <Delta value={r.change_pct} suffix="%" /> : <span className="text-slate-500">—</span>}
+                  <span className="tabular-nums text-foreground">{r ? price(r.last) : "—"}</span>
+                  {r ? <Delta value={r.change_pct} suffix="%" /> : <span className="text-muted-foreground/75">—</span>}
                 </span>
               </li>
             )
@@ -321,7 +321,7 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
   if (!s) {
     return (
       <Panel icon={<Activity className="h-4 w-4" />} title="Trade Statistics">
-        <p className="text-[11px] text-slate-400">Run a backtest to see its trade statistics.</p>
+        <p className="text-[11px] text-muted-foreground">Run a backtest to see its trade statistics.</p>
       </Panel>
     )
   }
@@ -353,9 +353,9 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
     <Panel icon={<Activity className="h-4 w-4" />} title="Trade Statistics">
       <ul className="text-[11.5px]">
         {rows.map(([label, value]) => (
-          <li key={label} className="flex items-center justify-between gap-2 py-1 border-t border-white/5 first:border-t-0">
-            <span className="text-slate-400">{label}</span>
-            <span className="tabular-nums text-slate-100">{value}</span>
+          <li key={label} className="flex items-center justify-between gap-2 py-1 border-t border-[color:var(--hairline-soft)] first:border-t-0">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="tabular-nums text-foreground">{value}</span>
           </li>
         ))}
       </ul>

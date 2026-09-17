@@ -113,21 +113,21 @@ export function StatTile({
   spark, bars, donut, icon,
 }: StatTileProps) {
   const valueColor =
-    tone === "good" ? "text-emerald-400"
-      : tone === "bad" ? "text-red-400"
-        : "text-slate-100"
+    tone === "good" ? "text-emerald-800 dark:text-emerald-400"
+      : tone === "bad" ? "text-red-800 dark:text-red-400"
+        : "text-foreground"
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-white/8
-                    bg-[#0c1322] px-3.5 py-3 transition-colors duration-200
-                    hover:border-white/16">
+    <div className="group relative overflow-hidden rounded-xl border border-[color:var(--hairline-soft)]
+                    bg-[var(--grid-head)] px-3.5 py-3 transition-colors duration-200
+                    hover:border-[color:var(--hairline-firm)]">
       {/* hairline of the tile's own colour along the top */}
       <span aria-hidden className="absolute inset-x-0 top-0 h-px opacity-60"
             style={{ background: STROKE[tone] }} />
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium text-slate-400 truncate">{label}</div>
+          <div className="text-[11px] font-medium text-muted-foreground truncate">{label}</div>
           <div className={cn("mt-1 text-[22px] font-bold leading-none tabular-nums tracking-tight",
                              valueColor)}>
             {value}
@@ -135,15 +135,15 @@ export function StatTile({
           {delta && (
             <div className={cn(
               "mt-1.5 text-[11px] font-semibold tabular-nums",
-              deltaTone === "good" ? "text-emerald-400"
-                : deltaTone === "bad" ? "text-red-400" : "text-slate-500",
+              deltaTone === "good" ? "text-emerald-800 dark:text-emerald-400"
+                : deltaTone === "bad" ? "text-red-800 dark:text-red-400" : "text-muted-foreground/75",
             )}>
               {delta}
             </div>
           )}
         </div>
 
-        <div className="shrink-0 self-end text-slate-500">
+        <div className="shrink-0 self-end text-muted-foreground/75">
           {spark ? <Spark data={spark} tone={tone} />
             : bars ? <Bars data={bars} tone={tone} />
               : donut !== undefined ? <Donut pct={donut} tone={tone} />

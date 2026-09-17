@@ -10,11 +10,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[linear-gradient(135deg,#9b8afb_0%,#7c6cf5_100%)] text-white shadow-[0_2px_16px_-4px_rgba(124,108,245,0.55)] hover:shadow-[0_4px_24px_-2px_rgba(155,138,251,0.75)] hover:brightness-110",
+          "bg-[linear-gradient(135deg,var(--accent)_0%,var(--primary)_100%)] text-white shadow-[0_2px_16px_-4px_color-mix(in_srgb,var(--primary)_55%,transparent)] hover:shadow-[0_4px_24px_-2px_color-mix(in_srgb,var(--accent)_75%,transparent)] hover:brightness-110",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
-          "bg-secondary text-secondary-foreground border border-white/8 hover:border-[color-mix(in_srgb,#7c6cf5_50%,transparent)] hover:shadow-[0_0_16px_-4px_rgba(124,108,245,0.5)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground border border-[color:var(--hairline-soft)] hover:border-[color-mix(in_srgb,var(--primary)_50%,transparent)] hover:shadow-[0_0_16px_-4px_color-mix(in_srgb,var(--primary)_50%,transparent)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:

@@ -66,7 +66,7 @@ export function CopyButton({
         className="shrink-0"
       >
         {copied
-          ? <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+          ? <Check className="h-3.5 w-3.5 text-emerald-800 dark:text-emerald-400" aria-hidden />
           : <Copy className="h-3.5 w-3.5" aria-hidden />}
       </Button>
       {/* Announced, not just drawn. The icon swap is invisible to a screen

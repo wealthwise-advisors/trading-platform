@@ -32,12 +32,12 @@ export function StepSection({
 
   return (
     <Reveal delay={delay}>
-      <section className="rounded-2xl border border-white/8 bg-[#0a1120] overflow-hidden">
+      <section className="rounded-2xl border border-[color:var(--hairline-soft)] bg-[var(--surface-deep)] overflow-hidden">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3
-                           border-b border-white/8 bg-[#0c1526]">
+                           border-b border-[color:var(--hairline-soft)] bg-[var(--grid-head)]">
           {Icon ? (
             <span aria-hidden className="grid place-items-center h-7 w-7 rounded-lg
-                                         bg-violet-500/12 text-violet-300 ring-1 ring-violet-400/25">
+                                         bg-violet-500/12 text-violet-800 dark:text-violet-300 ring-1 ring-violet-400/25">
               <Icon size={15} strokeWidth={2.2} />
             </span>
           ) : (
@@ -46,8 +46,8 @@ export function StepSection({
               className={`relative grid place-items-center h-7 w-7 rounded-full text-[11px]
                           font-bold transition-colors duration-300
                           ${done
-                            ? "bg-violet-500/12 text-violet-300 ring-1 ring-violet-400/35"
-                            : "bg-white/6 text-slate-400 ring-1 ring-white/10"}`}
+                            ? "bg-violet-500/12 text-violet-800 dark:text-violet-300 ring-1 ring-violet-400/35"
+                            : "bg-[color:var(--raise-3)] text-muted-foreground ring-1 ring-[color:var(--hairline-mid)]"}`}
             >
               <AnimatePresence mode="wait" initial={false}>
                 {done ? (
@@ -78,13 +78,13 @@ export function StepSection({
           {/* h2, not h3: the page's only heading above these is the h1, so an h3
               skipped a level and left anyone navigating by heading unable to tell
               whether a step was nested inside something they had missed. */}
-          <h2 className="text-[13px] font-bold uppercase tracking-[0.11em] text-slate-100">
+          <h2 className="text-[13px] font-bold uppercase tracking-[0.11em] text-foreground">
             {title}
           </h2>
 
           {hint && (
             <span className="ml-auto flex items-center gap-2 rounded-lg border border-violet-400/20
-                             bg-violet-500/[0.07] px-3 py-1.5 text-[12px] font-semibold text-slate-300">
+                             bg-violet-500/[0.07] px-3 py-1.5 text-[12px] font-semibold text-foreground">
               {hint}
             </span>
           )}

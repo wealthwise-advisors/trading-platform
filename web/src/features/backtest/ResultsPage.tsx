@@ -144,10 +144,10 @@ export function ResultsPage() {
                         backdrop-blur-md shadow-lg"
              style={{ background: "rgba(16, 17, 23, 0.82)",
                       borderColor: "rgba(190, 190, 214, 0.14)" }}>
-          <span className="text-lg leading-none" style={{ color: "#9b8afb" }}>▶</span>
+          <span className="text-lg leading-none" style={{ color: "var(--accent)" }}>▶</span>
           <p className="text-sm text-foreground">
             Configure your backtest in the sidebar, then click{" "}
-            <b style={{ color: "#9b8afb" }}>Run Backtest</b>.
+            <b style={{ color: "var(--accent)" }}>Run Backtest</b>.
           </p>
         </div>
       </div>
@@ -289,7 +289,7 @@ export function ResultsPage() {
             {/* h-[60vh] below xl: with no flex-1 chain to inherit from, a chart
                  whose only height instruction is "fill the parent" fills nothing. */}
             <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
-              <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
+              <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
                     <Suspense fallback={<ChartLoading />}>
@@ -307,46 +307,46 @@ export function ResultsPage() {
               </Card>
             </TabsContent>
             <TabsContent value="equity" className="mt-0">
-              <Card className="p-2 border border-white/6 w-full">
+              <Card className="p-2 border border-[color:var(--hairline-soft)] w-full">
                 <Suspense fallback={<ChartLoading />}>
                   <EquityChart points={equity} initialCapital={s.initial_capital} />
                 </Suspense>
               </Card>
             </TabsContent>
             <TabsContent value="trades" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <TradeLogTable trades={tradesQ.data ?? []} />
               </Card>
             </TabsContent>
             <TabsContent value="pnl" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <Suspense fallback={<ChartLoading />}>
                   <PnlDistributionChart trades={tradesQ.data ?? []} />
                 </Suspense>
               </Card>
             </TabsContent>
             <TabsContent value="monthly" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 {monthlyReturnsQ.data && <MonthlyReturnsHeatmap data={monthlyReturnsQ.data} />}
               </Card>
             </TabsContent>
             <TabsContent value="candles" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <CandlestickPatternsTable patterns={candlestickPatternsQ.data ?? []} />
               </Card>
             </TabsContent>
             <TabsContent value="chartpatterns" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <ChartPatternsTable patterns={chartPatternsQ.data ?? []} />
               </Card>
             </TabsContent>
             <TabsContent value="optimizer" className="mt-0">
-              <Card className="p-4 border border-white/6 w-full">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <OptimizerPanel />
               </Card>
             </TabsContent>
             <TabsContent value="elliottwave" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
-              <Card className="p-2 border border-white/6 w-full flex-1 flex flex-col min-h-0">
+              <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && (
                   <div className="flex-1 min-h-0">
                     <Suspense fallback={<ChartLoading />}>

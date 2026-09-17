@@ -6,6 +6,33 @@
     <link rel="apple-touch-icon" href="/src/assets/brand-favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AutoTrader</title>
+    <!--
+      Theme, decided before the first paint.
+
+      `class="dark"` above is the default and is what ships in the HTML, so a
+      browser with JavaScript off, or one that fails this script, still gets
+      the dark app rather than an unstyled white one.
+
+      This runs blocking in <head>, ahead of the stylesheet and ahead of React,
+      for one reason: doing it in an effect paints one dark frame first, so
+      someone who chose light sees a dark flash on every single reload. Kept to
+      a few lines and inlined on purpose -- an external file would be another
+      round trip in front of the paint it exists to fix.
+
+      The key is shared with src/store/themeStore.ts (THEME_KEY).
+    -->
+    <script>
+      try {
+        if (localStorage.getItem("autotrader.theme") === "light") {
+          document.documentElement.classList.remove("dark")
+          document.documentElement.dataset.theme = "light"
+        } else {
+          document.documentElement.dataset.theme = "dark"
+        }
+      } catch (e) {
+        /* Storage blocked or unavailable: no preference recorded, stay dark. */
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

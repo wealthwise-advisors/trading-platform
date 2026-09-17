@@ -31,7 +31,7 @@ export function SummaryChips({
           {source}
           {sourceLive && (
             <span className="rounded px-1 py-px text-[9px] font-bold tracking-[0.08em]
-                             bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30">
+                             bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 ring-1 ring-emerald-400/30">
               LIVE
             </span>
           )}
@@ -45,18 +45,18 @@ export function SummaryChips({
 
   return (
     <div className="flex flex-wrap items-stretch gap-x-6 gap-y-3 rounded-xl
-                    border border-white/8 bg-[#0b1322] px-4 py-2.5">
+                    border border-[color:var(--hairline-soft)] bg-[var(--grid-head)] px-4 py-2.5">
       {items.map((it, i) => (
         <div key={it.label}
-             className={i > 0 ? "pl-6 border-l border-white/8 min-w-0" : "min-w-0"}>
+             className={i > 0 ? "pl-6 border-l border-[color:var(--hairline-soft)] min-w-0" : "min-w-0"}>
           {/* slate-400: at 10px on this card slate-500 measures 3.89 against the
               required 4.5, and these are the labels naming what each value IS. */}
-          <div className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-400">
+          <div className="text-[10px] font-bold uppercase tracking-[0.09em] text-muted-foreground">
             {it.label}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold
-                          text-slate-200 truncate">
-            <it.Icon size={13} strokeWidth={2} className="text-slate-500 shrink-0" />
+                          text-foreground truncate">
+            <it.Icon size={13} strokeWidth={2} className="text-muted-foreground/75 shrink-0" />
             {it.value}
           </div>
         </div>
@@ -82,8 +82,8 @@ function Constellation({ active }: { active: boolean }) {
          className="absolute inset-0 h-full w-full">
       <defs>
         <linearGradient id="cst" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#7c6cf5" stopOpacity="0.15" />
-          <stop offset="50%" stopColor="#9b8afb" stopOpacity="0.55" />
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
+          <stop offset="50%" stopColor="var(--accent)" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.15" />
         </linearGradient>
       </defs>
@@ -99,7 +99,7 @@ function Constellation({ active }: { active: boolean }) {
           vectorEffect="non-scaling-stroke"
         />
         {pts.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="0.7" fill="#9b8afb"
+          <circle key={i} cx={x} cy={y} r="0.7" fill="var(--accent)"
                   opacity={0.35 + (i % 3) * 0.2} vectorEffect="non-scaling-stroke" />
         ))}
       </motion.g>
@@ -116,12 +116,12 @@ export function SetupFooterHint({
 }) {
   return (
     <Reveal delay={0.12}>
-      <div className="relative overflow-hidden rounded-2xl border border-white/8
-                      bg-[#080d1a] h-[92px] grid place-items-center">
+      <div className="relative overflow-hidden rounded-2xl border border-[color:var(--hairline-soft)]
+                      bg-[var(--surface-deep)] h-[92px] grid place-items-center">
         <Constellation active={active} />
         <div aria-hidden className="absolute inset-0"
              style={{ background: "linear-gradient(180deg,#080d1a00,#080d1acc)" }} />
-        <p className="relative text-[13.5px] text-slate-400 text-center px-4">
+        <p className="relative text-[13.5px] text-muted-foreground text-center px-4">
           {children}
         </p>
       </div>

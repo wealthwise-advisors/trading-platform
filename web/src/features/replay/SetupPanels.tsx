@@ -51,11 +51,11 @@ export function SummaryPanel({ rows }: { rows: SummaryRow[] }) {
       <div className="space-y-2.5">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center gap-2.5">
-            <r.Icon size={14} strokeWidth={2} className="text-violet-400 shrink-0" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.07em] text-slate-400">
+            <r.Icon size={14} strokeWidth={2} className="text-violet-800 dark:text-violet-400 shrink-0" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
               {r.label}
             </span>
-            <span className="ml-auto text-[13.5px] font-bold text-violet-300 tabular-nums whitespace-nowrap">
+            <span className="ml-auto text-[13.5px] font-bold text-violet-800 dark:text-violet-300 tabular-nums whitespace-nowrap">
               {r.value}
             </span>
           </div>
@@ -78,10 +78,10 @@ export function SummaryPanel({ rows }: { rows: SummaryRow[] }) {
 
 /** Colour per parameter, matched to the line it controls on the chart. */
 const PARAM_TONE: Record<string, { bar: string; text: string; ring: string }> = {
-  rsi_overbought: { bar: "#ef4444", text: "text-red-400", ring: "border-red-400/45" },
-  rsi_oversold: { bar: "#22c55e", text: "text-emerald-400", ring: "border-emerald-400/45" },
+  rsi_overbought: { bar: "#ef4444", text: "text-red-800 dark:text-red-400", ring: "border-red-400/45" },
+  rsi_oversold: { bar: "#22c55e", text: "text-emerald-800 dark:text-emerald-400", ring: "border-emerald-400/45" },
 }
-const DEFAULT_TONE = { bar: "#7c6cf5", text: "text-violet-300", ring: "border-violet-400/40" }
+const DEFAULT_TONE = { bar: "var(--primary)", text: "text-violet-800 dark:text-violet-300", ring: "border-violet-400/40" }
 
 export function ParamCard({
   name, label, value, min, max, step, disabled, title, onChange, Icon,
@@ -99,14 +99,14 @@ export function ParamCard({
 }) {
   const tone = PARAM_TONE[name] ?? DEFAULT_TONE
   return (
-    <div className="rounded-xl border border-white/8 bg-[#0b1322] px-4 py-3.5">
+    <div className="rounded-xl border border-[color:var(--hairline-soft)] bg-[var(--grid-head)] px-4 py-3.5">
       <div className="flex items-center gap-2.5">
         <Icon size={16} strokeWidth={2} className={tone.text} />
-        <span className="text-[11.5px] font-bold uppercase tracking-[0.07em] text-slate-300">
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.07em] text-foreground">
           {label}
         </span>
         <span
-          className={`ml-auto min-w-[46px] rounded-lg border ${tone.ring} bg-white/[0.03]
+          className={`ml-auto min-w-[46px] rounded-lg border ${tone.ring} bg-[color:var(--raise-1)]
                       px-2 py-1 text-center text-[13px] font-bold tabular-nums ${tone.text}`}
         >
           {value}
@@ -130,7 +130,7 @@ export function ParamCard({
       {/* slate-400, not slate-500: at 10.5px on this card slate-500 measures 3.89
           against the required 4.5, so the min/mid/max marks were the hardest
           numbers on the panel to read. */}
-      <div className="mt-1.5 flex justify-between text-[10.5px] font-medium text-slate-400 tabular-nums">
+      <div className="mt-1.5 flex justify-between text-[10.5px] font-medium text-muted-foreground tabular-nums">
         <span>{min}</span>
         <span>{Math.round((min + max) / 2)}</span>
         <span>{max}</span>

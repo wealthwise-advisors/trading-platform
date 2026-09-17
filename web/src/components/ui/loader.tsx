@@ -56,8 +56,8 @@ export function Loader({ size = 24, label = "Loading", tone = "brand", className
   const R_TICKS = 23
   const circ = (r: number) => 2 * Math.PI * r
 
-  const solid = tone === "current" ? "currentColor" : "var(--primary)"
-  const second = tone === "current" ? "currentColor" : "var(--accent)"
+  const solid = tone === "current" ? "currentColor" : "#7c6cf5"
+  const second = tone === "current" ? "currentColor" : "#9b8afb"
   const sweepStroke = tone === "current" ? "currentColor" : `url(#${gradient})`
 
   return (
@@ -70,9 +70,9 @@ export function Loader({ size = 24, label = "Loading", tone = "brand", className
       <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
         <defs>
           <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
-            <stop offset="45%" stopColor="var(--primary)" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="var(--accent)" />
+            <stop offset="0%" stopColor="#7c6cf5" stopOpacity="0" />
+            <stop offset="45%" stopColor="#7c6cf5" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#9b8afb" />
           </linearGradient>
           <filter id={glow} x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur stdDeviation="1.4" result="blur" />

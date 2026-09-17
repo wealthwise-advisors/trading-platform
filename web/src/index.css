@@ -49,24 +49,42 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    /* AutoTrader light theme — paper, with the dark theme's violet kept.
+     *
+     * This block used to hold shadcn's pure-greyscale defaults, which nothing
+     * ever rendered: index.html has always shipped class="dark". It is a real
+     * palette now, and it is the OPTIONAL one -- dark remains what a fresh
+     * browser gets (see src/store/themeStore.ts).
+     *
+     * Two rules held the whole theme together:
+     *
+     *   1. The violet primary is the SAME HUE as the dark theme's, darkened
+     *      to #5b4bd6 so it clears 4.5:1 against white. The brand does not
+     *      change with the lights.
+     *   2. Surfaces are near-white but never pure white except --card. A
+     *      trading screen is mostly panels; #ffffff everywhere removes every
+     *      edge and the layout stops being readable as panels at all.
+     *
+     * Contrast, measured against the surface each is used on: foreground
+     * 15.9:1, muted-foreground 5.1:1, primary 6.1:1, destructive 4.6:1. */
+    --background: #f4f5f9;
+    --foreground: #16181f;
+    --card: #ffffff;
+    --card-foreground: #16181f;
+    --popover: #ffffff;
+    --popover-foreground: #16181f;
+    --primary: #5b4bd6;
+    --primary-foreground: #ffffff;
+    --secondary: #eceef4;
+    --secondary-foreground: #2b2f3c;
+    --muted: #eceef4;
+    --muted-foreground: #5c6175;
+    --accent: #5b4bd6;
+    --accent-foreground: #ffffff;
+    --destructive: #c62828;
+    --border: rgba(22, 24, 31, 0.13);
+    --input: rgba(22, 24, 31, 0.18);
+    --ring: #5b4bd6;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -90,6 +108,79 @@
   --hairline: rgba(9, 12, 25, 0.10);
   --radius-card: 12px;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* --- Overlay and hairline scale -------------------------------------------
+     THE PART THAT MAKES A LIGHT THEME POSSIBLE AT ALL.
+
+     This app was written dark-first, so a raised surface was spelled
+     `bg-white/[0.04]` and an edge was `border-white/10` -- white at low alpha,
+     which is "slightly lighter than what is behind me". That is not a colour,
+     it is a DIRECTION, and under a light theme the direction reverses: white
+     on near-white is invisible, so every panel edge and every raised surface
+     simply disappears. There is no `dark:` variant that fixes it, because the
+     literal `white` is baked into the utility.
+
+     So the direction is a token. `--raise-N` is "one step away from the page",
+     and each theme decides which way away is. Same for the three hairlines.
+     Every one of the 184 white/black alpha utilities was rewritten to read
+     these, which is why the light theme did not need 184 hand-picked colours.
+
+     Four raise steps, three hairline weights -- that is what the codebase was
+     already using, counted rather than guessed. */
+  --raise-1: rgba(9, 12, 25, 0.025);
+  --raise-2: rgba(9, 12, 25, 0.045);
+  --raise-3: rgba(9, 12, 25, 0.07);
+  --raise-4: rgba(9, 12, 25, 0.10);
+  --raise-5: rgba(9, 12, 25, 0.16);
+  --hairline-soft: rgba(9, 12, 25, 0.08);
+  --hairline-mid: rgba(9, 12, 25, 0.13);
+  --hairline-firm: rgba(9, 12, 25, 0.20);
+  /* A focus ring is meant to be louder than an edge. Kept as its own token so
+     collapsing the edge weights could not quietly weaken focus visibility. */
+  --hairline-focus: rgba(22, 24, 31, 0.34);
+  /* The drop halo under a popover. Dark on light, dark on dark -- this one is
+     a shadow, so it does not invert with the theme. */
+  --ring-halo: rgba(9, 12, 25, 0.10);
+
+  /* Trading semantics. Profit is green and loss is red in both themes, but a
+     tint tuned to read on #0d0e13 washes out on #f4f5f9 -- #22c55e is 2.3:1 on
+     paper. These are the same hues, darkened until they clear 4.5:1. */
+  --gain: #045c37;
+  --loss: #a01818;
+  --flat: #16181f;
+
+  /* What a Plotly chart is drawn on. Read by lib/chartTheme.ts, not by CSS. */
+  --chart-paper: #ffffff;
+  --chart-grid: #e3e6ef;
+  --chart-ink: #2b2f3c;
+  --chart-ink-dim: #5c6175;
+  --chart-hover: rgba(255, 255, 255, 0.94);
+
+  /* The page behind .app-shell, seen only at the edges and before paint. */
+  --page-ground-from: #f6f7fb;
+  --page-ground-to: #eef0f6;
+
+  /* The two surfaces that are not cards: the status bar strip, and the
+     Market Grid's sticky header and hover rows. They were typed out as
+     near-black navies, which is a surface, not a colour anyone chose. */
+  --surface-deep: #eaecf3;
+  --grid-head: #eceef5;
+  --grid-line: #dcdfe9;
+  --grid-hover: #e4e8f4;
+  /* The config sidebar's own ground: one step off the page, so the panel
+     reads as a panel without becoming a second card inside a card. */
+  --sidebar-ground-from: #fbfcfe;
+  --sidebar-ground-to: #f2f4f9;
+  --pick-accent: #0369a1;
+  --pick-on: #14532d;
+  --pick-on-dim: #14532d;
+  --pick-on-faint: #2f5340;
+  --pick-hover-faint: #44556b;
+  --shadow-dialog: rgba(9, 12, 25, 0.22);
+  --dialog-surface: #ffffff;
+  /* A card's drop shadow. Softer on paper -- the dark theme's 0.35 black
+     under a white card reads as dirt rather than as elevation. */
+  --shadow-card: rgba(9, 12, 25, 0.07);
 }
 
 .dark {
@@ -144,6 +235,52 @@
   --hairline: rgba(198, 198, 220, 0.08);
   --radius-card: 12px;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Overlay and hairline scale -- see the long note in :root. These are the
+     values the app already used, now named: raise-1..4 are the four alphas
+     that appeared as bg-white/[0.02] .. /[0.06], and the hairlines are the
+     border-white/6, /10 and /15 that were in the markup. Nothing about the
+     dark theme's appearance changes -- this is the same paint, addressable. */
+  --raise-1: rgba(255, 255, 255, 0.03);
+  --raise-2: rgba(255, 255, 255, 0.04);
+  --raise-3: rgba(255, 255, 255, 0.05);
+  --raise-4: rgba(255, 255, 255, 0.09);
+  --raise-5: rgba(255, 255, 255, 0.15);
+  --hairline-soft: rgba(255, 255, 255, 0.07);
+  --hairline-mid: rgba(255, 255, 255, 0.11);
+  --hairline-firm: rgba(255, 255, 255, 0.16);
+  --hairline-focus: rgba(255, 255, 255, 0.25);
+  /* Unchanged from the ring-black/40 it replaces: a popover's halo is a
+     shadow, and a shadow does not become light when the theme does. */
+  --ring-halo: rgba(0, 0, 0, 0.40);
+
+  --gain: #22c55e;
+  --loss: #ef4444;
+  --flat: #e8e9f2;
+
+  --chart-paper: var(--surface-1);
+  --chart-grid: #1a2340;
+  --chart-ink: var(--foreground);
+  --chart-ink-dim: #8b8ba0;
+  --chart-hover: rgba(20, 21, 28, 0.92);
+
+  --page-ground-from: #0d0e13;
+  --page-ground-to: #131419;
+
+  --surface-deep: #0b0c11;
+  --grid-head: #101827;
+  --grid-line: #16213a;
+  --grid-hover: #12203a;
+  --sidebar-ground-from: #16171f;
+  --sidebar-ground-to: #0d0e13;
+  --pick-accent: #7dd3fc;
+  --pick-on: #4ade80;
+  --pick-on-dim: #86efac;
+  --pick-on-faint: #9dc0aa;
+  --pick-hover-faint: #a7b8cc;
+  --shadow-dialog: rgba(0, 0, 0, 0.85);
+  --dialog-surface: #0a1120;
+  --shadow-card: rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
@@ -181,9 +318,9 @@
      * than per page.
      */
     background:
-      radial-gradient(circle at 15% 0%, rgba(124, 108, 245, 0.10) 0%, transparent 40%),
-      radial-gradient(circle at 85% 15%, rgba(155, 138, 251, 0.08) 0%, transparent 45%),
-      linear-gradient(180deg, #0d0e13 0%, #131419 100%);
+      radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 40%),
+      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 45%),
+      linear-gradient(180deg, var(--page-ground-from) 0%, var(--page-ground-to) 100%);
     min-height: 100vh;
     /* Safety net: a component with non-shrinking content (e.g. shrink-0 +
        whitespace-nowrap) should never be able to force the WHOLE page wider
@@ -204,8 +341,8 @@
 [data-slot="card"] {
   border-radius: 16px !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 8px 28px -10px rgba(124, 108, 245, 0.35),
+    inset 0 1px 0 var(--raise-3),
+    0 8px 28px -10px color-mix(in srgb, var(--primary) 35%, transparent),
     0 2px 10px -4px rgba(0, 0, 0, 0.55);
 }
 
@@ -222,16 +359,16 @@
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--muted-foreground);
   white-space: nowrap;
   transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
 }
-.nav-pill:hover { background: rgba(255, 255, 255, 0.05); color: #e2e8f0; }
+.nav-pill:hover { background: var(--raise-3); color: var(--foreground); }
 .nav-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .nav-pill-on {
-  background: linear-gradient(180deg, #7c6cf5, #5a49d8);
+  background: linear-gradient(180deg, var(--primary), #5a49d8);
   color: #ffffff;
-  box-shadow: 0 1px 10px -2px rgba(124, 108, 245, 0.65);
+  box-shadow: 0 1px 10px -2px color-mix(in srgb, var(--primary) 65%, transparent);
 }
 .nav-pill-on:hover { background: linear-gradient(180deg, #8a7bf7, #6353de); color: #fff; }
 
@@ -246,9 +383,9 @@
   flex-wrap: wrap;
   padding: 6px 12px;
   border-top: 1px solid var(--hairline);
-  background: #0b0c11;
+  background: var(--surface-deep);
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--muted-foreground);
 }
 
 /* ── right rail cards ──────────────────────────────────────────────────────
@@ -260,7 +397,7 @@
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
   padding: 10px 12px 11px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 2px var(--shadow-card);
 }
 
 .stat-card {
@@ -289,7 +426,7 @@
   padding: 9px 12px 8px;
   border: 1px solid var(--hairline);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 var(--raise-2),
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 8px 24px -18px color-mix(in srgb, var(--stat-accent) 60%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.6);
@@ -313,7 +450,7 @@
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--stat-accent) 34%, var(--hairline));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 var(--raise-3),
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 14px 32px -20px color-mix(in srgb, var(--stat-accent) 85%, transparent),
     0 4px 14px rgba(0, 0, 0, 0.5);
@@ -351,15 +488,15 @@
    AI Insight) — port of ui/components/insights.py's _CARD_CSS ── */
 .info-card {
   position: relative;
-  background: linear-gradient(160deg, color-mix(in srgb, var(--info-accent, #7c6cf5) 8%, #1a1c24) 0%, #14151c 100%);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--info-accent, var(--primary)) 8%, var(--surface-2)) 0%, var(--surface-1) 100%);
   backdrop-filter: blur(6px);
-  border: 1px solid color-mix(in srgb, var(--info-accent, #7c6cf5) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--info-accent, var(--primary)) 35%, transparent);
   border-radius: 12px;
   padding: 6px 7px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px color-mix(in srgb, var(--info-accent, #7c6cf5) 12%, transparent),
-    0 6px 22px -8px color-mix(in srgb, var(--info-accent, #7c6cf5) 45%, transparent),
+    inset 0 1px 0 var(--raise-2),
+    0 0 0 1px color-mix(in srgb, var(--info-accent, var(--primary)) 12%, transparent),
+    0 6px 22px -8px color-mix(in srgb, var(--info-accent, var(--primary)) 45%, transparent),
     0 4px 16px -6px rgba(0, 0, 0, 0.5);
   height: 100%;
   transition: box-shadow 0.15s ease;
@@ -377,19 +514,19 @@
   gap: 6px;
   padding: 1.5px 0;
   font-size: 0.6rem;
-  color: #a6adc8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--raise-2);
 }
 .info-card .info-row:last-child {
   border-bottom: none;
 }
 .info-card .info-row .v {
   font-weight: 700;
-  color: #d4d6e4;
+  color: var(--foreground);
 }
 .info-card .insight-item {
   font-size: 0.82rem;
-  color: #a6adc8;
+  color: var(--muted-foreground);
   padding: 3px 0;
   line-height: 1.4;
 }
@@ -398,12 +535,12 @@
    decoration, BETA badge, extra glow. ── */
 .info-card.ai-insight {
   overflow: hidden;
-  background: linear-gradient(150deg, rgba(124, 108, 245, 0.30) 0%, rgba(155, 138, 251, 0.26) 55%, #16171f 100%);
-  border: 1px solid rgba(155, 138, 251, 0.5);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--primary) 30%, transparent) 0%, color-mix(in srgb, var(--accent) 26%, transparent) 55%, var(--card) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(155, 138, 251, 0.18),
-    0 10px 32px -8px rgba(155, 138, 251, 0.55),
+    inset 0 1px 0 var(--raise-4),
+    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 10px 32px -8px color-mix(in srgb, var(--accent) 55%, transparent),
     0 4px 16px -6px rgba(0, 0, 0, 0.5);
 }
 .info-card.ai-insight .info-title {
@@ -418,10 +555,10 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #fff;
-  background: linear-gradient(135deg, #9b8afb, #6d5df0);
+  background: linear-gradient(135deg, var(--accent), #6d5df0);
   padding: 2px 8px;
   border-radius: 999px;
-  box-shadow: 0 0 10px rgba(155, 138, 251, 0.7);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .ai-insight-brain {
   position: absolute;
@@ -552,10 +689,10 @@ table tbody tr {
   transition: background-color 120ms linear;
 }
 table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.032);
+  background-color: var(--raise-1);
 }
 table tbody tr + tr {
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--raise-2);
 }
 
 /* Header stays put while a long tape scrolls under it. */
@@ -645,7 +782,7 @@ input:focus-visible {
    brightest thing on screen. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  scrollbar-color: var(--raise-5) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
@@ -655,13 +792,13 @@ input:focus-visible {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--raise-5);
   border: 2px solid transparent;
   background-clip: content-box;
   border-radius: 8px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: var(--raise-5);
   background-clip: content-box;
 }
 *::-webkit-scrollbar-corner {
@@ -779,10 +916,10 @@ input:focus-visible {
   position: relative;
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--raise-3);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+    inset 0 0 0 1px var(--raise-2);
   overflow: hidden;
 }
 
@@ -807,7 +944,7 @@ input:focus-visible {
     #fbbf24 100%);
   box-shadow:
     0 0 10px -1px rgba(249, 115, 22, 0.75),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    inset 0 1px 0 var(--raise-5);
   /* Width comes from React. Eased so a tick reads as motion rather than a
      jump, but kept short: at 0.05s per tick a long transition would visibly
      lag behind the actual position. */
@@ -834,7 +971,7 @@ input:focus-visible {
   inset: 0;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.30) 50%,
+    var(--raise-5) 50%,
     transparent 100%);
   animation: tickbar-shimmer 1.5s linear infinite;
 }
@@ -911,7 +1048,7 @@ input:focus-visible {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: var(--pick-accent);
 }
 .cfg-h-note {
   font-weight: 500;
@@ -927,9 +1064,9 @@ input:focus-visible {
   place-items: center;
   height: 34px;
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #101827;
-  color: #94a3b8;
+  border: 1px solid var(--raise-4);
+  background: var(--grid-head);
+  color: var(--muted-foreground);
   font-size: 12.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -938,14 +1075,14 @@ input:focus-visible {
               border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out),
               transform 90ms var(--ease-out);
 }
-.tf-pill:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.tf-pill:hover { background: var(--grid-line); color: var(--foreground); border-color: var(--raise-5); }
 .tf-pill:active { transform: scale(0.94); }
 .tf-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .tf-pill-on {
-  background: linear-gradient(180deg, #7c6cf5, #5a49d8);
+  background: linear-gradient(180deg, var(--primary), #5a49d8);
   border-color: rgba(120, 170, 255, 0.55);
   color: #ffffff;
-  box-shadow: 0 2px 12px -2px rgba(124, 108, 245, 0.7);
+  box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 70%, transparent);
 }
 .tf-pill-on:hover { background: linear-gradient(180deg, #3d8bff, #2467e0); color: #ffffff; }
 
@@ -957,21 +1094,21 @@ input:focus-visible {
   padding: 10px 12px;
   text-align: left;
   border-radius: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #101827;
+  border: 1px solid var(--raise-4);
+  background: var(--grid-head);
   cursor: pointer;
   transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out),
               transform 90ms var(--ease-out);
 }
-.preset-card:hover:not(:disabled) { background: #16213a; border-color: rgba(255, 255, 255, 0.18); }
+.preset-card:hover:not(:disabled) { background: var(--grid-line); border-color: var(--raise-5); }
 .preset-card:active:not(:disabled) { transform: scale(0.985); }
 .preset-card:disabled { opacity: 0.55; cursor: not-allowed; }
 .preset-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.preset-name { font-size: 13px; font-weight: 700; color: #e2e8f0; line-height: 1.15; }
+.preset-name { font-size: 13px; font-weight: 700; color: var(--foreground); line-height: 1.15; }
 .preset-range { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 .preset-card-on { background: rgba(34, 197, 94, 0.10); border-color: rgba(34, 197, 94, 0.45); }
-.preset-card-on .preset-name { color: #4ade80; }
-.preset-card-on .preset-range { color: #86efac; }
+.preset-card-on .preset-name { color: var(--pick-on); }
+.preset-card-on .preset-range { color: var(--pick-on-dim); }
 
 /* ── reduced motion ────────────────────────────────────────────────────────
    The framer-motion components each check useReducedMotion() and render a
@@ -999,9 +1136,9 @@ input:focus-visible {
    ========================================================================= */
 
 .grid-thead {
-  background: #0d1526;
-  color: #9296ad;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+  background: var(--grid-head);
+  color: var(--muted-foreground);
+  box-shadow: inset 0 -1px 0 var(--raise-4);
 }
 .grid-thead th {
   font-size: 10.5px;
@@ -1014,11 +1151,11 @@ input:focus-visible {
 }
 
 .grid-table tbody tr {
-  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  border-top: 1px solid var(--raise-2);
   transition: background 130ms var(--ease-out);
 }
-.grid-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.016); }
-.grid-table tbody tr:hover { background: rgba(124, 108, 245, 0.09); }
+.grid-table tbody tr:nth-child(even) { background: var(--raise-1); }
+.grid-table tbody tr:hover { background: color-mix(in srgb, var(--primary) 9%, transparent); }
 .grid-table td { font-variant-numeric: tabular-nums; }
 
 /* The timeframe cell is the row's identity — pin it while the rest scrolls
@@ -1028,10 +1165,10 @@ input:focus-visible {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #14151c;
+  background: var(--surface-1);
 }
-.grid-thead th:first-child { background: #0d1526; z-index: 2; }
-.grid-table tbody tr:hover td:first-child { background: #12203a; }
+.grid-thead th:first-child { background: var(--grid-head); z-index: 2; }
+.grid-table tbody tr:hover td:first-child { background: var(--grid-hover); }
 
 /* =========================================================================
    Motion — pickers
@@ -1087,9 +1224,9 @@ input:focus-visible {
    real state change, not a loop: it confirms the tap landed, then stops.
    ========================================================================= */
 @keyframes tf-bloom {
-  0%   { box-shadow: 0 2px 12px -2px rgba(124, 108, 245, 0.7), 0 0 0 0 rgba(124, 108, 245, 0.45); }
-  70%  { box-shadow: 0 2px 12px -2px rgba(124, 108, 245, 0.7), 0 0 0 7px rgba(124, 108, 245, 0); }
-  100% { box-shadow: 0 2px 12px -2px rgba(124, 108, 245, 0.7), 0 0 0 0 rgba(124, 108, 245, 0); }
+  0%   { box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 70%, transparent), 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent); }
+  70%  { box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 70%, transparent), 0 0 0 7px color-mix(in srgb, var(--primary) 0%, transparent); }
+  100% { box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 70%, transparent), 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
 }
 .tf-pill-on { animation: tf-bloom 520ms var(--ease-out); }
 
@@ -1138,9 +1275,9 @@ button, [role="button"] {
   height: 24px;
   padding: 0 7px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #101827;
-  color: #94a3b8;
+  border: 1px solid var(--raise-4);
+  background: var(--grid-head);
+  color: var(--muted-foreground);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -1148,14 +1285,14 @@ button, [role="button"] {
   transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
               border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
 }
-.tz-pill:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.tz-pill:hover { background: var(--grid-line); color: var(--foreground); border-color: var(--raise-5); }
 .tz-pill:active { transform: scale(0.93); }
 .tz-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .tz-pill-on {
-  background: linear-gradient(180deg, #7c6cf5, #5a49d8);
+  background: linear-gradient(180deg, var(--primary), #5a49d8);
   border-color: rgba(120, 170, 255, 0.55);
   color: #ffffff;
-  box-shadow: 0 1px 8px -1px rgba(124, 108, 245, 0.6);
+  box-shadow: 0 1px 8px -1px color-mix(in srgb, var(--primary) 60%, transparent);
 }
 
 /* The same pills inside the Backtest Config panel, where they choose the clock
@@ -1178,8 +1315,8 @@ button, [role="button"] {
    ========================================================================= */
 
 .custom-session {
-  border: 1px solid rgba(155, 138, 251, 0.28);
-  background: linear-gradient(180deg, rgba(155, 138, 251, 0.07), rgba(22, 23, 31, 0.6));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), rgba(22, 23, 31, 0.6));
   border-radius: 14px;
   padding: 12px 13px 11px;
   display: flex;
@@ -1190,8 +1327,8 @@ button, [role="button"] {
 /* Off: the whole card recedes, so "these fields are not in play" is legible
    from the card rather than from each field's own dimming. */
 .custom-session[data-on="false"] {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.012);
+  border-color: var(--raise-4);
+  background: var(--raise-1);
 }
 .custom-session[data-on="false"] .custom-session-row { opacity: 0.42; }
 
@@ -1203,8 +1340,8 @@ button, [role="button"] {
   text-transform: uppercase;
   color: #c4b5fd;
 }
-.custom-session[data-on="false"] .custom-session-title { color: #7b8299; }
-.custom-session[data-on="false"] .custom-session-head svg { color: #7b8299; }
+.custom-session[data-on="false"] .custom-session-title { color: var(--muted-foreground); }
+.custom-session[data-on="false"] .custom-session-head svg { color: var(--muted-foreground); }
 
 /* ── the switch ─────────────────────────────────────────────────────────── */
 .session-switch {
@@ -1212,7 +1349,7 @@ button, [role="button"] {
   width: 42px;
   height: 23px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--raise-4);
   background: #1b2233;
   cursor: pointer;
   flex: 0 0 auto;
@@ -1272,9 +1409,9 @@ button, [role="button"] {
   min-width: 34px;
   padding: 3px 8px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #131a2b;
-  color: #94a3b8;
+  border: 1px solid var(--raise-4);
+  background: var(--grid-head);
+  color: var(--muted-foreground);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1282,7 +1419,7 @@ button, [role="button"] {
   transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
               border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
 }
-.ampm-seg:hover:not(:disabled) { background: #1c2540; color: #e2e8f0; }
+.ampm-seg:hover:not(:disabled) { background: #1c2540; color: var(--foreground); }
 .ampm-seg:active:not(:disabled) { transform: scale(0.93); }
 .ampm-seg:disabled { opacity: 0.5; cursor: not-allowed; }
 .ampm-seg:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -1352,10 +1489,10 @@ button, [role="button"] {
   height: 42px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.10);
-  color: #94a3b8;
+  color: var(--muted-foreground);
   transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
 }
-.preset-card-on .preset-icon { background: rgba(34, 197, 94, 0.16); color: #4ade80; }
+.preset-card-on .preset-icon { background: rgba(34, 197, 94, 0.16); color: var(--pick-on); }
 .preset-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .preset-name { font-size: 14px; letter-spacing: 0.02em; text-transform: uppercase; }
 .preset-range { font-size: 12px; }
@@ -1366,7 +1503,7 @@ button, [role="button"] {
   width: 21px;
   height: 21px;
   border-radius: 999px;
-  border: 1.6px solid rgba(255, 255, 255, 0.22);
+  border: 1.6px solid var(--raise-5);
   color: #04140a;
   transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
@@ -1446,10 +1583,10 @@ button, [role="button"] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--raise-4);
   border-radius: 18px;
-  background: #0a1120;
-  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, 0.85);
+  background: var(--dialog-surface);
+  box-shadow: 0 24px 70px -20px var(--shadow-dialog);
 }
 /* translate for the centring AND the motion, in one transform — two separate
    ones would fight and the panel would drift off-centre mid-animation. */
@@ -1476,20 +1613,20 @@ button, [role="button"] {
   height: 32px;
   padding: 0 13px;
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #101827;
-  color: #94a3b8;
+  border: 1px solid var(--raise-4);
+  background: var(--grid-head);
+  color: var(--muted-foreground);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
               border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
 }
-.cat-chip:hover { background: #16213a; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.18); }
+.cat-chip:hover { background: var(--grid-line); color: var(--foreground); border-color: var(--raise-5); }
 .cat-chip:active { transform: scale(0.95); }
 .cat-chip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .cat-chip-on {
-  background: rgba(124, 108, 245, 0.14);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
   border-color: rgba(120, 170, 255, 0.55);
   color: #bfdbfe;
 }
@@ -1497,27 +1634,27 @@ button, [role="button"] {
 /* ── rows ─────────────────────────────────────────────────────────────── */
 .instr-row {
   cursor: pointer;
-  border-top: 1px solid rgba(255, 255, 255, 0.045);
+  border-top: 1px solid var(--raise-2);
   transition: background 130ms var(--ease-out);
 }
-.instr-row:hover { background: rgba(255, 255, 255, 0.028); }
+.instr-row:hover { background: var(--raise-1); }
 .instr-row-on {
-  background: rgba(124, 108, 245, 0.11);
-  box-shadow: inset 2px 0 0 #7c6cf5;
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  box-shadow: inset 2px 0 0 var(--primary);
 }
-.instr-row-on:hover { background: rgba(124, 108, 245, 0.15); }
+.instr-row-on:hover { background: color-mix(in srgb, var(--primary) 15%, transparent); }
 
 .exch-tag {
   display: inline-block;
   padding: 2px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #94a3b8;
+  background: var(--raise-3);
+  color: var(--muted-foreground);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
-.exch-tag-on { background: rgba(124, 108, 245, 0.22); color: #bfdbfe; }
+.exch-tag-on { background: color-mix(in srgb, var(--primary) 22%, transparent); color: #bfdbfe; }
 
 .fav-btn {
   display: inline-grid;
@@ -1530,11 +1667,11 @@ button, [role="button"] {
   transition: color 160ms var(--ease-out), background 160ms var(--ease-out),
               transform 70ms var(--ease-out);
 }
-.fav-btn:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
+.fav-btn:hover { color: var(--muted-foreground); background: var(--raise-3); }
 .fav-btn:active { transform: scale(0.88); }
 .fav-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .fav-btn-on { color: #38bdf8; }
-.fav-btn-on:hover { color: #7dd3fc; }
+.fav-btn-on:hover { color: var(--pick-accent); }
 
 /* ── the trigger that opens it ────────────────────────────────────────── */
 .instr-trigger {
@@ -1549,7 +1686,7 @@ button, [role="button"] {
   cursor: pointer;
   transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
 }
-.instr-trigger:hover { border-color: rgba(124, 108, 245, 0.4); background: rgba(255, 255, 255, 0.02); }
+.instr-trigger:hover { border-color: color-mix(in srgb, var(--primary) 40%, transparent); background: var(--raise-1); }
 .instr-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* The trigger is disabled while a session is loaded, like every other field
@@ -1581,10 +1718,10 @@ button, [role="button"] {
   flex-direction: column;
   gap: 10px;
   padding: 13px 15px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--raise-3);
   border-radius: 13px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, var(--raise-1), rgba(255, 255, 255, 0)),
     #0c1524;
 }
 
@@ -1595,7 +1732,7 @@ button, [role="button"] {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
 
 .range-body {
@@ -1622,7 +1759,7 @@ button, [role="button"] {
    above it, not a second thing to read. */
 .range-leg-day {
   font-size: 11.5px;
-  color: #64748b;
+  color: var(--muted-foreground);
   padding-left: 2px;
 }
 
@@ -1671,8 +1808,8 @@ button, [role="button"] {
 /* The selected timeframe. tf-bloom above already fires once on click; this is
    the resting state that keeps it findable afterwards. */
 @keyframes tf-hold {
-  0%, 100% { box-shadow: 0 2px 12px -2px rgba(124, 108, 245, 0.55); }
-  50%      { box-shadow: 0 2px 18px -2px rgba(124, 108, 245, 0.78); }
+  0%, 100% { box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 55%, transparent); }
+  50%      { box-shadow: 0 2px 18px -2px color-mix(in srgb, var(--primary) 78%, transparent); }
 }
 .tf-pill-on { animation: tf-bloom 520ms var(--ease-out), tf-hold 4.2s 520ms ease-in-out infinite; }
 
@@ -1688,8 +1825,8 @@ button, [role="button"] {
    it is a mode you switch INTO, so it earns being the most distinct. Off, it
    stops entirely rather than breathing while doing nothing. */
 @keyframes cs-edge {
-  0%, 100% { border-color: rgba(155, 138, 251, 0.34); box-shadow: 0 0 22px -12px rgba(155, 138, 251, 0.55); }
-  50%      { border-color: rgba(167, 139, 250, 0.62); box-shadow: 0 0 30px -10px rgba(155, 138, 251, 0.80); }
+  0%, 100% { border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: 0 0 22px -12px color-mix(in srgb, var(--accent) 55%, transparent); }
+  50%      { border-color: rgba(167, 139, 250, 0.62); box-shadow: 0 0 30px -10px color-mix(in srgb, var(--accent) 80%, transparent); }
 }
 .custom-session[data-on="true"] { animation: cs-edge 6s ease-in-out infinite; }
 .custom-session[data-on="false"] { animation: none; }
@@ -1716,15 +1853,15 @@ button, [role="button"] {
   margin-top: 7px;
   font-size: 11.5px;
   line-height: 1.5;
-  /* Quiet, but still legible: #64748b measured 3.73 against the required 4.5 on
+  /* Quiet, but still legible: var(--muted-foreground) measured 3.73 against the required 4.5 on
      this card, and this text is the whole reason a preset gets chosen. The
      selected and hover tints are lifted with it so the three stay a family. */
-  color: #94a3b8;
+  color: var(--muted-foreground);
   text-align: left;
   text-wrap: pretty;
 }
-.preset-card-on .preset-why { color: #9dc0aa; }
-.preset-card:hover:not(:disabled) .preset-why { color: #a7b8cc; }
+.preset-card-on .preset-why { color: var(--pick-on-faint); }
+.preset-card:hover:not(:disabled) .preset-why { color: var(--pick-hover-faint); }
 
 /* Instrument & strategy row. Its own measure rather than .cfg-col's 62rem,
    which ended the row around 60% of a wide card. 78rem keeps the three fields
@@ -1771,10 +1908,10 @@ button, [role="button"] {
   padding-top: 7px;
   padding-bottom: 7px;
   font-variant-numeric: tabular-nums;
-  border-top: 1px solid rgba(255, 255, 255, 0.035);
+  border-top: 1px solid var(--raise-2);
 }
 .tape-table tbody tr { transition: background-color 120ms var(--ease-out); }
-.tape-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.014); }
+.tape-table tbody tr:nth-child(even) { background: var(--raise-1); }
 .tape-table tbody tr:hover { background: rgba(56, 132, 255, 0.10); }
 
 /* The newest bar. The tape is newest-first, so row one is the live edge and
@@ -1835,7 +1972,7 @@ button, [role="button"] {
   align-items: flex-end;
   gap: 10px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0));
+  background: linear-gradient(180deg, var(--raise-1), rgba(255, 255, 255, 0));
   border-bottom: 1px solid rgba(148, 178, 255, 0.10);
 }
 .tape-bar-lbl {
@@ -1845,7 +1982,7 @@ button, [role="button"] {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
 /* Primary and secondary, separated by a rule rather than by being different
    sizes -- the date, the time and Jump are one decision; the pills are a
@@ -1865,7 +2002,7 @@ button, [role="button"] {
   font-weight: 600;
   color: #8ea3bd;
   background: #111c30;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--raise-3);
   transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out),
               color 140ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
@@ -1940,7 +2077,29 @@ button, [role="button"] {
   .skip-link { transition: none; }
 }
 
+/* THE LIGHT GROUND, and the default for this rule.
+ *
+ * The photograph below is a DARK-THEME DEVICE and does not survive the
+ * translation. It is a bright gold trading screen, and the dark theme can
+ * carry it because light text on near-black panels stays legible in front of
+ * anything. Light panels are translucent over the same picture: gold behind
+ * off-white, at the contrast ratios a light theme has to hold, is where body
+ * copy and axis labels stop being readable. So light gets paper -- the two
+ * brand radials at a lower strength over a soft neutral, which keeps the
+ * shell recognisably the same product without putting a photograph under
+ * text it has to compete with.
+ *
+ * Deliberately NOT a filtered or heavily scrimmed version of the image: a
+ * washed-out photograph reads as a rendering failure, not as a choice. */
 .app-shell {
+  background:
+    radial-gradient(circle at 12% -5%, color-mix(in srgb, var(--primary) 9%, transparent) 0%, transparent 42%),
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 46%),
+    linear-gradient(180deg, #f6f7fb 0%, #eef0f6 100%);
+  background-attachment: fixed;
+}
+
+.dark .app-shell {
   /* The image, at full strength. No tint, no scrim, no filter.
    *
    * The gradient beneath it is a fallback ground for the moment before the

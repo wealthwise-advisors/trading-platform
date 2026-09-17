@@ -27,7 +27,7 @@ export function OscillatorStudyPanel({
       role="dialog"
       aria-label={`${info.label} settings`}
       onKeyDown={(e) => { if (e.key === "Escape") onClose() }}
-      className={cn("w-64 rounded-lg border border-white/12 bg-[#14151c] p-3 shadow-xl space-y-3", className)}
+      className={cn("w-64 rounded-lg border border-[color:var(--hairline-mid)] bg-[var(--surface-1)] p-3 shadow-xl space-y-3", className)}
     >
       <div className="flex items-center justify-between">
         <span className="font-semibold text-sm">{info.label} settings</span>

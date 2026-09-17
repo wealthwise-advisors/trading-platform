@@ -133,7 +133,7 @@ export function SymbolSearch() {
 
   return (
     <div ref={box} className="relative hidden md:block">
-      <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500"
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/75"
               aria-hidden />
       <input
         value={q}
@@ -145,25 +145,25 @@ export function SymbolSearch() {
         }}
         placeholder="Search symbol (e.g., ES, NQ)…"
         aria-label="Search for an instrument"
-        className="w-56 xl:w-72 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-8 pr-3
-                   text-xs text-slate-200 placeholder:text-slate-500 outline-none
-                   focus:border-white/25"
+        className="w-56 xl:w-72 rounded-lg border border-[color:var(--hairline-mid)] bg-[color:var(--raise-2)] py-1.5 pl-8 pr-3
+                   text-xs text-foreground placeholder:text-muted-foreground/75 outline-none
+                   focus:border-[color:var(--hairline-focus)]"
       />
       {open && q.trim() && (
-        <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-white/10
-                       bg-[#12141c] shadow-xl">
+        <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-[color:var(--hairline-mid)]
+                       bg-[var(--surface-1)] shadow-xl">
           {matches.map((s) => (
             <li key={s.symbol}>
               <button type="button" onClick={() => choose(s.symbol)}
                       className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left
-                                 text-xs hover:bg-white/5">
-                <span className="font-semibold text-slate-100">{s.symbol}</span>
-                <span className="truncate text-slate-400">{s.name}</span>
+                                 text-xs hover:bg-[color:var(--raise-3)]">
+                <span className="font-semibold text-foreground">{s.symbol}</span>
+                <span className="truncate text-muted-foreground">{s.name}</span>
               </button>
             </li>
           ))}
           {!matches.length && (
-            <li className="px-3 py-2 text-xs text-slate-500">
+            <li className="px-3 py-2 text-xs text-muted-foreground/75">
               {symbolsQ.isLoading ? "Loading instruments…" : "No instrument matches that."}
             </li>
           )}
@@ -195,26 +195,26 @@ export function AccountMenu({ user, onOpenAccount }: { user: Me; onOpenAccount: 
         aria-expanded={open}
         aria-label={`Account menu for ${user.full_name || user.username}`}
         title={user.email}
-        className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,#9b8afb,#5a49d8)]
-                   text-[11px] font-bold text-white ring-1 ring-white/15"
+        className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,var(--accent),#5a49d8)]
+                   text-[11px] font-bold text-white ring-1 ring-[color:var(--hairline-firm)]"
       >
         {initials(user)}
       </button>
       {open && (
         <div role="menu"
-             className="absolute right-0 z-50 mt-1 w-52 overflow-hidden rounded-lg border border-white/10
-                        bg-[#12141c] py-1 shadow-xl">
-          <p className="truncate px-3 py-1.5 text-[11px] text-slate-400" title={user.email}>
+             className="absolute right-0 z-50 mt-1 w-52 overflow-hidden rounded-lg border border-[color:var(--hairline-mid)]
+                        bg-[var(--surface-1)] py-1 shadow-xl">
+          <p className="truncate px-3 py-1.5 text-[11px] text-muted-foreground" title={user.email}>
             {user.full_name || user.username}
           </p>
           <button type="button" role="menuitem"
                   onClick={() => { setOpen(false); onOpenAccount() }}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-white/5">
+                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-[color:var(--raise-3)]">
             Account settings
           </button>
           <button type="button" role="menuitem"
                   onClick={async () => { await auth.logout(); window.location.assign(SIGN_IN_PAGE) }}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-200 hover:bg-white/5">
+                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-[color:var(--raise-3)]">
             Sign out
           </button>
         </div>

@@ -5,6 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Plot from "@/lib/plot"
+import { chartTheme } from "@/lib/chartTheme"
+import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
@@ -32,8 +34,11 @@ import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
-const BG = "#14151c"
-const GRID = "#1a2340"
+// Chart chrome comes from the theme, not from a literal here. BG and GRID used
+// to be module constants, which meant a light theme still painted a near-black
+// rectangle in the middle of a white page -- a Plotly layout is a JavaScript
+// object and no stylesheet can reach it. Series colours are NOT themed: see
+// the note in lib/chartTheme.ts for why a trader's hues must not move.
 const SWING_COLORS = ["#ffd23f", "#c77dff", "#4cc9f0", "#7ee787"]
 
 interface CandlestickChartProps {
@@ -82,6 +87,11 @@ export function CandlestickChart({
   symbol, strategyName, bars, indicators, zigzag, trades, showZigzag = true,
   showStochRsi = true, showVwap = true, showVolumeProfile = true,
 }: CandlestickChartProps) {
+  // Subscribing (rather than only calling chartTheme()) is what makes the
+  // header toggle repaint an open chart: without it the plot keeps the
+  // palette it was first built with until something else re-renders it.
+  useThemeStore((st) => st.theme)
+  const { paper: BG, grid: GRID, ink: INK, inkDim: INK_DIM, hover: HOVER } = chartTheme()
   // react-plotly.js's useResizeHandler only listens for window "resize"
   // events -- it never fires when the CONTAINER grows/shrinks from a pure
   // CSS/flex change (KPI row shrinking, footer removal, etc., all of which
@@ -1011,7 +1021,7 @@ export function CandlestickChart({
         y: lv.value, yref: "y", yanchor: "middle",
         text: lv.label, showarrow: false,
         font: { size: 9, color: lv.style.color },
-        bgcolor: "rgba(20,21,28,0.75)", borderpad: 2,
+        bgcolor: HOVER, borderpad: 2,
       } as Partial<Annotations>)
     }
   }
@@ -1027,7 +1037,7 @@ export function CandlestickChart({
       y: 1, yref: "y domain", yanchor: "top",
       text: vpTitleLine, showarrow: false,
       font: { size: 10, color: "#7dd3fc" },
-      bgcolor: "rgba(20,21,28,0.75)", borderpad: 2,
+      bgcolor: HOVER, borderpad: 2,
     } as unknown as Partial<Annotations>)
   }
 
@@ -1061,7 +1071,7 @@ export function CandlestickChart({
                 { count: 6, label: "6M", step: "month", stepmode: "backward" },
                 { step: "all", label: "All" },
               ],
-              bgcolor: BG, activecolor: "#3a3a48", font: { color: "#d4d6e4", size: 11 },
+              bgcolor: BG, activecolor: "#3a3a48", font: { color: INK, size: 11 },
               x: 0, y: rangeSelectorY, xanchor: "left",
             },
             range: xRange,
@@ -1092,7 +1102,7 @@ export function CandlestickChart({
       // "Left axis" from the reference dialog. Left is Plotly's default, so
       // unticking it moves the price scale to the right-hand side.
       ...(isPrice ? { side: (vpLeftAxis ? "left" : "right") as "left" | "right" } : {}),
-      title: { text: rowTitles[name], font: { size: 9, color: "#8b8ba0" } },
+      title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
       range: isPrice ? priceYRange : [0, 100],
@@ -1133,7 +1143,7 @@ export function CandlestickChart({
     title: { text: `${symbol} — ${strategyName} · ${dateLabel}` + (
       vpOn && vpShowStudy && vpShowInputNames
         ? `<br><span style="font-size:10px;color:#7dd3fc">VolumeProfile(${vpRowMode}, ${vpRowHeight}, ${vpTimePer}, ${vpMultiplier}, ${vpOnExpansion ? "Yes" : "No"}, ${vpMaxProfiles}, ${vpShow.poc ? "Yes" : "No"}, ${showValueArea(vpPlots) ? "Yes" : "No"}, ${vpValueArea}, ${vpOpacity})</span>`
-        : ""), font: { size: 14, color: "#d4d6e4" },
+        : ""), font: { size: 14, color: INK },
              xref: "paper", yref: "paper", x: 0.5, xanchor: "center",
              // Gap above the header base (1.015) widened 0.06 -> 0.11
              // (2026-08-02, full-audit): both title and headers scale by the
@@ -1144,7 +1154,7 @@ export function CandlestickChart({
              // the title visually collides with the tallest stacked row.
              y: (hasSwingHeaders ? 1.125 : 1.05) + extraHeaderRows * HEADER_LEVEL_HEIGHT, yanchor: "bottom" },
     paper_bgcolor: BG, plot_bgcolor: BG,
-    font: { color: "#d4d6e4" },
+    font: { color: INK },
     dragmode: "pan", hovermode: "x unified",
     // Plotly's own NATIVE legend, on -- matches api/report/charts.py's
     // _base_layout exactly (same bgcolor/borderwidth, default position, no
@@ -1153,7 +1163,7 @@ export function CandlestickChart({
     // didn't work as well as just using what the static HTML report
     // already does successfully.
     showlegend: true,
-    legend: { bgcolor: "rgba(0,0,0,0.3)", borderwidth: 0 },
+    legend: { bgcolor: HOVER, borderwidth: 0 },
     // t trimmed from 95 -> 88 -- less unnecessary top padding above the
     // range-selector/title strip, closer to the top edge of the chart. b
     // trimmed 32 -> 24 too -- the bottom axis now shows time-only labels
@@ -1214,8 +1224,8 @@ export function CandlestickChart({
           aria-label="VWAP settings"
           title={vwapOn ? "VWAP settings" : "Turn VWAP on and open its settings"}
           onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
-          className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
-                     hover:bg-white/10"
+          className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
+                     hover:bg-[color:var(--raise-4)]"
         >⚙</button>
         {vwapOn && (
           <span className="text-muted-foreground">
@@ -1223,7 +1233,7 @@ export function CandlestickChart({
           </span>
         )}
 
-        <span className="mx-1 text-white/15">|</span>
+        <span className="mx-1 text-[color:var(--hairline-firm)]">|</span>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={vpOn}
                  onChange={(e) => setVpOn(e.target.checked)} />
@@ -1234,8 +1244,8 @@ export function CandlestickChart({
           aria-label="Volume Profile settings"
           title={vpOn ? "Volume Profile settings" : "Turn Volume Profile on and open its settings"}
           onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
-          className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
-                     hover:bg-white/10"
+          className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
+                     hover:bg-[color:var(--raise-4)]"
         >⚙</button>
         {vpOn && (
           <span className="text-muted-foreground">
@@ -1250,7 +1260,7 @@ export function CandlestickChart({
           const info = OSC_STUDIES[key]
           return (
             <span key={key} className="flex items-center gap-1.5">
-              <span className="mx-1 text-white/15" aria-hidden>|</span>
+              <span className="mx-1 text-[color:var(--hairline-firm)]" aria-hidden>|</span>
               <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
                      title={info.available ? undefined : info.pending}>
                 <input type="checkbox" checked={osc[key]} disabled={!info.available}
@@ -1268,28 +1278,28 @@ export function CandlestickChart({
                   if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
                   setOscPanel(key)
                 }}
-                className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
-                           hover:bg-white/10"
+                className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
+                           hover:bg-[color:var(--raise-4)]"
               >⚙</button>
             </span>
           )
         })}
 
         {vpPanelOpen && vpOn && (
-          <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-white/12
-                          bg-[#14151c] p-3 shadow-xl space-y-3">
+          <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]
+                          bg-[var(--surface-1)] p-3 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">VolumeProfile Customizing</span>
               <button type="button" className="text-muted-foreground hover:text-foreground"
                       onClick={() => setVpPanelOpen(false)} aria-label="Close">✕</button>
             </div>
-            <div className="flex gap-2 border-b border-white/8 pb-2">
+            <div className="flex gap-2 border-b border-[color:var(--hairline-soft)] pb-2">
               <button type="button" onClick={saveVpDefaults} aria-label="Save as default"
-                      className="rounded border border-white/12 bg-white/5 px-2 py-1
-                                 hover:bg-white/10">Save as default</button>
+                      className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
+                                 hover:bg-[color:var(--raise-4)]">Save as default</button>
               <button type="button" onClick={resetVpFactory} aria-label="Reset to factory default"
-                      className="rounded border border-white/12 bg-white/5 px-2 py-1
-                                 hover:bg-white/10">Reset to factory default</button>
+                      className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
+                                 hover:bg-[color:var(--raise-4)]">Reset to factory default</button>
             </div>
             {vpSavedNote && (
               <p className="text-[#7dd3fc]">{vpSavedNote}</p>
@@ -1301,10 +1311,10 @@ export function CandlestickChart({
               <span className="w-32 text-muted-foreground">show value area</span>
               <select value={showValueArea(vpPlots) ? "Yes" : "No"} aria-label="show value area"
                       onChange={(e) => setVpPlots((s) => setShowValueArea(s, e.target.value === "Yes"))}
-                      className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                      className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                  text-foreground">
                 {["Yes", "No"].map((v) => (
-                  <option key={v} value={v} className="bg-[#14151c] text-[#e6edf3]">{v}</option>
+                  <option key={v} value={v} className="bg-[var(--surface-1)] text-[#e6edf3]">{v}</option>
                 ))}
               </select>
             </label>
@@ -1312,24 +1322,24 @@ export function CandlestickChart({
               <span className="w-32 text-muted-foreground">value area percent</span>
               <input type="number" min={1} max={100} step={5} value={vpValueArea}
                      onChange={(e) => setVpValueArea(Number(e.target.value))}
-                     className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                     className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                 text-foreground" />
             </label>
             <label className="flex items-center gap-2">
               <span className="w-32 text-muted-foreground">opacity</span>
               <input type="number" min={5} max={100} step={5} value={vpOpacity}
                      onChange={(e) => setVpOpacity(Number(e.target.value))}
-                     className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                     className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                 text-foreground" />
             </label>
             <label className="flex items-center gap-2">
               <span className="w-32 text-muted-foreground">price per row height</span>
               <select value={vpRowMode} aria-label="price per row height mode"
                       onChange={(e) => setVpRowMode(e.target.value as RowHeightMode)}
-                      className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                      className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                  text-foreground">
                 {["AUTOMATIC", "MANUAL"].map((m) => (
-                  <option key={m} value={m} className="bg-[#14151c] text-[#e6edf3]">{m}</option>
+                  <option key={m} value={m} className="bg-[var(--surface-1)] text-[#e6edf3]">{m}</option>
                 ))}
               </select>
             </label>
@@ -1338,7 +1348,7 @@ export function CandlestickChart({
               <input type="number" min={0.05} step={0.25} value={vpRowHeight}
                      disabled={vpRowMode === "AUTOMATIC"}
                      onChange={(e) => setVpRowHeight(Number(e.target.value))}
-                     className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                     className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                 text-foreground" />
             </label>
             <label className={`flex items-center gap-2 ${vpRowMode === "MANUAL" ? "opacity-40" : ""}`}>
@@ -1346,19 +1356,19 @@ export function CandlestickChart({
               <input type="number" min={6} max={240} step={6} value={vpBins}
                      disabled={vpRowMode === "MANUAL"}
                      onChange={(e) => setVpBins(Number(e.target.value))}
-                     className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                     className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                 text-foreground" />
             </label>
 
-            <div className="pt-1 border-t border-white/8 space-y-2">
+            <div className="pt-1 border-t border-[color:var(--hairline-soft)] space-y-2">
               <label className="flex items-center gap-2">
                 <span className="w-32 text-muted-foreground">time per profile</span>
                 <select value={vpTimePer} aria-label="time per profile"
                         onChange={(e) => setVpTimePer(e.target.value as TimePerProfile)}
-                        className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                        className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                    text-foreground">
                   {["CHART", "DAY", "WEEK"].map((m) => (
-                    <option key={m} value={m} className="bg-[#14151c] text-[#e6edf3]">{m}</option>
+                    <option key={m} value={m} className="bg-[var(--surface-1)] text-[#e6edf3]">{m}</option>
                   ))}
                 </select>
               </label>
@@ -1366,14 +1376,14 @@ export function CandlestickChart({
                 <span className="w-32 text-muted-foreground">multiplier</span>
                 <input type="number" min={1} max={30} step={1} value={vpMultiplier}
                        onChange={(e) => setVpMultiplier(Number(e.target.value))}
-                       className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                       className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                   text-foreground" />
               </label>
               <label className="flex items-center gap-2">
                 <span className="w-32 text-muted-foreground">profiles</span>
                 <input type="number" min={1} max={1000} step={1} value={vpMaxProfiles}
                        onChange={(e) => setVpMaxProfiles(Number(e.target.value))}
-                       className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                       className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                   text-foreground" />
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
@@ -1384,7 +1394,7 @@ export function CandlestickChart({
               </label>
             </div>
 
-            <div className="space-y-1 pt-2 border-t border-white/8">
+            <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
               <div className="text-muted-foreground mb-1">Options</div>
               {([
                 ["Show study", vpShowStudy, setVpShowStudy],
@@ -1400,7 +1410,7 @@ export function CandlestickChart({
               ))}
             </div>
 
-            <div className="space-y-1 pt-2 border-t border-white/8">
+            <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
               <div className="text-muted-foreground mb-1">Plots</div>
               <VolumeProfilePlotTabs styles={vpPlots} onChange={setVpPlot} />
             </div>
@@ -1413,8 +1423,8 @@ export function CandlestickChart({
         )}
 
         {vwapPanelOpen && vwapOn && (
-          <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-white/12
-                          bg-[#14151c] p-3 shadow-xl space-y-3">
+          <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-[color:var(--hairline-mid)]
+                          bg-[var(--surface-1)] p-3 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">VWAP settings</span>
               <button type="button" className="text-muted-foreground hover:text-foreground"
@@ -1426,14 +1436,14 @@ export function CandlestickChart({
                 <span className="text-muted-foreground">num dev dn</span>
                 <input type="number" step="0.5" value={devDn}
                        onChange={(e) => setDevDn(Number(e.target.value))}
-                       className="w-full rounded border border-white/10 bg-white/5 px-2 py-1
+                       className="w-full rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                   text-foreground" />
               </label>
               <label className="space-y-1">
                 <span className="text-muted-foreground">num dev up</span>
                 <input type="number" step="0.5" value={devUp}
                        onChange={(e) => setDevUp(Number(e.target.value))}
-                       className="w-full rounded border border-white/10 bg-white/5 px-2 py-1
+                       className="w-full rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                   text-foreground" />
               </label>
             </div>
@@ -1441,10 +1451,10 @@ export function CandlestickChart({
             <label className="flex items-center gap-2">
               <span className="w-20 text-muted-foreground">time frame</span>
               <select value={vwapTimeframe} disabled
-                      className="flex-1 rounded border border-white/10 bg-white/5 px-2 py-1
+                      className="flex-1 rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
                                  text-foreground disabled:opacity-60"
                       aria-label="VWAP timeframe">
-                <option className="bg-[#14151c] text-[#e6edf3]" value="DAY">DAY</option>
+                <option className="bg-[var(--surface-1)] text-[#e6edf3]" value="DAY">DAY</option>
               </select>
             </label>
 
@@ -1462,7 +1472,7 @@ export function CandlestickChart({
                     onChange={(e) => setVwapStyle((v) => ({
                       ...v, [key]: { ...v[key], color: e.target.value },
                     }))}
-                    className="h-6 w-8 cursor-pointer rounded border border-white/10 bg-transparent"
+                    className="h-6 w-8 cursor-pointer rounded border border-[color:var(--hairline-mid)] bg-transparent"
                     aria-label={`${label} colour`}
                   />
                   <select
@@ -1470,12 +1480,12 @@ export function CandlestickChart({
                     onChange={(e) => setVwapStyle((v) => ({
                       ...v, [key]: { ...v[key], width: Number(e.target.value) },
                     }))}
-                    className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
+                    className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
                                text-foreground"
                     aria-label={`${label} width`}
                   >
                     {[1, 1.5, 2, 2.5, 3, 4].map((w) => (
-                      <option key={w} value={w} className="bg-[#14151c] text-[#e6edf3]">
+                      <option key={w} value={w} className="bg-[var(--surface-1)] text-[#e6edf3]">
                         {w}px
                       </option>
                     ))}
@@ -1485,12 +1495,12 @@ export function CandlestickChart({
                     onChange={(e) => setVwapStyle((v) => ({
                       ...v, [key]: { ...v[key], dash: e.target.value },
                     }))}
-                    className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5
+                    className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
                                text-foreground"
                     aria-label={`${label} style`}
                   >
                     {["solid", "dash", "dot"].map((d) => (
-                      <option key={d} value={d} className="bg-[#14151c] text-[#e6edf3]">
+                      <option key={d} value={d} className="bg-[var(--surface-1)] text-[#e6edf3]">
                         {d}
                       </option>
                     ))}

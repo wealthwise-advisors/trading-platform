@@ -47,11 +47,11 @@ function Slider({
     >
       <SliderPrimitive.Track
         data-slot="slider-track"
-        className="relative grow overflow-hidden rounded-full bg-white/10 data-horizontal:h-1.5 data-horizontal:w-full data-vertical:h-full data-vertical:w-1"
+        className="relative grow overflow-hidden rounded-full bg-[color:var(--raise-4)] data-horizontal:h-1.5 data-horizontal:w-full data-vertical:h-full data-vertical:w-1"
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className="absolute rounded-full bg-[#7c6cf5] shadow-[0_0_10px_rgba(124,108,245,0.55)] select-none data-horizontal:h-full data-vertical:w-full"
+          className="absolute rounded-full bg-[var(--primary)] shadow-[0_0_10px_color-mix(in_srgb,var(--primary)_55%,transparent)] select-none data-horizontal:h-full data-vertical:w-full"
         />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
@@ -64,7 +64,7 @@ function Slider({
             ariaLabel && _values.length > 1 ? `${ariaLabel} ${index + 1}` : ariaLabel
           }
           aria-labelledby={ariaLabelledBy}
-          className="relative block size-4 shrink-0 rounded-full border-2 border-[#9b8afb] bg-white ring-[#9b8afb]/40 shadow-[0_0_12px_rgba(124,108,245,0.7)] transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
+          className="relative block size-4 shrink-0 rounded-full border-2 border-[var(--accent)] bg-white ring-[var(--accent)]/40 shadow-[0_0_12px_color-mix(in_srgb,var(--primary)_70%,transparent)] transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>

@@ -8,10 +8,20 @@
 // and CRITICAL below stay green and red, because those two are meaning.
 import type { ReactNode } from "react"
 
-export const ACCENTS = ["#7c6cf5", "#9b8afb", "#56b6e8", "#22C55E", "#8fa6ff", "#c084fc"]
-export const GOOD = "#22C55E"
-export const CRITICAL = "#EF4444"
-export const NEUTRAL = "#e8e9f2"
+export const ACCENTS = ["var(--primary)", "var(--accent)", "#56b6e8", "#22C55E", "#8fa6ff", "#c084fc"]
+// Profit is green and loss is red in BOTH themes -- that is not a style
+// choice to be re-decided per palette. What changes is lightness: #22c55e is
+// 2.3:1 on paper and #EF4444 is 3.4:1, so a light theme rendering these as-is
+// puts the two most important numbers on the page below the readable
+// threshold. --gain / --loss / --flat are the same hues, each theme holding
+// the version that clears contrast on its own surface.
+//
+// CSS ONLY. A Plotly layout is a JavaScript object and var() does not resolve
+// in one, so PnlDistributionChart keeps its own literals -- see the note
+// there. Everything else in the app draws these through the DOM.
+export const GOOD = "var(--gain)"
+export const CRITICAL = "var(--loss)"
+export const NEUTRAL = "var(--flat)"
 export const CYAN = "#14E0D4"
 
 interface StatCardProps {

@@ -22,7 +22,7 @@ type Close =
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-white/8 last:border-0">
+    <div className="flex items-baseline justify-between gap-4 py-2 border-b border-[color:var(--hairline-soft)] last:border-0">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <span className="text-sm text-foreground text-right break-words min-w-0">{children}</span>
     </div>
@@ -149,9 +149,9 @@ export function AccountSettings({ user, open: openProp, onOpenChange }: {
             <Row label="Email">{user.email || <span className="text-muted-foreground">none on file</span>}</Row>
             <Row label="Address confirmed">
               {user.email_verified ? (
-                <span className="text-emerald-400">Confirmed</span>
+                <span className="text-emerald-800 dark:text-emerald-400">Confirmed</span>
               ) : (
-                <span className="text-amber-400">Not confirmed</span>
+                <span className="text-amber-800 dark:text-amber-400">Not confirmed</span>
               )}
             </Row>
             {user.country && <Row label="Country">{user.country}</Row>}
@@ -164,7 +164,7 @@ export function AccountSettings({ user, open: openProp, onOpenChange }: {
             </p>
           )}
 
-          <div className="pt-1 border-t border-white/8">
+          <div className="pt-1 border-t border-[color:var(--hairline-soft)]">
             <h3 className="text-sm font-semibold text-foreground mt-4">Something wrong?</h3>
             <p className="text-xs text-muted-foreground mt-1">
               Report it with the details already filled in — which build you are
@@ -187,7 +187,7 @@ export function AccountSettings({ user, open: openProp, onOpenChange }: {
             </p>
           </div>
 
-          <div className="pt-1 border-t border-white/8">
+          <div className="pt-1 border-t border-[color:var(--hairline-soft)]">
             <h3 className="text-sm font-semibold text-foreground mt-4">Your data</h3>
             <p className="text-xs text-muted-foreground mt-1">
               Download everything this account holds — your details, saved
@@ -203,7 +203,7 @@ export function AccountSettings({ user, open: openProp, onOpenChange }: {
             </Button>
           </div>
 
-          <div className="pt-1 border-t border-white/8">
+          <div className="pt-1 border-t border-[color:var(--hairline-soft)]">
             <h3 className="text-sm font-semibold text-foreground mt-4">Close this account</h3>
             <p className="text-xs text-muted-foreground mt-1">
               This deletes your account, your saved backtests and their trades,

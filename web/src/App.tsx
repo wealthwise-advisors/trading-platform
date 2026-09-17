@@ -18,7 +18,8 @@ import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { Upload, Download, Rocket, Settings } from "lucide-react"
+import { Upload, Download, Rocket, Settings, Sun, Moon } from "lucide-react"
+import { useThemeStore } from "@/store/themeStore"
 
 const REPORT_FORMATS = [
   { id: "html", label: "HTML" },
@@ -42,6 +43,9 @@ function App({ user }: { user: Me }) {
   const [accountOpen, setAccountOpen] = useState(false)
   // Sent with Export Report so the report draws what the price chart shows.
   const chartSettings = useChartSettingsStore((s) => s.settings)
+  // Dark is the default and stays the default; this only offers the way out.
+  const theme = useThemeStore((s) => s.theme)
+  const toggleTheme = useThemeStore((s) => s.toggle)
 
   return (
     // Stack sidebar above content on small screens; side-by-side from lg up.
@@ -74,8 +78,8 @@ function App({ user }: { user: Me }) {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <AccountSettings user={user} open={accountOpen} onOpenChange={setAccountOpen} />
       {page === "backtest" && configOpen && (
-        <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-white/6 p-4 lg:overflow-y-auto lg:h-screen lg:sticky lg:top-0"
-               style={{ background: "linear-gradient(180deg, #16171f 0%, #0d0e13 100%)" }}>
+        <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] p-4 lg:overflow-y-auto lg:h-screen lg:sticky lg:top-0"
+               style={{ background: "linear-gradient(180deg, var(--sidebar-ground-from) 0%, var(--sidebar-ground-to) 100%)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
@@ -113,7 +117,7 @@ function App({ user }: { user: Me }) {
               </h1>
               {/* What the product is, in four words, for someone who has just
                   been sent a link to it. */}
-              <p className="hidden sm:block text-[10.5px] leading-tight text-slate-500">
+              <p className="hidden sm:block text-[10.5px] leading-tight text-muted-foreground/75">
                 Research. Backtest. Trade Smarter.
               </p>
             </div>
@@ -129,6 +133,21 @@ function App({ user }: { user: Me }) {
               session server-side rather than only clearing the cookie. */}
           <div className="flex items-center gap-2">
             <SymbolSearch />
+            {/* The icon shows what clicking it GIVES you, not what you are in:
+                a moon offers the dark theme. The accessible name says the same
+                thing in words, and aria-pressed carries the current state, so
+                a screen reader is not left to infer it from an icon name. */}
+            <Button size="sm" variant="secondary" className="px-2"
+                    onClick={toggleTheme}
+                    aria-pressed={theme === "light"}
+                    title={theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}>
+              {theme === "dark"
+                ? <Sun className="h-4 w-4" aria-hidden />
+                : <Moon className="h-4 w-4" aria-hidden />}
+              <span className="sr-only">
+                {theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
+              </span>
+            </Button>
             <Button size="sm" variant="secondary" className="px-2"
                     onClick={() => setAccountOpen(true)} title="Account settings">
               <Settings className="h-4 w-4" aria-hidden />

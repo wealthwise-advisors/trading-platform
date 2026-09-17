@@ -112,9 +112,9 @@ export function Onboarding({ user, onDone }: { user: Me; onDone: () => void }) {
           </Button>
         </div>
 
-        <div className="rounded-2xl border border-white/8 bg-card/80 backdrop-blur-sm
+        <div className="rounded-2xl border border-[color:var(--hairline-soft)] bg-card/80 backdrop-blur-sm
                         shadow-[0_24px_60px_-24px_rgba(0,0,0,.7)] overflow-hidden">
-          <div className="px-6 pt-6 pb-2 bg-[linear-gradient(180deg,rgba(124,108,245,.08),transparent)]">
+          <div className="px-6 pt-6 pb-2 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_8%,transparent),transparent)]">
             {/* key={step} remounts the illustration, which is what replays its
                 animation -- the drawing is the point, not the final frame. */}
             <AnimatePresence mode="wait">
@@ -167,7 +167,7 @@ export function Onboarding({ user, onDone }: { user: Me; onDone: () => void }) {
                     key={i}
                     className={
                       "h-1.5 rounded-full transition-all duration-300 " +
-                      (i === step ? "w-6 bg-primary" : "w-1.5 bg-white/15")
+                      (i === step ? "w-6 bg-primary" : "w-1.5 bg-[color:var(--raise-5)]")
                     }
                   />
                 ))}

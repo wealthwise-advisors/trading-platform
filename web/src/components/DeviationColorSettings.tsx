@@ -48,7 +48,7 @@ function Row({
               aria-label={`${label} colour slot ${i + 1}`}
               value={colors[i]}
               onChange={(e) => onPick(i, e.target.value)}
-              className="h-7 w-9 rounded cursor-pointer bg-transparent border border-white/15 p-0"
+              className="h-7 w-9 rounded cursor-pointer bg-transparent border border-[color:var(--hairline-firm)] p-0"
             />
             <span className={`text-[10px] font-mono ${i < inUse ? "" : "text-muted-foreground/50"}`}>
               #{i + 1}
@@ -81,7 +81,7 @@ export function DeviationColorSettings({
   }
 
   return (
-    <div className="space-y-3 border-t border-white/6 pt-3">
+    <div className="space-y-3 border-t border-[color:var(--hairline-soft)] pt-3">
       <div className="flex items-baseline justify-between gap-3">
         <div className="text-xs font-semibold">Deviation group colours</div>
         <div className="text-[11px] text-muted-foreground">

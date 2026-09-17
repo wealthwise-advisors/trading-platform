@@ -103,7 +103,7 @@ export function Section({ icon, label, accent = "blue", children, aside }: Secti
 /** A bordered group, for sections holding several related fields. */
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-white/10 bg-white/[0.025] p-3.5 space-y-3.5 ${className}`}>
+    <div className={`rounded-xl border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)] p-3.5 space-y-3.5 ${className}`}>
       {children}
     </div>
   )
@@ -122,7 +122,7 @@ export function Choice({
   return (
     <span className="flex items-center gap-2.5 py-0.5">
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg
-                       border border-white/10 bg-white/[0.04]">
+                       border border-[color:var(--hairline-mid)] bg-[color:var(--raise-2)]">
         {icon}
       </span>
       <span className="flex flex-col leading-tight">
@@ -148,7 +148,7 @@ export function FieldRow({
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-2.5 min-w-0">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
-                         border border-white/10 bg-white/[0.04]">
+                         border border-[color:var(--hairline-mid)] bg-[color:var(--raise-2)]">
           {icon}
         </span>
         <span className="flex flex-col leading-tight min-w-0">
@@ -215,9 +215,9 @@ export function SliderField({
             // sending NaN through to the request.
             if (Number.isFinite(v)) onChange(v)
           }}
-          className="w-[86px] shrink-0 rounded-lg border border-white/12 bg-white/[0.03]
+          className="w-[86px] shrink-0 rounded-lg border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)]
                      px-3 py-2 text-center text-sm tabular-nums
-                     focus:border-white/25 focus:outline-none focus:ring-2 focus:ring-blue-400/25"
+                     focus:border-[color:var(--hairline-focus)] focus:outline-none focus:ring-2 focus:ring-blue-400/25"
           aria-label={label}
         />
       </div>
@@ -265,7 +265,7 @@ export function ToggleSwitch({
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50
-                    disabled:opacity-50 ${checked ? "bg-[#2563eb]" : "bg-white/15"}`}
+                    disabled:opacity-50 ${checked ? "bg-[#2563eb]" : "bg-[color:var(--raise-5)]"}`}
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform
@@ -294,7 +294,7 @@ export function QuickPresets({
           key={label}
           type="button"
           onClick={() => onPick(days)}
-          className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1
+          className="rounded-lg border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)] px-2 py-1
                      text-[11px] font-medium text-muted-foreground transition-colors
                      hover:border-teal-400/40 hover:bg-teal-400/10 hover:text-teal-200"
         >
