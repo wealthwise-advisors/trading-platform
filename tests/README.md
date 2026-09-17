@@ -78,8 +78,8 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`fixtures/`](fixtures) | 📎 Pinned data the tests read |
-| [`test_elliott_wave/`](test_elliott_wave) | 🌊 The wave engine's own suite |
+| [`fixtures`](fixtures) | 📎 Pinned data the tests read |
+| [`test_elliott_wave`](test_elliott_wave) | 🌊 The wave engine's own suite |
 
 
 ---

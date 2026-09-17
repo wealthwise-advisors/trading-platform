@@ -17,7 +17,7 @@
 |:--|:--|
 | 🎯 **Holds** | The sign-in journey and the legal pages |
 | 🔒 **Self-contained** | Styles are inline, so app theming **cannot** change them |
-| ⚠️ **Also on the Desktop** | [`scripts/run_local.py`](../../scripts/run_local.py) prefers the Desktop copies — edit both, or the local rig shows a stale page |
+| ⚠️ **Also on the Desktop** | [`run_local.py`](../../scripts/run_local.py) prefers the Desktop copies — edit both, or the local rig shows a stale page |
 | 📁 **Path** | `web/public/` |
 | 📦 **Holds** | `9` files · `3,059` lines |
 
@@ -65,6 +65,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">web/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">web</a></sub>
 
 </div>

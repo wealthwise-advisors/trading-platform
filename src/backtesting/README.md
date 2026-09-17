@@ -15,7 +15,7 @@
 |:--|:--|
 | 🎯 **Does** | Feeds bars to a strategy and records what happened |
 | ⚖️ **Two modes** | **Backtest** runs to completion · **Replay** advances one bar at a time |
-| 💰 **Costs** | Every fill is priced by [`src/broker`](../broker) — never at the close |
+| 💰 **Costs** | Every fill is priced by [`broker`](../broker) — never at the close |
 | 📁 **Path** | `src/backtesting/` |
 | 📦 **Holds** | `6` files · `1,544` lines |
 
@@ -58,6 +58,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

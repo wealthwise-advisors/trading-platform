@@ -13,7 +13,7 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Written by** | [`api/export`](../../api/export) when someone asks for a download |
+| 🎯 **Written by** | [`export`](../../api/export) when someone asks for a download |
 | 🚫 **Not source** | Nothing reads these back in |
 | 📁 **Path** | `reports/exports/` |
 | 📦 **Holds** | `2` files · `6,159` lines |
@@ -51,6 +51,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">reports/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">reports</a></sub>
 
 </div>

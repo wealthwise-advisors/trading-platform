@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | ▶️ **Run** | `py -3.12 docs/assets/tools/<name>.py` |
-| 📤 **Writes to** | [`docs/assets/`](..) |
+| 📤 **Writes to** | [`assets`](..) |
 | 🎯 **Why scripts** | A diagram that must stay in step with the code has to be rebuildable |
 | 📁 **Path** | `docs/assets/tools/` |
 | 📦 **Holds** | `10` generators · `1` render harness |
@@ -53,7 +53,7 @@
 | [`make_legal_svgs.py`](make_legal_svgs.py) | ⚖️ The terms and privacy page headers. | 155 |
 
 > ⚠️ **`elliott-wave.svg` has no generator.** It is hand-maintained SVG and is
-> edited in place at [`../elliott-wave.svg`](../elliott-wave.svg). Looking for
+> edited in place at [`elliott-wave.svg`](../elliott-wave.svg). Looking for
 > `make_elliott_wave_svg.py` and concluding the file is stale is the mistake
 > this line exists to prevent.
 
@@ -115,6 +115,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">docs/assets/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">assets</a></sub>
 
 </div>

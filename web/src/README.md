@@ -15,7 +15,7 @@
 |:--|:--|
 | ▶️ **Entry** | [`main.tsx`](main.tsx) ➜ [`App.tsx`](App.tsx) |
 | 🎨 **All styling** | [`index.css`](index.css) — theme tokens live in the `.dark` block |
-| 📐 **Layout rule** | Shared ➜ [`components/`](components) · page-specific ➜ [`features/`](features) · pure logic ➜ [`lib/`](lib) |
+| 📐 **Layout rule** | Shared ➜ [`components`](components) · page-specific ➜ [`features`](features) · pure logic ➜ [`lib`](lib) |
 | 📁 **Path** | `web/src/` |
 | 📦 **Holds** | `3` files · `2,095` lines · `5` subfolders |
 
@@ -55,11 +55,11 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`assets/`](assets) | 🖼 Images the bundle imports |
-| [`components/`](components) | 🎨 Shared UI used in more than one place |
-| [`features/`](features) | 🖼 One folder per screen |
-| [`lib/`](lib) | 🧩 Pure functions, all unit-tested |
-| [`store/`](store) | 🗃 Client state (Zustand) |
+| [`assets`](assets) | 🖼 Images the bundle imports |
+| [`components`](components) | 🎨 Shared UI used in more than one place |
+| [`features`](features) | 🖼 One folder per screen |
+| [`lib`](lib) | 🧩 Pure functions, all unit-tested |
+| [`store`](store) | 🗃 Client state (Zustand) |
 
 
 ---
@@ -73,6 +73,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">web/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">web</a></sub>
 
 </div>

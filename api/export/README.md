@@ -54,6 +54,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api</a></sub>
 
 </div>

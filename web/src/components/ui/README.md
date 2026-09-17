@@ -72,6 +72,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">web/src/components/</a></sub>
+<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">components</a></sub>
 
 </div>

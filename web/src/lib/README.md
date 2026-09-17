@@ -17,7 +17,7 @@
 |:--|:--|
 | 🎯 **Rule** | No JSX here. If it renders, it is a component |
 | 🧪 **Testing** | Each `X.ts` has an `X.test.ts` beside it |
-| ⚠️ **`types.ts` is a mirror** | It must match [`api/schemas`](../../../api/schemas) or the UI drops fields silently |
+| ⚠️ **`types.ts` is a mirror** | It must match [`schemas`](../../../api/schemas) or the UI drops fields silently |
 | 📁 **Path** | `web/src/lib/` |
 | 📦 **Holds** | `48` files · `6,652` lines |
 
@@ -46,7 +46,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`api.ts`](api.ts) | 🔌 Every call to the backend, in one module. | 309 |
-| [`types.ts`](types.ts) | 📋 Mirrors [`api/schemas`](../../../api/schemas). Change one, change the other. | 479 |
+| [`types.ts`](types.ts) | 📋 Mirrors [`schemas`](../../../api/schemas). Change one, change the other. | 479 |
 | [`followLive.ts`](followLive.ts) | 📡 Keeps asking for bars that formed since the replay caught up. | 288 |
 | [`deviationColors.ts`](deviationColors.ts) | 🎨 Colours a VWAP deviation column by the whole number it lands on. | 191 |
 | [`volumeProfile.ts`](volumeProfile.ts) | 📊 Volume Profile, computed in the browser. | 221 |
@@ -84,13 +84,13 @@
 ## 💡 Worth knowing
 
 - ➜ **No JSX here.** If it renders, it is a component — that separation is what makes every file in this folder unit-testable without a DOM.
-- ➜ **[`types.ts`](types.ts) mirrors [`api/schemas`](../../../api/schemas).** They are two halves of one contract, and nothing enforces it but attention.
+- ➜ **[`types.ts`](types.ts) mirrors [`schemas`](../../../api/schemas).** They are two halves of one contract, and nothing enforces it but attention.
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

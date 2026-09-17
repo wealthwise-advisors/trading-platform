@@ -43,7 +43,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`config.py`](config.py) | Reads `config/settings.yaml` and hands out typed settings. | 71 |
+| [`config.py`](config.py) | Reads `settings.yaml` and hands out typed settings. | 71 |
 
 
 ---
@@ -52,12 +52,12 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`analysis/`](analysis) | 🔍 Indicators, swings, patterns and Elliott Wave |
-| [`backtesting/`](backtesting) | ⏱ The engines that run those rules over history |
-| [`broker/`](broker) | 💰 What a fill actually costs |
-| [`data/`](data) | 📥 Where bars come from — Schwab, Rithmic, CSV, synthetic |
-| [`live/`](live) | 📡 Live trading — a stub, deliberately |
-| [`strategies/`](strategies) | 🧠 The rules that decide to buy or sell |
+| [`analysis`](analysis) | 🔍 Indicators, swings, patterns and Elliott Wave |
+| [`backtesting`](backtesting) | ⏱ The engines that run those rules over history |
+| [`broker`](broker) | 💰 What a fill actually costs |
+| [`data`](data) | 📥 Where bars come from — Schwab, Rithmic, CSV, synthetic |
+| [`live`](live) | 📡 Live trading — a stub, deliberately |
+| [`strategies`](strategies) | 🧠 The rules that decide to buy or sell |
 
 
 ---
@@ -65,7 +65,7 @@
 ## 💡 Worth knowing
 
 - ➜ **Nothing in here imports FastAPI, React or a session.** That is what lets a strategy be run from a script, a notebook or a test with no server anywhere.
-- ➜ **The boundary is one-way.** [`api/`](../api) imports `src/`; `src/` never imports `api/`. A circular import here would make the engine untestable in isolation.
+- ➜ **The boundary is one-way.** [`api`](../api) imports `src`; `src` never imports `api`. A circular import here would make the engine untestable in isolation.
 
 
 ---

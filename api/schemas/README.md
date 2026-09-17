@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Does** | Pydantic models — validation in, serialisation out |
-| 🔗 **Mirrored by** | [`web/src/lib/types.ts`](../../web/src/lib/types.ts) |
+| 🔗 **Mirrored by** | [`types.ts`](../../web/src/lib/types.ts) |
 | ⚠️ **Watch for** | Change a field here ➜ change it there, or the UI silently drops it |
 | 📁 **Path** | `api/schemas/` |
 | 📦 **Holds** | `6` files · `424` lines |
@@ -54,7 +54,7 @@
 
 ## 💡 Worth knowing
 
-- ➜ **These models are half of a contract.** The other half is [`web/src/lib/types.ts`](../../web/src/lib/types.ts) — change a field here without changing it there and the UI drops it silently, with no error anywhere.
+- ➜ **These models are half of a contract.** The other half is [`types.ts`](../../web/src/lib/types.ts) — change a field here without changing it there and the UI drops it silently, with no error anywhere.
 - ➜ **Validation failures are 422, not 500.** A malformed request is the caller's problem and must say which field; a 500 would claim it was ours.
 
 
@@ -62,6 +62,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api</a></sub>
 
 </div>

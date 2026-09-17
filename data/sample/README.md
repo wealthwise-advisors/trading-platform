@@ -17,8 +17,8 @@
 |:--|:--|
 | 🎯 **Why committed** | The platform runs end to end with **no credentials and no download** |
 | 📊 **What they are** | Genuine market history, not synthetic — so the analysis engine works on real structure |
-| 📦 **Full archive** | [`wealthwise-advisors/data`](https://github.com/wealthwise-advisors/data) — 433 MB, 7.9M bars, Git LFS |
-| ⚙️ **Point at the full set** | `data.external_dir` in [`config/settings.yaml`](../../config/settings.yaml) |
+| 📦 **Full archive** | [`data`](https://github.com/wealthwise-advisors/data) — 433 MB, 7.9M bars, Git LFS |
+| ⚙️ **Point at the full set** | `data.external_dir` in [`settings.yaml`](../../config/settings.yaml) |
 | 📁 **Path** | `data/sample/` |
 | 📦 **Holds** | `16` files · `76,631` lines |
 
@@ -71,6 +71,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">data/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">data</a></sub>
 
 </div>

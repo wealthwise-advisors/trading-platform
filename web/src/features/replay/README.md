@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Does** | Streams bars over a WebSocket and draws them as they arrive |
-| 🕐 **One clock** | Every timeframe advances off a single shared clock — see [`src/backtesting/multi_replay.py`](../../../../src/backtesting/multi_replay.py) |
+| 🕐 **One clock** | Every timeframe advances off a single shared clock — see [`multi_replay.py`](../../../../src/backtesting/multi_replay.py) |
 | 📡 **Follow live** | Once caught up, it keeps asking for bars that have since formed |
 | 📁 **Path** | `web/src/features/replay/` |
 | 📦 **Holds** | `5` files · `3,057` lines |
@@ -57,13 +57,13 @@
 
 - ➜ **Thirteen here, fifteen on Backtest — on purpose.** The app offers `1d` and `1w`; this grid does not. Every pane is built by replaying **1-minute** bars, so a single weekly candle would need twenty years of minutes to form. `ALL_TIMEFRAMES` here is `INTRADAY_TIMEFRAMES`, the shared list minus daily and longer. Not an oversight to be "fixed".
 - ➜ **Every timeframe advances off one clock.** Thirteen independent clocks would drift, and the grid would quietly disagree with itself.
-- ➜ **Follow-live is the part that broke before.** [`tests/test_follow_live_matrix.py`](../../../../tests/test_follow_live_matrix.py) covers all thirteen timeframes, both DST switches and a leap day.
+- ➜ **Follow-live is the part that broke before.** [`test_follow_live_matrix.py`](../../../../tests/test_follow_live_matrix.py) covers all thirteen timeframes, both DST switches and a leap day.
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">web/src/features/</a></sub>
+<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">features</a></sub>
 
 </div>

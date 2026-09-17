@@ -13,7 +13,7 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Rule** | Used by two screens? It belongs in [`components/`](../components) |
+| 🎯 **Rule** | Used by two screens? It belongs in [`components`](../components) |
 | 🧭 **Routing** | These are tabs within one document, switched in [`App.tsx`](../App.tsx) |
 | 📁 **Path** | `web/src/features/` |
 
@@ -39,9 +39,9 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`backtest/`](backtest) | 📊 Configure a run and read its results |
-| [`export/`](export) | 📤 Raw OHLC download |
-| [`replay/`](replay) | 📡 Market Grid — live and replayed bars |
+| [`backtest`](backtest) | 📊 Configure a run and read its results |
+| [`export`](export) | 📤 Raw OHLC download |
+| [`replay`](replay) | 📡 Market Grid — live and replayed bars |
 
 
 ---
@@ -55,6 +55,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

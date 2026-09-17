@@ -15,7 +15,7 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Does** | Turns HTTP requests into calls on [`src/`](../src), and answers **who is asking** |
+| 🎯 **Does** | Turns HTTP requests into calls on [`src`](../src), and answers **who is asking** |
 | 🔐 **Guards** | Every route except sign-in, OAuth and health needs a session |
 | 🧩 **Owns nothing** | No strategy or indicator logic lives here — it is a thin consumer |
 | 📁 **Path** | `api/` |
@@ -68,10 +68,10 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`export/`](export) | 📤 CSV · XLSX · PDF · DOCX writers |
-| [`report/`](report) | 📈 Server-side chart and report rendering |
-| [`routers/`](routers) | 🛣 The endpoints themselves, one module per area |
-| [`schemas/`](schemas) | 📋 Pydantic request and response models |
+| [`export`](export) | 📤 CSV · XLSX · PDF · DOCX writers |
+| [`report`](report) | 📈 Server-side chart and report rendering |
+| [`routers`](routers) | 🛣 The endpoints themselves, one module per area |
+| [`schemas`](schemas) | 📋 Pydantic request and response models |
 
 
 ---

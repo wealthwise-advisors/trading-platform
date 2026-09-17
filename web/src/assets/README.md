@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Holds** | Brand marks and the app background |
-| 📦 **Versus [`public/`](../../public)** | These are **imported**, so Vite hashes and inlines them. `public/` is copied verbatim |
+| 📦 **Versus [`public`](../../public)** | These are **imported**, so Vite hashes and inlines them. `public` is copied verbatim |
 | 📁 **Path** | `web/src/assets/` |
 | 📦 **Holds** | `6` files · `3,128` lines |
 
@@ -51,13 +51,13 @@
 
 ## 💡 Worth knowing
 
-- ➜ **Imported, so Vite hashes them** — a changed image gets a new filename and cannot be served stale from a cache. Files in [`public/`](../../public) keep their names and do not get this.
+- ➜ **Imported, so Vite hashes them** — a changed image gets a new filename and cannot be served stale from a cache. Files in [`public`](../../public) keep their names and do not get this.
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

@@ -13,8 +13,8 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features/`](../features) |
-| 🎨 **Base kit** | shadcn/ui in [`ui/`](ui) — do not edit those by hand |
+| 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features`](../features) |
+| 🎨 **Base kit** | shadcn/ui in [`ui`](ui) — do not edit those by hand |
 | 📁 **Path** | `web/src/components/` |
 | 📦 **Holds** | `22` files · `3,273` lines · `5` subfolders |
 
@@ -73,11 +73,11 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`cards/`](cards) | 🃏 Stat, info and legend cards |
-| [`charts/`](charts) | 📈 Plotly wrappers — candlestick, equity, P&L, Elliott Wave |
-| [`motion/`](motion) | ✨ Shared animation helpers |
-| [`tables/`](tables) | 📋 Trade log, patterns, optimiser |
-| [`ui/`](ui) | 🧱 shadcn/ui primitives — button, input, slider, tabs, dialog |
+| [`cards`](cards) | 🃏 Stat, info and legend cards |
+| [`charts`](charts) | 📈 Plotly wrappers — candlestick, equity, P&L, Elliott Wave |
+| [`motion`](motion) | ✨ Shared animation helpers |
+| [`tables`](tables) | 📋 Trade log, patterns, optimiser |
+| [`ui`](ui) | 🧱 shadcn/ui primitives — button, input, slider, tabs, dialog |
 
 
 ---
@@ -91,6 +91,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

@@ -72,14 +72,14 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`assets/`](assets) | 🖼 Images the documents embed |
+| [`assets`](assets) | 🖼 Images the documents embed |
 
 
 ---
 
 ## 💡 Worth knowing
 
-- ➜ **[`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#rules) is a specification, not a description.** [`tests/test_elliott_wave/test_guards.py`](../tests/test_elliott_wave/test_guards.py) enforces it.
+- ➜ **[`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#rules) is a specification, not a description.** [`test_guards.py`](../tests/test_elliott_wave/test_guards.py) enforces it.
 - ➜ **Every folder has its own README too**, so orientation is available where you are rather than only here.
 
 

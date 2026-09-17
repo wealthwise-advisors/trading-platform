@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Holds** | SVG diagrams and PNG banners |
-| 🛠 **Most are generated** | The SVGs come from [`tools/`](tools) — edit the script, not the file |
+| 🛠 **Most are generated** | The SVGs come from [`tools`](tools) — edit the script, not the file |
 | 📐 **Style** | Technical documents, not marketing: plain arrows, restrained motion |
 | 📁 **Path** | `docs/assets/` |
 | 📦 **Holds** | `31` files · `12,940` lines · `1` subfolders |
@@ -76,7 +76,7 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`tools/`](tools) | 🐍 The Python scripts that draw the SVGs |
+| [`tools`](tools) | 🐍 The Python scripts that draw the SVGs |
 
 
 ---
@@ -90,6 +90,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">docs/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">docs</a></sub>
 
 </div>

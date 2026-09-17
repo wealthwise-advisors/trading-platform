@@ -13,7 +13,7 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Holds** | Reports written by [`api/report`](../api/report) and [`api/export`](../api/export) |
+| 🎯 **Holds** | Reports written by [`report`](../api/report) and [`export`](../api/export) |
 | 🚫 **Gitignored** | Safe to delete at any time — it regenerates |
 | 📁 **Path** | `reports/` |
 
@@ -37,7 +37,7 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`exports/`](exports) | 📤 CSV · XLSX · PDF · DOCX written on request |
+| [`exports`](exports) | 📤 CSV · XLSX · PDF · DOCX written on request |
 
 
 ---

@@ -60,6 +60,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src/data/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">data</a></sub>
 
 </div>

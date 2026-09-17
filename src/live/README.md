@@ -47,13 +47,13 @@
 ## 💡 Worth knowing
 
 - ➜ **This is a stub and stays one until it is genuinely finished.** The Deploy button in the UI is disabled to match, so nothing in the product implies it works.
-- ➜ **The paper broker is the tested path.** Backtesting and paper trading both run through [`src/broker/paper_broker.py`](../broker/paper_broker.py).
+- ➜ **The paper broker is the tested path.** Backtesting and paper trading both run through [`paper_broker.py`](../broker/paper_broker.py).
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

@@ -16,9 +16,9 @@
 |   |   |
 |:--|:--|
 | ▶️ **Dev** | `npm run dev` ➜ proxies `/api/*` to the backend |
-| 📦 **Build** | `npm run build` ➜ `dist/` |
+| 📦 **Build** | `npm run build` ➜ `dist` |
 | 🎨 **Theme** | Graphite + violet-blue. Warm colours are reserved for **meaning** — red for a loss |
-| 📄 **`public/` is copied verbatim** | The sign-in pages live there and never load `index.css` |
+| 📄 **`public` is copied verbatim** | The sign-in pages live there and never load `index.css` |
 | 📁 **Path** | `web/` |
 | 📦 **Holds** | `9` files · `612` lines · `2` subfolders |
 
@@ -58,8 +58,8 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`public/`](public) | 📄 Copied verbatim — sign-in, sign-up, terms, privacy, help |
-| [`src/`](src) | ⚛️ The application source |
+| [`public`](public) | 📄 Copied verbatim — sign-in, sign-up, terms, privacy, help |
+| [`src`](src) | ⚛️ The application source |
 
 
 ---
@@ -67,7 +67,7 @@
 ## 💡 Worth knowing
 
 - ➜ **nginx is configured twice.** Port 80 and port 443 are separate blocks — a fix applied to one only is a fix that works over `http` and not `https`.
-- ➜ **`public/` never sees the app's CSS.** Those pages are self-contained, so app styling cannot change them.
+- ➜ **`public` never sees the app's CSS.** Those pages are self-contained, so app styling cannot change them.
 
 
 ---

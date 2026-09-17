@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Does** | Bars in ➜ indicators, pivots, patterns and waves out |
-| 🧪 **Guarded by** | [`tests/test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) — 1,069 lines |
+| 🧪 **Guarded by** | [`test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) — 1,069 lines |
 | 📐 **Rule** | Pure functions on a frame. No I/O, no state |
 | 📁 **Path** | `src/analysis/` |
 | 📦 **Holds** | `6` files · `1,457` lines · `1` subfolders |
@@ -58,14 +58,14 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`elliott_wave/`](elliott_wave) | 🌊 The full Elliott Wave engine — 13 modules |
+| [`elliott_wave`](elliott_wave) | 🌊 The full Elliott Wave engine — 13 modules |
 
 
 ---
 
 ## 💡 Worth knowing
 
-- ➜ **Every function here is pure.** Same frame in, same numbers out — which is what makes [`tests/test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) able to pin them at all.
+- ➜ **Every function here is pure.** Same frame in, same numbers out — which is what makes [`test_indicator_correctness.py`](../../tests/test_indicator_correctness.py) able to pin them at all.
 - ➜ **Swing pivots are shared, not recomputed.** Chart patterns and the wave engine both build on `swing_identification`, so they cannot disagree about where a swing is.
 
 
@@ -73,6 +73,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

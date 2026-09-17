@@ -42,7 +42,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`settings.yaml`](settings.yaml) | ⚙️ Data paths, session hours, defaults — read by [`src/config.py`](../src/config.py). | 138 |
+| [`settings.yaml`](settings.yaml) | ⚙️ Data paths, session hours, defaults — read by [`config.py`](../src/config.py). | 138 |
 | [`credentials.yaml.example`](credentials.yaml.example) | 📄 The template. Copy to `credentials.yaml` and fill in. | 34 |
 | [`credentials.yaml`](credentials.yaml) | 🚨 **Secret.** Broker API keys. Gitignored. | 11 |
 | [`schwab_tokens.json`](schwab_tokens.json) | 🚨 **Secret.** The live Schwab token pair. Gitignored, and it expires. | 12 |

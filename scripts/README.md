@@ -51,7 +51,7 @@
 
 ## 💡 Worth knowing
 
-- ➜ **`run_local.py` prefers the Desktop copies of the sign-in pages** over [`web/public/`](../web/public). If a change seems not to apply locally, that is why.
+- ➜ **`run_local.py` prefers the Desktop copies of the sign-in pages** over [`public`](../web/public). If a change seems not to apply locally, that is why.
 
 
 ---

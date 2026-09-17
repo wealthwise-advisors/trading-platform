@@ -54,7 +54,7 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`schwabdev/`](schwabdev) | Vendored Schwab SDK — third-party, not ours |
+| [`schwabdev`](schwabdev) | Vendored Schwab SDK — third-party, not ours |
 
 
 ---
@@ -70,6 +70,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

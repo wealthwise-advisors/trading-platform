@@ -15,7 +15,7 @@
 |:--|:--|
 | 🎯 **Does** | Bars + indicators ➜ buy, sell or hold |
 | 🔌 **Interface** | Implement [`base_strategy.py`](base_strategy.py) and the engine can run it |
-| 🎛 **Parameters** | Declared in [`api/strategy_registry.py`](../../api/strategy_registry.py) so the optimiser can sweep them |
+| 🎛 **Parameters** | Declared in [`strategy_registry.py`](../../api/strategy_registry.py) so the optimiser can sweep them |
 | 📁 **Path** | `src/strategies/` |
 | 📦 **Holds** | `6` files · `727` lines |
 
@@ -56,13 +56,13 @@
 ## 💡 Worth knowing
 
 - ➜ **Any strategy can be swapped for any other** because the engine only knows [`base_strategy.py`](base_strategy.py). Adding one means implementing that interface — no engine change.
-- ➜ **Declare parameters in [`api/strategy_registry.py`](../../api/strategy_registry.py)** or the optimiser cannot sweep them, and the UI cannot draw the sliders.
+- ➜ **Declare parameters in [`strategy_registry.py`](../../api/strategy_registry.py)** or the optimiser cannot sweep them, and the UI cannot draw the sliders.
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

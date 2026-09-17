@@ -52,7 +52,7 @@
 - ➜ **The report never recomputes.** It formats a finished `BacktestResults`; if a number here disagreed with the screen, one of them would be lying.
 - ➜ **It draws what the chart shows.** Export Report sends the chart's settings: which oscillators are on, and every Volume Profile option.
 - ➜ **Mirrored line for line.** `chart_settings_draw.py` copies the web code, so change both sides together.
-- ➜ **Pinned by two shared files.** `tests/fixtures/chart_settings_factory.json` holds the defaults, and `volume_profile_golden.json` holds the exact profile numbers.
+- ➜ **Pinned by two shared files.** `chart_settings_factory.json` holds the defaults, and `volume_profile_golden.json` holds the exact profile numbers.
 - ➜ **Charts in HTML only.** CSV, Excel, PDF and Word carry the summary and trade log.
 
 
@@ -60,6 +60,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">api</a></sub>
 
 </div>

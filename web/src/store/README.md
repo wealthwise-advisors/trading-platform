@@ -15,7 +15,7 @@
 |:--|:--|
 | 🎯 **Does** | Holds the backtest configuration and the current page |
 | 📦 **Library** | Zustand — one store, no provider tree |
-| 🚫 **Not for** | Server data. That is React Query's job, in [`lib/api.ts`](../lib/api.ts) |
+| 🚫 **Not for** | Server data. That is React Query's job, in [`api.ts`](../lib/api.ts) |
 | 📁 **Path** | `web/src/store/` |
 | 📦 **Holds** | `2` files · `148` lines |
 
@@ -49,13 +49,13 @@
 
 ## 💡 Worth knowing
 
-- ➜ **Client state only.** Server data belongs to React Query in [`lib/api.ts`](../lib/api.ts) — duplicating it here guarantees the two go out of step.
+- ➜ **Client state only.** Server data belongs to React Query in [`api.ts`](../lib/api.ts) — duplicating it here guarantees the two go out of step.
 
 
 ---
 
 <div align="center">
 
-<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">web/src/</a></sub>
+<sub>⬅ <a href="../../../README.md">Project README</a> · <a href="..">src</a></sub>
 
 </div>

@@ -13,8 +13,8 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Covers** | [`src/analysis/elliott_wave`](../../src/analysis/elliott_wave) — all 13 modules |
-| 📘 **Specification** | [`docs/ELLIOTT_WAVE.md`](../../docs/ELLIOTT_WAVE.md#rules) |
+| 🎯 **Covers** | [`elliott_wave`](../../src/analysis/elliott_wave) — all 13 modules |
+| 📘 **Specification** | [`ELLIOTT_WAVE.md`](../../docs/ELLIOTT_WAVE.md#rules) |
 | 🚨 **Route count** | [`test_pipeline_and_api.py`](test_pipeline_and_api.py) asserts an exact API route count — it fails on purpose when a route is added |
 | 📁 **Path** | `tests/test_elliott_wave/` |
 | 📦 **Holds** | `10` files · `2,546` lines |
@@ -69,6 +69,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">tests/</a></sub>
+<sub>⬅ <a href="../../README.md">Project README</a> · <a href="..">tests</a></sub>
 
 </div>

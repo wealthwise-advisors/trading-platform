@@ -50,7 +50,7 @@
 ## 💡 Worth knowing
 
 - ➜ **The accent table lives in [`ConfigParts.tsx`](ConfigParts.tsx)** and its keys are named for the hue they draw, not the topic — a key that lies about its own colour is the one thing a reader will not check.
-- ➜ **The Session Hours clock is display only.** ET/CT/MT/PT change what the two fields show and accept; `session_start` and `session_end` are always stored and sent as **Eastern**, because that pair anchors VWAP and is what a saved config and a report hold. Switching clocks therefore relabels a window rather than re-filtering one. The choice lives in `localStorage` under `session-hours-zone` and never reaches the config store or a request. See [`lib/sessionZone.ts`](../../lib/sessionZone.ts).
+- ➜ **The Session Hours clock is display only.** ET/CT/MT/PT change what the two fields show and accept; `session_start` and `session_end` are always stored and sent as **Eastern**, because that pair anchors VWAP and is what a saved config and a report hold. Switching clocks therefore relabels a window rather than re-filtering one. The choice lives in `localStorage` under `session-hours-zone` and never reaches the config store or a request. See [`sessionZone.ts`](../../lib/sessionZone.ts).
 - ➜ **A control's name has to reach the element that carries the role.** `SliderField` passed `aria-label` to `<Slider>` from the start, and the thumb still had no name for months: Radix puts `role="slider"` on the thumb, so the label named the root instead. Nothing in the call site looked wrong. [`ConfigParts.a11y.test.tsx`](ConfigParts.a11y.test.tsx) asserts against the rendered DOM for exactly that reason.
 - ➜ **Daily and weekly ignore Session Hours entirely.** A `1d` or `1w` bar already is a whole session, and Schwab stamps it at midnight — a 09:30–16:00 window would drop every one.
 
@@ -59,6 +59,6 @@
 
 <div align="center">
 
-<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">web/src/features/</a></sub>
+<sub>⬅ <a href="../../../../README.md">Project README</a> · <a href="..">features</a></sub>
 
 </div>
