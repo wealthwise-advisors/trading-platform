@@ -11,12 +11,13 @@ import { Button } from "@/components/ui/button"
 import { type Me } from "@/lib/api"
 import { AccountSettings } from "@/components/AccountSettings"
 import { ExportReportButton } from "@/components/ExportReportButton"
+import { DeployButton } from "@/features/live/DeployButton"
 import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { Upload, Rocket, Settings, Sun, Moon } from "lucide-react"
+import { Upload, Settings, Sun, Moon } from "lucide-react"
 import { useThemeStore } from "@/store/themeStore"
 
 function App({ user }: { user: Me }) {
@@ -168,12 +169,11 @@ function App({ user }: { user: Me }) {
               <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
             {backtestId && <ExportReportButton backtestId={backtestId} chartSettings={chartSettings} />}
-            {/* Live trading isn't wired up yet (src/broker/rithmic_broker.py is
-                still a stub) -- disabled rather than pretending this does
-                something, styled to match the reference's premium look. */}
-            <Button size="sm" disabled title="Live trading deployment isn't implemented yet">
-              <Rocket className="h-3.5 w-3.5" aria-hidden /> Deploy
-            </Button>
+            {/* Starts a PAPER session -- a strategy running forward on live
+                bars with simulated fills. Real order routing still does not
+                exist (src/broker/rithmic_broker.py is a stub), and the button
+                says paper everywhere rather than implying otherwise. */}
+            <DeployButton />
         </div>
         {/* key={page} remounts this on every switch, which replays the
             entrance. The class goes HERE rather than on a wrapper inside:

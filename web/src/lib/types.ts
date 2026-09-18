@@ -511,3 +511,45 @@ export interface OptimizeResponse {
 }
 
 
+
+
+// ── paper trading ──────────────────────────────────────────────────────────
+
+export interface LiveStartRequest {
+  strategy_id: string
+  symbol: string
+  params: Record<string, number | string | boolean>
+  contracts: number
+  initial_capital?: number
+  commission?: number
+}
+
+export interface LiveEvent {
+  at: string
+  kind: "signal" | "order" | "fill" | "rejected" | "info" | string
+  text: string
+}
+
+export interface LiveStatus {
+  running: boolean
+  /** "paper" today. The dashboard keys its banner off this rather than
+   *  assuming -- if a live mode ever exists, the label must come from the
+   *  server that knows, not from the page that hopes. */
+  mode: string
+  strategy: string
+  symbol: string
+  contracts: number
+  started_at: string | null
+  stopped_at: string | null
+  bars_seen: number
+  position: number
+  cash: number
+  fills: number
+  orders_sent: number
+  orders_remaining: number
+  halted: boolean
+  halt_reason: string | null
+  duplicates_ignored: number
+  last_bar_at: string | null
+  events: LiveEvent[]
+}

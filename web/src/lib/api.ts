@@ -9,6 +9,7 @@ import type {
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
   OptimizeRequest, OptimizeResponse, ElliottWaveResponse, QuotesResponse,
+  LiveStatus, LiveStartRequest, OHLCVRecord,
 } from "./types"
 import type { ChartExportSettings } from "./chartExportSettings"
 
@@ -228,6 +229,18 @@ export const api = {
   // "it broke" into a report somebody can act on.
   version: () => request<{ version: string; api: string; commit: string }>("/version"),
   strategies: () => request<StrategyMeta[]>("/strategies"),
+
+  // ── paper trading ───────────────────────────────────────────────────────
+  liveStatus: () => request<LiveStatus>("/live/status"),
+  liveStart: (body: LiveStartRequest) =>
+    request<LiveStatus>("/live/start", { method: "POST", body: JSON.stringify(body) }),
+  liveStop: () => request<LiveStatus>("/live/stop", { method: "POST" }),
+  liveHeartbeat: () => request<LiveStatus>("/live/heartbeat", { method: "POST" }),
+  liveBar: (b: OHLCVRecord) =>
+    request<LiveStatus>("/live/bar", {
+      method: "POST",
+      body: JSON.stringify({ t: b.t, o: b.o, h: b.h, l: b.l, c: b.c, v: b.v ?? 0 }),
+    }),
   dataSources: () => request<DataSourceMeta[]>("/data-sources"),
   contracts: () => request<Record<string, unknown>>("/contracts"),
   // Symbols the given data source can actually serve. For external_csv this

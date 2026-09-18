@@ -328,4 +328,10 @@ class TestExistingApiUnchanged:
         # `connected: false` rather than failing, because a watchlist that
         # cannot reach its source is a normal state and a 500 would take the
         # whole results page down with it. See tests/test_quotes.py.
-        assert len(paths) == 47, sorted(paths)
+        # 47 -> 52 (2026-09-18): the five paper-trading routes --
+        # /api/live/start, /stop, /status, /bar and /heartbeat. Raised
+        # deliberately; that is what this assertion is for. All five are
+        # registered behind PROTECTED, tests/test_live_sessions.py asserts
+        # each one refuses an anonymous caller, and the broker they trade
+        # through is a PaperBroker chosen in api/routers/live.py.
+        assert len(paths) == 52, sorted(paths)

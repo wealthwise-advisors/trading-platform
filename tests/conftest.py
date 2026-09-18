@@ -96,7 +96,13 @@ _SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
                     # Asserts both phone routes refuse an anonymous
                     # caller with 401 rather than 422, and that a number
                     # proved by one account cannot be claimed by another.
-                    "test_phone_verification"}
+                    "test_phone_verification",
+                    # Paper-trading sessions. Asserts every /api/live route
+                    # refuses an anonymous caller, and that one account's
+                    # session is invisible to another -- under the override
+                    # both clients resolve to the same TEST_USER and the
+                    # isolation assertion would pass while proving nothing.
+                    "test_live_sessions"}
 
 
 @pytest.fixture(autouse=True)

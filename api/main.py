@@ -30,7 +30,7 @@ from api import auth as auth_mod
 from api import captcha, verification
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, account, quotes,
+                         schwab, optimize, data_export, account, quotes, live,
                          oauth as oauth_router)
 
 try:
@@ -201,3 +201,6 @@ app.include_router(account.router, prefix="/api", dependencies=[PROTECTED])
 # Protected like every other data route: a quote is market data the account
 # is entitled to through ITS Schwab link, not a public feed.
 app.include_router(quotes.router, prefix="/api", dependencies=[PROTECTED])
+# Paper trading sessions. Guarded like every other trading route; the broker
+# it uses is chosen in api/routers/live.py and is a PaperBroker.
+app.include_router(live.router, prefix="/api", dependencies=[PROTECTED])
