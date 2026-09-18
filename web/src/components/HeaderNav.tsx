@@ -95,7 +95,7 @@ export function HeaderNav() {
     ?? NAV.find((n) => n.page === page)
 
   return (
-    <nav className="flex items-center gap-1" aria-label="Sections">
+    <nav className="flex items-center gap-0.5 min-w-0 overflow-x-auto tabs-scroll" aria-label="Sections">
       {NAV.map((n) => (
         <button
           key={navKey(n)}
@@ -169,7 +169,7 @@ export function SymbolSearch() {
         }}
         placeholder="Search symbol (e.g., ES, NQ)…"
         aria-label="Search for an instrument"
-        className="w-56 xl:w-72 rounded-lg border border-[color:var(--hairline-mid)] bg-[color:var(--raise-2)] py-1.5 pl-8 pr-3
+        className="w-40 xl:w-52 rounded-lg border border-[color:var(--hairline-mid)] bg-[color:var(--raise-2)] py-1.5 pl-8 pr-3
                    text-xs text-foreground placeholder:text-muted-foreground/75 outline-none
                    focus:border-[color:var(--hairline-focus)]"
       />

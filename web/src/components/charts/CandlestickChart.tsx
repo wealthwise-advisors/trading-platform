@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Plot from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
-import { IndicatorReadout } from "@/components/charts/ChartHeader"
+import { ChartHeader, IndicatorReadout } from "@/components/charts/ChartHeader"
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
@@ -61,9 +61,18 @@ interface CandlestickChartProps {
    *  computed in-component from `bars` so its settings can redraw without a
    *  refetch — see lib/volumeProfile.ts. */
   showVolumeProfile?: boolean
+  /** The instrument's full name and venue, for the header line. Optional and
+   *  omitted rather than guessed when the catalogue has not got them. */
+  description?: string | null
+  exchange?: string | null
+  /** Bar interval, as the header prints it. */
+  interval: string
 }
 
 
+/** Width reserved for the price-axis tick labels, in pixels.
+ *  Five digits and a separator at 11px; 52 clears "7,713.31" with room. */
+const AXIS_W = 52
 // Default view opens on the last ~2 hours rather than the whole session, or on
 // the last 40 bars once a bar is two hours wide -- see lib/chartWindow.ts. It is
 // worked out once per render (`defaultWindow`) because swing-header collision
@@ -109,12 +118,17 @@ function MenuToggle({
 }
 
 export function CandlestickChart({
-  // symbol and strategyName are still part of the props -- every caller passes
-  // them and the export path reads the same shape -- but nothing in here draws
-  // them any more: the instrument is named by ChartHeader above the plot, and
-  // the strategy and run date by the status bar.
-  bars, indicators, zigzag, trades, showZigzag = true,
+  // strategyName is still part of the props -- every caller passes it and the
+  // export path reads the same shape -- but nothing in here draws it: the
+  // strategy and run date are named by the status bar.
+  //
+  // symbol, description, exchange and interval ARE drawn now: this component
+  // renders ChartHeader itself, so that the instrument line and the chart's
+  // own controls can share one row rather than being two siblings in a page
+  // that cannot put them on the same line.
+  symbol, bars, indicators, zigzag, trades, showZigzag = true,
   showStochRsi = true, showVwap = true, showVolumeProfile = true,
+  description, exchange, interval,
 }: CandlestickChartProps) {
   // Subscribing (rather than only calling chartTheme()) is what makes the
   // header toggle repaint an open chart: without it the plot keeps the
@@ -1306,10 +1320,33 @@ export function CandlestickChart({
     // didn't work as well as just using what the static HTML report
     // already does successfully.
     showlegend: true,
+    // ── THE LEGEND, AND WHY IT STOPPED SITTING ON THE PRICE LADDER ────────
+    //
+    // It was positioned in PAPER coordinates (x: 1.055), which are a fraction
+    // of the PLOT's width -- so the gap it left for the price labels grew and
+    // shrank with the window. Measured at 1494x832 the y-axis ticks ended at
+    // x=1029 and the legend box started at x=1031: two pixels, at that one
+    // size, by luck rather than by construction.
+    //
+    // xref "container" measures from the edge of the FIGURE instead, so the
+    // legend always occupies the same strip whatever the width, and the right
+    // margin below reserves exactly that strip plus the labels' own. The two
+    // numbers are declared together at LEGEND_W / AXIS_W so they cannot drift
+    // apart.
+    //
+    // The box is also slimmer: 10px type instead of the 12px default, a
+    // constant marker size so a thick trace cannot widen the column, and a
+    // transparent ground now that it no longer overlaps anything it needs to
+    // be legible against.
     legend: {
-      bgcolor: HOVER, borderwidth: 0,
-      ...(vpLeftAxis ? {} : { x: 1.055, xanchor: "left" as const }),
-    },
+      bgcolor: "rgba(0,0,0,0)", borderwidth: 0,
+      xref: "container", x: 1, xanchor: "right",
+      yref: "paper", y: 1, yanchor: "top",
+      font: { size: 10, color: INK },
+      itemsizing: "constant",
+      itemwidth: 30,
+      tracegroupgap: 3,
+    } as unknown as Partial<Plotly.Legend>,
     // t trimmed from 95 -> 88 -- less unnecessary top padding above the
     // range-selector/title strip, closer to the top edge of the chart. b
     // trimmed 32 -> 24 too -- the bottom axis now shows time-only labels
@@ -1328,9 +1365,15 @@ export function CandlestickChart({
     // SIDES FOLLOW THE AXIS. The price scale sits on the right by default now,
     // and its labels need the 50px there instead of on the left -- at r: 20
     // they were clipped to "45" and drawn on top of the volume profile.
+    // The margin reserves the AXIS LABELS only. Plotly already shrinks the
+    // plotting area to make room for a legend anchored outside it, so adding
+    // LEGEND_W here as well reserved the strip twice: measured at 1494px that
+    // left a 137px band of empty chart between the price ladder and the
+    // legend. LEGEND_W is still what sizes the legend's own type and marker
+    // column above; it is not a margin.
     margin: {
-      l: vpLeftAxis ? 66 : 14,
-      r: vpLeftAxis ? 14 : 66,
+      l: vpLeftAxis ? AXIS_W : 14,
+      r: vpLeftAxis ? 14 : AXIS_W,
       t: marginTop,
       b: 22,
     },
@@ -1342,6 +1385,86 @@ export function CandlestickChart({
     shapes: shapes as Layout["shapes"],
     annotations: annotations as Layout["annotations"],
   }
+
+  // The chart's own controls, handed to ChartHeader so they land on the
+  // instrument line instead of on a row of their own. Same buttons, same
+  // state, same handlers -- only the parent that draws them changed.
+  const chartActions = (
+    <>
+            {/* "Indicators": every study in one menu. The checkboxes to the left
+                stay exactly as they are -- this is a second way to reach the same
+                state, for a narrow window where the row wraps, not a replacement. */}
+            <span className="relative">
+              <button type="button"
+                      aria-haspopup="menu" aria-expanded={indicatorMenu}
+                      onClick={() => { setIndicatorMenu((v) => !v); setSaveMenu(false) }}
+                      className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
+                                 bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
+                Indicators <ChevronDown className="h-3 w-3" aria-hidden />
+              </button>
+              {indicatorMenu && (
+                <div role="menu"
+                     className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
+                                bg-[var(--surface-1)] py-1 shadow-xl">
+                  <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
+                  <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
+                  <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
+                  {OSC_ORDER.map((key) => (
+                    <MenuToggle key={key}
+                                label={OSC_STUDIES[key].label}
+                                checked={osc[key]}
+                                disabled={!OSC_STUDIES[key].available}
+                                hint={OSC_STUDIES[key].available ? undefined : OSC_STUDIES[key].pending}
+                                onChange={(v) => setOsc((o) => ({ ...o, [key]: v }))} />
+                  ))}
+                </div>
+              )}
+            </span>
+
+            {/* "Save": the two things there are to save here. Both already
+                existed -- the defaults writer and Plotly's own PNG export -- and
+                neither had a home outside the Volume Profile dialog. */}
+            <span className="relative">
+              <button type="button"
+                      aria-haspopup="menu" aria-expanded={saveMenu}
+                      onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false) }}
+                      className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
+                                 bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
+                <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
+              </button>
+              {saveMenu && (
+                <div role="menu"
+                     className="absolute right-0 top-7 z-30 w-56 rounded-lg border border-[color:var(--hairline-mid)]
+                                bg-[var(--surface-1)] py-1 shadow-xl">
+                  <button type="button" role="menuitem"
+                          onClick={() => { setSaveMenu(false); saveVpDefaults() }}
+                          className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
+                    Save chart settings as default
+                  </button>
+                  <button type="button" role="menuitem"
+                          onClick={() => { setSaveMenu(false); downloadPng() }}
+                          className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
+                    Download chart as PNG
+                  </button>
+                </div>
+              )}
+            </span>
+
+            {/* Fullscreen. The Fullscreen API on this container, so the chart
+                fills the screen with its own toolbar and oscillator rows rather
+                than being screenshotted. */}
+            <button type="button"
+                    onClick={toggleFullscreen}
+                    aria-pressed={isFullscreen}
+                    title={isFullscreen ? "Exit full screen" : "Full screen"}
+                    className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
+                               hover:bg-[color:var(--raise-4)]">
+              {isFullscreen ? <Minimize className="h-3.5 w-3.5" aria-hidden />
+                            : <Maximize className="h-3.5 w-3.5" aria-hidden />}
+              <span className="sr-only">{isFullscreen ? "Exit full screen" : "Full screen"}</span>
+            </button>
+    </>
+  )
 
   return (
     // Real height comes from ResultsPage's flex-1 min-h-0 chain (hero row ->
@@ -1356,6 +1479,12 @@ export function CandlestickChart({
     <div ref={containerRef}
          style={{ width: "100%", height: "100%", minHeight: chartMinHeight,
                   display: "flex", flexDirection: "column" }}>
+      {/* The instrument line, the OHLC quote, and the chart controls -- one
+          row, rendered here rather than by the page so that the controls can
+          sit on it. */}
+      <ChartHeader symbol={symbol} description={description} exchange={exchange}
+                   interval={interval} bars={bars} actions={chartActions} />
+
       {/* VWAP controls. The gear sits beside the toggle so the settings are
           discoverable from the thing they configure, rather than buried in a
           global preferences screen. */}
@@ -1436,84 +1565,6 @@ export function CandlestickChart({
             </span>
           )
         })}
-
-        {/* RIGHT-ALIGNED GROUP: the three controls the reference has at the end
-            of this row. ml-auto rather than a second row, so they sit on the
-            same line as the studies they act on. */}
-        <span className="ml-auto flex items-center gap-1.5">
-          {/* "Indicators": every study in one menu. The checkboxes to the left
-              stay exactly as they are -- this is a second way to reach the same
-              state, for a narrow window where the row wraps, not a replacement. */}
-          <span className="relative">
-            <button type="button"
-                    aria-haspopup="menu" aria-expanded={indicatorMenu}
-                    onClick={() => { setIndicatorMenu((v) => !v); setSaveMenu(false) }}
-                    className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
-                               bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
-              Indicators <ChevronDown className="h-3 w-3" aria-hidden />
-            </button>
-            {indicatorMenu && (
-              <div role="menu"
-                   className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
-                              bg-[var(--surface-1)] py-1 shadow-xl">
-                <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
-                <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
-                <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
-                {OSC_ORDER.map((key) => (
-                  <MenuToggle key={key}
-                              label={OSC_STUDIES[key].label}
-                              checked={osc[key]}
-                              disabled={!OSC_STUDIES[key].available}
-                              hint={OSC_STUDIES[key].available ? undefined : OSC_STUDIES[key].pending}
-                              onChange={(v) => setOsc((o) => ({ ...o, [key]: v }))} />
-                ))}
-              </div>
-            )}
-          </span>
-
-          {/* "Save": the two things there are to save here. Both already
-              existed -- the defaults writer and Plotly's own PNG export -- and
-              neither had a home outside the Volume Profile dialog. */}
-          <span className="relative">
-            <button type="button"
-                    aria-haspopup="menu" aria-expanded={saveMenu}
-                    onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false) }}
-                    className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
-                               bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
-              <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
-            </button>
-            {saveMenu && (
-              <div role="menu"
-                   className="absolute right-0 top-7 z-30 w-56 rounded-lg border border-[color:var(--hairline-mid)]
-                              bg-[var(--surface-1)] py-1 shadow-xl">
-                <button type="button" role="menuitem"
-                        onClick={() => { setSaveMenu(false); saveVpDefaults() }}
-                        className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
-                  Save chart settings as default
-                </button>
-                <button type="button" role="menuitem"
-                        onClick={() => { setSaveMenu(false); downloadPng() }}
-                        className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
-                  Download chart as PNG
-                </button>
-              </div>
-            )}
-          </span>
-
-          {/* Fullscreen. The Fullscreen API on this container, so the chart
-              fills the screen with its own toolbar and oscillator rows rather
-              than being screenshotted. */}
-          <button type="button"
-                  onClick={toggleFullscreen}
-                  aria-pressed={isFullscreen}
-                  title={isFullscreen ? "Exit full screen" : "Full screen"}
-                  className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
-                             hover:bg-[color:var(--raise-4)]">
-            {isFullscreen ? <Minimize className="h-3.5 w-3.5" aria-hidden />
-                          : <Maximize className="h-3.5 w-3.5" aria-hidden />}
-            <span className="sr-only">{isFullscreen ? "Exit full screen" : "Full screen"}</span>
-          </button>
-        </span>
 
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]

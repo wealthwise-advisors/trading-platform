@@ -407,7 +407,15 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
       <Section icon="dates" label="Date Range" accent="teal">
         <Panel>
-          <div className="grid grid-cols-2 gap-2">
+          {/* ONE PER ROW once the rail is narrow.
+              The rail is 290px wide from lg up, which leaves about 129px a
+              column in a two-column grid -- narrower than either control's
+              own content, so the date read "17 S..." and the time field drew
+              its AM/PM segment on top of the minutes. Below lg the rail is
+              full width and two columns fit comfortably, so the split is kept
+              there. Nothing is hidden at either size; the same controls just
+              stop being asked to fit in half a rail. */}
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Start Date</Label>
               <DateField label="Start date" value={cfg.startDate} tone="teal" popoverClassName="cfg-scope"
@@ -503,7 +511,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           </div>
           {/* --primary here is Session Hours' restrained orange: the AM / PM
               toggle and the hover border inside TimeField draw in primary. */}
-          <div className={`grid grid-cols-2 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}
+          <div className={`grid grid-cols-2 lg:grid-cols-1 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}
                style={{ "--primary": "#e9a26b" } as React.CSSProperties}>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>

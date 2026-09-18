@@ -71,7 +71,7 @@ function App({ user }: { user: Me }) {
           full-width sibling of the pair rather than a child of one of them. */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
       {page === "backtest" && configOpen && (
-        <aside className="w-full lg:w-[335px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
+        <aside className="relative w-full lg:w-[290px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
                style={{ background: "var(--sidebar-ground-from)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
@@ -81,18 +81,33 @@ function App({ user }: { user: Me }) {
             down by one strip rather than covering any of it. It renders
             nothing at all while the connection is fine. */}
         <div className="shrink-0"><OfflineBanner /></div>
-        {/* TWO EXPLICIT ROWS, as the reference has them: identity, sections,
-            search and account on the first; the export and deploy actions
-            right-aligned on the second, above the KPI row. This was one
-            wrapping row, which put the search box and the export buttons on
-            the same line and pushed the sections to their own. */}
-        <header className="px-3 pt-2 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* THE HEADER, IN THREE GROUPS THAT WRAP AS UNITS.
+            Identity, then the sections, then everything you can press --
+            search, theme, account settings, the two exports, Deploy and the
+            avatar.
+
+            It was THREE rows: brand and nav, then the search cluster wrapped
+            beneath it, then a third row holding nothing but Export Data,
+            Export Report and Deploy. The actions have joined the search
+            cluster, so that third row is gone and its height belongs to the
+            chart now.
+
+            Each group is shrink-0, which is what makes the remaining wrap
+            honest. Measured at 1494px the three groups want 1551px against
+            1222px of header: with the nav allowed to shrink it was squeezed
+            to 224px and quietly scrolled five of the seven sections out of
+            sight, and the pills that remained drew over the search box. Held
+            at their natural widths, the action group wraps to a second line
+            and right-aligns instead -- every section visible, nothing
+            overlapping, and one row rather than two as soon as the window is
+            wide enough to hold them. */}
+        <header className="px-3 pt-2 pb-1 flex flex-wrap items-center gap-x-2 gap-y-1 shrink-0">
           {/* The brand artwork rather than the name in text. The monogram and the
               wordmark are separate crops of the same poster: dropping the whole
               1536x1024 image into a 56px header would render the lettering about
               four pixels tall. The h1 is kept for the document outline, with the
               wordmark carrying its alt text. */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 shrink-0">
             <img
               src={brandMark}
               alt=""
@@ -116,15 +131,21 @@ function App({ user }: { user: Me }) {
             </div>
           </div>
 
-          {/* The sections, in the middle, where a trading terminal puts them. */}
-          <div className="order-last w-full xl:order-none xl:w-auto xl:flex-1 xl:justify-center flex">
+          {/* The sections, immediately after the brand.
+              NOT centred any more. xl:justify-center pushed the nav into the
+              middle of whatever width was left, which at 1494px put 378px of
+              nothing between the wordmark and "Chart" -- the gap reads as a
+              missing element rather than as breathing room. justify-start
+              parks the nav against the brand and lets the leftover space
+              collect on the right, where the actions use it. */}
+          <div className="order-last w-full xl:order-none xl:w-auto xl:mr-auto xl:shrink-0 flex min-w-0">
             <HeaderNav />
           </div>
           {/* Row one, right: find an instrument, reach the account. Sign out
               and Account live in the avatar menu, where the reference puts
               them; nothing was removed and the sign-out still revokes the
               session server-side rather than only clearing the cookie. */}
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
             <SymbolSearch />
             {/* The icon shows what clicking it GIVES you, not what you are in:
                 a moon offers the dark theme. The accessible name says the same
@@ -151,12 +172,15 @@ function App({ user }: { user: Me }) {
               <Settings className="h-4 w-4" aria-hidden />
               <span className="sr-only">Account settings</span>
             </Button>
-            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
-          </div>
-        </header>
 
-        {/* Row two: the actions, right-aligned above the KPI row. */}
-        <div className="px-3 pt-0.5 pb-0 flex items-center justify-end gap-2 flex-wrap shrink-0">
+            {/* THE ACTIONS, ON THIS ROW.
+                They used to have a row of their own directly beneath. That row
+                held three buttons and 28px of height across the full width,
+                and it sat between the header and the KPI cards -- so every
+                pixel it cost came out of the chart, which is the one thing on
+                this page that can actually use them. Same buttons, same
+                handlers, one row up. */}
+            <span className="mx-0.5 hidden xl:inline h-5 w-px shrink-0 bg-[color:var(--hairline-firm)]" aria-hidden />
             {/* The way back, so collapsing the panel is never a one-way door. */}
             {page === "backtest" && !configOpen && (
               <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
@@ -174,7 +198,9 @@ function App({ user }: { user: Me }) {
                 exist (src/broker/rithmic_broker.py is a stub), and the button
                 says paper everywhere rather than implying otherwise. */}
             <DeployButton />
-        </div>
+            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
+          </div>
+        </header>
         {/* key={page} remounts this on every switch, which replays the
             entrance. The class goes HERE rather than on a wrapper inside:
             ResultsPage's root is h-full, so it needs a parent with a real
@@ -186,7 +212,7 @@ function App({ user }: { user: Me }) {
             the document, and the next Tab goes straight back into the sidebar
             the link existed to skip. */}
         <div id="main-content" tabIndex={-1} key={page}
-             className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto page-swap">
+             className="relative lg:flex-1 lg:min-h-0 lg:overflow-y-auto page-swap">
           {page === "backtest" && <ResultsPage />}
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}

@@ -395,13 +395,18 @@
 /* ── header navigation pills ───────────────────────────────────────────────
    Quiet until chosen. The selected one is the only lit thing in the bar, so
    "where am I" is answerable without reading any label. */
+/* Sized so that seven sections, the brand, the search box and five actions
+   all fit on ONE header row at 1494px -- the width this was measured at. At
+   6px/10px and 12.5px type the nav alone wanted 687px and simply drew over
+   the search field to its right; there was no wrapping to notice, just
+   overlapping text. */
 .nav-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 5px 7px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -455,15 +460,15 @@
   align-items: stretch;
   grid-auto-rows: 1fr;
 }
-@media (width >= 640px)  { .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (width >= 1440px) { .kpi-row { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-@media (width >= 1697px) { .kpi-row { gap: 0.75rem; grid-auto-rows: 72px; } }
-
-.avg-pair { width: 100%; }
-@media (width >= 1280px) { .avg-pair { width: 264px; } }
-@media (width >= 1697px) { .avg-pair { width: 338px; } }
-
-@media (width >= 1697px) { .top-row { column-gap: 55px; } }
+@media (width >= 640px)  { .kpi-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* EIGHT ACROSS from 1280 up, which is the width at which the config rail and
+   the chart are side by side anyway. Eight cells of a single grid, so Avg Win
+   and Avg Loss are the same width and height as the other six rather than a
+   second container that has to be kept in agreement with the first. At 1494
+   -- a 290px rail and 24px of page padding -- that is 140px a card, and the
+   longest label ("Max Drawdown", 12px) needs 88. */
+@media (width >= 1280px) { .kpi-row { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+@media (width >= 1697px) { .kpi-row { gap: 0.625rem; } }
 
 /* The rail scrolls on a short window, and says so.
  *
@@ -512,9 +517,9 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  min-height: 72px;
-  padding: 8px 10px;
+  gap: 2px;
+  min-height: 62px;
+  padding: 7px 10px;
   border-radius: var(--radius-card);
   border: 1px solid var(--hairline);
   background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
@@ -590,16 +595,6 @@
   line-height: 1.15;
   color: color-mix(in srgb, var(--muted-foreground) 80%, transparent);
 }
-
-/* The Avg Win / Avg Loss pair above the rail. Shorter than a KPI card and
-   sitting slightly below the KPI row's top edge, as the reference has them. */
-.stat-card.stat-card-dense {
-  min-height: 61px;
-  gap: 3px;
-  padding: 8px 11px;
-}
-.stat-card.stat-card-dense .stat-label { font-size: 0.7rem; }
-.stat-card.stat-card-dense .stat-value { font-size: 1.12rem; }
 
 /* ── Info cards (Performance Summary / Backtest Details / Quick Insights /
    AI Insight) — port of ui/components/insights.py's _CARD_CSS ── */

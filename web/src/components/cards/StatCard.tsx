@@ -33,8 +33,6 @@ interface StatCardProps {
   icon?: ReactNode
   valueColor?: string
   sub?: string
-  /** The shorter card the Avg Win / Avg Loss pair uses. */
-  dense?: boolean
   /** Hover text, for a number whose full story does not fit in the card. */
   title?: string
 }
@@ -47,14 +45,16 @@ interface StatCardProps {
  * It rendered above the label on the left instead, which is what made the card
  * 100px tall and unlike the reference.
  *
- * `dense` is the Avg Win / Avg Loss pair above the market rail: the same card,
- * shorter, as the reference draws it.
+ * Every KPI on the page uses this one card, at one size. There was a `dense`
+ * variant for the Avg Win / Avg Loss pair; that pair is now two ordinary cells
+ * of the same grid as the rest, so a second size would only be a way for the
+ * row to disagree with itself.
  */
 export function StatCard({
-  label, value, accent, icon, valueColor = NEUTRAL, sub, dense = false, title,
+  label, value, accent, icon, valueColor = NEUTRAL, sub, title,
 }: StatCardProps) {
   return (
-    <div className={`stat-card${dense ? " stat-card-dense" : ""}`}
+    <div className="stat-card"
          style={{ ["--stat-accent" as string]: accent }}
          title={title}>
       <div className="stat-head">

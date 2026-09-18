@@ -13,7 +13,6 @@ import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MoreAnalyses } from "@/features/backtest/MoreAnalyses"
-import { ChartHeader } from "@/components/charts/ChartHeader"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
 import {
@@ -221,14 +220,18 @@ export function ResultsPage() {
     // and only there. The same reasoning is why flex-1/min-h-0/overflow-y-auto
     // are xl:-prefixed all the way down this file.
     <div className="xl:h-full flex flex-col gap-2 px-3 pt-0.5 pb-3 xl:pb-2 w-full max-w-none">
-      {/* THE TOP ROW: six metrics, then the Avg pair.
-           The pair is 338px and starts 25px below the row's top edge, which is
-           where the reference puts it -- wider than the 285px market rail
-           beneath it, and deliberately so. It sits here rather than inside the
-           rail because in the reference it overhangs the chart column, which a
-           child of the rail cannot do. */}
-      <div className="shrink-0 flex flex-col xl:flex-row gap-2 top-row items-stretch">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 kpi-row gap-2 flex-1 min-w-0 items-stretch auto-rows-fr">
+      {/* THE TOP ROW: eight metrics, ONE grid.
+           It used to be two containers -- six cards in a grid, then Avg Win
+           and Avg Loss in a separate 338px box nudged 25px down and rendered
+           `dense`. Three differences at once (own width, own vertical offset,
+           own type scale) is why that pair read as detached and oversized
+           rather than as the last two cards of a row. They are cells of the
+           same grid now, so they are the same width, height, padding and type
+           as the other six by construction -- not by two sets of numbers being
+           kept in agreement. Nothing was renamed and no value is computed
+           differently; only the box each one sits in changed. */}
+      <div className="shrink-0 min-w-0">
+      <div className="grid kpi-row gap-2 min-w-0 items-stretch">
         <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
                   valueColor={retColor} />
@@ -244,8 +247,7 @@ export function ResultsPage() {
                   value={pf.text} valueColor={pf.color} sub={pf.sub} />
         <StatCard label="Total Trades" icon={<Hash className="h-4 w-4" />} accent={ACCENTS[2]}
                   value={s.total_trades.toLocaleString()} />
-      </div>
-      {/* IN POINTS, as the reference shows them -- and derived, not
+        {/* IN POINTS, as the reference shows them -- and derived, not
             relabelled. avg_win_points is the mean price move across the
             winning trades, computed on the server from each trade's entry and
             exit (api/serializers.py::_avg_points). It is null when there were
@@ -255,21 +257,19 @@ export function ResultsPage() {
             Statistics directly below, and it is what the exported report
             carries.
 
-            No sub-line here: the reference's pair is two lines, and "no
-            losing trades" already appears under Profit Factor and in the
-            panel beneath. `dense` is the shorter card that pairing needs. */}
-              <div className="grid grid-cols-2 gap-2 shrink-0 avg-pair xl:self-start xl:pt-[25px]">
-          <StatCard label="Avg Win" dense icon={<ArrowUpRight className="h-4 w-4" />}
-                    accent={ACCENTS[3]}
-                    value={points(s.avg_win_points)}
-                    valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
-                    title={`${money(s.avg_win)} average on ${s.winning_trades} winning trade(s)`} />
-          <StatCard label="Avg Loss" dense icon={<ArrowDownRight className="h-4 w-4" />}
-                    accent={ACCENTS[0]}
-                    value={points(s.avg_loss_points)}
-                    valueColor={s.losing_trades > 0 ? CRITICAL : NEUTRAL}
-                    title={`${money(s.avg_loss)} average on ${s.losing_trades} losing trade(s)`} />
-        </div>
+            No sub-line here: "no losing trades" already appears under Profit
+            Factor and in the panel beneath. */}
+        <StatCard label="Avg Win" icon={<ArrowUpRight className="h-4 w-4" />}
+                  accent={ACCENTS[3]}
+                  value={points(s.avg_win_points)}
+                  valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
+                  title={`${money(s.avg_win)} average on ${s.winning_trades} winning trade(s)`} />
+        <StatCard label="Avg Loss" icon={<ArrowDownRight className="h-4 w-4" />}
+                  accent={ACCENTS[0]}
+                  value={points(s.avg_loss_points)}
+                  valueColor={s.losing_trades > 0 ? CRITICAL : NEUTRAL}
+                  title={`${money(s.avg_loss)} average on ${s.losing_trades} losing trade(s)`} />
+      </div>
       </div>
       {/* The two columns, BELOW the top row: chart workspace and market rail. */}
       <div className="xl:min-h-0 xl:flex-1 flex flex-col xl:flex-row gap-3">
@@ -350,26 +350,24 @@ export function ResultsPage() {
              cross-size by default, so flex-1 on the chart column now
              actually reaches the bottom of the available viewport space. ── */}
         <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-2">
-          <div className="min-w-0 xl:flex-1 flex flex-col space-y-2 xl:overflow-y-auto">
+          <div className="relative min-w-0 xl:flex-1 flex flex-col space-y-2 xl:overflow-y-auto">
             {/* h-[60vh] below xl: with no flex-1 chain to inherit from, a chart
                  whose only height instruction is "fill the parent" fills nothing. */}
             <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
-                {priceDataQ.data && (
-                  <ChartHeader
-                    symbol={s.symbol}
-                    description={instrument?.name}
-                    exchange={instrument?.exchange}
-                    interval={s.timeframe}
-                    bars={priceDataQ.data.bars}
-                  />
-                )}
+                {/* The chart draws its own header now, so that the instrument
+                    line and the Indicators / Save / full-screen controls share
+                    one row. Rendering ChartHeader here as well would put the
+                    instrument on the page twice. */}
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
                     <Suspense fallback={<ChartLoading />}>
                       <CandlestickChart
                         symbol={s.symbol}
                         strategyName={s.strategy_name}
+                        description={instrument?.name}
+                        exchange={instrument?.exchange}
+                        interval={s.timeframe}
                         bars={priceDataQ.data.bars}
                         indicators={priceDataQ.data.indicators}
                         zigzag={zigzagQ.data}
@@ -443,7 +441,7 @@ export function ResultsPage() {
         </div>
       </Tabs>
     </div>
-      <aside className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
+      <aside className="relative shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
                         xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto"
              aria-label="Market and trade panels">
         <WatchlistPanel />

@@ -52,10 +52,22 @@ interface ChartHeaderProps {
   interval: string
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
+  /**
+   * The chart's own controls -- Indicators, Save, full screen -- rendered at
+   * the right end of the instrument line.
+   *
+   * They arrive as a node rather than being built here because they are
+   * driven by CandlestickChart's state (which studies are on, which menu is
+   * open, which element goes full screen). Lifting that state up to place
+   * three buttons would be a large change for a small one; passing the
+   * already-built node down puts them on this row without either component
+   * learning anything about the other.
+   */
+  actions?: React.ReactNode
 }
 
 export function ChartHeader({
-  symbol, description, exchange, interval, bars,
+  symbol, description, exchange, interval, bars, actions,
 }: Omit<ChartHeaderProps, "indicators">) {
   const last = bars.length ? bars[bars.length - 1] : null
   const prev = bars.length > 1 ? bars[bars.length - 2] : null
@@ -70,10 +82,15 @@ export function ChartHeader({
 
   return (
     <div className="shrink-0 px-1 pb-1">
-      {/* The instrument line. The description and the exchange are omitted
-          rather than guessed when the catalogue has not got them -- a symbol
-          with an invented venue beside it is worse than a symbol alone. */}
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px]">
+      {/* The instrument line, with the chart's controls at its right end.
+          ONE ROW: the controls used to sit on a line of their own below the
+          study checkboxes, which cost the plot a whole row of height and put
+          three buttons a long way from the chart they act on.
+          The description and the exchange are omitted rather than guessed when
+          the catalogue has not got them -- a symbol with an invented venue
+          beside it is worse than a symbol alone. */}
+      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px] min-w-0">
         <Crosshair className="h-3.5 w-3.5 shrink-0 self-center text-muted-foreground" aria-hidden />
         <span className="font-semibold tracking-tight text-foreground">{symbol}</span>
         {description && (
@@ -93,6 +110,10 @@ export function ChartHeader({
             <span className="text-muted-foreground/75">·</span>
             <span className="text-muted-foreground">{exchange}</span>
           </>
+        )}
+      </div>
+        {actions && (
+          <div className="shrink-0 flex items-center gap-1.5 text-xs">{actions}</div>
         )}
       </div>
 
