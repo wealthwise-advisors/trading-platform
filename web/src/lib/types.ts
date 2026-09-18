@@ -107,6 +107,9 @@ export interface BacktestSummary {
   profit_factor: number | null
   avg_win: number
   avg_loss: number
+  /** Mean price MOVE on that side, or null when there were no such trades. */
+  avg_win_points: number | null
+  avg_loss_points: number | null
   total_trades: number
   winning_trades: number
   losing_trades: number

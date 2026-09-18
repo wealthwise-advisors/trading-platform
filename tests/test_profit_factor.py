@@ -25,11 +25,25 @@ client = TestClient(app)
 
 
 class _Trade:
-    """The only fields compute_metrics reads off a trade."""
+    """A stand-in for a Trade, with the fields the paths under test read.
 
-    def __init__(self, pnl):
+    It began as just `pnl` and `duration_minutes`, which is all
+    compute_metrics looks at. The serializer now also derives the average
+    move in POINTS from each trade's entry and exit, so a stub without prices
+    stopped standing in for a real Trade -- which always has them -- and the
+    JSON tests failed on the fake rather than on the code.
+
+    Prices are placed so the move agrees with the pnl's sign: a 1-point move
+    per $50, the E-mini's point value.
+    """
+
+    def __init__(self, pnl, *, direction="LONG", entry_price=4500.0):
         self.pnl = pnl
         self.duration_minutes = 10
+        self.direction = direction
+        self.entry_price = entry_price
+        move = pnl / 50.0
+        self.exit_price = entry_price + (move if direction == "LONG" else -move)
 
 
 def _results(pnls) -> BacktestResults:

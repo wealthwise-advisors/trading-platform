@@ -26,10 +26,21 @@ function runLabel(iso: string | null): string | null {
   if (!iso) return null
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleString(undefined, {
+  // IN EASTERN TIME, AND SAID SO.
+  //
+  // The reference ends this with "ET", and it used to render in whatever zone
+  // the browser happens to be in. Appending "ET" to a local clock would be a
+  // label that lies -- and this app already means Eastern everywhere else it
+  // says a time: Session Hours is headed (ET), and the ET/CT/MT/PT pills all
+  // convert from it. So the timestamp is CONVERTED, not just relabelled.
+  //
+  // "ET" rather than timeZoneName: "short", which prints EST or EDT depending
+  // on the date and would have the strip change wording twice a year.
+  return d.toLocaleString("en-US", {
+    timeZone: "America/New_York",
     month: "short", day: "numeric", year: "numeric",
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
-  })
+  }).replace(",", "") + " ET"
 }
 
 export function StatusBar() {

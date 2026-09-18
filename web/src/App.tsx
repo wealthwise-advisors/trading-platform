@@ -8,26 +8,16 @@ import { useConfigStore } from "@/store/configStore"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
-import { api, type Me } from "@/lib/api"
+import { type Me } from "@/lib/api"
 import { AccountSettings } from "@/components/AccountSettings"
+import { ExportReportButton } from "@/components/ExportReportButton"
 import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { Upload, Download, Rocket, Settings, Sun, Moon } from "lucide-react"
+import { Upload, Rocket, Settings, Sun, Moon } from "lucide-react"
 import { useThemeStore } from "@/store/themeStore"
-
-const REPORT_FORMATS = [
-  { id: "html", label: "HTML" },
-  { id: "csv", label: "CSV" },
-  { id: "xlsx", label: "Excel" },
-  { id: "pdf", label: "PDF" },
-  { id: "docx", label: "Word" },
-]
 
 function App({ user }: { user: Me }) {
   const page = useConfigStore((s) => s.page)
@@ -37,7 +27,6 @@ function App({ user }: { user: Me }) {
   const [configOpen, setConfigOpen] = useState(true)
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
-  const [reportFormat, setReportFormat] = useState("html")
   // The account dialog is opened from the avatar menu now, so the page owns
   // whether it is showing rather than the dialog's own trigger button.
   const [accountOpen, setAccountOpen] = useState(false)
@@ -70,20 +59,23 @@ function App({ user }: { user: Me }) {
     // the first time, which is what finally lets the chart's flex-1 chain
     // resolve to "fill remaining viewport space" instead of an arbitrary
     // fixed pixel guess.
-    <div className="app-shell min-h-screen lg:h-screen text-foreground flex flex-col lg:flex-row lg:overflow-hidden">
+    <div className="app-shell min-h-screen lg:h-screen text-foreground flex flex-col lg:overflow-hidden">
       {/* First focusable thing on the page, and invisible until it is focused.
           Without it a keyboard or screen-reader user tabs through the entire
           config sidebar -- every input, slider and dropdown -- before reaching
           the results they came for, on every single page load. */}
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <AccountSettings user={user} open={accountOpen} onOpenChange={setAccountOpen} />
+      {/* The two COLUMNS. Their own row, so the status strip below can be a
+          full-width sibling of the pair rather than a child of one of them. */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
       {page === "backtest" && configOpen && (
-        <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] p-4 lg:overflow-y-auto lg:h-screen lg:sticky lg:top-0"
-               style={{ background: "linear-gradient(180deg, var(--sidebar-ground-from) 0%, var(--sidebar-ground-to) 100%)" }}>
+        <aside className="w-full lg:w-[335px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
+               style={{ background: "var(--sidebar-ground-from)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
-      <main className="flex-1 min-w-0 lg:h-screen flex flex-col lg:overflow-hidden">
+      <main className="flex-1 min-w-0 lg:h-full lg:min-h-0 flex flex-col lg:overflow-hidden">
         {/* Above the header and shrink-0, so losing the network pushes the app
             down by one strip rather than covering any of it. It renders
             nothing at all while the connection is fine. */}
@@ -93,7 +85,7 @@ function App({ user }: { user: Me }) {
             right-aligned on the second, above the KPI row. This was one
             wrapping row, which put the search box and the export buttons on
             the same line and pushed the sections to their own. */}
-        <header className="p-3 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <header className="px-3 pt-2 pb-0 flex flex-wrap items-center justify-between gap-3 shrink-0">
           {/* The brand artwork rather than the name in text. The monogram and the
               wordmark are separate crops of the same poster: dropping the whole
               1536x1024 image into a 56px header would render the lettering about
@@ -141,9 +133,14 @@ function App({ user }: { user: Me }) {
                     onClick={toggleTheme}
                     aria-pressed={theme === "light"}
                     title={theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}>
+              {/* The icon shows the theme you are IN, which is what the
+                  reference draws: a moon while the app is dark. The
+                  accessible name and the tooltip below still describe the
+                  ACTION, so nothing about the behaviour or the announcement
+                  depends on reading the picture. */}
               {theme === "dark"
-                ? <Sun className="h-4 w-4" aria-hidden />
-                : <Moon className="h-4 w-4" aria-hidden />}
+                ? <Moon className="h-4 w-4" aria-hidden />
+                : <Sun className="h-4 w-4" aria-hidden />}
               <span className="sr-only">
                 {theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
               </span>
@@ -158,7 +155,7 @@ function App({ user }: { user: Me }) {
         </header>
 
         {/* Row two: the actions, right-aligned above the KPI row. */}
-        <div className="px-3 pt-2 flex items-center justify-end gap-2 flex-wrap shrink-0">
+        <div className="px-3 pt-0.5 pb-0 flex items-center justify-end gap-2 flex-wrap shrink-0">
             {/* The way back, so collapsing the panel is never a one-way door. */}
             {page === "backtest" && !configOpen && (
               <Button size="sm" variant="secondary" onClick={() => setConfigOpen(true)}
@@ -170,21 +167,7 @@ function App({ user }: { user: Me }) {
                     onClick={() => setPage("export")} title="Export raw OHLC bars">
               <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
-            {backtestId && (
-              <div className="flex items-center gap-1">
-                <Select value={reportFormat} onValueChange={setReportFormat}>
-                  {/* Sits beside "Export Report" with nothing but "HTML" in it,
-                      so unnamed it announced as the format and not as a choice. */}
-                  <SelectTrigger className="w-21 h-8 text-xs" aria-label="Report format"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {REPORT_FORMATS.map((f) => <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button asChild size="sm" variant="default">
-                  <a href={api.reportUrl(backtestId, reportFormat, chartSettings)} download><Download className="h-3.5 w-3.5" aria-hidden /> Export Report</a>
-                </Button>
-              </div>
-            )}
+            {backtestId && <ExportReportButton backtestId={backtestId} chartSettings={chartSettings} />}
             {/* Live trading isn't wired up yet (src/broker/rithmic_broker.py is
                 still a stub) -- disabled rather than pretending this does
                 something, styled to match the reference's premium look. */}
@@ -208,10 +191,15 @@ function App({ user }: { user: Me }) {
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}
         </div>
-        {/* Outside the scroll container: what was run and whether it finished
-            should not scroll away with the thing it describes. */}
-        <div className="shrink-0"><StatusBar /></div>
       </main>
+      </div>
+      {/* FULL WIDTH, and therefore a sibling of both columns rather than a
+          child of <main>. In the reference it runs the entire width of the
+          window, under the config panel as well -- what was run is a fact
+          about the whole application, not about the results column. Outside
+          every scroll container, so it never scrolls away from the thing it
+          describes. */}
+      <div className="shrink-0 w-full"><StatusBar /></div>
     </div>
   )
 }

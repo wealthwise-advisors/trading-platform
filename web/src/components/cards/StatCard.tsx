@@ -33,30 +33,34 @@ interface StatCardProps {
   icon?: ReactNode
   valueColor?: string
   sub?: string
+  /** The shorter card the Avg Win / Avg Loss pair uses. */
+  dense?: boolean
+  /** Hover text, for a number whose full story does not fit in the card. */
+  title?: string
 }
 
-// Sparkline mini-charts removed -- numbers only, per explicit request to
-// free up vertical space for the price chart. This card is now just
-// label + value (+ optional sub line), sized to its own compact content
-// instead of stretching to fill a tall row.
+/**
+ * One KPI number: its name, its accent icon, and the value.
+ *
+ * The head is a real flex ROW -- label left, icon right -- because the icon
+ * used to be `float-right` on a flex child, where a float does nothing at all.
+ * It rendered above the label on the left instead, which is what made the card
+ * 100px tall and unlike the reference.
+ *
+ * `dense` is the Avg Win / Avg Loss pair above the market rail: the same card,
+ * shorter, as the reference draws it.
+ */
 export function StatCard({
-  label, value, accent, icon, valueColor = NEUTRAL, sub,
+  label, value, accent, icon, valueColor = NEUTRAL, sub, dense = false, title,
 }: StatCardProps) {
   return (
-    <div className="stat-card" style={{ ["--stat-accent" as string]: accent }}>
-      {icon && (
-        // Dimmed to match the card's new restraint: at 45% ring opacity the
-        // chip was competing with the value for attention. It is a category
-        // marker, not a data point.
-        <span className="float-right -mt-0.5 -mr-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[0.65rem] opacity-70"
-              style={{
-                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                boxShadow: `0 0 0 1px color-mix(in srgb, ${accent} 24%, transparent)`,
-              }}>
-          {icon}
-        </span>
-      )}
-      <div className="stat-label">{label}</div>
+    <div className={`stat-card${dense ? " stat-card-dense" : ""}`}
+         style={{ ["--stat-accent" as string]: accent }}
+         title={title}>
+      <div className="stat-head">
+        <div className="stat-label">{label}</div>
+        {icon && <span className="stat-icon" aria-hidden>{icon}</span>}
+      </div>
       <div className="stat-value" style={{ color: valueColor }}>{value}</div>
       {sub && <div className="stat-sub">{sub}</div>}
     </div>

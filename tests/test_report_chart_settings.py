@@ -203,16 +203,24 @@ def test_plot_names_follow_the_switch(base_df):
 
 
 def test_bubbles_per_plot_and_on_the_price_axis_side(base_df):
+    """A bubble hangs off whichever edge the price scale is on.
+
+    The DEFAULT is the right-hand side, which is where the reference and every
+    trading terminal put the price scale, and where CandlestickChart's own
+    vpLeftAxis now starts. Both sides are asserted explicitly rather than one
+    by default and one by override, so a future flip of that default cannot
+    make this test quietly stop checking the case it names.
+    """
     fig = _fig(df=base_df)
     assert len(_bubbles(fig)) == 3
-    assert all((b.x, b.xanchor) == (0, "right") for b in _bubbles(fig))
-    assert fig.layout.yaxis.side == "left"
+    assert all((b.x, b.xanchor) == (1, "left") for b in _bubbles(fig))
+    assert fig.layout.yaxis.side == "right"
 
     assert len(_bubbles(_fig(_vp(plots={"poc": _plot(bubble=False)}), base_df))) == 2
 
-    right = _fig(_vp(leftAxis=False), base_df)
-    assert all((b.x, b.xanchor) == (1, "left") for b in _bubbles(right))
-    assert right.layout.yaxis.side == "right"
+    left = _fig(_vp(leftAxis=True), base_df)
+    assert all((b.x, b.xanchor) == (0, "right") for b in _bubbles(left))
+    assert left.layout.yaxis.side == "left"
 
 
 def test_a_bubble_prints_its_level_to_the_cent_as_the_chart_does(base_df):

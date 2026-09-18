@@ -39,7 +39,10 @@ interface ConfigState {
   setPage: (page: "backtest" | "replay" | "export") => void
   setResultsTab: (tab: string) => void
   /** Go to a page and, on the results page, a specific tab in one step. */
-  goTo: (page: "backtest" | "replay" | "export", tab?: string) => void
+  /** The header section last chosen, so the lit pill reflects intent.
+   *  Null means "nothing chosen yet, derive it from the page and tab". */
+  navSection: string | null
+  goTo: (page: "backtest" | "replay" | "export", tab?: string, section?: string) => void
   setLastRunAt: (iso: string | null) => void
   getSnapshot: () => ConfigSnapshot
   loadSnapshot: (snapshot: ConfigSnapshot) => void
@@ -131,7 +134,10 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setBacktestId: (id) => set({ backtestId: id }),
   setPage: (page) => set({ page }),
   setResultsTab: (resultsTab) => set({ resultsTab }),
-  goTo: (page, tab) => set(tab ? { page, resultsTab: tab } : { page }),
+  navSection: null,
+  goTo: (page, tab, section) =>
+    set(tab ? { page, resultsTab: tab, navSection: section ?? null }
+            : { page, navSection: section ?? null }),
   setLastRunAt: (iso) => set({ lastRunAt: iso }),
   getSnapshot: () => {
     const s = get()

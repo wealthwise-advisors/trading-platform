@@ -368,6 +368,43 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── date range ───────────────────────────────────────────────────── */}
+      {/* ZIGZAG BEFORE DATE RANGE, matching the reference's order. The
+          swing settings shape what the chart draws, so they belong with
+          the other things that decide the picture; the date range and the
+          session window decide which bars go in, and read as a group
+          after it. Nothing moved out of the panel -- Capital & Risk and
+          Session Hours are still here, below. */}
+      <Section icon="zigzag" label="ZigZag Swings" accent="violet">
+        <Panel>
+          {/* The dots tell the two sliders apart. The 10-leg dot is the chart's
+              #2196f3. The 3-leg dot is the section's purple rather than the
+              chart's #f0c040 line: the config palette carries no yellow or gold
+              (2026-09-15), so the help text names the line's colour instead.
+
+              Range from a measured sweep on ES 5m (see src/analysis/zigzag.py):
+              at 0.05% (~3.9pt) a session yields ~4-5 minor pivots per major
+              swing; below 0.02% the filter stops discriminating and every
+              fractal pivot survives. The old 0.05-5 range was calibrated
+              against a units bug that made every value 100x weaker than it read. */}
+          <SliderField
+            label="3-Leg Deviation %"
+            dot="#a78bfa"
+            help="Minimum move, as a percentage, before a new 3-leg swing is recorded. Drawn on the chart as the yellow dotted line."
+            value={cfg.zigzagDev3}
+            onChange={(v) => cfg.setField("zigzagDev3", v)}
+            min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
+          />
+          <SliderField
+            label="10-Leg Deviation %"
+            dot="#2196f3"
+            color="#2196f3"
+            help="Minimum move, as a percentage, before a new 10-leg swing is recorded. Matches the blue dotted line on the chart."
+            value={cfg.zigzagDev10}
+            onChange={(v) => cfg.setField("zigzagDev10", v)}
+            min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
+          />
+        </Panel>
+      </Section>
       <Section icon="dates" label="Date Range" accent="teal">
         <Panel>
           <div className="grid grid-cols-2 gap-2">
@@ -446,7 +483,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               Eastern (lib/sessionZone explains why), so switching to CT cannot
               quietly change which bars the next backtest runs on. */}
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground/75 font-medium whitespace-nowrap">
+            <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">
               Times in
             </span>
             <div className="flex gap-1">
@@ -496,37 +533,6 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── zigzag ───────────────────────────────────────────────────────── */}
-      <Section icon="zigzag" label="ZigZag Swings" accent="violet">
-        <Panel>
-          {/* The dots tell the two sliders apart. The 10-leg dot is the chart's
-              #2196f3. The 3-leg dot is the section's purple rather than the
-              chart's #f0c040 line: the config palette carries no yellow or gold
-              (2026-09-15), so the help text names the line's colour instead.
-
-              Range from a measured sweep on ES 5m (see src/analysis/zigzag.py):
-              at 0.05% (~3.9pt) a session yields ~4-5 minor pivots per major
-              swing; below 0.02% the filter stops discriminating and every
-              fractal pivot survives. The old 0.05-5 range was calibrated
-              against a units bug that made every value 100x weaker than it read. */}
-          <SliderField
-            label="3-Leg Deviation %"
-            dot="#a78bfa"
-            help="Minimum move, as a percentage, before a new 3-leg swing is recorded. Drawn on the chart as the yellow dotted line."
-            value={cfg.zigzagDev3}
-            onChange={(v) => cfg.setField("zigzagDev3", v)}
-            min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
-          />
-          <SliderField
-            label="10-Leg Deviation %"
-            dot="#2196f3"
-            color="#2196f3"
-            help="Minimum move, as a percentage, before a new 10-leg swing is recorded. Matches the blue dotted line on the chart."
-            value={cfg.zigzagDev10}
-            onChange={(v) => cfg.setField("zigzagDev10", v)}
-            min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
-          />
-        </Panel>
-      </Section>
 
       {/* ── run ──────────────────────────────────────────────────────────── */}
       <Button

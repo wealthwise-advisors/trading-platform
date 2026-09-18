@@ -6,20 +6,21 @@ import {
 } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import { WatchlistPanel, MarketSummaryPanel, TradeStatsPanel } from "@/components/panels/MarketPanels"
-import { WinLossDonut } from "@/components/charts/WinLossDonut"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
 import { CandlestickPatternsTable } from "@/components/tables/CandlestickPatternsTable"
 import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { MoreAnalyses } from "@/features/backtest/MoreAnalyses"
+import { ChartHeader } from "@/components/charts/ChartHeader"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
 import {
   TrendingUp, TrendingDown, Trophy, Gauge, LineChart,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
-  ClipboardList, BarChart3, CalendarDays, Activity, Shapes, Sparkles, Waves,
+  ClipboardList, BarChart3, CalendarDays, Activity, Shapes, Sparkles,
   Sigma, Hash, ArrowUpRight, ArrowDownRight,
 } from "lucide-react"
 
@@ -65,6 +66,16 @@ function ChartLoading() {
  * src/backtesting/metrics.py), so it arrives negative and a naive `$${n}`
  * prints the sign in the middle of the number.
  */
+/**
+ * A price move, for the Avg Win / Avg Loss pair.
+ *
+ * null means there were no trades on that side to average -- not a move of
+ * zero. An em dash says "nothing to measure"; "0.0 pts" would claim the
+ * trades happened and went nowhere.
+ */
+const points = (n: number | null | undefined) =>
+  n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)} pts`
+
 const money = (n: number) =>
   `${n < 0 ? "-" : ""}$${Math.abs(n).toLocaleString(undefined, {
     minimumFractionDigits: 2, maximumFractionDigits: 2,
@@ -110,11 +121,18 @@ export function ResultsPage() {
     queryFn: () => api.getElliottWave(backtestId!),
     enabled: !!backtestId,
   })
-  const winLossQ = useQuery({
-    queryKey: ["backtest", backtestId, "win-loss"],
-    queryFn: () => api.getWinLoss(backtestId!),
-    enabled: !!backtestId,
+  const dataSource = useConfigStore((st) => st.dataSource)
+  // Shares the config panel's request (same key) purely to name the
+  // instrument in the chart header. Absent, the header omits the description
+  // and the exchange rather than inventing either.
+  const symbolsQ = useQuery({
+    queryKey: ["symbols", dataSource],
+    queryFn: () => api.symbols(dataSource),
+    staleTime: 5 * 60_000,
   })
+  const instrument = (symbolsQ.data ?? []).find((m) => m.symbol === summaryQ.data?.symbol)
+
+
   const monthlyReturnsQ = useQuery({
     queryKey: ["backtest", backtestId, "monthly-returns"],
     queryFn: () => api.getMonthlyReturns(backtestId!),
@@ -202,8 +220,60 @@ export function ResultsPage() {
     // the chart claim the leftover height is exactly right -- so it is kept,
     // and only there. The same reasoning is why flex-1/min-h-0/overflow-y-auto
     // are xl:-prefixed all the way down this file.
-    <div className="xl:h-full flex flex-col xl:flex-row gap-3 p-3 w-full max-w-none">
-    <div className="xl:min-h-0 xl:flex-1 min-w-0 flex flex-col gap-2">
+    <div className="xl:h-full flex flex-col gap-2 px-3 pt-0.5 pb-3 xl:pb-2 w-full max-w-none">
+      {/* THE TOP ROW: six metrics, then the Avg pair.
+           The pair is 338px and starts 25px below the row's top edge, which is
+           where the reference puts it -- wider than the 285px market rail
+           beneath it, and deliberately so. It sits here rather than inside the
+           rail because in the reference it overhangs the chart column, which a
+           child of the rail cannot do. */}
+      <div className="shrink-0 flex flex-col xl:flex-row gap-2 2xl:gap-x-[55px] items-stretch">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-2 2xl:gap-3 flex-1 min-w-0 items-stretch auto-rows-fr 2xl:auto-rows-[72px]">
+        <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
+                  value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
+                  valueColor={retColor} />
+        <StatCard label="Sharpe Ratio" icon={<Gauge className="h-4 w-4" />} accent={ACCENTS[1]} value={s.sharpe_ratio.toFixed(2)} />
+        <StatCard label="Max Drawdown" icon={<TrendingDown className="h-4 w-4" />} accent={ACCENTS[2]}
+                  value={`${s.max_drawdown_pct.toFixed(1)}%`} valueColor={CRITICAL} />
+        <StatCard label="Win Rate" icon={<Trophy className="h-4 w-4" />} accent={ACCENTS[3]}
+                  value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor} />
+        {/* Every value below comes from the same summary the other cards read
+            (`profit_factor`, `total_trades`, `avg_win`, `avg_loss`) — nothing
+            is recomputed here, so a card cannot disagree with the report. */}
+        <StatCard label="Profit Factor" icon={<Sigma className="h-4 w-4" />} accent={ACCENTS[5]}
+                  value={pf.text} valueColor={pf.color} sub={pf.sub} />
+        <StatCard label="Total Trades" icon={<Hash className="h-4 w-4" />} accent={ACCENTS[2]}
+                  value={s.total_trades.toLocaleString()} />
+      </div>
+      {/* IN POINTS, as the reference shows them -- and derived, not
+            relabelled. avg_win_points is the mean price move across the
+            winning trades, computed on the server from each trade's entry and
+            exit (api/serializers.py::_avg_points). It is null when there were
+            no trades on that side, and an em dash says so rather than "0.0
+            pts", which would read as "won nothing" instead of "won nothing
+            yet". The dollar figure is not lost: it is a row in Trade
+            Statistics directly below, and it is what the exported report
+            carries.
+
+            No sub-line here: the reference's pair is two lines, and "no
+            losing trades" already appears under Profit Factor and in the
+            panel beneath. `dense` is the shorter card that pairing needs. */}
+              <div className="grid grid-cols-2 gap-2 shrink-0 xl:w-[338px] xl:self-start xl:pt-[25px]">
+          <StatCard label="Avg Win" dense icon={<ArrowUpRight className="h-4 w-4" />}
+                    accent={ACCENTS[3]}
+                    value={points(s.avg_win_points)}
+                    valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
+                    title={`${money(s.avg_win)} average on ${s.winning_trades} winning trade(s)`} />
+          <StatCard label="Avg Loss" dense icon={<ArrowDownRight className="h-4 w-4" />}
+                    accent={ACCENTS[0]}
+                    value={points(s.avg_loss_points)}
+                    valueColor={s.losing_trades > 0 ? CRITICAL : NEUTRAL}
+                    title={`${money(s.avg_loss)} average on ${s.losing_trades} losing trade(s)`} />
+        </div>
+      </div>
+      {/* The two columns, BELOW the top row: chart workspace and market rail. */}
+      <div className="xl:min-h-0 xl:flex-1 flex flex-col xl:flex-row gap-3">
+      <div className="xl:min-h-0 xl:flex-1 min-w-0 flex flex-col gap-2">
       {/* ── KPI row — sparklines/donut removed per explicit request (numbers
            only, no graphs) so this row is as short as possible, handing
            the freed vertical space straight to the chart below via the
@@ -230,26 +300,11 @@ export function ResultsPage() {
            screen — the row was squeezing the labels to hold cards that read
            better beside the trade statistics anyway.
 
-           Columns step 2 -> 3 -> 4 -> 7 so the row never has to squeeze. ── */}
-      <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7 gap-2 items-stretch auto-rows-fr">
-        <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
-                  value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
-                  valueColor={retColor} />
-        <StatCard label="Sharpe Ratio" icon={<Gauge className="h-4 w-4" />} accent={ACCENTS[1]} value={s.sharpe_ratio.toFixed(2)} />
-        <StatCard label="Max Drawdown" icon={<TrendingDown className="h-4 w-4" />} accent={ACCENTS[2]}
-                  value={`${s.max_drawdown_pct.toFixed(1)}%`} valueColor={CRITICAL} />
-        <StatCard label="Win Rate" icon={<Trophy className="h-4 w-4" />} accent={ACCENTS[3]}
-                  value={`${s.win_rate.toFixed(0)}%`} valueColor={winColor} />
-        <WinLossDonut wins={winLossQ.data?.wins ?? 0} losses={winLossQ.data?.losses ?? 0}
-                      winRate={winLossQ.data?.win_rate ?? 0} />
-        {/* Every value below comes from the same summary the other cards read
-            (`profit_factor`, `total_trades`, `avg_win`, `avg_loss`) — nothing
-            is recomputed here, so a card cannot disagree with the report. */}
-        <StatCard label="Profit Factor" icon={<Sigma className="h-4 w-4" />} accent={ACCENTS[5]}
-                  value={pf.text} valueColor={pf.color} sub={pf.sub} />
-        <StatCard label="Total Trades" icon={<Hash className="h-4 w-4" />} accent={ACCENTS[2]}
-                  value={s.total_trades.toLocaleString()} />
-      </div>
+           SIX cards, as the reference has. "Win % / Loss %" moved to the
+           Trade Statistics panel -- the number is still one glance away,
+           and this row now holds what the reference holds.
+
+           Columns step 2 -> 3 -> 3 -> 6 so the row never has to squeeze. ── */}
 
       {/* Controlled, not defaultValue: the header's Chart / Strategy Lab /
           Analytics links open the view they name, which they cannot do if the
@@ -260,7 +315,7 @@ export function ResultsPage() {
              next to each other with the requested ~56px gap -- removed the
              duplicates that used to sit here to avoid two visible "Live Replay"
              entry points; same setPage("replay")/reportUrl() calls either way. ── */}
-        <div className="shrink-0 flex flex-wrap items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2 min-w-0">
           <TabsList className="tabs-scroll">
             <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
             <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
@@ -270,8 +325,18 @@ export function ResultsPage() {
             <TabsTrigger value="candles"><Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> Candlestick Patterns</TabsTrigger>
             <TabsTrigger value="chartpatterns"><Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart Patterns</TabsTrigger>
             <TabsTrigger value="optimizer"><Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> Strategy Optimizer</TabsTrigger>
-            <TabsTrigger value="elliottwave"><Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> Elliott Wave</TabsTrigger>
           </TabsList>
+          {/* ELLIOTT WAVE LIVES HERE NOW, not deleted.
+              The reference shows eight tabs and they fit; ours was nine and
+              the strip clipped after "Chart Patterns" at the reference width.
+              Rather than drop a working feature -- twelve modules and eight
+              structures sit behind it -- the ninth moves into an overflow
+              menu, which is where a ninth item belongs once a row of eight is
+              the design. It stays a real tab: the trigger below is the same
+              TabsTrigger the strip would have rendered, so selecting it
+              switches the panel exactly as before and the tab keeps its
+              roving-focus and aria wiring. */}
+          <MoreAnalyses value={resultsTab} onSelect={setResultsTab} />
         </div>
 
         {/* ── Hero row: chart (fills remaining space) + narrow fixed sidebar ──
@@ -290,6 +355,15 @@ export function ResultsPage() {
                  whose only height instruction is "fill the parent" fills nothing. */}
             <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
+                {priceDataQ.data && (
+                  <ChartHeader
+                    symbol={s.symbol}
+                    description={instrument?.name}
+                    exchange={instrument?.exchange}
+                    interval={s.timeframe}
+                    bars={priceDataQ.data.bars}
+                  />
+                )}
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
                     <Suspense fallback={<ChartLoading />}>
@@ -370,24 +444,13 @@ export function ResultsPage() {
       </Tabs>
     </div>
       <aside className="shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
-                        xl:flex xl:flex-col xl:w-[266px] xl:overflow-y-auto"
+                        xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto"
              aria-label="Market and trade panels">
-        {/* The pair that heads the rail. Same .stat-card as the KPI row, so
-            they are the same object in two columns rather than a lookalike.
-            Green and red are meaning here: a $0.00 average loss with no losing
-            trades is NOT red, because nothing was lost. */}
-        <div className="grid grid-cols-2 gap-2 lg:col-span-3 xl:col-span-1">
-          <StatCard label="Avg Win" icon={<ArrowUpRight className="h-4 w-4" />} accent={ACCENTS[3]}
-                    value={money(s.avg_win)} valueColor={s.winning_trades > 0 ? GOOD : NEUTRAL}
-                    sub={s.winning_trades === 0 ? "no winning trades" : undefined} />
-          <StatCard label="Avg Loss" icon={<ArrowDownRight className="h-4 w-4" />} accent={ACCENTS[0]}
-                    value={money(s.avg_loss)} valueColor={s.losing_trades > 0 ? CRITICAL : NEUTRAL}
-                    sub={s.losing_trades === 0 ? "no losing trades" : undefined} />
-        </div>
         <WatchlistPanel />
         <MarketSummaryPanel />
         <TradeStatsPanel s={s} />
       </aside>
+      </div>
     </div>
   )
 }

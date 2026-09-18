@@ -26,6 +26,6 @@
     "showStudy": true,
     "showPlotNames": true,
     "showInputNames": true,
-    "leftAxis": true
+    "leftAxis": false
   }
 }

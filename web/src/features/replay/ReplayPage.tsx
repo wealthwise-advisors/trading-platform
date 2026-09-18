@@ -2190,7 +2190,7 @@ export function ReplayPage() {
                      it sits on the first of them rather than inside the tape
                      it used to be buried in. */
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground/75 font-medium whitespace-nowrap">
+                    <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">
                       Times in
                     </span>
                     <div className="flex gap-1">

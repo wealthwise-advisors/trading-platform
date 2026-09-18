@@ -59,14 +59,28 @@ function initials(user: Me): string {
 export function HeaderNav() {
   const page = useConfigStore((s) => s.page)
   const resultsTab = useConfigStore((s) => s.resultsTab)
+  const navSection = useConfigStore((s) => s.navSection)
   const goTo = useConfigStore((s) => s.goTo)
 
-  // EXACTLY ONE PILL IS LIT. "Backtest" matches any tab on the results page,
-  // so a naive per-item test lit it alongside whichever specific view was
-  // open -- two highlighted sections, which answers "where am I" with two
-  // answers. The most specific match wins: an item naming a tab beats the
-  // one that only names the page.
-  const current = NAV.find((n) => n.page === page && n.tab === resultsTab)
+  // EXACTLY ONE PILL IS LIT, and it is the one you pressed.
+  //
+  // This used to be derived from (page, tab) alone, most-specific-wins. That
+  // is right when you arrive somewhere by clicking a RESULTS tab, but wrong
+  // when you click a SECTION: "Backtest" selects the results page without
+  // naming a tab, so with resultsTab still "price" the derived rule lit
+  // "Chart" instead -- pressing Backtest lit a different button, and Backtest
+  // could never light at all while the price chart was open. The reference has
+  // Backtest lit with the Chart tab active, which the derived rule cannot
+  // produce.
+  //
+  // So an explicit choice wins while it still describes where we are, and the
+  // derivation is the fallback for arriving by any other route.
+  const chosen = NAV.find((n) => n.label === navSection)
+  const chosenStillFits = chosen
+    && chosen.page === page
+    && (chosen.tab === undefined || chosen.tab === resultsTab)
+  const current = (chosenStillFits ? chosen : undefined)
+    ?? NAV.find((n) => n.page === page && n.tab === resultsTab)
     ?? NAV.find((n) => n.page === page && !n.tab)
     ?? NAV.find((n) => n.page === page)
 
@@ -78,7 +92,7 @@ export function HeaderNav() {
           type="button"
           title={n.title}
           aria-current={n === current ? "page" : undefined}
-          onClick={() => goTo(n.page, n.tab)}
+          onClick={() => goTo(n.page, n.tab, n.label)}
           className={`nav-pill${n === current ? " nav-pill-on" : ""}`}
         >
           <n.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />

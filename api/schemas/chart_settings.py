@@ -99,7 +99,7 @@ class VolumeProfileSettings(BaseModel):
     show_study: bool = True
     show_plot_names: bool = True
     show_input_names: bool = True
-    left_axis: bool = True
+    left_axis: bool = False
 
 
 class ChartSettings(BaseModel):

@@ -59,6 +59,11 @@ class BacktestSummary(BaseModel):
     profit_factor: Optional[float]
     avg_win: float
     avg_loss: float
+    # The same averages as a price move, or null when there were no trades on
+    # that side. Nullable for the same reason profit_factor is: zero points and
+    # no trades to measure are different answers.
+    avg_win_points: Optional[float] = None
+    avg_loss_points: Optional[float] = None
     total_trades: int
     winning_trades: int
     losing_trades: int

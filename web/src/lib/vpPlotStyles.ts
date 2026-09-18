@@ -174,6 +174,12 @@ export const MAX_LEVEL_MARKERS = 60
 export function levelTrace(label: string, value: number, xs: string[], style: PlotStyle): Data {
   const common = {
     type: "scatter", name: label, legendgroup: "vp", xaxis: "x", yaxis: "y",
+    // NOT IN THE LEGEND. Each level already names itself on the chart: the
+    // "Show plot names" annotation pins POC / VAHigh / VALow at the level's
+    // right-hand end, which is where the reference platform puts them. Listing
+    // them again in the legend pushed it from 13 entries to 19 and made a box
+    // sized for the overlays start scrolling. The hover label is untouched.
+    showlegend: false,
     hovertemplate: `<b>${label}</b>: %{y:.2f}<extra></extra>`,
   }
   if (style.drawAs === "line") {

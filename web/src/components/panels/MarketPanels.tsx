@@ -94,7 +94,7 @@ function Panel({ icon, title, action, children }: {
 }) {
   return (
     <section className="rail-card">
-      <header className="flex items-center gap-2 mb-2">
+      <header className="flex items-center gap-2 mb-1">
         <span className="text-[#38bdf8]" aria-hidden>{icon}</span>
         <h2 className="text-[13px] font-semibold text-foreground">{title}</h2>
         {action && <span className="ml-auto">{action}</span>}
@@ -221,7 +221,7 @@ export function WatchlistPanel() {
                   aria-current={r.symbol === activeSymbol ? "true" : undefined}
                   className={`group border-t border-[color:var(--hairline-soft)] ${
                     r.symbol === activeSymbol ? "bg-sky-500/10" : ""}`}>
-                <td className="py-1.5 font-semibold text-foreground"
+                <td className="py-[3px] font-semibold text-foreground"
                     title={r.contract ? `Quoting ${r.contract}` : undefined}>
                   {r.symbol}
                   <button type="button" onClick={() => remove(r.symbol)}
@@ -231,16 +231,16 @@ export function WatchlistPanel() {
                     ×
                   </button>
                 </td>
-                <td className="py-1.5 text-right tabular-nums text-foreground">{price(r.last)}</td>
-                <td className="py-1.5 text-right"><Delta value={r.change} /></td>
-                <td className="py-1.5 text-right"><Delta value={r.change_pct} suffix="%" /></td>
+                <td className="py-[3px] text-right tabular-nums text-foreground">{price(r.last)}</td>
+                <td className="py-[3px] text-right"><Delta value={r.change} /></td>
+                <td className="py-[3px] text-right"><Delta value={r.change_pct} suffix="%" /></td>
               </tr>
             ))}
             {/* A symbol that returns no quote is dropped by the backend, so
                 say which ones rather than leaving a silent gap in the list. */}
             {symbols.filter((sym) => !rows.some((r) => r.symbol === sym)).map((sym) => (
               <tr key={sym} className="group border-t border-[color:var(--hairline-soft)] text-muted-foreground/75">
-                <td className="py-1.5 font-semibold">
+                <td className="py-[3px] font-semibold">
                   {sym}
                   <button type="button" onClick={() => remove(sym)}
                           aria-label={`Remove ${sym} from the watchlist`}
@@ -249,7 +249,7 @@ export function WatchlistPanel() {
                     ×
                   </button>
                 </td>
-                <td colSpan={3} className="py-1.5 text-right text-[10.5px]">
+                <td colSpan={3} className="py-[3px] text-right text-[10.5px]">
                   {q.isLoading ? "loading…" : "no quote"}
                 </td>
               </tr>
@@ -275,7 +275,7 @@ export function MarketSummaryPanel() {
           <button
             key={t.id} type="button" role="tab" aria-selected={t.id === tab}
             onClick={() => setTab(t.id)}
-            className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+            className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
               t.id === tab
                 ? "bg-[#1d4ed8]/25 text-sky-800 dark:text-sky-200 ring-1 ring-sky-400/30"
                 : "text-muted-foreground hover:text-foreground hover:bg-[color:var(--raise-3)]"}`}
@@ -332,15 +332,51 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
   // factor earned in size.
   const p = s.win_rate / 100
   const expectancy = p * s.avg_win + (1 - p) * s.avg_loss
+  // IN POINTS, as the reference shows this panel. avg_win_points and
+  // avg_loss_points come from the trades' own entry and exit prices
+  // (api/serializers.py::_avg_points), so nothing here divides a dollar figure
+  // by a contract multiplier.
+  //
+  // A SIDE WITH NO TRADES HAS NO AVERAGE, and prints an em dash -- "0.0 pts"
+  // would say the losing trades went nowhere rather than that there were none.
+  //
+  // Expectancy still works in that case, and exactly: it weights each side by
+  // its share of the trades, and a side with no trades has a weight of zero,
+  // so the missing average cannot affect the result. It is only unavailable
+  // when a side that DID trade has no point figure -- which happens when its
+  // trades are still open and have no exit price to measure.
+  const wPts = s.avg_win_points
+  const lPts = s.avg_loss_points
+  const haveWin = wPts != null || s.winning_trades === 0
+  const haveLoss = lPts != null || s.losing_trades === 0
+  const expectancyPts = haveWin && haveLoss
+    ? p * (wPts ?? 0) + (1 - p) * (lPts ?? 0)
+    : null
+  const pts = (n: number | null | undefined) =>
+    n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)} pts`
 
   const rows: Array<[string, React.ReactNode]> = [
     ["Total Trades", s.total_trades.toLocaleString()],
     ["Winning Trades", <span style={{ color: GOOD }}>{s.winning_trades}</span>],
     ["Losing Trades", <span style={{ color: s.losing_trades ? CRITICAL : undefined }}>{s.losing_trades}</span>],
     ["Win Rate", `${s.win_rate.toFixed(0)}%`],
-    ["Avg Win", <span style={{ color: s.winning_trades ? GOOD : undefined }}>{money(s.avg_win)}</span>],
-    ["Avg Loss", <span style={{ color: s.losing_trades ? CRITICAL : undefined }}>{money(s.avg_loss)}</span>],
-    ["Expectancy", <span style={{ color: expectancy >= 0 ? GOOD : CRITICAL }}>{money(expectancy)}</span>],
+    // Moved here from the KPI row, which the reference has at six cards. The
+    // pairing is the point -- "27%" alone does not say how much of the rest
+    // was a loss rather than a scratch -- so it is kept as one line rather
+    // than left to be inferred from the two counts above.
+    ["Win % / Loss %",
+      `${s.win_rate.toFixed(0)}% / ${(s.total_trades > 0 ? 100 - s.win_rate : 0).toFixed(0)}%`],
+    // The dollar figure is on the hover of each, so nothing is lost: it is
+    // what the exported report carries and what the P&L is actually in.
+    ["Avg Win", <span style={{ color: s.winning_trades ? GOOD : undefined }}
+                      title={`${money(s.avg_win)} across ${s.winning_trades} winning trade(s)`}>
+                  {haveWin ? pts(wPts) : money(s.avg_win)}</span>],
+    ["Avg Loss", <span style={{ color: s.losing_trades ? CRITICAL : undefined }}
+                       title={`${money(s.avg_loss)} across ${s.losing_trades} losing trade(s)`}>
+                   {haveLoss ? pts(lPts) : money(s.avg_loss)}</span>],
+    ["Expectancy", <span style={{ color: (expectancyPts ?? expectancy) >= 0 ? GOOD : CRITICAL }}
+                         title={`${money(expectancy)} per trade`}>
+                     {expectancyPts == null ? money(expectancy) : pts(expectancyPts)}</span>],
     // null means "no finite ratio"; the counts say whether that was unbounded
     // (winners, no losers) or undefined (nothing won and nothing lost).
     ["Profit Factor", s.profit_factor == null
@@ -353,7 +389,7 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
     <Panel icon={<Activity className="h-4 w-4" />} title="Trade Statistics">
       <ul className="text-[11.5px]">
         {rows.map(([label, value]) => (
-          <li key={label} className="flex items-center justify-between gap-2 py-1 border-t border-[color:var(--hairline-soft)] first:border-t-0">
+          <li key={label} className="flex items-center justify-between gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
             <span className="text-muted-foreground">{label}</span>
             <span className="tabular-nums text-foreground">{value}</span>
           </li>

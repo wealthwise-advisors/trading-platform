@@ -51,7 +51,7 @@ export function vpFactorySettings(): VpDialogSettings {
     rowHeight: 1, timePer: "CHART", multiplier: 1,
     maxProfiles: 1000, onExpansion: true,
     plots: defaultPlotStyles(),
-    showStudy: true, showPlotNames: true, showInputNames: true, leftAxis: true,
+    showStudy: true, showPlotNames: true, showInputNames: true, leftAxis: false,
   }
 }
 

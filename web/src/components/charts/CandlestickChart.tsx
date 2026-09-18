@@ -6,10 +6,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Plot from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
+import { IndicatorReadout } from "@/components/charts/ChartHeader"
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
+import { ChevronDown, Maximize, Minimize, Save } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
@@ -83,8 +85,35 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
   return domains
 }
 
+
+/** One study in the Indicators menu: a checkbox row that reads as a menu item. */
+function MenuToggle({
+  label, checked, onChange, disabled, hint,
+}: {
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+  hint?: string
+}) {
+  return (
+    <label role="menuitemcheckbox" aria-checked={checked}
+           title={hint}
+           className={`flex items-center gap-2 px-3 py-1.5 ${disabled
+             ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[color:var(--raise-3)]"}`}>
+      <input type="checkbox" checked={checked} disabled={disabled}
+             onChange={(e) => onChange(e.target.checked)} />
+      <span>{label}</span>
+    </label>
+  )
+}
+
 export function CandlestickChart({
-  symbol, strategyName, bars, indicators, zigzag, trades, showZigzag = true,
+  // symbol and strategyName are still part of the props -- every caller passes
+  // them and the export path reads the same shape -- but nothing in here draws
+  // them any more: the instrument is named by ChartHeader above the plot, and
+  // the strategy and run date by the status bar.
+  bars, indicators, zigzag, trades, showZigzag = true,
   showStochRsi = true, showVwap = true, showVolumeProfile = true,
 }: CandlestickChartProps) {
   // Subscribing (rather than only calling chartTheme()) is what makes the
@@ -162,8 +191,39 @@ export function CandlestickChart({
   // Both on by default, as in the reference dialog.
   const [vpShowPlotNames, setVpShowPlotNames] = useState(true)
   const [vpShowInputNames, setVpShowInputNames] = useState(true)
-  const [vpLeftAxis, setVpLeftAxis] = useState(true)
+  // false: the reference puts the price scale on the RIGHT, which is also
+  // where every trading terminal puts it. Still a tick in the Volume Profile
+  // dialog ("Left axis"), so anyone who wants it back has it.
+  const [vpLeftAxis, setVpLeftAxis] = useState(false)
   const [vpSavedNote, setVpSavedNote] = useState("")
+  const [indicatorMenu, setIndicatorMenu] = useState(false)
+  const [saveMenu, setSaveMenu] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Fullscreen is driven by the BROWSER, not by this state -- Escape and the
+  // F11 key both exit it without going through the button, so the flag has to
+  // follow the document rather than be toggled optimistically.
+  useEffect(() => {
+    const sync = () => setIsFullscreen(document.fullscreenElement === containerRef.current)
+    document.addEventListener("fullscreenchange", sync)
+    return () => document.removeEventListener("fullscreenchange", sync)
+  }, [])
+
+  const toggleFullscreen = () => {
+    const el = containerRef.current
+    if (!el) return
+    // A rejected request (an iframe without allowfullscreen, a browser that
+    // refuses it) must not leave the button claiming a state it is not in.
+    if (document.fullscreenElement === el) void document.exitFullscreen().catch(() => {})
+    else void el.requestFullscreen?.().catch(() => {})
+  }
+
+  /** Plotly's own PNG export, from the menu rather than only the modebar. */
+  const downloadPng = () => {
+    const plot = containerRef.current?.querySelector<HTMLElement>(".js-plotly-plot")
+    const btn = plot?.querySelector<HTMLElement>('[data-title="Download plot as a PNG"]')
+    btn?.click()
+  }
 
   // ── Save as default / Reset to factory default ─────────────────────────
   // Factory values live here so "reset" has something authoritative to return
@@ -336,16 +396,6 @@ export function CandlestickChart({
 
   // The x-axis only shows a date label where the visible range crosses a day
   // boundary (Plotly's default date-axis behavior) -- when zoomed into a
-  // single day there'd be no date visible anywhere, so put it in the title
-  // instead, where it stays visible at any zoom/pan level.
-  const dateLabel = (() => {
-    if (!bars.length) return ""
-    const fmt = (iso: string) =>
-      new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" })
-    const first = fmt(bars[0].t)
-    const last = fmt(bars[bars.length - 1].t)
-    return first === last ? first : `${first} – ${last}`
-  })()
 
   const data: Data[] = []
   const shapes: Partial<Shape>[] = []
@@ -778,7 +828,7 @@ export function CandlestickChart({
   if (indicatorRows.includes("rsi2")) {
     const rsi2Suffix = suffixOf("rsi2")
     data.push({
-      type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)",
+      type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)", showlegend: false,
       line: { color: "#ce93d8", width: 1.1 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
       xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
     } as unknown as Data)
@@ -787,10 +837,10 @@ export function CandlestickChart({
     // StochRSI's two plots, named as the reference platform names them.
     const stochRsiSuffix = suffixOf("stochrsi")
     data.push(
-      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_k, name: "FullK",
+      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_k, name: "FullK", showlegend: false,
         line: { color: "#4fc3f7", width: 1.1 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_d, name: "FullD",
+      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_d, name: "FullD", showlegend: false,
         line: { color: "#f48fb1", width: 1.0, dash: "dot" }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
     )
@@ -798,7 +848,7 @@ export function CandlestickChart({
   if (indicatorRows.includes("rsi13")) {
     const rsi13Suffix = suffixOf("rsi13")
     data.push({
-      type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)",
+      type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)", showlegend: false,
       line: { color: "#ffcc80", width: 1.1 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
       xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
     } as unknown as Data)
@@ -983,7 +1033,32 @@ export function CandlestickChart({
   // Axis definitions are built per active row (price + whichever oscillator
   // rows are on) instead of hardcoded blocks, so whichever row is last takes
   // over the bottom-axis role (tick labels, automargin).
-  const rowTitles: Record<string, string> = { price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)", mfi: "MFI" }
+  // The row label carries the CURRENT reading, as the reference shows it:
+  // "RSI (2) 32.14" rather than a bare axis name. The value is the last
+  // non-null point of the series the row draws -- the same number the line
+  // ends on -- and the label falls back to the bare name when the series has
+  // no reading yet, rather than printing a fabricated zero.
+  const lastOf = (xs?: (number | null)[]) => {
+    if (!xs) return null
+    for (let i = xs.length - 1; i >= 0; i--) if (xs[i] != null) return xs[i] as number
+    return null
+  }
+  const withValue = (name: string, v: number | null, digits = 2) =>
+    v == null ? name : `${name}  ${v.toFixed(digits)}`
+  const kNow = lastOf(indicators.stochrsi_k)
+  const dNow = lastOf(indicators.stochrsi_d)
+  const rowTitles: Record<string, string> = {
+    price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)", mfi: "MFI",
+  }
+  /** The reading each oscillator row currently shows, for its own label. */
+  const rowReadout: Record<string, string> = {
+    rsi2: withValue("RSI (2)", lastOf(indicators.rsi2)),
+    stochrsi: kNow == null && dNow == null
+      ? "StochRSI 14 14 3 3"
+      : `StochRSI 14 14 3 3   ${kNow == null ? "--" : kNow.toFixed(2)}   ${dNow == null ? "--" : dNow.toFixed(2)}`,
+    rsi13: withValue("RSI (13)", lastOf(indicators.rsi13)),
+    mfi: withValue("MFI (20)", lastOf(indicators.mfi)),
+  }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
   const rangebreaks = useMemo(() => computeRangebreaks(bars.map((b) => b.t)), [bars])
@@ -1101,13 +1176,37 @@ export function CandlestickChart({
       gridcolor: GRID, showgrid: true,
       // "Left axis" from the reference dialog. Left is Plotly's default, so
       // unticking it moves the price scale to the right-hand side.
-      ...(isPrice ? { side: (vpLeftAxis ? "left" : "right") as "left" | "right" } : {}),
+      side: (vpLeftAxis ? "left" : "right") as "left" | "right",
       title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
       range: isPrice ? priceYRange : [0, 100],
     }
+
+    // THE ROW'S CURRENT READING, as the reference draws it: horizontal, at the
+    // top-left inside the row. The y-axis title is rotated and cannot hold a
+    // number without colliding with its neighbours, which is why this is an
+    // annotation rather than part of the title.
+    //
+    // Anchored to THIS ROW'S OWN AXIS DOMAIN (`y<suffix> domain`), not to a
+    // paper offset indexed by position -- that put every label one panel above
+    // the one it described, because the domain list is not in the same order
+    // as the row list. Tied to the axis, the label cannot land on the wrong
+    // row however the studies are switched on and off.
+    const readout = rowReadout[name]
+    if (readout) {
+      annotations.push({
+        text: readout,
+        xref: "x domain" as Annotations["xref"],
+        yref: `y${suffix} domain` as Annotations["yref"],
+        x: 0.004, xanchor: "left",
+        y: 0.97, yanchor: "top",
+        showarrow: false, align: "left",
+        font: { size: 9.5, color: INK_DIM, family: "Arial" },
+      })
+    }
   })
+
 
   // Overlay axis for the profile. Reversed so bars extend leftward from the
   // right edge; capped so the histogram occupies at most a third of the width.
@@ -1115,11 +1214,18 @@ export function CandlestickChart({
     const maxVol = Math.max(...vpLocal.volumes, 1)
     dynamicAxes["xaxis9"] = {
       overlaying: "x", side: "top", anchor: "y",
-      range: [maxVol * 4, 0],       // reversed; 4x cap => bars use <= 1/4 width
+      range: [maxVol * 4.6, 0],     // reversed; 4.6x cap => bars use <= ~1/4.6 width,
+                                    // which keeps them clear of the right-hand price scale
       showgrid: false, zeroline: false, showticklabels: false,
       fixedrange: true,
     }
   }
+
+
+  // The Plotly top margin, in pixels. It holds the range selector and the
+  // ZigZag swing headers, and the indicator readout overlay is positioned
+  // from it so it starts below both rather than on top of them.
+  const marginTop = hasSwingHeaders ? 62 + extraHeaderRows * 21 : 38
 
   const layout: Partial<Layout> = {
     // Plotly's title defaults to yref:"container" (positioned against the
@@ -1140,19 +1246,13 @@ export function CandlestickChart({
     // still offset.
     // "Show input names": the reference platform appends the study's inputs to
     // its on-chart label, e.g. VolumeProfile(AUTOMATIC, 1.0, CHART, 1, ...).
-    title: { text: `${symbol} — ${strategyName} · ${dateLabel}` + (
-      vpOn && vpShowStudy && vpShowInputNames
-        ? `<br><span style="font-size:10px;color:#7dd3fc">VolumeProfile(${vpRowMode}, ${vpRowHeight}, ${vpTimePer}, ${vpMultiplier}, ${vpOnExpansion ? "Yes" : "No"}, ${vpMaxProfiles}, ${vpShow.poc ? "Yes" : "No"}, ${showValueArea(vpPlots) ? "Yes" : "No"}, ${vpValueArea}, ${vpOpacity})</span>`
-        : ""), font: { size: 14, color: INK },
-             xref: "paper", yref: "paper", x: 0.5, xanchor: "center",
-             // Gap above the header base (1.015) widened 0.06 -> 0.11
-             // (2026-08-02, full-audit): both title and headers scale by the
-             // same extraHeaderRows*HEADER_LEVEL_HEIGHT amount, so the GAP
-             // between them stays constant at any stack depth -- 0.06 was
-             // only ever enough clearance for a single-line header; a 2-line
-             // header (the common case) needs more room at the same gap, or
-             // the title visually collides with the tallest stacked row.
-             y: (hasSwingHeaders ? 1.125 : 1.05) + extraHeaderRows * HEADER_LEVEL_HEIGHT, yanchor: "bottom" },
+    // NO PLOTLY TITLE. ChartHeader above the plot carries the instrument, the
+    // interval and the exchange, and the strategy name and run date are in the
+    // status bar -- a second title stacked over the same chart was the
+    // reference's one plus one, and it cost the price panel two lines of
+    // height. The Volume Profile input string went with it: it is editable in
+    // that study's own settings panel, which is where it belongs.
+    title: { text: "" },
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: INK },
     dragmode: "pan", hovermode: "x unified",
@@ -1163,7 +1263,10 @@ export function CandlestickChart({
     // didn't work as well as just using what the static HTML report
     // already does successfully.
     showlegend: true,
-    legend: { bgcolor: HOVER, borderwidth: 0 },
+    legend: {
+      bgcolor: HOVER, borderwidth: 0,
+      ...(vpLeftAxis ? {} : { x: 1.055, xanchor: "left" as const }),
+    },
     // t trimmed from 95 -> 88 -- less unnecessary top padding above the
     // range-selector/title strip, closer to the top edge of the chart. b
     // trimmed 32 -> 24 too -- the bottom axis now shows time-only labels
@@ -1179,9 +1282,15 @@ export function CandlestickChart({
     // shrinks the gap between them in real pixels, and cutting too hard here
     // is what re-creates the title-collides-with-header bug this block has
     // already been through twice.
-    margin: hasSwingHeaders
-      ? { l: 50, r: 20, t: 62 + extraHeaderRows * 21, b: 22 }
-      : { l: 50, r: 20, t: 38, b: 22 },
+    // SIDES FOLLOW THE AXIS. The price scale sits on the right by default now,
+    // and its labels need the 50px there instead of on the left -- at r: 20
+    // they were clipped to "45" and drawn on top of the volume profile.
+    margin: {
+      l: vpLeftAxis ? 66 : 14,
+      r: vpLeftAxis ? 14 : 66,
+      t: marginTop,
+      b: 22,
+    },
     // No fixed height here on purpose -- the wrapping container stretches to
     // fill the available vertical space (matching the taller right-panel
     // column), and autosize + the Plot's own height:100% style pick that up.
@@ -1222,16 +1331,12 @@ export function CandlestickChart({
         <button
           type="button"
           aria-label="VWAP settings"
-          title={vwapOn ? "VWAP settings" : "Turn VWAP on and open its settings"}
+          title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
+                        : "Turn VWAP on and open its settings"}
           onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
           className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
                      hover:bg-[color:var(--raise-4)]"
         >⚙</button>
-        {vwapOn && (
-          <span className="text-muted-foreground">
-            dev {devDn.toFixed(1)} / +{devUp.toFixed(1)}
-          </span>
-        )}
 
         <span className="mx-1 text-[color:var(--hairline-firm)]">|</span>
         <label className="flex items-center gap-1.5 cursor-pointer">
@@ -1242,16 +1347,12 @@ export function CandlestickChart({
         <button
           type="button"
           aria-label="Volume Profile settings"
-          title={vpOn ? "Volume Profile settings" : "Turn Volume Profile on and open its settings"}
+          title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
+                      : "Turn Volume Profile on and open its settings"}
           onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
           className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
                      hover:bg-[color:var(--raise-4)]"
         >⚙</button>
-        {vpOn && (
-          <span className="text-muted-foreground">
-            {vpBins} rows · VA {vpValueArea}%
-          </span>
-        )}
 
         {/* Oscillator panels, switched on and configured the same way as VWAP
             and Volume Profile. Switching one off removes its row, handing the
@@ -1284,6 +1385,83 @@ export function CandlestickChart({
             </span>
           )
         })}
+
+        {/* RIGHT-ALIGNED GROUP: the three controls the reference has at the end
+            of this row. ml-auto rather than a second row, so they sit on the
+            same line as the studies they act on. */}
+        <span className="ml-auto flex items-center gap-1.5">
+          {/* "Indicators": every study in one menu. The checkboxes to the left
+              stay exactly as they are -- this is a second way to reach the same
+              state, for a narrow window where the row wraps, not a replacement. */}
+          <span className="relative">
+            <button type="button"
+                    aria-haspopup="menu" aria-expanded={indicatorMenu}
+                    onClick={() => { setIndicatorMenu((v) => !v); setSaveMenu(false) }}
+                    className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
+                               bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
+              Indicators <ChevronDown className="h-3 w-3" aria-hidden />
+            </button>
+            {indicatorMenu && (
+              <div role="menu"
+                   className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
+                              bg-[var(--surface-1)] py-1 shadow-xl">
+                <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
+                <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
+                {OSC_ORDER.map((key) => (
+                  <MenuToggle key={key}
+                              label={OSC_STUDIES[key].label}
+                              checked={osc[key]}
+                              disabled={!OSC_STUDIES[key].available}
+                              hint={OSC_STUDIES[key].available ? undefined : OSC_STUDIES[key].pending}
+                              onChange={(v) => setOsc((o) => ({ ...o, [key]: v }))} />
+                ))}
+              </div>
+            )}
+          </span>
+
+          {/* "Save": the two things there are to save here. Both already
+              existed -- the defaults writer and Plotly's own PNG export -- and
+              neither had a home outside the Volume Profile dialog. */}
+          <span className="relative">
+            <button type="button"
+                    aria-haspopup="menu" aria-expanded={saveMenu}
+                    onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false) }}
+                    className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
+                               bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
+              <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
+            </button>
+            {saveMenu && (
+              <div role="menu"
+                   className="absolute right-0 top-7 z-30 w-56 rounded-lg border border-[color:var(--hairline-mid)]
+                              bg-[var(--surface-1)] py-1 shadow-xl">
+                <button type="button" role="menuitem"
+                        onClick={() => { setSaveMenu(false); saveVpDefaults() }}
+                        className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
+                  Save chart settings as default
+                </button>
+                <button type="button" role="menuitem"
+                        onClick={() => { setSaveMenu(false); downloadPng() }}
+                        className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
+                  Download chart as PNG
+                </button>
+              </div>
+            )}
+          </span>
+
+          {/* Fullscreen. The Fullscreen API on this container, so the chart
+              fills the screen with its own toolbar and oscillator rows rather
+              than being screenshotted. */}
+          <button type="button"
+                  onClick={toggleFullscreen}
+                  aria-pressed={isFullscreen}
+                  title={isFullscreen ? "Exit full screen" : "Full screen"}
+                  className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
+                             hover:bg-[color:var(--raise-4)]">
+            {isFullscreen ? <Minimize className="h-3.5 w-3.5" aria-hidden />
+                          : <Maximize className="h-3.5 w-3.5" aria-hidden />}
+            <span className="sr-only">{isFullscreen ? "Exit full screen" : "Full screen"}</span>
+          </button>
+        </span>
 
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]
@@ -1522,17 +1700,25 @@ export function CandlestickChart({
       </div>
 
       <div className="flex-1 min-h-0">
-      <Plot
-        data={data}
-        layout={layout}
-        config={{
-          scrollZoom: true, displayModeBar: true,
-          modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
-        }}
-        style={{ width: "100%", height: "100%" }}
-        useResizeHandler
-        onRelayout={handleRelayout}
-      />
+      {/* relative: the indicator readout overlays the PLOT's top-left, as
+          the reference draws it. It lives here rather than in ResultsPage
+          because from there it covered this component's own toolbar rows --
+          the VWAP checkbox and the 1D/5D/1M range buttons -- instead of the
+          chart. */}
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <IndicatorReadout indicators={indicators} topOffset={marginTop + 4} />
+        <Plot
+          data={data}
+          layout={layout}
+          config={{
+            scrollZoom: true, displayModeBar: true,
+            modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
+          }}
+          style={{ width: "100%", height: "100%" }}
+          useResizeHandler
+          onRelayout={handleRelayout}
+        />
+      </div>
       </div>
     </div>
   )

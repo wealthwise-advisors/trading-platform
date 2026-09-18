@@ -58,6 +58,33 @@ def profit_factor_label(value: float, *, unicode: bool = True) -> str:
     return f"{value:.2f}"
 
 
+def _avg_points(trades, *, winners: bool):
+    """Average move, in POINTS, across the winning or losing trades.
+
+    WHY POINTS AND NOT DOLLARS DIVIDED BY A MULTIPLIER. avg_win is net USD, so
+    recovering points from it means dividing by point_value AND by the position
+    size AND adding the commission back -- three places to be wrong. The price
+    difference is the point move directly, and it is already on the trade.
+
+    An open trade has no exit price and no move to average, so it is skipped
+    rather than counted as zero. A trade that closed exactly flat is neither a
+    winner nor a loser and belongs to neither average, which is the same rule
+    winning_trades / losing_trades already use.
+
+    None when there is nothing to average. Not 0.0 -- "no losing trades" and
+    "lost nothing per trade" are different facts, and the caller has the counts
+    beside this to tell them apart.
+    """
+    moves = []
+    for t in trades:
+        if t.exit_price is None or t.entry_price is None:
+            continue
+        if (t.pnl > 0) if winners else (t.pnl < 0):
+            moves.append(t.exit_price - t.entry_price if t.direction == "LONG"
+                         else t.entry_price - t.exit_price)
+    return sum(moves) / len(moves) if moves else None
+
+
 def results_to_summary(backtest_id: str, results: BacktestResults, data_source: str,
                        session_start, session_end) -> dict:
     r = results
@@ -87,6 +114,11 @@ def results_to_summary(backtest_id: str, results: BacktestResults, data_source: 
         "profit_factor": _safe(r.profit_factor),
         "avg_win": r.avg_win,
         "avg_loss": r.avg_loss,
+        # The same two averages as a price move. Derived from the trades, not
+        # stored: adding a field to BacktestResults means a new column and a
+        # migration, and this is a presentation of numbers the row already has.
+        "avg_win_points": _safe(_avg_points(r.trades, winners=True)),
+        "avg_loss_points": _safe(_avg_points(r.trades, winners=False)),
         "total_trades": r.total_trades,
         "winning_trades": r.winning_trades,
         "losing_trades": r.losing_trades,

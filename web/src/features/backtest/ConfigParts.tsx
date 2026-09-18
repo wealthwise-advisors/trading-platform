@@ -43,15 +43,19 @@ import {
 export type Accent =
   "blue" | "sky" | "teal" | "steel" | "green" | "orange" | "ember" | "violet"
 
+// Each hue is a TOKEN now, not a literal. The values these replace were tuned
+// against a dark sidebar and came out at 1.8:1 to 2.6:1 on a light one; the
+// tokens hold the same hue at a lightness that works in whichever theme is
+// on. See the note beside --sec-* in index.css.
 const ACCENT: Record<Accent, { text: string; hex: string }> = {
-  blue:   { text: "text-[#60a5fa]", hex: "#60a5fa" },  // structure: Timeframe Selector, Capital & Risk
-  sky:    { text: "text-[#38bdf8]", hex: "#38bdf8" },  // where the data comes from
-  teal:   { text: "text-[#2dd4bf]", hex: "#2dd4bf" },  // what and when: Symbol, Date Range
-  steel:  { text: "text-[#7fb6cc]", hex: "#7fb6cc" },  // Interval Picker -- muted, so it reads apart from the Selector
-  green:  { text: "text-[#34d399]", hex: "#34d399" },  // Strategy
-  orange: { text: "text-[#fb923c]", hex: "#fb923c" },  // the numbers you tune
-  ember:  { text: "text-[#e9a26b]", hex: "#e9a26b" },  // Session Hours -- orange, restrained
-  violet: { text: "text-[#a78bfa]", hex: "#a78bfa" },  // ZigZag Swings -- the one purple, kept small
+  blue:   { text: "text-[color:var(--sec-blue)]",   hex: "var(--sec-blue)" },    // structure: Timeframe Selector, Capital & Risk
+  sky:    { text: "text-[color:var(--sec-sky)]",    hex: "var(--sec-sky)" },     // where the data comes from
+  teal:   { text: "text-[color:var(--sec-teal)]",   hex: "var(--sec-teal)" },    // what and when: Symbol, Date Range
+  steel:  { text: "text-[color:var(--sec-steel)]",  hex: "var(--sec-steel)" },   // Interval Picker -- muted, so it reads apart from the Selector
+  green:  { text: "text-[color:var(--sec-green)]",  hex: "var(--sec-green)" },   // Strategy
+  orange: { text: "text-[color:var(--sec-orange)]", hex: "var(--sec-orange)" },  // the numbers you tune
+  ember:  { text: "text-[color:var(--sec-ember)]",  hex: "var(--sec-ember)" },   // Session Hours -- orange, restrained
+  violet: { text: "text-[color:var(--sec-violet)]", hex: "var(--sec-violet)" },  // ZigZag Swings -- the one purple, kept small
 }
 
 export const SECTION_ICON = {
