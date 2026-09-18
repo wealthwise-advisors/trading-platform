@@ -104,6 +104,13 @@ class IndicatorSeries(BaseModel):
     stochrsi_k: list[Optional[float]]
     stochrsi_d: list[Optional[float]]
     mfi: list[Optional[float]]
+    # Bollinger Bands (20, 2) on the close. A ROLLING window, unrelated to the
+    # session-anchored VWAP bands that sit beside them on the chart -- the two
+    # are named apart because they are different calculations, not two skins
+    # on one.
+    bb_middle: list[Optional[float]] = []
+    bb_upper: list[Optional[float]] = []
+    bb_lower: list[Optional[float]] = []
 
 
 class PriceDataResponse(BaseModel):

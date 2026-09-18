@@ -140,9 +140,13 @@ function Quote({ label, value }: { label: string; value: string }) {
  * itself.
  */
 export function IndicatorReadout({
-  indicators, topOffset = 40,
+  indicators, topOffset = 40, showBollinger = false,
 }: {
   indicators: IndicatorSeries
+  /** Whether the Bollinger row is drawn. It follows the chart's own toggle:
+   *  a readout for a line that is not on the chart is a number with nothing
+   *  to point at. */
+  showBollinger?: boolean
   /** Pixels from the plot's top edge. The caller passes the Plotly top margin,
    *  because that band holds the range selector and the ZigZag swing headers
    *  and this block has to start below both. A fixed guess put it on top of
@@ -159,6 +163,14 @@ export function IndicatorReadout({
     ["VWAP Bands ±2σ",
       `${px(lastOf(indicators.vwap_upper))}  ${px(lastOf(indicators.vwap_lower))}`],
   ]
+
+  // "BB 20 2" -- the name the reference uses, now on the thing it actually
+  // names: a 20-bar simple moving average with 2-sigma envelopes, computed
+  // server-side. Basis, upper, lower, in that order.
+  if (showBollinger) {
+    rows.push(["BB 20 2",
+      `${px(lastOf(indicators.bb_middle))}  ${px(lastOf(indicators.bb_upper))}  ${px(lastOf(indicators.bb_lower))}`])
+  }
 
   return (
     <div className="pointer-events-none absolute left-2 z-10" style={{ top: topOffset }}>

@@ -12,7 +12,8 @@ import pandas as pd
 from src.backtesting.results import BacktestResults, Trade
 from src.backtesting.replay_engine import FrameState
 from src.analysis.indicators import (
-    calc_rsi, calc_stochrsi, calc_mfi, calc_vwap_bands, calc_volume_profile,
+    calc_rsi, calc_stochrsi, calc_mfi, calc_vwap_bands, calc_bollinger_bands,
+    calc_volume_profile,
 )
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 from src.data.resample import bars_are_daily_or_longer
@@ -188,6 +189,12 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
     if bars_are_daily_or_longer(df.index):
         vwap = vwap_u = vwap_l = pd.Series(np.nan, index=df.index)
 
+    # Bollinger Bands (20, 2) on the close. Unlike VWAP they are a rolling
+    # window rather than a session accumulation, so there is no session anchor
+    # to pass and no reason to blank them on daily bars -- a 20-day Bollinger
+    # band is a perfectly ordinary thing to want.
+    bb_mid, bb_upper, bb_lower = calc_bollinger_bands(df["close"], length=20, num_dev=2.0)
+
     def series_to_list(s: pd.Series) -> list:
         return [_safe(float(v)) if pd.notna(v) else None for v in s]
 
@@ -202,6 +209,9 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
         "vwap": series_to_list(vwap),
         "vwap_upper": series_to_list(vwap_u),
         "vwap_lower": series_to_list(vwap_l),
+        "bb_middle": series_to_list(bb_mid),
+        "bb_upper": series_to_list(bb_upper),
+        "bb_lower": series_to_list(bb_lower),
     }
     # Volume Profile is price-indexed, not bar-indexed, so it travels beside
     # the per-bar series rather than inside them.

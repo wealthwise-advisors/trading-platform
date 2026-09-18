@@ -16,7 +16,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
-  BarChart3, CandlestickChart, FileText, LineChart, Search, Settings, Zap,
+  BarChart2, BarChart3, CandlestickChart, FileText, LineChart, Search, Settings, Zap,
 } from "lucide-react"
 
 import { api, auth, SIGN_IN_PAGE, type Me } from "@/lib/api"
@@ -43,7 +43,16 @@ const NAV: NavItem[] = [
   { label: "Strategy Lab", icon: Settings, page: "backtest", tab: "optimizer",
     title: "Sweep a strategy's parameter grid and rank the runs" },
   { label: "Analytics", icon: LineChart, page: "backtest", tab: "pnl",
-    title: "P&L distribution, monthly returns and the equity curve" },
+    title: "P&L distribution across the trades" },
+  // THE SECOND "Analytics". The reference header carries the name twice, with
+  // a line-chart icon and a bar-chart one, and this is the bar-chart half. It
+  // opens Monthly Returns -- a real tab that no other section named, and the
+  // one the bar-chart icon fits. The label is duplicated on purpose; the
+  // titles are what tell the two apart on hover, and `current` keys on the
+  // ITEM rather than on its label, so two items sharing a name cannot make
+  // two pills light at once.
+  { label: "Analytics", icon: BarChart2, page: "backtest", tab: "monthly",
+    title: "Monthly returns, month by month" },
   { label: "Reports", icon: FileText, page: "export",
     title: "Export raw bars, or download a full backtest report" },
 ]
@@ -75,7 +84,8 @@ export function HeaderNav() {
   //
   // So an explicit choice wins while it still describes where we are, and the
   // derivation is the fallback for arriving by any other route.
-  const chosen = NAV.find((n) => n.label === navSection)
+  const navKey = (n: NavItem) => `${n.label}-${n.tab ?? n.page}`
+  const chosen = NAV.find((n) => navKey(n) === navSection)
   const chosenStillFits = chosen
     && chosen.page === page
     && (chosen.tab === undefined || chosen.tab === resultsTab)
@@ -88,11 +98,11 @@ export function HeaderNav() {
     <nav className="flex items-center gap-1" aria-label="Sections">
       {NAV.map((n) => (
         <button
-          key={n.label}
+          key={navKey(n)}
           type="button"
           title={n.title}
           aria-current={n === current ? "page" : undefined}
-          onClick={() => goTo(n.page, n.tab, n.label)}
+          onClick={() => goTo(n.page, n.tab, navKey(n))}
           className={`nav-pill${n === current ? " nav-pill-on" : ""}`}
         >
           <n.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -2,7 +2,8 @@
 indicators.py
 =============
 
-RSI and StochRSI calculations, shared by the API (which feeds the live chart)
+RSI, StochRSI, MFI, VWAP bands, Bollinger Bands and the volume profile,
+shared by the API (which feeds the live chart)
 and the exported HTML report, so the two cannot compute different values.
 RSI was extracted verbatim from ui/components/charts.py. StochRSI replaced the
 price Stochastic on 2026-09-15.
@@ -95,6 +96,43 @@ def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
     neg_sum = negative.rolling(length).sum()
     total = (pos_sum + neg_sum).replace(0, np.nan)
     return 100.0 * pos_sum / total
+
+
+def calc_bollinger_bands(
+    close: pd.Series,
+    length: int = 20,
+    num_dev: float = 2.0,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Bollinger Bands: a simple moving average with standard-deviation bands.
+
+        middle = SMA(close, length)
+        sigma  = population standard deviation of the same window
+        upper  = middle + num_dev * sigma
+        lower  = middle - num_dev * sigma
+
+    Returns (middle, upper, lower).
+
+    NOT THE SAME THING AS calc_vwap_bands, and that is the whole reason this
+    exists. That one is volume-weighted and resets at every session open; this
+    one is an unweighted rolling window that carries across sessions. They sit
+    at different prices on the same chart and answer different questions, so
+    the readout names them separately rather than lending one the other's
+    label.
+
+    ddof=0 -- the POPULATION deviation, which is what Bollinger defined and
+    what every trading platform draws. pandas defaults to ddof=1, the sample
+    deviation, which on a 20-bar window is about 2.6% wider; a band that is
+    2.6% off is a band that disagrees with the chart the trader came from.
+
+    The first `length - 1` bars have no full window and come back NaN, which
+    the serializer turns into nulls and the chart simply does not draw.
+    """
+    if length < 1:
+        raise ValueError(f"Bollinger length must be >= 1, got {length}")
+    window = close.rolling(window=length, min_periods=length)
+    middle = window.mean()
+    sigma = window.std(ddof=0)
+    return middle, middle + num_dev * sigma, middle - num_dev * sigma
 
 
 def calc_vwap_bands(

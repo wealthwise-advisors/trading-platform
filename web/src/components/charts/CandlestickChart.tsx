@@ -145,6 +145,10 @@ export function CandlestickChart({
   // maximum difference 0.0000000000. So the redraw is instant, needs no round
   // trip, and does not fork the VWAP maths into TypeScript.
   const [vwapOn, setVwapOn] = useState(showVwap)
+  // Bollinger Bands (20, 2). Off by default: the price panel already carries
+  // VWAP and its bands, and stacking a second envelope on top of that without
+  // being asked makes the candles harder to read, not easier.
+  const [bbOn, setBbOn] = useState(false)
   const [vwapPanelOpen, setVwapPanelOpen] = useState(false)
   const [devUp, setDevUp] = useState(2)
   const [devDn, setDevDn] = useState(-2)
@@ -465,6 +469,31 @@ export function CandlestickChart({
                 dash: vwapStyle.vwap.dash },
         hovertemplate: hover("VWAP"),
         legendgroup: "vwap", xaxis: "x", yaxis: "y" } as unknown as Data,
+    )
+  }
+
+  // ── Bollinger Bands (20, 2) ───────────────────────────────────────────
+  // A REAL indicator, not the VWAP bands wearing a different name. These are
+  // a 20-bar simple moving average with population-sigma envelopes
+  // (src/analysis/indicators.py::calc_bollinger_bands); the VWAP bands above
+  // are volume-weighted and reset every session. They sit at different prices
+  // and they are labelled differently for that reason.
+  //
+  // Dashed and dimmer than VWAP so that with both on, the eye can still tell
+  // which envelope is which.
+  const bbHasData = (indicators.bb_middle ?? []).some((v) => v != null)
+  if (bbOn && bbHasData) {
+    const bbHover = (n: string) => `${n}: %{y:.2f}<extra></extra>`
+    data.push(
+      { type: "scatter", mode: "lines", x: t, y: indicators.bb_upper, name: "BB Upper",
+        line: { color: "#8b9dc3", width: 1, dash: "dash" }, hovertemplate: bbHover("BB Upper"),
+        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
+      { type: "scatter", mode: "lines", x: t, y: indicators.bb_lower, name: "BB Lower",
+        line: { color: "#8b9dc3", width: 1, dash: "dash" }, hovertemplate: bbHover("BB Lower"),
+        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
+      { type: "scatter", mode: "lines", x: t, y: indicators.bb_middle, name: "BB 20 2",
+        line: { color: "#6b7fa8", width: 1.2 }, hovertemplate: bbHover("BB Basis"),
+        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
     )
   }
 
@@ -1354,6 +1383,14 @@ export function CandlestickChart({
 
         <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]">|</span>
         <label className="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" checked={bbOn}
+                 aria-label="Show Bollinger Bands"
+                 onChange={(e) => setBbOn(e.target.checked)} />
+          <span>BB(20,2)</span>
+        </label>
+
+        <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]">|</span>
+        <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={vpOn}
                  onChange={(e) => setVpOn(e.target.checked)} />
           <span>Volume Profile</span>
@@ -1420,6 +1457,7 @@ export function CandlestickChart({
                    className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
                               bg-[var(--surface-1)] py-1 shadow-xl">
                 <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
+                <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
                 <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
                 {OSC_ORDER.map((key) => (
                   <MenuToggle key={key}
@@ -1720,7 +1758,7 @@ export function CandlestickChart({
           the VWAP checkbox and the 1D/5D/1M range buttons -- instead of the
           chart. */}
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <IndicatorReadout indicators={indicators} topOffset={marginTop + 4} />
+        <IndicatorReadout indicators={indicators} topOffset={marginTop + 4} showBollinger={bbOn} />
         <Plot
           data={data}
           layout={layout}
