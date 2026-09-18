@@ -227,8 +227,8 @@ export function ResultsPage() {
            beneath it, and deliberately so. It sits here rather than inside the
            rail because in the reference it overhangs the chart column, which a
            child of the rail cannot do. */}
-      <div className="shrink-0 flex flex-col xl:flex-row gap-2 2xl:gap-x-[55px] items-stretch">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-2 2xl:gap-3 flex-1 min-w-0 items-stretch auto-rows-fr 2xl:auto-rows-[72px]">
+      <div className="shrink-0 flex flex-col xl:flex-row gap-2 top-row items-stretch">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 kpi-row gap-2 flex-1 min-w-0 items-stretch auto-rows-fr">
         <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
                   valueColor={retColor} />
@@ -258,7 +258,7 @@ export function ResultsPage() {
             No sub-line here: the reference's pair is two lines, and "no
             losing trades" already appears under Profit Factor and in the
             panel beneath. `dense` is the shorter card that pairing needs. */}
-              <div className="grid grid-cols-2 gap-2 shrink-0 xl:w-[338px] xl:self-start xl:pt-[25px]">
+              <div className="grid grid-cols-2 gap-2 shrink-0 avg-pair xl:self-start xl:pt-[25px]">
           <StatCard label="Avg Win" dense icon={<ArrowUpRight className="h-4 w-4" />}
                     accent={ACCENTS[3]}
                     value={points(s.avg_win_points)}

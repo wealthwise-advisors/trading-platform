@@ -6,6 +6,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* `wide` is the reference screenshot's own width, and `mid` is where six
+       KPI cards stop fitting across. Declared rather than written inline as
+       min-[1697px]: -- see the note in the git history: arbitrary media
+       variants produced no CSS in this project and failed silently. */
+    --breakpoint-mid: 1440px;
+    --breakpoint-wide: 1697px;
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -429,6 +435,59 @@
   color: var(--muted-foreground);
 }
 
+/* ── The top band's width rules ─────────────────────────────────────────────
+ *
+ * PLAIN CSS, not Tailwind variants, and deliberately so. These three rules
+ * are width-dependent in a way that fought the utility ordering: a custom
+ * breakpoint declared in @theme is emitted BEFORE the built-in ones, so
+ * `xl:grid-cols-3` (1280px) landed after `mid:grid-cols-6` (1440px) in the
+ * stylesheet and won at every width above 1440 -- six cards silently became
+ * three, and the Avg pair never reached the reference's 338px. Written here
+ * the cascade is the order on the page, which is the order that was meant.
+ *
+ * The numbers come from the reference screenshot measured at its own 1697px:
+ * six cards across, a 338px Avg pair, and a 55px channel between them. Below
+ * 1697 the pair gives width back so "Max Drawdown" stays on one line; below
+ * 1440 six cards no longer fit at all and the row folds to three. */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+@media (width >= 640px)  { .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (width >= 1440px) { .kpi-row { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (width >= 1697px) { .kpi-row { gap: 0.75rem; grid-auto-rows: 72px; } }
+
+.avg-pair { width: 100%; }
+@media (width >= 1280px) { .avg-pair { width: 264px; } }
+@media (width >= 1697px) { .avg-pair { width: 338px; } }
+
+@media (width >= 1697px) { .top-row { column-gap: 55px; } }
+
+/* The rail scrolls on a short window, and says so.
+ *
+ * Three panels need about 726px; a 824px-high window leaves the rail roughly
+ * 604px after the header, the KPI band and the status strip. That is not a
+ * layout bug, it is arithmetic -- so the honest thing is to make the overflow
+ * legible rather than pretend it is not there. The bottom edge fades, the same
+ * device the tab strip uses, so a half-visible row reads as "there is more
+ * below" instead of as a panel that has been chopped.
+ *
+ * mask-image only paints the fade when the content actually overflows, because
+ * a scroll-driven animation only runs when there is scroll range to drive it. */
+@supports (animation-timeline: scroll(self)) {
+  [aria-label="Market and trade panels"] {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+    animation: rail-fade-out linear both;
+    animation-timeline: scroll(self);
+    animation-range: exit-crossing 26px;
+  }
+}
+@keyframes rail-fade-out {
+  to { mask-image: linear-gradient(to bottom, #000 100%, #000 100%); }
+}
+
 /* ── right rail cards ──────────────────────────────────────────────────────
    Watchlist, Market Summary and Trade Statistics. Deliberately quieter than
    .stat-card: the rail sits beside the chart all day, so it gets a flat
@@ -455,7 +514,7 @@
   justify-content: center;
   gap: 3px;
   min-height: 72px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: var(--radius-card);
   border: 1px solid var(--hairline);
   background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
@@ -516,10 +575,7 @@
   font-weight: 500;
   color: var(--muted-foreground);
   letter-spacing: 0.01em;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.15;
 }
 .stat-card .stat-value {
   font-size: 1.28rem;
@@ -822,6 +878,10 @@ input:focus-visible {
      overflow on the left stays unreachable. With nine tabs in a narrowed
      column that hid "Chart" completely: not scrolled past, unreachable. */
   justify-content: flex-start;
+  /* The edge fade already says "there is more this way"; a scrollbar track
+     under the tabs said it again in a way that reads as a rendering fault.
+     Scrolling itself is untouched -- wheel, drag and keyboard all still work. */
+  scrollbar-width: none;
   /* Fade the two edges instead of slicing a tab in half. A scrollable row that
      hard-clips "Price & Trades" to "rice & Trades" looks like a bug; a fade
      reads as "there is more this way", which is the actual situation. */
@@ -833,6 +893,7 @@ input:focus-visible {
     transparent 100%);
   scroll-padding-inline: 14px;
 }
+.tabs-scroll::-webkit-scrollbar { height: 0; }
 .tabs-scroll [data-slot="tabs-trigger"] {
   flex: 0 0 auto;
   /* Tighter than the shared default so the EIGHT tabs the reference shows fit
@@ -843,6 +904,13 @@ input:focus-visible {
   padding-inline: 0.5rem;
   font-size: 0.8125rem;
   gap: 0.3rem;
+}
+@media (max-width: 1696px) {
+  .tabs-scroll [data-slot="tabs-trigger"] svg { display: none; }
+  .tabs-scroll [data-slot="tabs-trigger"] {
+    padding-inline: 0.35rem;
+    font-size: 0.78rem;
+  }
 }
 
 /* --- 5. Scrollbars ------------------------------------------------------

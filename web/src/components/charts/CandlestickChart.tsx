@@ -1316,7 +1316,7 @@ export function CandlestickChart({
       {/* VWAP controls. The gear sits beside the toggle so the settings are
           discoverable from the thing they configure, rather than buried in a
           global preferences screen. */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2 pb-1.5 text-xs relative">
+      <div className="shrink-0 flex flex-wrap items-center gap-x-1.5 gap-y-1 pb-1 text-xs relative">
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={vwapOn}
                  onChange={(e) => setVwapOn(e.target.checked)} />
@@ -1338,7 +1338,7 @@ export function CandlestickChart({
                      hover:bg-[color:var(--raise-4)]"
         >⚙</button>
 
-        <span className="mx-1 text-[color:var(--hairline-firm)]">|</span>
+        <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]">|</span>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={vpOn}
                  onChange={(e) => setVpOn(e.target.checked)} />
@@ -1361,7 +1361,7 @@ export function CandlestickChart({
           const info = OSC_STUDIES[key]
           return (
             <span key={key} className="flex items-center gap-1.5">
-              <span className="mx-1 text-[color:var(--hairline-firm)]" aria-hidden>|</span>
+              <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]" aria-hidden>|</span>
               <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
                      title={info.available ? undefined : info.pending}>
                 <input type="checkbox" checked={osc[key]} disabled={!info.available}
