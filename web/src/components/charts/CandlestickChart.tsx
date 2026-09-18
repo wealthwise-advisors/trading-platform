@@ -1227,6 +1227,20 @@ export function CandlestickChart({
   // from it so it starts below both rather than on top of them.
   const marginTop = hasSwingHeaders ? 62 + extraHeaderRows * 21 : 38
 
+  // THE FLOOR GROWS WITH THE STUDIES. It was a flat 420px, which is fine for
+  // the price panel and three oscillators and hopeless for four: switching MFI
+  // on at an 800px window squeezed every row to about 25px, and the row labels
+  // -- "RSI (2) 68.00", "StochRSI 14 14 3 3 16.51 26.82" -- overlapped each
+  // other into noise.
+  //
+  // 58px is the least a 0-100 oscillator can be and still show its three grid
+  // labels without them colliding. Below the floor the container stops
+  // shrinking and the page scrolls instead, which is the honest trade: a row
+  // you have to scroll to is readable, a row crushed to 25px is not.
+  const OSC_ROW_MIN = 58
+  const PRICE_MIN = 240
+  const chartMinHeight = PRICE_MIN + indicatorRows.length * OSC_ROW_MIN + marginTop + 30
+
   const layout: Partial<Layout> = {
     // Plotly's title defaults to yref:"container" (positioned against the
     // WHOLE figure, margins included) while the range-selector buttons
@@ -1311,7 +1325,7 @@ export function CandlestickChart({
     // instead of just being small. 420 is low enough to only kick in on
     // genuinely tiny viewports.
     <div ref={containerRef}
-         style={{ width: "100%", height: "100%", minHeight: 420,
+         style={{ width: "100%", height: "100%", minHeight: chartMinHeight,
                   display: "flex", flexDirection: "column" }}>
       {/* VWAP controls. The gear sits beside the toggle so the settings are
           discoverable from the thing they configure, rather than buried in a
