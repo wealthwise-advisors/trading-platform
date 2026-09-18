@@ -64,7 +64,7 @@ export function PnlDistributionChart({ trades }: { trades: TradeRecord[] }) {
   }
 
   return (
-    <Plot data={data} layout={layout} config={{ scrollZoom: true, displayModeBar: true }}
+    <Plot data={data} layout={layout} config={{ scrollZoom: true, displayModeBar: true, displaylogo: false }}
           style={{ width: "100%" }} useResizeHandler />
   )
 }

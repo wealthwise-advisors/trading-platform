@@ -76,7 +76,12 @@ import { delta as signed, price } from "@/lib/priceFormat"
 type Status = "idle" | "loading" | "ready" | "playing" | "paused" | "done"
 
 /** Levels offered. 1 and 2 are what broker platforms default to. */
-const ALL_DEV_LEVELS = [0.5, 1, 1.5, 2, 2.5, 3] as const
+// 4 and 5 added so the grid can offer the same range the price chart's
+// VWAP presets do. Nothing about the calculation changes: each level is a
+// multiple of the same sigma, recovered from the shipped 2-sigma payload,
+// and the defaults below are untouched -- these are two more boxes to tick,
+// not a new behaviour.
+const ALL_DEV_LEVELS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5] as const
 
 /**
  * Session windows worth having to hand, in ET.

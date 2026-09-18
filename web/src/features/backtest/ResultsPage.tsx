@@ -219,7 +219,7 @@ export function ResultsPage() {
     // the chart claim the leftover height is exactly right -- so it is kept,
     // and only there. The same reasoning is why flex-1/min-h-0/overflow-y-auto
     // are xl:-prefixed all the way down this file.
-    <div className="xl:h-full flex flex-col gap-2 px-3 pt-0.5 pb-3 xl:pb-2 w-full max-w-none">
+    <div className="xl:h-full flex flex-col gap-1.5 px-3 pt-0.5 pb-3 xl:pb-1.5 w-full max-w-none">
       {/* THE TOP ROW: eight metrics, ONE grid.
            It used to be two containers -- six cards in a grid, then Avg Win
            and Avg Loss in a separate 338px box nudged 25px down and rendered
@@ -349,12 +349,12 @@ export function ResultsPage() {
              pitfall: a flex-row's children stretch to the container's full
              cross-size by default, so flex-1 on the chart column now
              actually reaches the bottom of the available viewport space. ── */}
-        <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-2">
+        <div className="xl:flex-1 xl:min-h-0 flex flex-col xl:flex-row gap-3 items-stretch mt-1">
           <div className="relative min-w-0 xl:flex-1 flex flex-col space-y-2 xl:overflow-y-auto">
             {/* h-[60vh] below xl: with no flex-1 chain to inherit from, a chart
                  whose only height instruction is "fill the parent" fills nothing. */}
             <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
-              <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
+              <Card className="p-1.5 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
                 {/* The chart draws its own header now, so that the instrument
                     line and the Indicators / Save / full-screen controls share
                     one row. Rendering ChartHeader here as well would put the

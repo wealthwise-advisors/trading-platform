@@ -68,7 +68,7 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
     <Plot
       data={data}
       layout={layout}
-      config={{ scrollZoom: true, displayModeBar: true }}
+      config={{ scrollZoom: true, displayModeBar: true, displaylogo: false }}
       style={{ width: "100%" }}
       useResizeHandler
     />

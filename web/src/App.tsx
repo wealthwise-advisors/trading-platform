@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { type Me } from "@/lib/api"
 import { AccountSettings } from "@/components/AccountSettings"
 import { ExportReportButton } from "@/components/ExportReportButton"
-import { DeployButton } from "@/features/live/DeployButton"
 import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
@@ -138,7 +137,7 @@ function App({ user }: { user: Me }) {
               missing element rather than as breathing room. justify-start
               parks the nav against the brand and lets the leftover space
               collect on the right, where the actions use it. */}
-          <div className="order-last w-full xl:order-none xl:w-auto xl:mr-auto xl:shrink-0 flex min-w-0">
+          <div className="order-last w-full xl:order-none xl:ml-4 xl:w-auto xl:mr-auto xl:shrink-0 flex min-w-0">
             <HeaderNav />
           </div>
           {/* Row one, right: find an instrument, reach the account. Sign out
@@ -193,11 +192,15 @@ function App({ user }: { user: Me }) {
               <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
             {backtestId && <ExportReportButton backtestId={backtestId} chartSettings={chartSettings} />}
-            {/* Starts a PAPER session -- a strategy running forward on live
-                bars with simulated fills. Real order routing still does not
-                exist (src/broker/rithmic_broker.py is a stub), and the button
-                says paper everywhere rather than implying otherwise. */}
-            <DeployButton />
+            {/* DEPLOY IS NOT IN THE HEADER.
+                It read as "deploy the application", which is what AWS already
+                does on a push -- so a button offering to start a paper trading
+                session under that name was answering a question nobody was
+                asking here. The feature itself is untouched: the API routes,
+                the order guard, the session and the confirmation dialog are
+                all still there, and DeployButton is still a component, so
+                bringing it back is one line. Nothing about the paper-only
+                restriction changed. */}
             <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
           </div>
         </header>

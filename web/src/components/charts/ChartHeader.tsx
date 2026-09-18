@@ -6,31 +6,22 @@
  *
  *   1. the instrument line -- symbol, description, interval, exchange
  *   2. the OHLC quote for the last bar, with its change
- *   3. the indicator readout -- EMA 9, EMA 21, VWAP and the band pair
+ *
+ * The indicator readout used to be a third item here, painted over the plot's
+ * top-left corner. It is a dropdown now -- ChartLegendMenu, on this same row
+ * -- because a reading you glance at occasionally had been given permanent
+ * space in front of the candles it described.
  *
  * NOTHING HERE IS FABRICATED. Every number is the last real point of the
  * series the chart draws, and a series with no reading prints an em dash
- * rather than a zero. The band row is labelled "VWAP Bands +/-2sigma" and NOT
- * "BB 20 2" as the reference does, because these are not Bollinger bands:
- * api/serializers.py computes them as the session VWAP plus and minus two
- * standard deviations, which is a different calculation with a different
- * meaning. Copying the reference's label onto them would be the one kind of
- * mismatch that actually misleads a trader.
+ * rather than a zero.
  *
  * Plain DOM, not Plotly annotations: a Plotly layout cannot reflow, cannot be
  * themed by the stylesheet, and cannot hold a collapse control.
  */
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp, Crosshair } from "lucide-react"
-import type { IndicatorSeries, OHLCVRecord } from "@/lib/types"
-
-/** The last non-null reading of a series, or null when it has none. */
-function lastOf(xs?: (number | null)[]): number | null {
-  if (!xs) return null
-  for (let i = xs.length - 1; i >= 0; i--) if (xs[i] != null) return xs[i] as number
-  return null
-}
+import { Crosshair } from "lucide-react"
+import type { OHLCVRecord } from "@/lib/types"
 
 /** "5m" -> "5"; "1h", "1d", "1w" unchanged. */
 function intervalLabel(interval: string): string {
@@ -51,7 +42,6 @@ interface ChartHeaderProps {
   exchange?: string | null
   interval: string
   bars: OHLCVRecord[]
-  indicators: IndicatorSeries
   /**
    * The chart's own controls -- Indicators, Save, full screen -- rendered at
    * the right end of the instrument line.
@@ -68,7 +58,7 @@ interface ChartHeaderProps {
 
 export function ChartHeader({
   symbol, description, exchange, interval, bars, actions,
-}: Omit<ChartHeaderProps, "indicators">) {
+}: ChartHeaderProps) {
   const last = bars.length ? bars[bars.length - 1] : null
   const prev = bars.length > 1 ? bars[bars.length - 2] : null
   // Change against the PREVIOUS BAR'S CLOSE, which is what a quote line means
@@ -146,81 +136,5 @@ function Quote({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}</span>{" "}
       <span className="text-foreground">{value}</span>
     </span>
-  )
-}
-
-
-/**
- * The indicator readout, overlaying the top-left of the price panel.
- *
- * Positioned rather than stacked: the reference draws it INSIDE the plot, and
- * in the flow above it this block cost the chart roughly 85px of height --
- * which on a 927px window is the difference between three readable oscillator
- * rows and three squashed ones. pointer-events-none on the wrapper so it
- * cannot swallow a drag on the chart beneath; the button re-enables them for
- * itself.
- */
-export function IndicatorReadout({
-  indicators, topOffset = 40, showBollinger = false,
-}: {
-  indicators: IndicatorSeries
-  /** Whether the Bollinger row is drawn. It follows the chart's own toggle:
-   *  a readout for a line that is not on the chart is a number with nothing
-   *  to point at. */
-  showBollinger?: boolean
-  /** Pixels from the plot's top edge. The caller passes the Plotly top margin,
-   *  because that band holds the range selector and the ZigZag swing headers
-   *  and this block has to start below both. A fixed guess put it on top of
-   *  them. */
-  topOffset?: number
-}) {
-  const [open, setOpen] = useState(true)
-
-  const rows: [string, string][] = [
-    ["EMA 9", px(lastOf(indicators.ema9))],
-    ["EMA 21", px(lastOf(indicators.ema21))],
-    ["VWAP", px(lastOf(indicators.vwap))],
-    // Two numbers on one row: the band pair is one indicator, not two.
-    ["VWAP Bands ±2σ",
-      `${px(lastOf(indicators.vwap_upper))}  ${px(lastOf(indicators.vwap_lower))}`],
-  ]
-
-  // "BB 20 2" -- the name the reference uses, now on the thing it actually
-  // names: a 20-bar simple moving average with 2-sigma envelopes, computed
-  // server-side. Basis, upper, lower, in that order.
-  if (showBollinger) {
-    rows.push(["BB 20 2",
-      `${px(lastOf(indicators.bb_middle))}  ${px(lastOf(indicators.bb_upper))}  ${px(lastOf(indicators.bb_lower))}`])
-  }
-
-  return (
-    <div className="pointer-events-none absolute left-2 z-10" style={{ top: topOffset }}>
-      <div className="pointer-events-auto inline-flex flex-col items-start gap-0.5
-                      rounded-md bg-[color:var(--chart-readout-scrim)] px-1.5 py-0.5
-                      backdrop-blur-[2px]">
-        {open && (
-          <dl className="grid grid-cols-[auto_auto] gap-x-4 text-[11px] tabular-nums">
-            {rows.map(([name, value]) => (
-              <div key={name} className="contents">
-                <dt className="text-muted-foreground">{name}</dt>
-                <dd className="text-right text-foreground">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {/* BELOW the values, as the reference draws it -- the chevron is the
-            handle you pull the block closed with, not a heading over it. */}
-        <button type="button"
-                onClick={() => setOpen((v) => !v)}
-                aria-expanded={open}
-                aria-label={open ? "Hide indicator values" : "Show indicator values"}
-                className="rounded border border-[color:var(--hairline-soft)]
-                           bg-[color:var(--raise-2)] px-1 text-muted-foreground
-                           hover:text-foreground">
-          {open ? <ChevronUp className="h-3 w-3" aria-hidden />
-                : <ChevronDown className="h-3 w-3" aria-hidden />}
-        </button>
-      </div>
-    </div>
   )
 }

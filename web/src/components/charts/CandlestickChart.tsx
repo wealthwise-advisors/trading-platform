@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Plot from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
-import { ChartHeader, IndicatorReadout } from "@/components/charts/ChartHeader"
+import { ChartHeader } from "@/components/charts/ChartHeader"
+import { ChartLegendMenu, type LegendEntry } from "@/components/charts/ChartLegendMenu"
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
@@ -69,6 +70,19 @@ interface CandlestickChartProps {
   interval: string
 }
 
+
+/** The last non-null reading of a series, or null when it has none.
+ *  null means "nothing to show", which prints as an em dash -- never as 0,
+ *  which would claim a measurement that was never taken. */
+function lastReading(xs?: (number | null)[]): number | null {
+  if (!xs) return null
+  for (let i = xs.length - 1; i >= 0; i--) if (xs[i] != null) return xs[i] as number
+  return null
+}
+
+const fmtPrice = (n: number | null | undefined) =>
+  n == null ? "—" : n.toLocaleString(undefined,
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /** Width reserved for the price-axis tick labels, in pixels.
  *  Five digits and a separator at 11px; 52 clears "7,713.31" with room. */
@@ -164,6 +178,18 @@ export function CandlestickChart({
   // being asked makes the candles harder to read, not easier.
   const [bbOn, setBbOn] = useState(false)
   const [vwapPanelOpen, setVwapPanelOpen] = useState(false)
+  /**
+   * Whether Plotly's own legend is drawn beside the plot.
+   *
+   * OFF by default, which is what buys the chart its extra width: measured
+   * at 1536px the legend column and its clearance were 139px of a 907px
+   * figure -- 15% of the plot spent restating what the Legend menu on the
+   * header row now says on demand. It is a toggle in that menu rather than a
+   * deletion: on a wide screen a legend you can read without leaving the
+   * candles is worth the space, and that is a judgement about the window,
+   * not about the app.
+   */
+  const [legendOnChart, setLegendOnChart] = useState(false)
   const [devUp, setDevUp] = useState(2)
   const [devDn, setDevDn] = useState(-2)
   // "DAY" is the only timeframe the engine implements -- VWAP resets on the
@@ -451,6 +477,11 @@ export function CandlestickChart({
   // the DATA, not just the prop: an explicit showVwap can't force a line that
   // has nothing behind it.
   const vwapHasData = (indicators.vwap ?? []).some((v) => v != null)
+  // The last reading of each band, captured from the arrays the traces are
+  // actually built from. The Legend menu prints these; recomputing them there
+  // would be a second copy of the sigma maths, free to drift from this one.
+  let bandUpperNow: number | null = null
+  let bandLowerNow: number | null = null
   if (vwapOn && vwapHasData) {
     // Rebuild each band at the user's multiplier. devDn is stored negative,
     // matching the reference dialog's "num dev dn = -2.0" convention, so it is
@@ -466,6 +497,8 @@ export function CandlestickChart({
 
     const upper = atDev(devUp)
     const lower = atDev(devDn)
+    bandUpperNow = lastReading(upper)
+    bandLowerNow = lastReading(lower)
     const hover = (label: string) => `<b>${label}</b>: %{y:.2f}<extra></extra>`
     data.push(
       { type: "scatter", mode: "lines", x: t, y: upper, name: "UpperBand",
@@ -1319,7 +1352,7 @@ export function CandlestickChart({
     // ChartLegendCard overlay, a tab-row toggle button) were both tried and
     // didn't work as well as just using what the static HTML report
     // already does successfully.
-    showlegend: true,
+    showlegend: legendOnChart,
     // ── THE LEGEND, AND WHY IT STOPPED SITTING ON THE PRICE LADDER ────────
     //
     // It was positioned in PAPER coordinates (x: 1.055), which are a fraction
@@ -1375,7 +1408,7 @@ export function CandlestickChart({
       l: vpLeftAxis ? AXIS_W : 14,
       r: vpLeftAxis ? 14 : AXIS_W,
       t: marginTop,
-      b: 22,
+      b: 18,
     },
     // No fixed height here on purpose -- the wrapping container stretches to
     // fill the available vertical space (matching the taller right-panel
@@ -1386,12 +1419,83 @@ export function CandlestickChart({
     annotations: annotations as Layout["annotations"],
   }
 
+  /**
+   * Everything currently drawn on the price panel, with its colour, the way
+   * it is drawn, and its latest reading where it has one.
+   *
+   * Built from the same state and the same style objects that produced the
+   * traces above -- the ZigZag colours, the swing-circle colours and the
+   * marker shapes are the literals the traces use. A legend holding its own
+   * copy of the palette is a legend that will eventually describe a colour
+   * the chart stopped using.
+   *
+   * Only what is actually ON appears. A key listing a study you switched off
+   * is a key you have to second-guess.
+   */
+  const legendEntries: LegendEntry[] = []
+  legendEntries.push(
+    { label: "EMA 9", color: "#ffab40", kind: "line",
+      value: fmtPrice(lastReading(indicators.ema9)) },
+    { label: "EMA 21", color: "#80cbc4", kind: "line",
+      value: fmtPrice(lastReading(indicators.ema21)) },
+  )
+  if (vwapOn && vwapHasData) {
+    legendEntries.push(
+      { label: "VWAP", color: vwapStyle.vwap.color, kind: "line",
+        note: `session anchored, resets ${vwapTimeframe.toLowerCase()}`,
+        value: fmtPrice(lastReading(indicators.vwap)) },
+      { label: `VWAP Upper +${devUp.toFixed(1)}σ`, color: vwapStyle.upper.color,
+        kind: "band", value: fmtPrice(bandUpperNow) },
+      { label: `VWAP Lower ${devDn.toFixed(1)}σ`, color: vwapStyle.lower.color,
+        kind: "band", value: fmtPrice(bandLowerNow) },
+    )
+  }
+  if (bbOn) {
+    legendEntries.push(
+      { label: "BB 20 2 basis", color: "#6b7fa8", kind: "line",
+        note: "20-bar mean, 2 sigma envelope",
+        value: fmtPrice(lastReading(indicators.bb_middle)) },
+      { label: "BB Upper", color: "#8b9dc3", kind: "dash",
+        value: fmtPrice(lastReading(indicators.bb_upper)) },
+      { label: "BB Lower", color: "#8b9dc3", kind: "dash",
+        value: fmtPrice(lastReading(indicators.bb_lower)) },
+    )
+  }
+  if (vpOn) {
+    legendEntries.push({ label: "Volume Profile", color: "rgb(56,189,248)", kind: "band",
+                         note: "value area darker than the rest" })
+  }
+  if (showZigzag) {
+    legendEntries.push(
+      { label: "ZigZag (3L)", color: "#f0c040", kind: "dot", note: "3-leg swing structure" },
+      { label: "ZigZag (10L)", color: "#2196f3", kind: "dot", note: "10-leg swing structure" },
+      { label: "Swing High", color: "#ff6b6b", kind: "marker", symbol: "circle",
+        note: "numbered circle at the high" },
+      { label: "Swing Low", color: "#69f0ae", kind: "marker", symbol: "circle",
+        note: "numbered circle at the low" },
+    )
+  }
+  if (trades.length) {
+    legendEntries.push(
+      { label: "Long Entry", color: GREEN, kind: "marker", symbol: "triangle-up" },
+      { label: "Exit", color: RED, kind: "marker", symbol: "x",
+        note: "green when the trade won, red when it lost" },
+    )
+  }
+
   // The chart's own controls, handed to ChartHeader so they land on the
   // instrument line instead of on a row of their own. Same buttons, same
   // state, same handlers -- only the parent that draws them changed.
   const chartActions = (
     <>
-            {/* "Indicators": every study in one menu. The checkboxes to the left
+            {/* "Legend": what the lines and markers MEAN, and what they read right
+          now. Next to Indicators, which is what turns them on and off -- two
+          different questions, two different menus. */}
+      <ChartLegendMenu entries={legendEntries}
+                       onChart={legendOnChart}
+                       onToggleOnChart={setLegendOnChart} />
+
+      {/* "Indicators": every study in one menu. The checkboxes to the left
                 stay exactly as they are -- this is a second way to reach the same
                 state, for a narrow window where the row wraps, not a replacement. */}
             <span className="relative">
@@ -1712,6 +1816,38 @@ export function CandlestickChart({
                       onClick={() => setVwapPanelOpen(false)} aria-label="Close">✕</button>
             </div>
 
+            {/* PRESET BANDS. The maths already took any multiplier -- sigma is
+                recovered from the shipped 2-sigma payload as (upper - vwap)/2
+                and the bands are rebuilt from it, so 1 through 5 were all
+                reachable before this control existed. What was missing was any
+                way to KNOW that: two bare number fields labelled "num dev dn"
+                and "num dev up" do not tell you the range they accept, and
+                nothing on the chart said the bands were at 2.
+
+                These are symmetric, which is what a sigma band is -- one
+                distance, both sides. The two fields below still take an
+                asymmetric pair for anyone who wants one, and the preset simply
+                writes both at once. */}
+            <div className="space-y-1">
+              <span className="text-muted-foreground">deviation bands (&plusmn;&sigma;)</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[1, 2, 3, 4, 5].map((d) => {
+                  const on = devUp === d && devDn === -d
+                  return (
+                    <button key={d} type="button"
+                            aria-pressed={on}
+                            aria-label={`deviation bands plus and minus ${d} sigma`}
+                            onClick={() => { setDevUp(d); setDevDn(-d) }}
+                            className={`rounded border px-2 py-0.5 ${on
+                              ? "border-[color:var(--primary)] bg-[color:var(--primary)]/15 text-foreground"
+                              : "border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] hover:bg-[color:var(--raise-4)]"}`}>
+                      {on ? "✓ " : ""}&plusmn;{d}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1">
                 <span className="text-muted-foreground">num dev dn</span>
@@ -1803,25 +1939,26 @@ export function CandlestickChart({
       </div>
 
       <div className="flex-1 min-h-0">
-      {/* relative: the indicator readout overlays the PLOT's top-left, as
-          the reference draws it. It lives here rather than in ResultsPage
-          because from there it covered this component's own toolbar rows --
-          the VWAP checkbox and the 1D/5D/1M range buttons -- instead of the
-          chart. */}
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <IndicatorReadout indicators={indicators} topOffset={marginTop + 4} showBollinger={bbOn} />
+      {/* No overlay any more. The EMA / VWAP readout used to be painted over
+          the plot's top-left corner permanently -- about 200x90px of the one
+          region on the page where space is worth something, spent covering
+          the candles it described. The same numbers are in the Legend menu on
+          the header row, beside the key that says what each line is. */}
         <Plot
           data={data}
           layout={layout}
           config={{
             scrollZoom: true, displayModeBar: true,
+            // No Plotly badge. The modebar keeps every button it had --
+            // zoom, pan, reset, download, the axis controls -- so nothing
+            // about how the chart is driven changes; only the logo goes.
+            displaylogo: false,
             modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
           }}
           style={{ width: "100%", height: "100%" }}
           useResizeHandler
           onRelayout={handleRelayout}
         />
-      </div>
       </div>
     </div>
   )
