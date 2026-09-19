@@ -6,6 +6,7 @@
 // grown its own header markup and they had drifted apart.
 
 import type { ReactNode } from "react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function LiveBadge({ on }: { on: boolean }) {
@@ -34,7 +35,7 @@ export function LiveBadge({ on }: { on: boolean }) {
 }
 
 export function SectionHeader({
-  title, meta, live, right,
+  title, meta, live, right, tools, collapsed, onToggle,
 }: {
   title: string
   /** Quiet caption beside the title -- counts, timestamps, scope. */
@@ -43,10 +44,37 @@ export function SectionHeader({
   live?: boolean
   /** Controls pinned to the right edge. */
   right?: ReactNode
+  /**
+   * Icon-only controls at the very end of the row -- a settings gear, a full
+   * screen toggle. Separate from `right` so the panel's own controls always
+   * sit outermost, in the same place on every panel, however much `right`
+   * carries.
+   */
+  tools?: ReactNode
+  /**
+   * Draws a disclosure chevron before the title. Omit both and none is drawn:
+   * a panel that cannot be folded should not advertise that it can.
+   */
+  collapsed?: boolean
+  onToggle?: () => void
 }) {
+  const foldable = collapsed !== undefined && !!onToggle
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5
                     border-b border-[color:var(--hairline-soft)] bg-[var(--surface-2)]">
+      {foldable && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? "Show" : "Hide"} ${title}`}
+          className="-ml-1 grid h-5 w-5 shrink-0 place-items-center rounded
+                     text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
+        >
+          {collapsed ? <ChevronRight size={14} strokeWidth={2.4} />
+                     : <ChevronDown size={14} strokeWidth={2.4} />}
+        </button>
+      )}
       <h3 className="text-[13px] font-bold uppercase tracking-[0.09em]
                      text-violet-800 dark:text-violet-300 whitespace-nowrap">
         {title}
@@ -55,7 +83,12 @@ export function SectionHeader({
       {meta && (
         <span className="text-xs text-muted-foreground/75 font-normal min-w-0">{meta}</span>
       )}
-      {right && <div className="ml-auto flex items-center gap-2">{right}</div>}
+      {(right || tools) && (
+        <div className="ml-auto flex items-center gap-2">
+          {right}
+          {tools && <div className="flex items-center gap-1">{tools}</div>}
+        </div>
+      )}
     </div>
   )
 }

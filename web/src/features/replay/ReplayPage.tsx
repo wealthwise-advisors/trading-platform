@@ -53,6 +53,9 @@ import { Loader, LoadingBlock } from "@/components/ui/loader"
 import { TickProgress } from "@/components/ui/tick-progress"
 import { StatTile } from "@/components/cards/StatTile"
 import { SectionHeader } from "@/components/SectionHeader"
+import { FullscreenButton, PanelToolButton } from "@/components/PanelTools"
+import { usePanelFullscreen } from "@/lib/usePanelFullscreen"
+import { Settings2 } from "lucide-react"
 import { Layers, Wallet, Coins, ClipboardList, Target, ArrowUpRight,
          ArrowDownRight, TriangleAlert } from "lucide-react"
 import { StepSection } from "./StepSection"
@@ -461,6 +464,23 @@ export function ReplayPage() {
    * and unlocks the fields, exactly as before.
    */
   const [setupExpanded, setSetupExpanded] = useState(false)
+  /**
+   * Whether each data panel is folded shut.
+   *
+   * Three panels of twenty-odd columns each is a lot of page. Folding one is
+   * how you give the other two the screen without losing your place in the
+   * session -- the data keeps arriving either way, because this hides the
+   * markup rather than unsubscribing anything.
+   */
+  const [liveOpen, setLiveOpen] = useState(true)
+  const [tapeOpen, setTapeOpen] = useState(true)
+  const [tradesOpen, setTradesOpen] = useState(true)
+  const livePanelRef = useRef<HTMLDivElement>(null)
+  const tapePanelRef = useRef<HTMLDivElement>(null)
+  const tradesPanelRef = useRef<HTMLDivElement>(null)
+  const liveFs = usePanelFullscreen(livePanelRef)
+  const tapeFs = usePanelFullscreen(tapePanelRef)
+  const tradesFs = usePanelFullscreen(tradesPanelRef)
 
   const updateDevPalettes = (next: DeviationPalettes) => {
     setDevPalettes(next)
@@ -2309,10 +2329,29 @@ export function ReplayPage() {
               by the deviation settings, and Volume Profile is computed in the
               browser from each pane's accumulated bars. Both therefore react
               to the settings panel instantly. */}
-          <Card className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden">
+          <Card ref={livePanelRef}
+                className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden
+                           fullscreen:rounded-none">
               <SectionHeader
                 title="Live state — all timeframes"
                 live={status === "playing"}
+                collapsed={!liveOpen}
+                onToggle={() => setLiveOpen((v) => !v)}
+                tools={
+                  <>
+                    {/* The same panel the button below the tiles opens. It is
+                        here as well because the columns it governs -- the VWAP
+                        band pairs, POC, VAH, VAL -- are in THIS table, and in
+                        full screen that button is not on the page at all. */}
+                    <PanelToolButton label="VWAP and Volume Profile settings"
+                                     pressed={settingsOpen}
+                                     onClick={() => setSettingsOpen((v) => !v)}>
+                      <Settings2 size={12} strokeWidth={2.2} />
+                    </PanelToolButton>
+                    <FullscreenButton isFull={liveFs.isFull} onToggle={liveFs.toggle}
+                                      what="live state" />
+                  </>
+                }
                 meta={marketTime ? (
                   <span className="font-mono">
                   {/* market_time is the base bar-s OPEN; the clock the panes
@@ -2374,8 +2413,13 @@ export function ReplayPage() {
                   </span>
                 )}
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm grid-table">
+              {/* BOUNDED, so the sticky header has something to stick to and
+                  a long list of panes cannot push the tape off the screen.
+                  In full screen the cap lifts -- the whole point of going full
+                  screen is to see more rows at once. */}
+              <div hidden={!liveOpen}
+                   style={{ overflow: "auto", maxHeight: liveFs.isFull ? undefined : 420 }}>
+                <table className="w-full text-sm grid-table table-sticky">
                   <thead className="grid-thead">
                     <tr>
                       <th className="text-left p-2 font-medium">TF</th>
@@ -2488,7 +2532,9 @@ export function ReplayPage() {
               </div>
             </Card>
 
-            <Card className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden">
+            <Card ref={tapePanelRef}
+                  className="p-0 border border-[color:var(--hairline-soft)] overflow-hidden
+                             fullscreen:rounded-none">
               {/* The count moved into the header's right slot. It had a row of
                   its own holding one short phrase, which cost a full band of
                   vertical space on every screen to say something that belongs
@@ -2507,6 +2553,12 @@ export function ReplayPage() {
                         : `newest ${Math.min(TAPE_WINDOW, shownTape.length)} of ${shownTape.length.toLocaleString()} bars`}
                   </span>
                 }
+                collapsed={!tapeOpen}
+                onToggle={() => setTapeOpen((v) => !v)}
+                tools={
+                  <FullscreenButton isFull={tapeFs.isFull} onToggle={tapeFs.toggle}
+                                    what="consolidated tape" />
+                }
               />
 
               {/* Reaching an earlier bar used to mean pausing playback on exactly
@@ -2517,7 +2569,7 @@ export function ReplayPage() {
                   deliberately no paging here: three navigation buttons for a
                   table mostly read at its newest end were more to understand
                   than they were worth. */}
-              <div className="tape-bar">
+              <div className="tape-bar" hidden={!tapeOpen}>
                 <div className="space-y-1">
                   <span className="tape-bar-lbl">Jump to date</span>
                   {/* min/max: a bare date input accepts any year the spec allows,
@@ -2618,7 +2670,8 @@ export function ReplayPage() {
               {/* table-sticky pins the header while the tape scrolls -- with 400
                   rows and 13 columns, losing the column names a screen down was
                   the main thing making this table hard to read. */}
-              <div className="overflow-auto" style={{ maxHeight: 460 }}>
+              <div hidden={!tapeOpen}
+                   style={{ overflow: "auto", maxHeight: tapeFs.isFull ? undefined : 460 }}>
                 <table className="w-full text-sm table-sticky grid-table tape-table">
                   <thead className="grid-thead sticky top-0">
                     <tr>
@@ -2648,11 +2701,16 @@ export function ReplayPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tapeWindow.map((r) => {
+                    {tapeWindow.map((r, i) => {
                       const d = r.c - r.o
                         const vp = profileAtRow(r)
                       return (
-                        <tr key={`${r.t}-${r.tf}`} className="border-t border-[color:var(--hairline-soft)]">
+                        // The tape is newest-first, so row 0 is the bar that
+                        // just closed -- marked, because it is the one the
+                        // panel exists to show and it is otherwise
+                        // indistinguishable from the hundred behind it.
+                        <tr key={`${r.t}-${r.tf}`}
+                            className={`border-t border-[color:var(--hairline-soft)]${i === 0 && !jumpedRows ? " row-newest" : ""}`}>
                           <td className="p-2 font-mono text-xs">{closeInTz(r.t, TF_MINUTES[r.tf])}</td>
                           <td className="p-2 font-mono text-xs text-muted-foreground">{inTz(r.t)}</td>
                           <td className="p-2">
@@ -2737,14 +2795,23 @@ export function ReplayPage() {
               </div>
             </Card>
           {completedTrades.length > 0 && (
-            <Card className="p-0 border border-[color:var(--hairline-soft)] w-full overflow-hidden">
+            <Card ref={tradesPanelRef}
+                  className="p-0 border border-[color:var(--hairline-soft)] w-full overflow-hidden
+                             fullscreen:rounded-none">
               <SectionHeader
                 title={`Recent trades — ${focusedTimeframe} pane`}
                 live={status === "playing"}
                 meta={`${completedTrades.length} closed · newest first`}
+                collapsed={!tradesOpen}
+                onToggle={() => setTradesOpen((v) => !v)}
+                tools={
+                  <FullscreenButton isFull={tradesFs.isFull} onToggle={tradesFs.toggle}
+                                    what="recent trades" />
+                }
               />
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm grid-table">
+              <div hidden={!tradesOpen}
+                   style={{ overflow: "auto", maxHeight: tradesFs.isFull ? undefined : 320 }}>
+                <table className="w-full text-sm grid-table table-sticky">
                   <thead className="grid-thead">
                     <tr>
                       <th className="text-left p-2 font-medium">Entry</th>

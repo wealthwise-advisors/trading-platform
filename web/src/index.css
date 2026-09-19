@@ -1219,6 +1219,12 @@ input:focus-visible {
 .tf-pill-on:hover { background: linear-gradient(180deg, #3d8bff, #2467e0); color: #ffffff; }
 
 
+/* A component rule here beats Tailwind's utilities, because this stylesheet
+   sits outside its layer -- so `display: flex` on .tape-bar quietly won
+   against `hidden`, and folding the tape left its toolbar on screen. Anything
+   in this file that sets `display` has to say what [hidden] means for itself. */
+.tape-bar[hidden] { display: none; }
+
 /* ── the circled "i" ───────────────────────────────────────────────────────
    One control, explained on click. An eye would promise "show/hide"; this
    promises "here is what this is", which is the actual offer. 22px so it can
@@ -1351,6 +1357,34 @@ input:focus-visible {
 .grid-table tbody tr {
   border-top: 1px solid var(--raise-2);
   transition: background 130ms var(--ease-out);
+}
+
+/* DENSITY AND GRIDLINES.
+   A trading table is read by running the eye ACROSS a row and DOWN a column,
+   and both need a rule to follow. Rows already had a hairline between them;
+   columns had nothing, so on twenty-odd columns of numbers the eye drifted a
+   column sideways -- which on a table where VWAP, Upper +1s and Lower -1s sit
+   next to each other is not a cosmetic mistake.
+   The separators are deliberately fainter than the row rules: a full grid of
+   equal lines reads as a spreadsheet and fights the numbers.
+   Padding comes down from 8px to 4px vertical, which is about 6px a row -- on
+   a tape showing its newest hundred bars that is six hundred pixels of
+   scrolling saved, for nothing given up. */
+.grid-table th,
+.grid-table td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-right: 1px solid color-mix(in srgb, var(--raise-2) 55%, transparent);
+}
+.grid-table th:last-child,
+.grid-table td:last-child { border-right: 0; }
+.grid-thead th { padding-top: 0.42rem; padding-bottom: 0.42rem; }
+
+/* The newest bar, which is the row the panel exists to show. A left edge in
+   the accent rather than a filled background: a tinted row competes with the
+   green and red the numbers themselves carry. */
+.grid-table tbody tr.row-newest td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .grid-table tbody tr:nth-child(even) { background: var(--raise-1); }
 .grid-table tbody tr:hover { background: color-mix(in srgb, var(--primary) 9%, transparent); }
