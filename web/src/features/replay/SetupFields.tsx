@@ -11,11 +11,14 @@ import { CalendarDays } from "lucide-react"
 import { Label } from "@/components/ui/label"
 
 export function IconField({
-  label, Icon, children,
+  label, Icon, children, info,
 }: {
   label: string
   Icon: typeof CalendarDays
   children: ReactNode
+  /** The circled "i" for this field. Sits on the label row, so it cannot
+   *  change the input's height or push the row wider. */
+  info?: ReactNode
 }) {
   return (
     <div className="flex items-start gap-3">
@@ -24,22 +27,31 @@ export function IconField({
         <Icon size={15} strokeWidth={2} />
       </span>
       <div className="min-w-0 flex-1 space-y-1.5">
-        <Label className="cfg-h">{label}</Label>
+        <div className="flex items-center gap-1.5">
+          <Label className="cfg-h">{label}</Label>
+          {info}
+        </div>
         {children}
       </div>
     </div>
   )
 }
 
-/** The candlestick glyph inside every timeframe pill. */
+/** The glyph inside every timeframe pill.
+ *
+ *  Three plain bars of increasing height -- the same shape the nav's chart
+ *  icons use. What was here before drew a candlestick: three boxes with wicks
+ *  above and below, at 13px, which at that size resolves into a smear of
+ *  strokes rather than anything recognisable, and read as noise beside the
+ *  label it was meant to support. A timeframe is a bar width, so a bar chart
+ *  is the honest picture of it. */
 export function TfGlyph() {
   return (
     <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden
-         fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
-      <path d="M6 4v3M6 17v3M12 3v4M12 16v5M18 5v4M18 15v4" opacity="0.75" />
-      <rect x="4" y="7" width="4" height="10" rx="1" />
-      <rect x="10" y="7" width="4" height="9" rx="1" />
-      <rect x="16" y="9" width="4" height="6" rx="1" />
+         fill="currentColor">
+      <rect x="4" y="13" width="4" height="7" rx="1" />
+      <rect x="10" y="9" width="4" height="11" rx="1" />
+      <rect x="16" y="5" width="4" height="15" rx="1" />
     </svg>
   )
 }

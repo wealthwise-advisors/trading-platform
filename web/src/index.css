@@ -1211,12 +1211,78 @@ input:focus-visible {
 .tf-pill:active { transform: scale(0.94); }
 .tf-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .tf-pill-on {
-  background: linear-gradient(180deg, var(--primary), #5a49d8);
+  background: linear-gradient(180deg, #3d8bff, #2467e0);
   border-color: rgba(120, 170, 255, 0.55);
   color: #ffffff;
   box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 70%, transparent);
 }
 .tf-pill-on:hover { background: linear-gradient(180deg, #3d8bff, #2467e0); color: #ffffff; }
+
+
+/* ── the circled "i" ───────────────────────────────────────────────────────
+   One control, explained on click. An eye would promise "show/hide"; this
+   promises "here is what this is", which is the actual offer. 22px so it can
+   sit inside a card header or beside a field without changing either one's
+   height. */
+.info-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline-mid);
+  background: var(--raise-2);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
+              border-color 160ms var(--ease-out);
+}
+.info-dot:hover { background: var(--raise-4); color: var(--foreground); }
+.info-dot:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.info-dot-on {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  color: var(--foreground);
+}
+.info-pop {
+  position: absolute;
+  top: calc(100% + 7px);
+  z-index: 40;
+  width: 258px;
+  border-radius: 10px;
+  border: 1px solid var(--hairline-mid);
+  background: var(--surface-1);
+  padding: 9px 11px;
+  box-shadow: 0 16px 40px -18px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.35);
+  /* Normal weight and left-aligned: these panels open from inside cards whose
+     own text is uppercase and bold, and inheriting that made the explanation
+     read as another heading. */
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: default;
+}
+.info-pop-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  margin-bottom: 3px;
+}
+.info-pop-body {
+  font-size: 11.5px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+
+/* The two time controls inside the custom-session panel, a size down. That
+   panel sets the height of the whole session row -- the two preset cards
+   stretch to meet it -- so its own slack is paid for three times over. */
+.cs-time { padding-top: 2px; padding-bottom: 2px; }
+.cs-time span { font-size: 14px; }
 
 /* ── session preset cards ──────────────────────────────────────────────── */
 .preset-card {
@@ -1446,14 +1512,17 @@ button, [role="button"] {
    BARS exist rather than how they are displayed — worth looking different.
    ========================================================================= */
 
+/* Sized to sit level with the two preset cards beside it. It used to be about
+   twice their height, which is why they were stretched to meet it and ended up
+   mostly empty. */
 .custom-session {
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), rgba(22, 23, 31, 0.6));
   border-radius: 14px;
-  padding: 12px 13px 11px;
+  padding: 10px 13px 9px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 5px;
   transition: border-color 220ms var(--ease-out), background 220ms var(--ease-out);
 }
 /* Off: the whole card recedes, so "these fields are not in play" is legible
@@ -1514,7 +1583,7 @@ button, [role="button"] {
 .custom-session-row {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   transition: opacity 220ms var(--ease-out);
 }
 .custom-session-label {
@@ -1611,8 +1680,8 @@ button, [role="button"] {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 13px;
-  padding: 14px 15px;
+  gap: 12px;
+  padding: 12px 14px;
 }
 .preset-icon {
   display: grid;
@@ -1685,7 +1754,7 @@ button, [role="button"] {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 40px;
+  height: 36px;
   padding: 0 6px;
 }
 .tf-pill svg { opacity: 0.55; }
@@ -1876,7 +1945,7 @@ button, [role="button"] {
 .range-leg {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   flex: 1 1 0;
 }
@@ -1974,7 +2043,7 @@ button, [role="button"] {
 /* The two presets fill the row height rather than sitting short beside the
    taller custom-session panel. Content stays top-aligned so the name and the
    window keep the same relationship to the icon at any height. */
-.preset-card { height: 100%; align-items: flex-start; }
+.preset-card { width: 100%; height: 100%; align-items: flex-start; }
 .preset-card .preset-icon,
 .preset-card .preset-text,
 .preset-card .preset-radio { margin-top: 1px; }

@@ -33,7 +33,7 @@ export function StepSection({
   return (
     <Reveal delay={delay}>
       <section className="rounded-2xl border border-[color:var(--hairline-soft)] bg-[var(--surface-deep)] overflow-hidden">
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2
                            border-b border-[color:var(--hairline-soft)] bg-[var(--grid-head)]">
           {Icon ? (
             <span aria-hidden className="grid place-items-center h-7 w-7 rounded-lg
@@ -90,7 +90,7 @@ export function StepSection({
           )}
         </header>
 
-        <div className="p-4">{children}</div>
+        <div className="px-4 py-2.5">{children}</div>
       </section>
     </Reveal>
   )

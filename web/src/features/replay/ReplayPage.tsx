@@ -19,7 +19,7 @@ import { InstrumentPicker } from "@/components/InstrumentPicker"
 import { ChevronsUpDown } from "lucide-react"
 import { SourceMark } from "@/components/SourceMark"
 import { StrategyMark } from "@/components/StrategyMark"
-import { CountUp, motion, useReducedMotion, SPRING } from "@/components/motion/primitives"
+import { motion, useReducedMotion, SPRING } from "@/components/motion/primitives"
 import { AnimatePresence } from "framer-motion"
 import { Clock, Info, Globe, Landmark, CalendarRange, BarChart3, Check,
          Activity, TrendingDown, Ruler, ArrowRight } from "lucide-react"
@@ -33,6 +33,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
+import { InfoDot } from "@/components/ui/info-dot"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
 } from "@/lib/deviationColorSettings"
@@ -106,6 +107,35 @@ function weekdayOf(iso: string): string {
     ? ""
     : ["Sunday", "Monday", "Tuesday", "Wednesday",
        "Thursday", "Friday", "Saturday"][d.getUTCDay()]
+}
+
+/**
+ * What each money and speed field does, for its circled "i".
+ *
+ * Written here rather than inline so the four read as one set and stay the
+ * same length. They say what the field CONTROLS and what changes when you move
+ * it -- never whether a value is a good idea, which is not something a form
+ * field can know.
+ */
+const FIELD_INFO: Record<string, string> = {
+  "Initial capital ($)":
+    "The cash the simulated account starts with. Every percentage on the results -- return, drawdown -- is measured against this number, so changing it rescales those without changing which trades were taken.",
+  "Contracts / trade":
+    "How many contracts each entry buys or sells. It multiplies the profit and loss of every trade, and the commission with it. It does not change entry or exit timing.",
+  "Commission / contract ($)":
+    "Charged per contract on entry and again on exit, and subtracted from each trade's result. Set it to what your broker actually charges: too low flatters every strategy, and most on short timeframes.",
+  "Speed":
+    "How fast the replay steps from one bar to the next. It affects playback only -- the bars, the signals and the results are identical at every speed.",
+}
+
+/** The same, for the three strategy parameters, keyed by their server name. */
+const PARAM_INFO: Record<string, string> = {
+  rsi_overbought:
+    "The RSI level at or above which price counts as stretched to the upside, letting the strategy look for a bearish divergence. Raising it takes fewer, more extreme signals; lowering it takes more.",
+  rsi_oversold:
+    "The RSI level at or below which price counts as stretched to the downside, letting the strategy look for a bullish divergence. Lowering it takes fewer, more extreme signals; raising it takes more.",
+  swing_lookback:
+    "How many bars either side a high or low must beat to count as a swing point. Divergences are measured between those points, so a larger value finds fewer and slower swings, a smaller one finds more and noisier ones.",
 }
 
 const SESSION_PRESETS = [
@@ -1328,7 +1358,7 @@ export function ReplayPage() {
     : 0
 
   return (
-    <div className="space-y-4 p-4 w-full max-w-none">
+    <div className="space-y-2 p-4 pt-2 w-full max-w-none">
       {/* Clicking a locked field used to do NOTHING -- a disabled control
           swallows the click, so the field simply refused to open with no
           feedback at all. That is what "completely locked with no way out"
@@ -1339,7 +1369,7 @@ export function ReplayPage() {
           index.css), so the click lands on their wrapper and reaches this
           handler, which answers the question the click was asking. */}
       <div
-        className={`w-full space-y-4 ${ready ? "setup-locked" : ""}`}
+        className={`w-full space-y-2 ${ready ? "setup-locked" : ""}`}
         onClickCapture={(e) => {
           if (!ready) return
           const el = e.target as HTMLElement
@@ -1452,18 +1482,7 @@ export function ReplayPage() {
         </StepSection>
 
         <StepSection n={2} title="Period & timeframe" done={step2Done} delay={0.08}
-                     Icon={CalendarRange}
-                     hint={
-                       <>
-                         <CalendarRange size={13} className="text-violet-800 dark:text-violet-400" />
-                         <CountUp value={dayCount} />{dayCount === 1 ? " Day" : " Days"}
-                         <span className="opacity-40">·</span>
-                         <CountUp value={timeframes.length} />
-                         {timeframes.length === 1 ? " Timeframe" : " Timeframes"}
-                         <span className="opacity-40">·</span>
-                         {sessionLabel}
-                       </>
-                     }>
+                     Icon={CalendarRange}>
         {/* One row, three groups: the range, the count derived from it, and the
             summary those two produce. They used to be three separate rows with
             the dates held to a narrow column, which left most of the card empty
@@ -1615,13 +1634,18 @@ export function ReplayPage() {
           )}
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-1.5 space-y-1.5">
+          <div className="flex items-center gap-1.5">
           <Label className="text-xs">
             Session Hours (ET)
-            <span className="ml-2 text-muted-foreground">
-              · also anchors each pane&apos;s VWAP reset
-            </span>
           </Label>
+          <InfoDot label="Session hours (ET)" align="left">
+            The window each pane is cut to, and the anchor each pane&apos;s VWAP
+            resets at. The data itself is always Eastern; the clock buttons only
+            relabel it. Getting this wrong is what makes a VWAP disagree with
+            another platform while both are arithmetically correct.
+          </InfoDot>
+          </div>
           {/* PRESETS.
               These two fields decide where VWAP starts accumulating, so an
               arbitrary value here puts every VWAP and band off against any other
@@ -1634,7 +1658,6 @@ export function ReplayPage() {
               Typing the right pair from memory is the step that failed, so the
               two that matter are one click, and the one that matches a broker
               platform's DAY says so. */}
-          <Label className="cfg-h mt-1">Presets</Label>
           {/* Two cards rather than two buttons: the label carries a name AND a
               window, and a single-line button forced those into one string that
               was read as one thing. Split, the window is scannable -- which
@@ -1645,17 +1668,20 @@ export function ReplayPage() {
               natural height left a band of empty card under them. They now fill
               the row, which is also what makes the three read as one group of
               alternatives rather than two small things beside a big one. */}
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_25rem] gap-4 items-stretch">
-          <div className="grid grid-cols-2 gap-3 h-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
             {SESSION_PRESETS.map((p) => {
               const on = !session24h && sessionStart === p.from && sessionEnd === p.to
               const [name, ...rest] = p.label.split(" ")
               return (
+                // A WRAPPER, because the "i" is a button and the card is a
+                // button, and a button inside a button is invalid HTML that
+                // browsers resolve by dropping one of them. The card keeps its
+                // whole area clickable; the "i" sits over it.
+                <div key={p.label} className="relative h-full">
                 <button
-                  key={p.label} type="button"
+                  type="button"
                   aria-pressed={on}
                   aria-label={`session preset ${p.label}`}
-                  title={p.why}
                   disabled={ready}
                   className={`preset-card relative${on ? " preset-card-on" : ""}`}
                   onClick={() => { setSession24h(false); setSessionStart(p.from); setSessionEnd(p.to) }}
@@ -1682,21 +1708,21 @@ export function ReplayPage() {
                   <span className="preset-text relative">
                     <span className="preset-name">{name}</span>
                     <span className="preset-range">{rest.join(" ")}</span>
-                    {/* Already written, and until now only reachable by hovering
-                        and waiting. Picking the wrong window is the mistake this
-                        control exists to prevent, so the reason to pick one is
-                        on the card rather than behind a tooltip -- and it fills
-                        a card that otherwise sits empty next to the taller
-                        custom-session panel. */}
-                    <span className="preset-why">{p.why}</span>
+                    {/* The reason to pick this window used to be three lines of
+                        body text here. It is behind the "i" now: worth reading
+                        once while deciding, and after that a paragraph standing
+                        between you and the control. */}
                   </span>
                   <span aria-hidden className={`preset-radio${on ? " preset-radio-on" : ""}`}>
                     {on && <Check size={12} strokeWidth={3.4} />}
                   </span>
                 </button>
+                <span className="absolute top-[13px] right-[46px]">
+                  <InfoDot label={`${name} session`}>{p.why}</InfoDot>
+                </span>
+                </div>
               )
             })}
-          </div>
           {/* The switch and the fields it governs, in one box. Off means the
               session is the whole 24 hours and these two are not consulted at
               all -- which is why they dim rather than vanish: the window you
@@ -1705,6 +1731,13 @@ export function ReplayPage() {
             <div className="custom-session-head">
               <Clock size={14} strokeWidth={2.2} className="text-violet-800 dark:text-violet-300" />
               <span className="custom-session-title">Custom session</span>
+              <InfoDot label="Custom session" className="ml-1.5">
+                The window every pane is cut to. Bars outside From–To are dropped
+                before anything is computed, and each pane&apos;s VWAP restarts at
+                the From time. Session length below is To minus From, counting
+                past midnight when To is the earlier of the two — which is how a
+                Globex-style window spanning two dates is measured.
+              </InfoDot>
               <button
                 type="button"
                 role="switch"
@@ -1724,14 +1757,14 @@ export function ReplayPage() {
             <div className="custom-session-row">
               <span className="custom-session-label">From</span>
               <TimeField value={sessionStart} onChange={setSessionStart}
-                         label="Session start" segmented
+                         label="Session start" segmented className="cs-time"
                          title={lockTitle("data")}
                          disabled={ready || session24h} />
             </div>
             <div className="custom-session-row">
               <span className="custom-session-label">To</span>
               <TimeField value={sessionEnd} onChange={setSessionEnd}
-                         label="Session end" segmented
+                         label="Session end" segmented className="cs-time"
                          title={lockTitle("data")}
                          disabled={ready || session24h} />
             </div>
@@ -1739,12 +1772,16 @@ export function ReplayPage() {
             {/* The real length, computed from the two fields above -- not a
                 fixed cap. RTH is 6h 30m and Globex is 23h, so any hardcoded
                 limit here would be wrong for one of them. */}
-            <div className="custom-session-foot">
-              <Info size={12} strokeWidth={2.2} />
-              {session24h
-                ? <span>Off — every bar kept, all 24 hours</span>
-                : <span>Session length: <b className="text-foreground">{sessionLabel}</b></span>}
-            </div>
+            {/* Only the OFF state earns a line here. The window's length is
+                already TOTAL DURATION in the summary card two rows up, and
+                printing it twice cost this panel the height that made all
+                three session cards stretch to match it. */}
+            {session24h && (
+              <div className="custom-session-foot">
+                <Info size={12} strokeWidth={2.2} />
+                <span>Off — every bar kept, all 24 hours</span>
+              </div>
+            )}
           </div>
           </div>
         </div>
@@ -1754,7 +1791,7 @@ export function ReplayPage() {
         <StepSection n={3} title="Parameters & capital" done={step3Done} delay={0.12}
                      Icon={BarChart3}>
         {currentStrategy && currentStrategy.params.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2.5">
             {currentStrategy.params.map((p) => (
               <ParamCard
                 key={p.name}
@@ -1766,24 +1803,27 @@ export function ReplayPage() {
                 title={lockTitle("strategy")}
                 Icon={PARAM_ICON[p.name] ?? Ruler}
                 onChange={(v) => setParams((prev) => ({ ...prev, [p.name]: v }))}
+                info={PARAM_INFO[p.name]
+                  ? <InfoDot label={p.label}>{PARAM_INFO[p.name]}</InfoDot>
+                  : undefined}
               />
             ))}
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-4">
-          <IconField label="Initial capital ($)" Icon={DollarSign}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-2">
+          <IconField label="Initial capital ($)" Icon={DollarSign} info={<InfoDot label="Initial capital ($)">{FIELD_INFO["Initial capital ($)"]}</InfoDot>}>
             <Input type="number" step={10000} aria-label="Initial capital in dollars" value={initialCapital} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setInitialCapital(Number(e.target.value))} />
           </IconField>
-          <IconField label="Contracts / trade" Icon={Boxes}>
+          <IconField label="Contracts / trade" Icon={Boxes} info={<InfoDot label="Contracts / trade">{FIELD_INFO["Contracts / trade"]}</InfoDot>}>
             <Input type="number" min={1} max={10} aria-label="Contracts per trade" value={contractsPerTrade} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setContractsPerTrade(Number(e.target.value))} />
           </IconField>
-          <IconField label="Commission / contract ($)" Icon={Link2}>
+          <IconField label="Commission / contract ($)" Icon={Link2} info={<InfoDot label="Commission / contract ($)">{FIELD_INFO["Commission / contract ($)"]}</InfoDot>}>
             <Input type="number" step={0.5} aria-label="Commission per contract in dollars" value={commission} title={lockTitle("money")} disabled={ready}
                    onChange={(e) => setCommission(Number(e.target.value))} />
           </IconField>
-          <IconField label="Speed" Icon={GaugeIcon}>
+          <IconField label="Speed" Icon={GaugeIcon} info={<InfoDot label="Speed">{FIELD_INFO["Speed"]}</InfoDot>}>
             <Select value={String(speed)} onValueChange={(v) => changeSpeed(Number(v))}>
               <SelectTrigger className="w-full" aria-label="Speed"><SelectValue /></SelectTrigger>
               <SelectContent>{SPEED_OPTIONS.map((o) => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}</SelectContent>
@@ -1794,7 +1834,7 @@ export function ReplayPage() {
         </StepSection>
       </div>
 
-      <Card className="p-4 border border-[color:var(--hairline-soft)] w-full space-y-3">
+      <Card className="p-2.5 border border-[color:var(--hairline-soft)] w-full space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           {/* Left of the transport, because it undoes the FORM rather than the
               run. Disabled while a session is loaded: the fields are locked
@@ -1871,6 +1911,16 @@ export function ReplayPage() {
               ✎ Change Setup
             </Button>
           )}
+          {/* Last look before Load Data locks these for the session. ml-auto,
+              so it rides the right end of the transport row instead of taking
+              a row of its own. */}
+          <div className="ml-auto"><SummaryChips
+            source={sourceLabel}
+            sourceLive={sourceIsLive}
+            strategy={strategyName || (strategies?.find((x) => x.id === strategyId)?.label ?? strategyId)}
+            dataType={`Candles${showVwap ? " + VWAP" : ""}${showVp ? " + Volume Profile" : ""}`}
+            mode="Market Grid"
+          /></div>
           {ready && (
             /* The tick count and the timestamp moved into TickProgress below;
                they were being stated twice, once here and once by the bar. What
@@ -1886,14 +1936,6 @@ export function ReplayPage() {
             </span>
           )}
         </div>
-        {/* Last look before Load Data locks these for the session. */}
-        <SummaryChips
-          source={sourceLabel}
-          sourceLive={sourceIsLive}
-          strategy={strategyName || (strategies?.find((x) => x.id === strategyId)?.label ?? strategyId)}
-          dataType={`Candles${showVwap ? " + VWAP" : ""}${showVp ? " + Volume Profile" : ""}`}
-          mode="Market Grid"
-        />
 
         {ready && follow.enabled && (
           /* Directly under the checkbox it belongs to. It first went in the

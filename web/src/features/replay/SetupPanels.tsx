@@ -47,8 +47,8 @@ export function makeSummaryRows(opts: {
 export function SummaryPanel({ rows }: { rows: SummaryRow[] }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-violet-400/25
-                    bg-gradient-to-b from-violet-500/[0.07] to-transparent px-4 py-3">
-      <div className="space-y-2.5">
+                    bg-gradient-to-b from-violet-500/[0.07] to-transparent px-4 py-2.5">
+      <div className="space-y-2">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center gap-2.5">
             <r.Icon size={14} strokeWidth={2} className="text-violet-800 dark:text-violet-400 shrink-0" />
@@ -84,7 +84,7 @@ const PARAM_TONE: Record<string, { bar: string; text: string; ring: string }> = 
 const DEFAULT_TONE = { bar: "var(--primary)", text: "text-violet-800 dark:text-violet-300", ring: "border-violet-400/40" }
 
 export function ParamCard({
-  name, label, value, min, max, step, disabled, title, onChange, Icon,
+  name, label, value, min, max, step, disabled, title, onChange, Icon, info,
 }: {
   name: string
   label: string
@@ -96,11 +96,14 @@ export function ParamCard({
   title?: string
   onChange: (v: number) => void
   Icon: typeof Clock
+  /** The circled "i" for this parameter. On the header row beside the value,
+   *  where it costs the card no extra height. */
+  info?: ReactNode
 }) {
   const tone = PARAM_TONE[name] ?? DEFAULT_TONE
   return (
-    <div className="rounded-xl border border-[color:var(--hairline-soft)] bg-[var(--grid-head)] px-4 py-3.5">
-      <div className="flex items-center gap-2.5">
+    <div className="rounded-xl border border-[color:var(--hairline-soft)] bg-[var(--grid-head)] px-3.5 py-2">
+      <div className="flex items-center gap-2">
         <Icon size={16} strokeWidth={2} className={tone.text} />
         <span className="text-[11.5px] font-bold uppercase tracking-[0.07em] text-foreground">
           {label}
@@ -111,11 +114,12 @@ export function ParamCard({
         >
           {value}
         </span>
+        {info}
       </div>
 
       {/* The track takes the parameter's own colour, so the control and the
           line it moves on the chart are recognisably the same thing. */}
-      <div className="mt-3" style={{ ["--param-bar" as string]: tone.bar }}>
+      <div className="mt-2" style={{ ["--param-bar" as string]: tone.bar }}>
         <Slider
           className="param-slider"
           min={min} max={max} step={step}
@@ -130,9 +134,8 @@ export function ParamCard({
       {/* slate-400, not slate-500: at 10.5px on this card slate-500 measures 3.89
           against the required 4.5, so the min/mid/max marks were the hardest
           numbers on the panel to read. */}
-      <div className="mt-1.5 flex justify-between text-[10.5px] font-medium text-muted-foreground tabular-nums">
+      <div className="mt-1 flex justify-between text-[10.5px] font-medium text-muted-foreground tabular-nums">
         <span>{min}</span>
-        <span>{Math.round((min + max) / 2)}</span>
         <span>{max}</span>
       </div>
     </div>
