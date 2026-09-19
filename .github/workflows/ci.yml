@@ -140,3 +140,56 @@ jobs:
       # "files": [], so --noEmit type-checks nothing and always exits 0.
       - run: npx tsc -b --force
       - run: npx oxlint src
+
+  e2e:
+    # END-TO-END, IN A REAL BROWSER.
+    #
+    # Deliberately NOT in the deploy path. deploy.yml does not wait on this
+    # job, so a browser test having a bad day can never stand between a
+    # production fix and production. It IS a required check on pull requests,
+    # which is where blocking is useful and where a human can re-run it.
+    #
+    # TO PROMOTE IT LATER, once it has a track record of not flaking:
+    #   1. add `e2e` to the `needs:` list of deploy.yml's job, and
+    #   2. give that job a `workflow_run`/`needs` gate on this workflow.
+    # Do that only after watching the run history: the cost of getting it
+    # wrong is being unable to ship a hotfix while a test is flapping.
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The suite drives the real API, so it needs both runtimes. The app is
+      # exercised through its own synthetic data source -- no Schwab token, no
+      # credential of any kind, and none should ever be added here.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install -e ".[dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+
+      # Chromium only, and only Chromium's dependencies: the full `--with-deps
+      # install` pulls three browsers and their system libraries for no gain.
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+
+      - run: npm run test:e2e
+        working-directory: web
+
+      # Kept for 7 days rather than the default 90: these are debugging aids
+      # for a run someone is looking at now, not a record worth storing.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/playwright-report/
+            web/test-results/
+          retention-days: 7

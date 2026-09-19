@@ -53,3 +53,30 @@ Do not open a public issue for a suspected security problem in credential
 handling, auth flows, or data exposure. Report it directly to the project
 maintainer. See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) for what
 was already reviewed as of v1.0.0.
+
+## Browser tests
+
+Anything that changes layout, CSS or a control's behaviour should be checked in a
+real browser before it is pushed:
+
+```bash
+cd web
+npx playwright install chromium   # once
+npm run test:e2e
+```
+
+The suite builds the app and runs it against a throwaway API on its own database,
+using the synthetic data source. It never reads your dev database and never needs
+a broker credential — **do not add one**.
+
+Two rules for anything added to `web/e2e/`:
+
+1. **No `waitForTimeout`.** Wait for the condition you actually need. A timer is a
+   guess about someone else's machine: too short and it flakes on CI, too long and
+   it is dead time on every run forever.
+2. **Assert the behaviour, not the implementation.** `expect(overflow).toBe(0)` keeps
+   holding if the fix is later done another way; asserting `position: relative`
+   does not.
+
+A test that fails intermittently is worse than no test, because it teaches people
+to re-run rather than read. If one flakes, fix it or delete it the same day.

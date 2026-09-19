@@ -1175,6 +1175,7 @@ Four checks. Each answers a different question, and none substitutes for another
 |:---|:---|
 | `py -3.12 -m pytest` | Does the engine still compute what it computed before? |
 | `cd web && npm test` | Does the pure frontend logic still hold? |
+| `cd web && npm run test:e2e` | Does it still **work in a browser**? |
 | `cd web && npm run build` | Does it actually typecheck? **This one, not `tsc --noEmit`** |
 | `py -3.12 -m ruff check .` | Is the style and the import graph clean? |
 | `py -3.12 -m pytest --cov=src --cov=api --cov-report=term` | How much of it is exercised? |
@@ -1184,6 +1185,41 @@ Four checks. Each answers a different question, and none substitutes for another
 > solution file carrying project references only, so there is nothing for it to check.
 > **`npm run build` (`tsc -b`) is the real typecheck** — it is the only command that
 > will fail on a type error.
+
+<br>
+
+### ◆ End-to-end, in a real browser
+
+`npm test` runs in jsdom, which has no layout engine. It cannot tell you that an
+element sits 260px below the fold, that a scroll container does not scroll, or
+that one stylesheet's rules beat another's — and each of those has reached
+production here while every other check stayed green. That is what this suite is
+for.
+
+```bash
+cd web
+npx playwright install chromium   # once, ~110 MB
+npm run test:e2e                  # ~90s, Chromium only
+npm run test:e2e:ui               # pick and step through individual tests
+npm run test:e2e:report           # open the report from the last failing run
+```
+
+Nothing needs to be running first. Playwright builds the app, starts a
+**throwaway API on its own SQLite file**, serves the build, registers a test
+account and tears it all down again. Your own `data/autotrader.db` and anything
+on ports 5173/8000 are never touched.
+
+| ▶ | ➜ |
+|:---|:---|
+| **Data** | The app's own **synthetic** source. No Schwab token, no credential of any kind — and none should ever be added. |
+| **Ports** | `4188` (built app) and `8188` (API), chosen clear of the dev ports. |
+| **Retries** | One. A trace and a screenshot are kept **only** for a failure. |
+| **Waits** | None. Every step waits on a condition, never a timer. |
+
+> [!NOTE]
+> The e2e job runs on pull requests and on pushes to master. It is **not** in the
+> deploy path: `deploy.yml` does not wait on it, so a flaky browser test can
+> never stand between a production fix and production.
 
 <br>
 

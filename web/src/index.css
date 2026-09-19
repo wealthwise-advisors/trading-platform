@@ -1219,10 +1219,16 @@ input:focus-visible {
 .tf-pill-on:hover { background: linear-gradient(180deg, #3d8bff, #2467e0); color: #ffffff; }
 
 
-/* A component rule here beats Tailwind's utilities, because this stylesheet
-   sits outside its layer -- so `display: flex` on .tape-bar quietly won
-   against `hidden`, and folding the tape left its toolbar on screen. Anything
-   in this file that sets `display` has to say what [hidden] means for itself. */
+/* Belt and braces. This rule was added when folding the tape left its toolbar
+   on screen: `.tape-bar { display: flex }` is emitted after Tailwind's
+   utilities, so it beat `.hidden` at equal specificity.
+
+   The markup uses the `hidden` ATTRIBUTE now, which Chrome's UA stylesheet
+   hides with `display: none !important` -- so this rule is no longer what does
+   the work, and removing it does not bring the bug back. It stays as a guard
+   for any future caller that reaches for the class instead, and because
+   anything in this file that sets `display` should say what [hidden] means for
+   itself. */
 .tape-bar[hidden] { display: none; }
 
 /* ── the circled "i" ───────────────────────────────────────────────────────

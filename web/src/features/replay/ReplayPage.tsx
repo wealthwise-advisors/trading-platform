@@ -2416,7 +2416,14 @@ export function ReplayPage() {
               {/* BOUNDED, so the sticky header has something to stick to and
                   a long list of panes cannot push the tape off the screen.
                   In full screen the cap lifts -- the whole point of going full
-                  screen is to see more rows at once. */}
+                  screen is to see more rows at once.
+
+                  overflow is set here rather than with a utility class. That
+                  began as a fix for a container that reported `visible` with
+                  `overflow-auto` in its class list; putting the class back
+                  does NOT reproduce that against a production build, so the
+                  original diagnosis was wrong. It stays inline because
+                  maxHeight is already here and the two belong together. */}
               <div hidden={!liveOpen}
                    style={{ overflow: "auto", maxHeight: liveFs.isFull ? undefined : 420 }}>
                 <table className="w-full text-sm grid-table table-sticky">

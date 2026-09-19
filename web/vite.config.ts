@@ -31,4 +31,25 @@ export default defineConfig({
       },
     },
   },
+  // THE SAME PROXY, FOR `vite preview`.
+  //
+  // The end-to-end suite runs against a BUILT app -- that is the point of it,
+  // since three of the bugs it exists to catch only appear after the CSS has
+  // been through the minifier and Tailwind's layers have been flattened. A
+  // built app is static files, which have no proxy, so `vite preview` needs
+  // its own; `server.proxy` above is read by `vite dev` and nothing else.
+  //
+  // E2E_API_TARGET lets the runner point this at the throwaway API it started
+  // on a free port, instead of whatever is on 8000.
+  preview: {
+    proxy: {
+      "/api": {
+        target: process.env.E2E_API_TARGET ?? "http://localhost:8000",
+        // false for the same reason as above: the API compares Origin against
+        // Host and refuses a state-changing request when they disagree.
+        changeOrigin: false,
+        ws: true,
+      },
+    },
+  },
 })
