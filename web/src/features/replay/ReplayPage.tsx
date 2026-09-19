@@ -53,7 +53,8 @@ import { Loader, LoadingBlock } from "@/components/ui/loader"
 import { TickProgress } from "@/components/ui/tick-progress"
 import { StatTile } from "@/components/cards/StatTile"
 import { SectionHeader } from "@/components/SectionHeader"
-import { Layers } from "lucide-react"
+import { Layers, Wallet, Coins, ClipboardList, Target, ArrowUpRight,
+         ArrowDownRight, TriangleAlert } from "lucide-react"
 import { StepSection } from "./StepSection"
 import { SummaryChips, SetupFooterHint } from "./SetupChrome"
 import { TimeField } from "@/components/ui/time-field"
@@ -445,6 +446,21 @@ export function ReplayPage() {
    */
   const [devPalettes, setDevPalettes] = useState<DeviationPalettes>(() => loadPalettes())
   const [devColorNote, setDevColorNote] = useState("")
+  /**
+   * Whether the setup form is expanded while a session is loaded.
+   *
+   * Closed by default once Load Data has run. Those three sections are about
+   * 700px of form that is LOCKED for the session -- every field in them is
+   * disabled -- and leaving them expanded pushed the gauge, the tiles, the
+   * signal and the whole live table below the fold on a 950px window. What
+   * was chosen is still answered above by the Data source / Strategy / Data
+   * type / Mode bar and by the status strip; this is for reading the rest of
+   * it back, so it opens on request rather than by default.
+   *
+   * It is a DISCLOSURE, not the lock. Change Setup still releases the session
+   * and unlocks the fields, exactly as before.
+   */
+  const [setupExpanded, setSetupExpanded] = useState(false)
 
   const updateDevPalettes = (next: DeviationPalettes) => {
     setDevPalettes(next)
@@ -1358,7 +1374,7 @@ export function ReplayPage() {
     : 0
 
   return (
-    <div className="space-y-2 p-4 pt-2 w-full max-w-none">
+    <div className="flex flex-col gap-1.5 p-4 pt-2 w-full max-w-none">
       {/* Clicking a locked field used to do NOTHING -- a disabled control
           swallows the click, so the field simply refused to open with no
           feedback at all. That is what "completely locked with no way out"
@@ -1368,7 +1384,32 @@ export function ReplayPage() {
           Locked controls now have pointer-events:none (see .setup-locked in
           index.css), so the click lands on their wrapper and reaches this
           handler, which answers the question the click was asking. */}
+      {/* The handle for the block below, shown only while a session holds the
+          form. It reads as one strip on a page whose next element is the live
+          tape, rather than as three collapsed cards. */}
+      {ready && (
+        <button
+          type="button"
+          onClick={() => setSetupExpanded((v) => !v)}
+          aria-expanded={setupExpanded}
+          className="flex w-full items-center gap-2 rounded-lg border border-[color:var(--hairline-soft)]
+                     bg-[var(--grid-head)] px-3 py-1.5 text-left text-[12px]
+                     hover:border-[color:var(--hairline-firm)]"
+        >
+          <ChevronsUpDown size={13} strokeWidth={2.2} className="shrink-0 text-muted-foreground" />
+          <span className="font-semibold uppercase tracking-[0.08em] text-muted-foreground">Setup</span>
+          <span className="text-muted-foreground/75">
+            {setupExpanded ? "hide" : "show"} instrument, period and parameters
+          </span>
+          <span className="ml-auto rounded px-1.5 py-px text-[10px] font-bold tracking-[0.07em]
+                           bg-[color:var(--raise-2)] text-muted-foreground
+                           ring-1 ring-[color:var(--hairline-mid)]">
+            LOCKED FOR THIS SESSION
+          </span>
+        </button>
+      )}
       <div
+        hidden={ready && !setupExpanded}
         className={`w-full space-y-2 ${ready ? "setup-locked" : ""}`}
         onClickCapture={(e) => {
           if (!ready) return
@@ -1578,7 +1619,8 @@ export function ReplayPage() {
           </p>
         )}
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-2.5 space-y-1.5">
+          <div className="flex items-center gap-1.5">
           <Label className="cfg-h">
             Timeframes
             <span className="cfg-h-note">
@@ -1588,6 +1630,15 @@ export function ReplayPage() {
               )}
             </span>
           </Label>
+          <InfoDot label="Timeframes" align="left">
+            Every ticked timeframe gets its own pane, its own broker and its own
+            P&amp;L, so the figures are per-pane and are not summed. The finest one
+            drives the shared clock — one tick per bar of it — and the others
+            update as their own bars close. Bars are fetched at the finest
+            timeframe selected, so any whole multiple of it is added instantly
+            and backfilled; anything else has to refetch.
+          </InfoDot>
+          </div>
           {/* A grid, not a wrap: thirteen pills of differing text width reflowed
               into ragged rows that moved every time a label changed. Fixed
               columns keep each timeframe in the same place every render, which
@@ -1634,7 +1685,7 @@ export function ReplayPage() {
           )}
         </div>
 
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-1 space-y-1.5">
           <div className="flex items-center gap-1.5">
           <Label className="text-xs">
             Session Hours (ET)
@@ -1834,7 +1885,12 @@ export function ReplayPage() {
         </StepSection>
       </div>
 
-      <Card className="p-2.5 border border-[color:var(--hairline-soft)] w-full space-y-2">
+      {/* order-first once a session is loaded, so the controls you are now
+          using -- Play, Pause, Follow live -- are the first thing on the page
+          rather than sitting under a form that is locked. Nothing moves while
+          the form is still editable: there the transport belongs after the
+          fields it acts on. */}
+      <Card className={`p-2.5 border border-[color:var(--hairline-soft)] w-full space-y-2${ready ? " order-first" : ""}`}>
         <div className="flex flex-wrap gap-2 items-center">
           {/* Left of the transport, because it undoes the FORM rather than the
               run. Disabled while a session is loaded: the fields are locked
@@ -1911,10 +1967,14 @@ export function ReplayPage() {
               ✎ Change Setup
             </Button>
           )}
-          {/* Last look before Load Data locks these for the session. ml-auto,
-              so it rides the right end of the transport row instead of taking
-              a row of its own. */}
-          <div className="ml-auto"><SummaryChips
+          {/* Last look before Load Data locks these for the session.
+              WHILE IDLE it rides the right end of the transport row, because
+              the row has space there and a line of its own would be height the
+              setup form cannot spare. ONCE LOADED it becomes a full-width bar
+              directly under the transport, which is where a terminal states
+              what is running -- and by then the row beside it is carrying
+              Follow live, Change Setup and the strategy's status instead. */}
+          <div className={ready ? "w-full order-last" : "ml-auto"}><SummaryChips
             source={sourceLabel}
             sourceLive={sourceIsLive}
             strategy={strategyName || (strategies?.find((x) => x.id === strategyId)?.label ?? strategyId)}
@@ -2044,6 +2104,7 @@ export function ReplayPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <StatTile
+              Icon={Wallet}
               label="Portfolio (ROI)"
               value={`$${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
               delta={`${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(2)}%`}
@@ -2052,6 +2113,7 @@ export function ReplayPage() {
               spark={equitySeries}
             />
             <StatTile
+              Icon={Coins}
               label="Total P&L"
               value={`${totalPnl >= 0 ? "+" : ""}$${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
               delta={initialCapital > 0
@@ -2061,42 +2123,59 @@ export function ReplayPage() {
               tone={totalPnl >= 0 ? "good" : "bad"}
               spark={cumPnl}
             />
-            <StatTile label="Trades" value={String(completedTrades.length)} bars={pnls} />
+            <StatTile Icon={ClipboardList} label="Trades" value={String(completedTrades.length)} bars={pnls} />
             <StatTile
+              Icon={Target}
               label="Win Rate"
               value={`${winRate.toFixed(completedTrades.length ? 1 : 0)}%`}
               tone={winRate >= 50 ? "good" : "bad"}
               donut={winRate}
             />
             <StatTile
+              Icon={ArrowUpRight}
               label="Avg Win"
               value={`$${avgWin.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
               tone="good"
               spark={winSeries}
             />
             <StatTile
+              Icon={ArrowDownRight}
               label="Avg Loss"
               value={`$${avgLoss.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
               tone="bad"
               spark={lossSeries}
             />
             <StatTile
+              Icon={Layers}
               label="Position"
               value={position === 0 ? "FLAT" : position > 0 ? `LONG +${position}` : `SHORT ${position}`}
               tone={position === 0 ? "neutral" : position > 0 ? "good" : "bad"}
-              icon={<Layers size={26} strokeWidth={1.5} />}
             />
           </div>
 
-          {lastSignal && (
-            <div className="rounded-md px-3 py-2 border-l-4"
-                 style={{
-                   borderColor: lastSignal.type === "SELL" ? CRITICAL : lastSignal.type === "BUY" ? GOOD : "#e3b341",
-                   background: `color-mix(in srgb, ${lastSignal.type === "SELL" ? CRITICAL : lastSignal.type === "BUY" ? GOOD : "#e3b341"} 12%, transparent)`,
-                 }}>
-              <b>{lastSignal.type}</b> <span className="text-muted-foreground">{lastSignal.reason}</span>
-            </div>
-          )}
+          {lastSignal && (() => {
+            // The colour is the SIGNAL's, not a house style: a sell is red, a
+            // buy is green, and a close is amber, because that is what each one
+            // means everywhere else on the page. The glyph is there so the
+            // distinction survives for a reader who cannot see the tint.
+            const tone = lastSignal.type === "SELL" ? CRITICAL
+              : lastSignal.type === "BUY" ? GOOD : "#e3b341"
+            return (
+              <div role="status"
+                   className="flex items-center gap-2.5 rounded-lg border px-3 py-2 text-[13px]"
+                   style={{
+                     borderColor: `color-mix(in srgb, ${tone} 38%, transparent)`,
+                     background: `color-mix(in srgb, ${tone} 11%, transparent)`,
+                   }}>
+                <span aria-hidden className="grid place-items-center h-[22px] w-[22px] shrink-0 rounded-full"
+                      style={{ background: `color-mix(in srgb, ${tone} 20%, transparent)`, color: tone }}>
+                  <TriangleAlert size={13} strokeWidth={2.4} />
+                </span>
+                <b style={{ color: tone }} className="tracking-wide">{lastSignal.type}</b>
+                <span className="text-muted-foreground min-w-0">{lastSignal.reason}</span>
+              </div>
+            )
+          })()}
 
           {/* Indicator settings. The same knobs as the Backtest page's gear
               dialogs, minus colour/width -- a table has no line to style, so
@@ -2111,6 +2190,15 @@ export function ReplayPage() {
                          onChange={(e) => setShowVwap(e.target.checked)} />
                   <span>VWAP</span>
                 </label>
+                <InfoDot label="VWAP and its bands" align="left">
+                  Volume-weighted average price, anchored to the session above
+                  and restarting when that session does. Each &plusmn;&sigma; level is
+                  that VWAP plus and minus a multiple of the same standard
+                  deviation, so the pair is symmetric about it. Which levels are
+                  shown is set in VWAP &amp; Volume Profile settings, and changing
+                  them re-derives the columns from bars already streamed — no
+                  reload.
+                </InfoDot>
                 <span className="text-xs text-muted-foreground font-mono">
                   {devLevels.length === 0
                     ? "bands off"
@@ -2121,6 +2209,14 @@ export function ReplayPage() {
                          onChange={(e) => setShowVp(e.target.checked)} />
                   <span>Volume Profile</span>
                 </label>
+                <InfoDot label="Volume Profile" align="left">
+                  Volume by price across the bars each pane has accumulated,
+                  computed in the browser rather than fetched. <b>Rows</b> is how
+                  many price buckets that range is divided into. <b>VA</b> is the
+                  share of total volume the value area covers, which is what sets
+                  the VAHigh and VALow columns. <b>POC</b> is the single busiest
+                  bucket.
+                </InfoDot>
                 <span className="text-xs text-muted-foreground font-mono">
                   {vpBins} rows · VA {vpValueArea}%
                 </span>

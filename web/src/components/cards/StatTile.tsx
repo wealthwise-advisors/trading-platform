@@ -9,6 +9,7 @@
 // can never show a rising spark next to a falling figure.
 
 import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type Tone = "good" | "bad" | "neutral"
@@ -106,11 +107,16 @@ interface StatTileProps {
   bars?: number[]
   donut?: number
   icon?: ReactNode
+  /** A small tinted glyph before the label, in the tile's own tone. It names
+   *  the measure at a glance on a row of seven tiles whose labels are all
+   *  11px; the visual on the right shows the SHAPE of the number, which is a
+   *  different question. */
+  Icon?: LucideIcon
 }
 
 export function StatTile({
   label, value, delta, deltaTone = "neutral", tone = "neutral",
-  spark, bars, donut, icon,
+  spark, bars, donut, icon, Icon,
 }: StatTileProps) {
   const valueColor =
     tone === "good" ? "text-emerald-800 dark:text-emerald-400"
@@ -127,7 +133,17 @@ export function StatTile({
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium text-muted-foreground truncate">{label}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {Icon && (
+              <span aria-hidden
+                    className="grid place-items-center h-[18px] w-[18px] shrink-0 rounded-[5px]"
+                    style={{ background: `color-mix(in srgb, ${STROKE[tone]} 16%, transparent)`,
+                             color: STROKE[tone] }}>
+                <Icon size={11} strokeWidth={2.4} />
+              </span>
+            )}
+            <div className="text-[11px] font-medium text-muted-foreground truncate">{label}</div>
+          </div>
           <div className={cn("mt-1 text-[22px] font-bold leading-none tabular-nums tracking-tight",
                              valueColor)}>
             {value}
