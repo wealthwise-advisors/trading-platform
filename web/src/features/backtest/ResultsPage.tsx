@@ -513,11 +513,27 @@ export function ResultsPage() {
       <aside className="relative shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
                         xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto"
              aria-label="Market and trade panels">
-        <WatchlistPanel />
-        <MarketSummaryPanel />
-        {/* Alerts, judged against the bars this chart is drawn from -- the
-            same array, so the panel and the level on the chart agree. */}
-        <AlertsPanel bars={bars} />
+        {/* WATCHLIST / MARKET SUMMARY / ALERTS SHARE ONE PANE, as the
+            reference has them: three views of "what is the market doing",
+            one at a time. Stacked, they pushed Trade Statistics and Account
+            Summary below the fold on every screen shorter than about 1100px.
+            Trade Statistics and Account Summary stay as their own panels
+            below -- they describe THIS RUN, not the market, and the reference
+            keeps them visible alongside whichever market view is open. */}
+        <Tabs defaultValue="watchlist" className="xl:contents">
+          <div className="lg:col-span-3 xl:contents">
+            <TabsList className="w-full justify-start tabs-scroll">
+              <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
+              <TabsTrigger value="summary">Market Summary</TabsTrigger>
+              <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            </TabsList>
+            <TabsContent value="watchlist" className="mt-0"><WatchlistPanel /></TabsContent>
+            <TabsContent value="summary" className="mt-0"><MarketSummaryPanel /></TabsContent>
+            {/* Alerts, judged against the bars this chart is drawn from -- the
+                same array, so the panel and the level on the chart agree. */}
+            <TabsContent value="alerts" className="mt-0"><AlertsPanel bars={bars} /></TabsContent>
+          </div>
+        </Tabs>
         <TradeStatsPanel s={s} />
         {/* Account Summary sits below Trade Statistics, as the reference has
             it: the stats describe the trading, the account describes the

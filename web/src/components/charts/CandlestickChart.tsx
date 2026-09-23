@@ -10,6 +10,7 @@ import { ChartHeader } from "@/components/charts/ChartHeader"
 import { ChartLegendMenu, type LegendEntry } from "@/components/charts/ChartLegendMenu"
 import { ChartToolRail, type ToolSpec } from "@/components/charts/ChartToolRail"
 import { ChartToolbar } from "@/components/charts/ChartToolbar"
+import { ChartRangeBar } from "@/components/charts/ChartRangeBar"
 import { loadAlerts } from "@/lib/priceAlerts"
 
 /** What Plotly's `dragmode` may be set to here. Plotly's own type is a wide
@@ -230,6 +231,12 @@ export function CandlestickChart({
    *  truth, so the Alerts rail panel and the chart cannot disagree. */
   const [alertTick, setAlertTick] = useState(0)
   const alerts = useMemo(() => loadAlerts(), [alertTick])
+
+  /** Bottom bar state. `activeRange` only lights a button; the window itself
+   *  lives in visibleRange, so a mouse pan un-lights the preset it no longer
+   *  matches rather than leaving a button claiming a range that is not shown. */
+  const [activeRange, setActiveRange] = useState<string | null>(null)
+  const [logScale, setLogScale] = useState(false)
   const [devUp, setDevUp] = useState(2)
   const [devDn, setDevDn] = useState(-2)
   // "DAY" is the only timeframe the engine implements -- VWAP resets on the
@@ -506,12 +513,16 @@ export function CandlestickChart({
     if (e["xaxis.autorange"]) {
       if (!bars.length) return
       setVisibleRange({ start: new Date(bars[0].t).getTime(), end: new Date(bars[bars.length - 1].t).getTime() })
+      setActiveRange("All")     // autorange IS the whole range
       return
     }
     const r0 = e["xaxis.range[0]"]
     const r1 = e["xaxis.range[1]"]
     if (typeof r0 === "string" && typeof r1 === "string") {
       setVisibleRange({ start: new Date(r0).getTime(), end: new Date(r1).getTime() })
+      // Dragged or zoomed by hand: whatever preset was lit no longer
+      // describes what is on screen, so nothing is lit.
+      setActiveRange(null)
     }
   }
 
@@ -1130,16 +1141,11 @@ export function CandlestickChart({
   // price-row y was mixing them -- the buttons drifted by the wrong amount
   // whenever headers stacked. Converting through the price row's share of
   // the paper makes one paper unit mean one paper unit for both.
-  const priceRowFraction = domains[0][1] - domains[0][0]
-  const paperToPriceRow = (d: number) => d / priceRowFraction
-  // Target: sit on the same strip as Plotly's native modebar (camera / zoom /
-  // pan / home, top-right), which renders in the top margin rather than on
-  // the paper. 0.115 of the paper above the top edge lands in that strip at
-  // the container heights this chart actually gets; it is an approximation,
-  // since the modebar's offset is in device pixels and not queryable here.
-  const RANGE_SELECTOR_PAPER_OFFSET = hasSwingHeaders ? 0.115 : 0.03
-  const rangeSelectorY =
-    1 + paperToPriceRow(RANGE_SELECTOR_PAPER_OFFSET + extraHeaderRows * HEADER_LEVEL_HEIGHT)
+  // The paper/price-row conversion that used to position Plotly's floating
+  // rangeselector went with it: ChartRangeBar is a DOM strip under the plot,
+  // so it needs no coordinate conversion and cannot drift when swing headers
+  // stack. The comment above is kept because the same conversion would be
+  // needed again by anything else that has to sit in the top margin.
 
   // The default window (lib/chartWindow.ts) exists because aggregation alone
   // couldn't make candles look wide on a full-day view, because "wide" is a
@@ -1367,18 +1373,11 @@ export function CandlestickChart({
         ? {
             showgrid: true,
             rangeslider: { visible: false },
-            rangeselector: {
-              buttons: [
-                { count: 1, label: "1D", step: "day", stepmode: "backward" },
-                { count: 5, label: "5D", step: "day", stepmode: "backward" },
-                { count: 1, label: "1M", step: "month", stepmode: "backward" },
-                { count: 3, label: "3M", step: "month", stepmode: "backward" },
-                { count: 6, label: "6M", step: "month", stepmode: "backward" },
-                { step: "all", label: "All" },
-              ],
-              bgcolor: BG, activecolor: "#3a3a48", font: { color: INK, size: 11 },
-              x: 0, y: rangeSelectorY, xanchor: "left",
-            },
+            // NO Plotly rangeselector. It floated above the price row with six
+            // buttons; ChartRangeBar along the bottom now carries nine, in the
+            // reference's order, and writes the same visibleRange the user's
+            // zoom and pan write. Two range controls on one chart would drift
+            // apart the moment one set a window the other did not know about.
             range: xRange,
           }
         : { matches: "x" }),
@@ -1410,7 +1409,16 @@ export function CandlestickChart({
       title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
-      range: isPrice ? priceYRange : [0, 100],
+      // Log applies to the PRICE row only: an oscillator is already bounded
+      // 0-100 and a log scale on it would be meaningless.
+      ...(isPrice && logScale ? { type: "log" as const } : {}),
+      // A log axis takes its range as log10 of the price, so handing it the
+      // linear range would put the window in the wrong place entirely.
+      range: isPrice
+        ? (logScale && priceYRange
+            ? [Math.log10(Math.max(1e-9, priceYRange[0])), Math.log10(Math.max(1e-9, priceYRange[1]))]
+            : priceYRange)
+        : [0, 100],
     }
 
     // THE ROW'S CURRENT READING, as the reference draws it: horizontal, at the
@@ -2161,6 +2169,16 @@ export function CandlestickChart({
         />
         </div>
       </div>
+
+      <ChartRangeBar
+        firstBarMs={bars.length ? new Date(bars[0].t).getTime() : null}
+        lastBarMs={bars.length ? new Date(bars[bars.length - 1].t).getTime() : null}
+        activeRange={activeRange}
+        logScale={logScale}
+        onRange={(id, start, end) => { setVisibleRange({ start, end }); setActiveRange(id || null) }}
+        onToggleLog={() => setLogScale((v) => !v)}
+        onAuto={() => { setVisibleRange(null); setActiveRange(null); setLogScale(false) }}
+      />
     </div>
   )
 }

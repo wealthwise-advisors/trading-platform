@@ -188,6 +188,18 @@ export function ChartToolbar({
               aria-label="Download chart as PNG" title="Download this chart as a PNG">
         <Camera className="h-3 w-3" aria-hidden />
       </button>
+
+      {/* The price scale's currency.
+          A LABEL, not the reference's dropdown. Every contract this platform
+          trades -- ES, NQ, MES, YM, RTY, CL, GC and the rest -- is quoted in
+          USD, and there is no FX rate anywhere in the app to convert a price
+          with. A dropdown would offer a choice that could not be honoured;
+          the label states the fact the axis is already in. */}
+      <span className="ml-auto rounded border border-[color:var(--hairline-soft)] px-1.5 py-0.5
+                       text-muted-foreground"
+            title="Prices are quoted in US dollars. Every contract this platform trades is USD-denominated.">
+        USD
+      </span>
     </div>
   )
 }
