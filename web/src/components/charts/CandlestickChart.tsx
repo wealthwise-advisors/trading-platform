@@ -97,6 +97,10 @@ const fmtPrice = (n: number | null | undefined) =>
 /** Width reserved for the price-axis tick labels, in pixels.
  *  Five digits and a separator at 11px; 52 clears "7,713.31" with room. */
 const AXIS_W = 52
+/** Width reserved for the on-chart legend when it is showing, in pixels.
+ *  Wide enough for the longest entry this chart produces ("Volume Profile")
+ *  at 10px plus its marker column. Only applied while the legend is on. */
+const LEGEND_W = 104
 // Default view opens on the last ~2 hours rather than the whole session, or on
 // the last 40 bars once a bar is two hours wide -- see lib/chartWindow.ts. It is
 // worked out once per render (`defaultWindow`) because swing-header collision
@@ -499,15 +503,29 @@ export function CandlestickChart({
        study shapes followed by the user's. Everything past the built-in
        count is the user's, so slicing there keeps their drawings without
        ever copying a VWAP band or a value-area rectangle into user state --
-       which would duplicate it on the next render and make it un-erasable. */
+       which would duplicate it on the next render and make it un-erasable.
+
+       ONLY WHEN IT ACTUALLY CHANGED. Plotly includes `shapes` on relayouts
+       that have nothing to do with drawing -- a pan recomputes every
+       paper-referenced shape and reports the lot. Setting state
+       unconditionally there queued a re-render mid-drag on every pointer
+       move, and the chart stopped panning: e2e's "dragging the chart still
+       pans it" caught exactly that. Comparing first makes a pan a no-op here
+       while a real edit still lands. */
     if (Array.isArray(e.shapes)) {
-      const all = e.shapes as Partial<Shape>[]
-      setUserShapes(all.slice(builtInShapeCount.current))
+      // `editable` is stamped on here rather than via a global `edits` config,
+      // so a drawing can be dragged and reshaped afterwards while the chart's
+      // own study shapes stay fixed -- see the config block for why that
+      // distinction matters to panning.
+      const next = (e.shapes as Partial<Shape>[])
+        .slice(builtInShapeCount.current)
+        .map((sh) => ({ ...sh, editable: true }) as Partial<Shape>)
+      if (JSON.stringify(next) !== JSON.stringify(userShapes)) setUserShapes(next)
     }
-    /* A note was moved or its text edited. Same slice, same reason. */
+    /* A note was moved or its text edited. Same slice, same guard. */
     if (Array.isArray(e.annotations)) {
-      const all = e.annotations as Partial<Annotations>[]
-      setUserNotes(all.slice(builtInNoteCount.current))
+      const next = (e.annotations as Partial<Annotations>[]).slice(builtInNoteCount.current)
+      if (JSON.stringify(next) !== JSON.stringify(userNotes)) setUserNotes(next)
     }
 
     if (e["xaxis.autorange"]) {
@@ -1573,15 +1591,25 @@ export function CandlestickChart({
     // SIDES FOLLOW THE AXIS. The price scale sits on the right by default now,
     // and its labels need the 50px there instead of on the left -- at r: 20
     // they were clipped to "45" and drawn on top of the volume profile.
-    // The margin reserves the AXIS LABELS only. Plotly already shrinks the
-    // plotting area to make room for a legend anchored outside it, so adding
-    // LEGEND_W here as well reserved the strip twice: measured at 1494px that
-    // left a 137px band of empty chart between the price ladder and the
-    // legend. LEGEND_W is still what sizes the legend's own type and marker
-    // column above; it is not a margin.
+    // THE LEGEND NEEDS ITS OWN STRIP, and only while it is on.
+    //
+    // This margin used to reserve the axis labels alone, on the reasoning that
+    // "Plotly already shrinks the plotting area to make room for a legend
+    // anchored outside it". That is true of a PAPER-referenced legend. This
+    // one is xref:"container" (see the legend block below, which moved to
+    // container coords so its strip stopped scaling with the window), and a
+    // container-referenced legend floats over the figure -- Plotly reserves
+    // nothing for it. So with the legend on, it sat straight on top of the
+    // price ladder: measured -20px, i.e. a 20px overlap, which is what
+    // e2e/dashboard.spec.ts catches.
+    //
+    // Adding LEGEND_W only when legendOnChart is true keeps the old behaviour
+    // exactly when the legend is off -- which is the default and the common
+    // case -- so the chart does not lose 104px of width to a legend that is
+    // not being drawn.
     margin: {
-      l: vpLeftAxis ? AXIS_W : 14,
-      r: vpLeftAxis ? 14 : AXIS_W,
+      l: vpLeftAxis ? AXIS_W + (legendOnChart && vpLeftAxis ? LEGEND_W : 0) : 14,
+      r: (vpLeftAxis ? 14 : AXIS_W) + (legendOnChart && !vpLeftAxis ? LEGEND_W : 0),
       t: marginTop,
       b: 18,
     },
@@ -2157,11 +2185,17 @@ export function CandlestickChart({
             // about how the chart is driven changes; only the logo goes.
             displaylogo: false,
             modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
-            // Lets a drawn shape be selected, dragged and reshaped after the
-            // fact. Without it the rail could draw but never revise, which is
-            // half a drawing tool.
+            // NO GLOBAL `edits`. Turning on edits.shapePosition here made
+            // EVERY shape draggable, including the chart's own VWAP bands and
+            // value-area rectangles -- which span the plot, so a drag anywhere
+            // grabbed one of them instead of panning the chart. That is what
+            // e2e's "dragging the chart still pans it" caught.
+            //
+            // Per-shape `editable: true` gives the same result where it is
+            // wanted: the drawings the rail creates carry it, the chart's own
+            // shapes do not, so a user's trend line can still be dragged and
+            // panning is untouched everywhere else.
             editable: false,
-            edits: { shapePosition: true, annotationPosition: true, annotationText: true },
           }}
           style={{ width: "100%", height: "100%" }}
           useResizeHandler
