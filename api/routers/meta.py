@@ -1,5 +1,6 @@
 """Health check and reference/meta endpoints."""
 
+import importlib.util
 import os
 from functools import lru_cache
 
@@ -240,11 +241,12 @@ def list_data_sources():
         # showed as available even with no credentials configured.
         availability["schwab"] = False
 
-    try:
-        import src.data.rithmic_provider  # noqa: F401
-        availability["rithmic"] = True
-    except ImportError:
-        availability["rithmic"] = False
+    # Probe `rithmic` (the vendor library) rather than our own provider module.
+    # rithmic_provider imports `rithmic` *lazily*, inside _ensure_apis(), so the
+    # provider module imports fine with the library absent -- this check used to
+    # report True unconditionally and the frontend offered "Real Data (Rithmic)"
+    # until the run failed mid-backtest. Same bug as the schwab branch above.
+    availability["rithmic"] = importlib.util.find_spec("rithmic") is not None
 
     return [
         {"id": "synthetic", "label": "Synthetic Data", "available": availability["synthetic"]},

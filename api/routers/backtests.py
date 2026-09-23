@@ -1,5 +1,6 @@
 """Backtest run + result sub-resource endpoints."""
 
+import importlib.util
 from datetime import datetime, time as time_type, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
@@ -40,7 +41,11 @@ except Exception:
     _SCHWAB_AVAILABLE = False
 try:
     from src.data.rithmic_provider import RithmicDataProvider
-    _RITHMIC_AVAILABLE = True
+    # rithmic_provider imports the vendor `rithmic` library lazily (inside
+    # _ensure_apis()), so importing the provider proves nothing about whether
+    # Rithmic can actually serve data. Probe the library itself, or the 400
+    # guard below never fires and the ImportError surfaces mid-backtest.
+    _RITHMIC_AVAILABLE = importlib.util.find_spec("rithmic") is not None
 except ImportError:
     _RITHMIC_AVAILABLE = False
 
