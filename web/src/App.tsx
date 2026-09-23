@@ -17,7 +17,12 @@ import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
-import { Upload, Settings, Sun, Moon } from "lucide-react"
+import {
+  Upload, Settings, Sun, Moon,
+  // The collapsed-config icon rail, one per ConfigForm section.
+  ChevronsRight, Database, LineChart, Clock, Sparkles, SlidersHorizontal,
+  Wallet, Waves, CalendarDays,
+} from "lucide-react"
 import { useThemeStore } from "@/store/themeStore"
 
 function App({ user }: { user: Me }) {
@@ -74,6 +79,49 @@ function App({ user }: { user: Me }) {
         <aside className="relative w-full lg:w-[290px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
                style={{ background: "var(--sidebar-ground-from)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />
+        </aside>
+      )}
+      {/* COLLAPSED CONFIG: an icon rail, not nothing.
+          Collapsing used to remove the panel outright, leaving the way back
+          only on a button up in the header -- far from where the panel was and
+          easy to miss. This strip keeps the affordance in place, and each icon
+          names the section it reopens to, so the rail also says what is in
+          there. Every control still lives in ConfigForm and its state is
+          untouched by collapsing: the panel is unmounted, but cfg is in the
+          store, so nothing typed is lost.
+          lg and up only -- below that the config is a full-width block above
+          the chart, and a 36px column beside it would have nothing to sit
+          next to. */}
+      {page === "backtest" && !configOpen && (
+        <aside className="hidden lg:flex shrink-0 w-9 flex-col items-center gap-1 border-r
+                          border-[color:var(--hairline-soft)] py-2"
+               style={{ background: "var(--sidebar-ground-from)" }}
+               aria-label="Backtest configuration, collapsed">
+          <button type="button" onClick={() => setConfigOpen(true)}
+                  title="Show the backtest configuration"
+                  aria-label="Show the backtest configuration"
+                  className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
+                             hover:text-foreground">
+            <ChevronsRight className="h-4 w-4" aria-hidden />
+          </button>
+          <span className="my-0.5 h-px w-5 bg-[color:var(--hairline-soft)]" aria-hidden />
+          {[
+            { Icon: Database, label: "Data Source" },
+            { Icon: LineChart, label: "Symbol" },
+            { Icon: Clock, label: "Timeframe" },
+            { Icon: Sparkles, label: "Strategy" },
+            { Icon: SlidersHorizontal, label: "Strategy Parameters" },
+            { Icon: Wallet, label: "Capital & Risk" },
+            { Icon: Waves, label: "ZigZag Swings" },
+            { Icon: CalendarDays, label: "Date Range" },
+          ].map(({ Icon, label }) => (
+            <button key={label} type="button" onClick={() => setConfigOpen(true)}
+                    title={label} aria-label={`Show ${label}`}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
+                               hover:text-foreground">
+              <Icon className="h-4 w-4" aria-hidden />
+            </button>
+          ))}
         </aside>
       )}
       <main className="flex-1 min-w-0 lg:h-full lg:min-h-0 flex flex-col lg:overflow-hidden">

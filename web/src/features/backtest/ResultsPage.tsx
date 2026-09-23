@@ -32,6 +32,8 @@ import {
   Sigma, Hash, ArrowUpRight, ArrowDownRight,
   // The reference's trading dock.
   Wallet, Inbox, History, Landmark, NotebookPen,
+  // The collapsible right rail.
+  ChevronsLeft, ChevronsRight, Star, Bell, Activity,
 } from "lucide-react"
 
 /**
@@ -95,6 +97,9 @@ const money = (n: number) =>
 export function ResultsPage() {
   const backtestId = useConfigStore((s) => s.backtestId)
   const resultsTab = useConfigStore((s) => s.resultsTab)
+  /** The right rail's open state. Per session rather than persisted: it is a
+   *  "give the chart room for a moment" control, not a preference. */
+  const [railOpen, setRailOpen] = useState(true)
   const setResultsTab = useConfigStore((s) => s.setResultsTab)
   const [ewScale, setEwScale] = useState<number | "all">("all")
 
@@ -510,30 +515,67 @@ export function ResultsPage() {
         </div>
       </Tabs>
     </div>
-      <aside className="relative shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
-                        xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto"
+      {/* COLLAPSED: a narrow rail of icons rather than nothing.
+          Hiding the panels entirely leaves no clue they exist and no way back
+          except a control somewhere else on the page. The strip keeps the
+          affordance where the panels were, and each icon says which panel it
+          brings back. Only from xl up -- below that the rail is a grid under
+          the chart, not a column beside it, and there is no width to win. */}
+      {!railOpen && (
+        <aside className="hidden xl:flex shrink-0 w-9 flex-col items-center gap-1 border-l
+                          border-[color:var(--hairline-soft)] py-2"
+               aria-label="Market and trade panels, collapsed">
+          <button type="button" onClick={() => setRailOpen(true)}
+                  title="Show the market and trade panels"
+                  aria-label="Show the market and trade panels"
+                  className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
+                             hover:text-foreground">
+            <ChevronsLeft className="h-4 w-4" aria-hidden />
+          </button>
+          <span className="my-0.5 h-px w-5 bg-[color:var(--hairline-soft)]" aria-hidden />
+          {[
+            { Icon: Star, label: "Watchlist" },
+            { Icon: BarChart3, label: "Market Summary" },
+            { Icon: Bell, label: "Alerts" },
+            { Icon: Activity, label: "Trade Statistics" },
+            { Icon: Wallet, label: "Account Summary" },
+          ].map(({ Icon, label }) => (
+            <button key={label} type="button" onClick={() => setRailOpen(true)}
+                    title={label} aria-label={`Show ${label}`}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
+                               hover:text-foreground">
+              <Icon className="h-4 w-4" aria-hidden />
+            </button>
+          ))}
+        </aside>
+      )}
+
+      <aside className={`relative shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
+                        xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto
+                        ${railOpen ? "" : "xl:hidden"}`}
              aria-label="Market and trade panels">
-        {/* WATCHLIST / MARKET SUMMARY / ALERTS SHARE ONE PANE, as the
-            reference has them: three views of "what is the market doing",
-            one at a time. Stacked, they pushed Trade Statistics and Account
-            Summary below the fold on every screen shorter than about 1100px.
-            Trade Statistics and Account Summary stay as their own panels
-            below -- they describe THIS RUN, not the market, and the reference
-            keeps them visible alongside whichever market view is open. */}
-        <Tabs defaultValue="watchlist" className="xl:contents">
-          <div className="lg:col-span-3 xl:contents">
-            <TabsList className="w-full justify-start tabs-scroll">
-              <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-              <TabsTrigger value="summary">Market Summary</TabsTrigger>
-              <TabsTrigger value="alerts">Alerts</TabsTrigger>
-            </TabsList>
-            <TabsContent value="watchlist" className="mt-0"><WatchlistPanel /></TabsContent>
-            <TabsContent value="summary" className="mt-0"><MarketSummaryPanel /></TabsContent>
-            {/* Alerts, judged against the bars this chart is drawn from -- the
-                same array, so the panel and the level on the chart agree. */}
-            <TabsContent value="alerts" className="mt-0"><AlertsPanel bars={bars} /></TabsContent>
-          </div>
-        </Tabs>
+        {/* The collapse control lives with the panels it hides. */}
+        <div className="hidden xl:flex justify-end">
+          <button type="button" onClick={() => setRailOpen(false)}
+                  title="Hide the market and trade panels"
+                  aria-label="Hide the market and trade panels"
+                  className="rounded p-1 text-muted-foreground hover:bg-[color:var(--raise-3)]
+                             hover:text-foreground">
+            <ChevronsRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+        {/* STACKED, NOT TABBED. An earlier pass put Watchlist, Market Summary
+            and Alerts behind one tab strip to save vertical space. The current
+            reference shows all of them open at once, and it is right: a
+            watchlist you have to click to see is not a watchlist, and the
+            whole point of the rail is answering "what is the market doing"
+            without taking an action. The rail scrolls independently instead,
+            and collapses entirely when the chart needs the width. */}
+        <WatchlistPanel />
+        <MarketSummaryPanel />
+        {/* Alerts, judged against the bars this chart is drawn from -- the
+            same array, so the panel and the level on the chart agree. */}
+        <AlertsPanel bars={bars} />
         <TradeStatsPanel s={s} />
         {/* Account Summary sits below Trade Statistics, as the reference has
             it: the stats describe the trading, the account describes the
