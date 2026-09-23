@@ -5,8 +5,14 @@ import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
 } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
-import { WatchlistPanel, MarketSummaryPanel, TradeStatsPanel } from "@/components/panels/MarketPanels"
+import {
+  WatchlistPanel, MarketSummaryPanel, TradeStatsPanel, AccountSummaryPanel,
+} from "@/components/panels/MarketPanels"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
+import {
+  PositionsTable, OrdersTable, OrderHistoryTable, BalanceHistoryTable,
+  TradingJournalTable, openPositionCount,
+} from "@/components/tables/TradingPanels"
 import { CandlestickPatternsTable } from "@/components/tables/CandlestickPatternsTable"
 import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
@@ -16,11 +22,16 @@ import { MoreAnalyses } from "@/features/backtest/MoreAnalyses"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
 import {
-  TrendingUp, TrendingDown, Trophy, Gauge, LineChart,
+  TrendingUp, TrendingDown, Trophy, Gauge,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
-  ClipboardList, BarChart3, CalendarDays, Activity, Shapes, Sparkles,
+  // LineChart, Activity, Shapes and Sparkles left with their tabs when Equity
+  // Curve, Candlestick Patterns, Chart Patterns and Strategy Optimizer moved
+  // into MoreAnalyses -- the icons are declared there now, beside the entries.
+  ClipboardList, BarChart3, CalendarDays,
   Sigma, Hash, ArrowUpRight, ArrowDownRight,
+  // The reference's trading dock.
+  Wallet, Inbox, History, Landmark, NotebookPen,
 } from "lucide-react"
 
 /**
@@ -183,6 +194,20 @@ export function ResultsPage() {
   }
 
   const equity = equityQ.data ?? []
+
+  /**
+   * The mark for open positions: the close of the last bar the chart drew.
+   *
+   * Deliberately the SAME series the chart renders, so a position's unrealised
+   * P&L can never disagree with the candle the user is looking at. null while
+   * price data is still loading -- the Positions panel prints an em dash for
+   * that rather than falling back to the entry price, which would show every
+   * open trade at exactly break-even and read as a real quote.
+   */
+  const bars = priceDataQ.data?.bars ?? []
+  const lastPrice = bars.length ? bars[bars.length - 1].c : null
+  const openCount = openPositionCount(tradesQ.data ?? [])
+
   const retColor = s.total_return_pct >= 0 ? GOOD : CRITICAL
   const winColor = s.win_rate >= 50 ? GOOD : NEUTRAL
 
@@ -317,14 +342,28 @@ export function ResultsPage() {
              entry points; same setPage("replay")/reportUrl() calls either way. ── */}
         <div className="shrink-0 flex items-center gap-2 min-w-0">
           <TabsList className="tabs-scroll">
+            {/* THE REFERENCE'S BOTTOM DOCK, in its order: Positions, Orders,
+                Order History, Trade Log, P&L Analysis, Monthly Returns,
+                Balance History, Trading Journal.
+
+                Chart stays first and stays in the strip. In the reference the
+                chart is not a tab at all -- it sits permanently above the dock
+                -- so there is no position in that row that corresponds to it.
+                Dropping it into the overflow menu to make the row match
+                exactly would bury the app's primary view behind a menu, which
+                is a worse trade than one extra tab. Everything the strip can
+                no longer hold moved to MoreAnalyses, not deleted. */}
             <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
-            <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
+            <TabsTrigger value="positions">
+              <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> Positions{openCount > 0 ? ` (${openCount})` : ""}
+            </TabsTrigger>
+            <TabsTrigger value="orders"><Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden /> Orders</TabsTrigger>
+            <TabsTrigger value="orderhistory"><History className="h-3.5 w-3.5 shrink-0" aria-hidden /> Order History</TabsTrigger>
             <TabsTrigger value="trades"><ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trade Log</TabsTrigger>
             <TabsTrigger value="pnl"><BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> P&amp;L Analysis</TabsTrigger>
             <TabsTrigger value="monthly"><CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> Monthly Returns</TabsTrigger>
-            <TabsTrigger value="candles"><Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> Candlestick Patterns</TabsTrigger>
-            <TabsTrigger value="chartpatterns"><Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart Patterns</TabsTrigger>
-            <TabsTrigger value="optimizer"><Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> Strategy Optimizer</TabsTrigger>
+            <TabsTrigger value="balance"><Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> Balance History</TabsTrigger>
+            <TabsTrigger value="journal"><NotebookPen className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trading Journal</TabsTrigger>
           </TabsList>
           {/* ELLIOTT WAVE LIVES HERE NOW, not deleted.
               The reference shows eight tabs and they fit; ours was nine and
@@ -390,6 +429,36 @@ export function ResultsPage() {
                 <TradeLogTable trades={tradesQ.data ?? []} />
               </Card>
             </TabsContent>
+            {/* ── The reference's trading dock. Every figure on these five is
+                 derived from the trades and the equity curve this page already
+                 holds, so nothing here can disagree with the Trade Log or the
+                 Equity Curve, and no panel invents a fill or a balance. ── */}
+            <TabsContent value="positions" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <PositionsTable trades={tradesQ.data ?? []} lastPrice={lastPrice} symbol={s?.symbol ?? ""} />
+              </Card>
+            </TabsContent>
+            <TabsContent value="orders" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <OrdersTable trades={tradesQ.data ?? []} symbol={s?.symbol ?? ""} />
+              </Card>
+            </TabsContent>
+            <TabsContent value="orderhistory" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <OrderHistoryTable trades={tradesQ.data ?? []} symbol={s?.symbol ?? ""} />
+              </Card>
+            </TabsContent>
+            <TabsContent value="balance" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <BalanceHistoryTable equity={equityQ.data ?? []}
+                                     initialCapital={s?.initial_capital ?? 0} />
+              </Card>
+            </TabsContent>
+            <TabsContent value="journal" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <TradingJournalTable trades={tradesQ.data ?? []} backtestId={backtestId} />
+              </Card>
+            </TabsContent>
             <TabsContent value="pnl" className="mt-0">
               <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
                 <Suspense fallback={<ChartLoading />}>
@@ -447,6 +516,10 @@ export function ResultsPage() {
         <WatchlistPanel />
         <MarketSummaryPanel />
         <TradeStatsPanel s={s} />
+        {/* Account Summary sits below Trade Statistics, as the reference has
+            it: the stats describe the trading, the account describes the
+            capital it was done with. */}
+        <AccountSummaryPanel s={s} openPositions={openCount} />
       </aside>
       </div>
     </div>

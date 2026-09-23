@@ -19,7 +19,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Waves } from "lucide-react"
+import {
+  MoreHorizontal, Waves, LineChart, Activity, Shapes, Sparkles,
+} from "lucide-react"
 
 export interface OverflowTab {
   value: string
@@ -27,8 +29,18 @@ export interface OverflowTab {
   icon: React.ReactNode
 }
 
-/** What did not fit in the strip. One entry today; the list is the contract. */
+/** What did not fit in the strip. The list is the contract.
+ *
+ *  Grew when the reference's trading dock -- Positions, Orders, Order History,
+ *  Balance History, Trading Journal -- was added to the strip. Five new tabs
+ *  do not fit beside the eight that were already there, so the four analyses
+ *  a trader reaches for least often moved here to join Elliott Wave. None was
+ *  deleted and none changed: each is the same panel, selected the same way. */
 export const OVERFLOW_TABS: OverflowTab[] = [
+  { value: "equity", label: "Equity Curve", icon: <LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+  { value: "candles", label: "Candlestick Patterns", icon: <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+  { value: "chartpatterns", label: "Chart Patterns", icon: <Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+  { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
   { value: "elliottwave", label: "Elliott Wave", icon: <Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
 ]
 

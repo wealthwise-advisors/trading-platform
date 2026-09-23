@@ -13,7 +13,7 @@
  */
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Activity, BarChart3, Plus, Star } from "lucide-react"
+import { Activity, BarChart3, Plus, Star, Wallet } from "lucide-react"
 
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
@@ -395,6 +395,94 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
           </li>
         ))}
       </ul>
+    </Panel>
+  )
+}
+
+/**
+ * Account Summary — the capital the run was traded with, and where it ended.
+ *
+ * WHAT EACH LINE IS, because three of the four are easy to misread as broker
+ * figures and they are not. This platform runs backtests and a paper session;
+ * there is no funded account behind these numbers.
+ *
+ *   Account Balance   closed equity: starting capital plus realised P&L.
+ *   Equity            balance plus open P&L. Identical to balance when
+ *                     nothing is open, which is the normal end state.
+ *   Available Funds   equity minus the margin the open positions tie up.
+ *   Margin            initial margin of what is open, from the contract spec.
+ *
+ * Margin needs a per-contract requirement that lives in the contract spec,
+ * which this panel is not given. So when something IS open, the two lines
+ * that depend on it print an em dash rather than a guess -- an invented
+ * margin figure would make Available Funds wrong in the one state where a
+ * trader would actually act on it. With a flat book both are exact, and that
+ * is the state the panel is in after almost every backtest.
+ */
+export function AccountSummaryPanel({ s, openPositions }: {
+  s: BacktestSummary | null
+  openPositions: number
+}) {
+  const money = (n: number) =>
+    `${n < 0 ? "-" : ""}$${Math.abs(n).toLocaleString(undefined, {
+      minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  if (!s) {
+    return (
+      <Panel icon={<Wallet className="h-4 w-4" />} title="Account Summary">
+        <p className="text-[11px] text-muted-foreground">Run a backtest to see the account it traded.</p>
+      </Panel>
+    )
+  }
+
+  const flat = openPositions === 0
+  const balance = s.final_capital
+  const pnl = s.total_pnl
+
+  const rows: Array<[string, React.ReactNode]> = [
+    ["Account Balance", money(balance)],
+    ["Realized P&L",
+      <span style={{ color: pnl === 0 ? undefined : pnl > 0 ? GOOD : CRITICAL }}>
+        {`${pnl >= 0 ? "+" : "-"}$${Math.abs(pnl).toLocaleString(undefined, {
+          minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+      </span>],
+    // Flat book: equity IS the balance, exactly. Open book: the open P&L is
+    // in points on the Positions panel and needs the multiplier to become
+    // dollars, which this panel does not have.
+    ["Equity", flat ? money(balance)
+      : <span title="A position is open. Its P&L is in points on the Positions panel; converting it to dollars needs the contract multiplier.">—</span>],
+    ["Available Funds", flat ? money(balance)
+      : <span title="Depends on the margin tied up by the open position.">—</span>],
+    ["Margin", flat ? money(0)
+      : <span title="Initial margin comes from the contract spec, which this panel is not given.">—</span>],
+  ]
+
+  return (
+    <Panel
+      icon={<Wallet className="h-4 w-4" />}
+      title="Account Summary"
+      action={
+        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
+              title={flat
+                ? "Flat — no open positions. These are closed-run figures, not a broker account."
+                : `${openPositions} open position(s) carried to the end of the run.`}>
+          <span className="h-1.5 w-1.5 rounded-full"
+                style={{ background: flat ? "var(--muted-foreground, #7a8699)" : GOOD }} aria-hidden />
+          {flat ? "Flat" : "Open"}
+        </span>
+      }
+    >
+      <ul className="text-[11.5px]">
+        {rows.map(([label, value]) => (
+          <li key={label} className="flex items-center justify-between gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="tabular-nums text-foreground">{value}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-[10px] text-muted-foreground/80">
+        Backtest capital, not a funded account.
+      </p>
     </Panel>
   )
 }
