@@ -11,14 +11,17 @@
  * Trade Statistics needs no feed at all: every line is a field of the summary
  * the backtest already returned, so it is exact whenever a result exists.
  */
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Activity, BarChart3, Plus, Star, Wallet } from "lucide-react"
+import { Activity, BarChart3, Bell, Plus, Star, Wallet, X } from "lucide-react"
 
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
 import type { BacktestSummary, Quote } from "@/lib/types"
 import { GOOD, CRITICAL } from "@/components/cards/StatCard"
+import {
+  loadAlerts, saveAlerts, alertTriggered, type PriceAlert,
+} from "@/lib/priceAlerts"
 
 /** The futures roots the platform trades. The backend maps them to Schwab. */
 const WATCHLIST = ["ES", "NQ", "YM", "RTY", "CL", "GC"]
@@ -484,5 +487,136 @@ export function AccountSummaryPanel({ s, openPositions }: {
         Backtest capital, not a funded account.
       </p>
     </Panel>
+  )
+}
+
+/**
+ * Alerts — the price levels the user has marked, and whether the bars on
+ * screen have reached them.
+ *
+ * WHAT "TRIGGERED" MEANS HERE, because the word promises more than this can
+ * deliver. Nothing watches the market while the app is closed: there is no
+ * server-side feed subscription and no push channel to reach the user
+ * through. So an alert is checked against the bars currently loaded, high and
+ * low rather than close, and the panel reports "Reached" or "Waiting" for
+ * that range only. With no bars loaded it says so instead of showing a tick,
+ * because "not reached" and "nothing to check against" are different answers.
+ */
+export function AlertsPanel({ bars }: { bars: Array<{ h: number; l: number }> }) {
+  const [alerts, setAlerts] = useState<PriceAlert[]>(loadAlerts)
+  const activeSymbol = useConfigStore((s) => s.symbol)
+
+  // Another tab adding an alert should show up here rather than being
+  // clobbered by this tab's stale copy.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "price-alerts") setAlerts(loadAlerts())
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
+  const remove = (id: string) => {
+    const next = alerts.filter((a) => a.id !== id)
+    setAlerts(next)
+    saveAlerts(next)
+  }
+
+  if (!alerts.length) {
+    return (
+      <div data-panel="alerts">
+        <Panel icon={<Bell className="h-4 w-4" />} title="Alerts">
+          <p className="text-[11px] text-muted-foreground">
+            No alerts. Use <span className="text-foreground">Alert</span> on the chart toolbar to mark a price level.
+          </p>
+        </Panel>
+      </div>
+    )
+  }
+
+  return (
+    <div data-panel="alerts">
+    <Panel icon={<Bell className="h-4 w-4" />} title="Alerts">
+      <ul className="text-[11.5px]">
+        {alerts.map((a) => {
+          // Only judge an alert against bars that belong to it. A level set on
+          // NQ cannot be answered by the ES bars on screen, and saying
+          // "Waiting" would imply it had been checked.
+          const sameInstrument = !activeSymbol || a.symbol === activeSymbol
+          const hit = sameInstrument ? alertTriggered(a, bars) : null
+          const state = !sameInstrument ? { text: "Other symbol", color: undefined }
+            : hit == null ? { text: "No bars", color: undefined }
+            : hit ? { text: "Reached", color: GOOD }
+            : { text: "Waiting", color: undefined }
+          return (
+            <li key={a.id}
+                className="flex items-center gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
+              <span className="text-foreground font-medium">{a.symbol}</span>
+              <span className="text-muted-foreground">{a.direction === "above" ? "≥" : "≤"}</span>
+              <span className="tabular-nums text-foreground">{a.price.toFixed(2)}</span>
+              <span className="ml-auto tabular-nums" style={{ color: state.color }}>{state.text}</span>
+              <button type="button" onClick={() => remove(a.id)}
+                      aria-label={`Remove alert on ${a.symbol} at ${a.price}`}
+                      title="Remove this alert"
+                      className="text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-1.5 text-[10px] text-muted-foreground/80">
+        Checked against the bars on screen. Nothing watches the market while this is closed.
+      </p>
+    </Panel>
+    </div>
+  )
+}
+
+/**
+ * The header bell: how many price alerts are set.
+ *
+ * The badge is a COUNT, not an unread indicator. Nothing watches the market
+ * while the app is closed -- see priceAlerts.ts -- so there is no category of
+ * "alert that fired and you have not seen". Claiming otherwise with a red dot
+ * would be the badge lying about what the app can do.
+ */
+export function AlertsBell() {
+  const [count, setCount] = useState(() => loadAlerts().length)
+
+  useEffect(() => {
+    const refresh = () => setCount(loadAlerts().length)
+    window.addEventListener("storage", refresh)
+    // The chart writes alerts in this same tab, where `storage` does not fire.
+    window.addEventListener("alerts-changed", refresh)
+    return () => {
+      window.removeEventListener("storage", refresh)
+      window.removeEventListener("alerts-changed", refresh)
+    }
+  }, [])
+
+  return (
+    <button
+      type="button"
+      className="relative inline-flex h-8 items-center rounded-md px-2 text-muted-foreground
+                 hover:bg-[color:var(--raise-3)] hover:text-foreground"
+      title={count ? `${count} price alert${count === 1 ? "" : "s"} set` : "No price alerts set"}
+      onClick={() => {
+        document.querySelector("[data-panel='alerts']")?.scrollIntoView({
+          behavior: "smooth", block: "center",
+        })
+      }}
+    >
+      <Bell className="h-4 w-4" aria-hidden />
+      {count > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center
+                         rounded-full bg-[#2563eb] px-1 text-[9px] font-semibold text-white">
+          {count}
+        </span>
+      )}
+      <span className="sr-only">
+        {count ? `${count} price alerts set` : "No price alerts set"}
+      </span>
+    </button>
   )
 }

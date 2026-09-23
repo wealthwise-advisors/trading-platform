@@ -8,6 +8,15 @@ import Plot from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
 import { ChartHeader } from "@/components/charts/ChartHeader"
 import { ChartLegendMenu, type LegendEntry } from "@/components/charts/ChartLegendMenu"
+import { ChartToolRail, type ToolSpec } from "@/components/charts/ChartToolRail"
+import { ChartToolbar } from "@/components/charts/ChartToolbar"
+import { loadAlerts } from "@/lib/priceAlerts"
+
+/** What Plotly's `dragmode` may be set to here. Plotly's own type is a wide
+ *  union including modes this chart never uses (lasso, orbit, turntable). */
+type DragMode =
+  | "pan" | "zoom" | "select"
+  | "drawline" | "drawrect" | "drawcircle" | "drawopenpath"
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
@@ -190,6 +199,37 @@ export function CandlestickChart({
    * not about the app.
    */
   const [legendOnChart, setLegendOnChart] = useState(false)
+
+  /* ── Drawing rail state ───────────────────────────────────────────────
+     `drawTool` is which rail button is lit; `dragMode` is what Plotly does
+     with the mouse. They are separate because two rail buttons -- the
+     horizontal line and the note -- are ACTIONS that add a shape and then
+     hand the mouse back, rather than modes the chart stays in.
+
+     `userShapes` holds only what the user drew. It is kept apart from the
+     `shapes` the chart builds for VWAP bands, the value area and the swing
+     structure, so Clear All removes the user's drawings and cannot wipe a
+     study the chart is responsible for. */
+  const [drawTool, setDrawTool] = useState<string>("pan")
+  const [dragMode, setDragMode] = useState<DragMode>("pan")
+  const [userShapes, setUserShapes] = useState<Partial<Shape>[]>([])
+  const [userNotes, setUserNotes] = useState<Partial<Annotations>[]>([])
+  /** How many shapes/annotations the CHART built this render. The relayout
+   *  handler slices at these to tell the user's drawings from the studies. */
+  const builtInShapeCount = useRef(0)
+  const builtInNoteCount = useRef(0)
+  /** Which collection the last drawing went into, so Undo removes the thing
+   *  the user actually added last rather than always a shape. */
+  const lastDrawn = useRef<"shape" | "note">("shape")
+  /** Undone drawings, newest last. Cleared as soon as a NEW drawing is made:
+   *  redoing onto a changed chart would put a shape back into a history that
+   *  no longer leads to it, which is how redo stacks produce surprises. */
+  const [redoStack, setRedoStack] = useState<Partial<Shape>[]>([])
+
+  /** Price alerts, drawn as levels. Re-read rather than held as the source of
+   *  truth, so the Alerts rail panel and the chart cannot disagree. */
+  const [alertTick, setAlertTick] = useState(0)
+  const alerts = useMemo(() => loadAlerts(), [alertTick])
   const [devUp, setDevUp] = useState(2)
   const [devDn, setDevDn] = useState(-2)
   // "DAY" is the only timeframe the engine implements -- VWAP resets on the
@@ -359,8 +399,110 @@ export function CandlestickChart({
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null)
   useEffect(() => setVisibleRange(null), [bars])
 
+  /**
+   * A rail button was pressed.
+   *
+   * Most tools just set the dragmode and stay lit until another is picked --
+   * that is how a drawing tool behaves. Three do something else:
+   *
+   *   hline   adds a horizontal level immediately. There is no Plotly
+   *           dragmode for "horizontal line", and asking the user to drag a
+   *           perfectly level line by hand is the wrong tool for the job, so
+   *           this drops one at the last close and leaves it draggable.
+   *   text    pins a note. Plotly has no draw-text mode either; the label is
+   *           an annotation, editable in place once placed.
+   *   clear   removes the user's drawings, and returns the mouse to Pan so
+   *           the chart is not left in a draw mode with nothing to erase.
+   */
+  /**
+   * Undo the most recent drawing, whichever kind it was.
+   *
+   * Notes and shapes are separate Plotly collections with no shared ordering,
+   * so "most recent" is decided by which list was last added to -- tracked in
+   * lastDrawn rather than guessed from array lengths. Only shapes go on the
+   * redo stack: an undone annotation carries text the user may have edited in
+   * place, and restoring a stale copy of it would silently discard that edit.
+   */
+  const undoDrawing = () => {
+    if (lastDrawn.current === "note" && userNotes.length) {
+      setUserNotes((n) => n.slice(0, -1))
+      if (userNotes.length === 1) lastDrawn.current = "shape"
+      return
+    }
+    if (userShapes.length) {
+      setRedoStack((r) => [...r, userShapes[userShapes.length - 1]])
+      setUserShapes((s) => s.slice(0, -1))
+      return
+    }
+    if (userNotes.length) setUserNotes((n) => n.slice(0, -1))
+  }
+
+  const redoDrawing = () => {
+    if (!redoStack.length) return
+    setUserShapes((s) => [...s, redoStack[redoStack.length - 1]])
+    setRedoStack((r) => r.slice(0, -1))
+    lastDrawn.current = "shape"
+  }
+
+  const pickTool = (t: ToolSpec) => {
+    if (t.id === "clear") {
+      setRedoStack([])
+      setUserShapes([])
+      setUserNotes([])
+      setDrawTool("pan")
+      setDragMode("pan")
+      return
+    }
+    if (t.id === "erase") { undoDrawing(); return }
+    if (t.id === "hline") {
+      const last = bars.length ? bars[bars.length - 1].c : null
+      if (last == null) return          // nothing to anchor to; do nothing rather than draw at 0
+      setUserShapes((s) => [...s, {
+        type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: last, y1: last,
+        line: { color: "#38bdf8", width: 1, dash: "dot" },
+        editable: true,
+      } as Partial<Shape>])
+      lastDrawn.current = "shape"
+      return                            // an action, not a mode: the rail stays where it was
+    }
+    if (t.id === "text") {
+      const last = bars.length ? bars[bars.length - 1] : null
+      if (!last) return
+      setUserNotes((n) => [...n, {
+        x: toNaiveString(new Date(last.t).getTime()), y: last.c, xref: "x", yref: "y",
+        text: "Note", showarrow: true, arrowhead: 2, ax: 0, ay: -30,
+        font: { color: "#38bdf8", size: 11 },
+        bgcolor: "rgba(15,23,42,0.85)", bordercolor: "#38bdf8", borderwidth: 1,
+        captureevents: true,
+      } as Partial<Annotations>])
+      lastDrawn.current = "note"
+      return
+    }
+    if (t.mode) {
+      setDrawTool(t.id)
+      setDragMode(t.mode as DragMode)
+    }
+  }
+
   const handleRelayout = (ev: PlotRelayoutEvent) => {
     const e = ev as unknown as Record<string, unknown>
+
+    /* A shape was drawn, dragged or erased.
+       Plotly hands back the WHOLE shapes array, which is the chart's own
+       study shapes followed by the user's. Everything past the built-in
+       count is the user's, so slicing there keeps their drawings without
+       ever copying a VWAP band or a value-area rectangle into user state --
+       which would duplicate it on the next render and make it un-erasable. */
+    if (Array.isArray(e.shapes)) {
+      const all = e.shapes as Partial<Shape>[]
+      setUserShapes(all.slice(builtInShapeCount.current))
+    }
+    /* A note was moved or its text edited. Same slice, same reason. */
+    if (Array.isArray(e.annotations)) {
+      const all = e.annotations as Partial<Annotations>[]
+      setUserNotes(all.slice(builtInNoteCount.current))
+    }
+
     if (e["xaxis.autorange"]) {
       if (!bars.length) return
       setVisibleRange({ start: new Date(bars[0].t).getTime(), end: new Date(bars[bars.length - 1].t).getTime() })
@@ -443,6 +585,18 @@ export function CandlestickChart({
 
   const data: Data[] = []
   const shapes: Partial<Shape>[] = []
+
+  /* Price alerts for THIS instrument, drawn as dashed levels across the plot.
+     Filtered by symbol so an ES alert does not appear on an NQ chart. Amber
+     rather than the drawing rail's blue: an alert is the chart telling the
+     user something, not something the user drew. */
+  const alertShapes: Partial<Shape>[] = alerts
+    .filter((a) => !symbol || a.symbol === symbol)
+    .map((a) => ({
+      type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: a.price, y1: a.price,
+      line: { color: "#f59e0b", width: 1, dash: "dash" },
+      layer: "above",
+    } as Partial<Shape>))
   const annotations: Partial<Annotations>[] = []
 
   // ── Row 1: Candlestick (9-min display bars) + EMA9/21 (still per-minute) ──
@@ -1345,7 +1499,20 @@ export function CandlestickChart({
     title: { text: "" },
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: INK },
-    dragmode: "pan", hovermode: "x unified",
+    // Driven by the drawing rail. "pan" until a tool is picked, which is the
+    // behaviour the chart had before the rail existed.
+    dragmode: dragMode, hovermode: "x unified",
+    // Style for shapes drawn from here on, so a user's trend line reads as
+    // theirs rather than as one of the chart's own study lines.
+    //
+    // Cast: `newshape` and `activeshape` are real Plotly layout keys and have
+    // been since the drawing tools shipped, but they are missing from the
+    // plotly.js TypeScript definitions. The cast is for the typings' gap, not
+    // for a property Plotly will ignore.
+    ...({
+      newshape: { line: { color: "#38bdf8", width: 1.5 }, opacity: 0.9 },
+      activeshape: { fillcolor: "rgba(56,189,248,0.12)" },
+    } as Partial<Layout>),
     // Plotly's own NATIVE legend, on -- matches api/report/charts.py's
     // _base_layout exactly (same bgcolor/borderwidth, default position, no
     // custom overlay component). Custom-built alternatives (a floating
@@ -1415,8 +1582,20 @@ export function CandlestickChart({
     // column), and autosize + the Plot's own height:100% style pick that up.
     autosize: true,
     ...(dynamicAxes as Partial<Layout>),
-    shapes: shapes as Layout["shapes"],
-    annotations: annotations as Layout["annotations"],
+    // The chart's own shapes first, the user's drawings on top, so a trend
+    // line is never hidden behind a value-area band. The counts are recorded
+    // here, at the one place that knows the split, for handleRelayout's slice.
+    shapes: ((): Layout["shapes"] => {
+      // Alert levels count as the chart's own: the user did not draw them
+      // with the rail, and the eraser must not treat them as a drawing.
+      const own = [...shapes, ...alertShapes]
+      builtInShapeCount.current = own.length
+      return [...own, ...userShapes] as Layout["shapes"]
+    })(),
+    annotations: ((): Layout["annotations"] => {
+      builtInNoteCount.current = annotations.length
+      return [...annotations, ...userNotes] as Layout["annotations"]
+    })(),
   }
 
   /**
@@ -1938,7 +2117,23 @@ export function CandlestickChart({
         )}
       </div>
 
-      <div className="flex-1 min-h-0">
+      <ChartToolbar
+        symbol={symbol}
+        lastPrice={bars.length ? bars[bars.length - 1].c : null}
+        canUndo={userShapes.length > 0 || userNotes.length > 0}
+        canRedo={redoStack.length > 0}
+        onUndo={undoDrawing}
+        onRedo={redoDrawing}
+        onSnapshot={downloadPng}
+        onAlertsChanged={() => setAlertTick((n) => n + 1)}
+      />
+
+      {/* The rail sits BESIDE the plot, not over it: an overlay would cover
+          the candles at the left edge, which is exactly where a trend line
+          usually starts. */}
+      <div className="flex-1 min-h-0 flex">
+        <ChartToolRail active={drawTool} onPick={pickTool} />
+        <div className="flex-1 min-w-0">
       {/* No overlay any more. The EMA / VWAP readout used to be painted over
           the plot's top-left corner permanently -- about 200x90px of the one
           region on the page where space is worth something, spent covering
@@ -1954,11 +2149,17 @@ export function CandlestickChart({
             // about how the chart is driven changes; only the logo goes.
             displaylogo: false,
             modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
+            // Lets a drawn shape be selected, dragged and reshaped after the
+            // fact. Without it the rail could draw but never revise, which is
+            // half a drawing tool.
+            editable: false,
+            edits: { shapePosition: true, annotationPosition: true, annotationText: true },
           }}
           style={{ width: "100%", height: "100%" }}
           useResizeHandler
           onRelayout={handleRelayout}
         />
+        </div>
       </div>
     </div>
   )

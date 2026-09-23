@@ -6,7 +6,7 @@ import {
 } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import {
-  WatchlistPanel, MarketSummaryPanel, TradeStatsPanel, AccountSummaryPanel,
+  WatchlistPanel, MarketSummaryPanel, TradeStatsPanel, AccountSummaryPanel, AlertsPanel,
 } from "@/components/panels/MarketPanels"
 import { TradeLogTable } from "@/components/tables/TradeLogTable"
 import {
@@ -515,6 +515,9 @@ export function ResultsPage() {
              aria-label="Market and trade panels">
         <WatchlistPanel />
         <MarketSummaryPanel />
+        {/* Alerts, judged against the bars this chart is drawn from -- the
+            same array, so the panel and the level on the chart agree. */}
+        <AlertsPanel bars={bars} />
         <TradeStatsPanel s={s} />
         {/* Account Summary sits below Trade Statistics, as the reference has
             it: the stats describe the trading, the account describes the

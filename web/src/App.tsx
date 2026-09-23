@@ -12,6 +12,7 @@ import { type Me } from "@/lib/api"
 import { AccountSettings } from "@/components/AccountSettings"
 import { ExportReportButton } from "@/components/ExportReportButton"
 import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
+import { AlertsBell } from "@/components/panels/MarketPanels"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
@@ -146,6 +147,12 @@ function App({ user }: { user: Me }) {
               session server-side rather than only clearing the cookie. */}
           <div className="ml-auto flex items-center gap-1.5 shrink-0">
             <SymbolSearch />
+            {/* The bell, with the count of price alerts currently set. It is a
+                COUNT, not an unread badge: nothing watches the market while
+                the app is closed, so there is no such thing as an alert the
+                user has not seen yet. Clicking scrolls the Alerts panel into
+                view rather than opening a second list of the same thing. */}
+            <AlertsBell />
             {/* The icon shows what clicking it GIVES you, not what you are in:
                 a moon offers the dark theme. The accessible name says the same
                 thing in words, and aria-pressed carries the current state, so
