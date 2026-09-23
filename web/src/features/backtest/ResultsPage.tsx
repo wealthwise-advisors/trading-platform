@@ -550,8 +550,18 @@ export function ResultsPage() {
         </aside>
       )}
 
+      {/* xl:min-h-0 is what MAKES the overflow-y-auto beside it work.
+          A flex item defaults to min-height:auto, which refuses to shrink
+          below its content -- so the rail grew past the viewport instead of
+          scrolling, and its lower panels (Trade Statistics, Account Summary)
+          were laid out hundreds of pixels below the fold where nothing could
+          reach them. It only showed once Alerts made the stack five panels
+          tall, and only on Linux, where the fonts are a little taller: the
+          local run passed and CI's did not. Same flex-1/min-h-0/overflow
+          trio the rest of this file uses. */}
       <aside className={`relative shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3
-                        xl:flex xl:flex-col xl:w-[285px] xl:gap-1 xl:overflow-y-auto
+                        xl:flex xl:flex-col xl:w-[285px] xl:gap-1
+                        xl:min-h-0 xl:overflow-y-auto
                         ${railOpen ? "" : "xl:hidden"}`}
              aria-label="Market and trade panels">
         {/* The collapse control lives with the panels it hides. */}
