@@ -522,17 +522,19 @@ export function AlertsPanel({ bars }: { bars: Array<{ h: number; l: number }> })
     saveAlerts(next)
   }
 
-  if (!alerts.length) {
-    return (
-      <div data-panel="alerts">
-        <Panel icon={<Bell className="h-4 w-4" />} title="Alerts">
-          <p className="text-[11px] text-muted-foreground">
-            No alerts. Use <span className="text-foreground">Alert</span> on the chart toolbar to mark a price level.
-          </p>
-        </Panel>
-      </div>
-    )
-  }
+  // NOTHING AT ALL WHEN THERE ARE NO ALERTS.
+  //
+  // The rail is four panels in the reference -- Watchlist, Market Summary,
+  // Trade Statistics, Account Summary -- and a fifth showing only the sentence
+  // "no alerts yet" earns none of that height. It also had a real cost: five
+  // stacked panels ran the rail past the fold, and e2e/layering.spec.ts failed
+  // on Linux (taller fonts) while passing here. An empty panel is not worth a
+  // regression guard.
+  //
+  // The entry point is not lost: the header bell says how many alerts are set
+  // and the chart toolbar's Alert button is where one is made. The panel
+  // appears the moment there is something to put in it.
+  if (!alerts.length) return null
 
   return (
     <div data-panel="alerts">

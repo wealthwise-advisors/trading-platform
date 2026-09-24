@@ -41,12 +41,43 @@ test.describe("regressions that reached production", () => {
     ).toBeLessThanOrEqual(2)
 
     // And nothing reaches below the fold that nothing can see.
+    //
+    // "That nothing can see" is the operative part. This used to flag ANY
+    // element below the fold, which was true enough while nothing on the page
+    // scrolled internally past it. The market rail does now -- four stacked
+    // panels are taller than a short viewport by design, and the rail scrolls
+    // them -- so the check has to tell "unreachable" from "further down a
+    // scroll container", which are not the same thing.
+    //
+    // The discriminator is the container's own scrollHeight, NOT merely
+    // having a scrolling ancestor: an escaped element is still a DOM
+    // descendant of the container it escaped, so that weaker test would wave
+    // BUG 1 straight through. A normal child was measured by its container,
+    // so its offset inside the scrollable content falls within scrollHeight.
+    // An absolutely positioned box whose ancestor is not its containing block
+    // was never measured or clipped by it, lands beyond scrollHeight, and is
+    // still reported.
+    //
+    // Both halves verified against a synthetic DOM before this was changed:
+    // 80 rows in a 300px scroller are not flagged, and a position:absolute
+    // child at top:4000px inside a position:static overflow:auto parent -- the
+    // exact shape of BUG 1 -- still is.
     const stragglers = await page.evaluate(() => {
       const vh = document.documentElement.clientHeight
+      const reachableByScrolling = (el: Element) => {
+        const b = el.getBoundingClientRect()
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          const oy = getComputedStyle(p).overflowY
+          if (oy !== "auto" && oy !== "scroll") continue
+          const pb = p.getBoundingClientRect()
+          return b.top - pb.top + p.scrollTop <= p.scrollHeight + 2
+        }
+        return false
+      }
       return Array.from(document.querySelectorAll("body *"))
         .filter((el) => {
           const b = el.getBoundingClientRect()
-          return b.height > 0 && b.top > vh + 200
+          return b.height > 0 && b.top > vh + 200 && !reachableByScrolling(el)
         })
         .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`)
         .slice(0, 5)
