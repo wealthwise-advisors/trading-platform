@@ -455,6 +455,28 @@ export function CandlestickChart({
     lastDrawn.current = "shape"
   }
 
+  /**
+   * Zoom about the centre of the window on screen.
+   *
+   * Driven through visibleRange, the same state the range bar and a mouse pan
+   * write, so every way of changing the window goes through one path and the
+   * x-axis, the y-autoscale and the aggregation cannot disagree about which
+   * window is showing. `factor` < 1 zooms in.
+   */
+  const zoomBy = (factor: number) => {
+    if (bars.length < 2) return
+    const first = new Date(bars[0].t).getTime()
+    const last = new Date(bars[bars.length - 1].t).getTime()
+    const cur = visibleRange ?? { start: Math.max(first, last - defaultWindow), end: last }
+    const mid = (cur.start + cur.end) / 2
+    const halfSpan = ((cur.end - cur.start) * factor) / 2
+    // Never past the data, and never so tight that no bar is left on screen.
+    const minHalf = Math.max(1, (last - first) / (bars.length - 1))
+    const half = Math.min(Math.max(halfSpan, minHalf), (last - first) / 2 || minHalf)
+    setVisibleRange({ start: Math.max(first, mid - half), end: Math.min(last, mid + half) })
+    setActiveRange(null)
+  }
+
   const pickTool = (t: ToolSpec) => {
     if (t.id === "clear") {
       setRedoStack([])
@@ -2162,6 +2184,9 @@ export function CandlestickChart({
         onRedo={redoDrawing}
         onSnapshot={downloadPng}
         onAlertsChanged={() => setAlertTick((n) => n + 1)}
+        onZoomIn={() => zoomBy(0.6)}
+        onZoomOut={() => zoomBy(1 / 0.6)}
+        onResetView={() => { setVisibleRange(null); setActiveRange(null) }}
       />
 
       {/* The rail sits BESIDE the plot, not over it: an overlay would cover
@@ -2179,12 +2204,15 @@ export function CandlestickChart({
           data={data}
           layout={layout}
           config={{
-            scrollZoom: true, displayModeBar: true,
-            // No Plotly badge. The modebar keeps every button it had --
-            // zoom, pan, reset, download, the axis controls -- so nothing
-            // about how the chart is driven changes; only the logo goes.
+            scrollZoom: true,
+            // MODEBAR OFF. It floated over the top-right of the plot with a
+            // second camera -- the toolbar row above already had one -- and
+            // cost a strip of chart to sit in. Its useful buttons moved to
+            // that row (zoom in, zoom out, reset) and to the drawing rail
+            // (pan, crosshair, box zoom), so nothing it did was lost and the
+            // chart gets the space back.
+            displayModeBar: false,
             displaylogo: false,
-            modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
             // NO GLOBAL `edits`. Turning on edits.shapePosition here made
             // EVERY shape draggable, including the chart's own VWAP bands and
             // value-area rectangles -- which span the plot, so a drag anywhere

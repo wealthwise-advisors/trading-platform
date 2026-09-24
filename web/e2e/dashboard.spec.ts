@@ -37,16 +37,30 @@ test("the eight KPI cards sit on one row, all the same height", async () => {
   expect(new Set(cards.map((c) => c.h)).size, "KPI cards differ in height").toBe(1)
 })
 
-test("the chart carries no Plotly badge, and keeps every modebar button", async () => {
+test("the chart carries no Plotly badge, and every way of driving it survives", async () => {
   await expect(page.locator(".js-plotly-plot a.modebar-btn--logo")).toHaveCount(0)
-  const titles = await page.evaluate(() =>
-    Array.from(document.querySelectorAll(".js-plotly-plot .modebar-btn"))
-      .map((b) => b.getAttribute("data-title")),
-  )
-  for (const wanted of ["Zoom in", "Zoom out", "Pan", "Reset axes"]) {
-    expect(titles, `modebar lost "${wanted}"`).toContain(wanted)
+
+  // PLOTLY'S FLOATING MODEBAR IS OFF NOW. It sat over the top-right of the
+  // plot carrying a SECOND camera -- the chart toolbar already had one -- and
+  // cost a strip of chart to sit in. Its controls did not go away; they moved
+  // somewhere a reader can see them without hovering the plot.
+  //
+  // This test still exists to stop them being lost. It asserts the
+  // CAPABILITY, by its new home, rather than the old widget: zoom, reset and
+  // snapshot on the toolbar row above the chart, pan on the drawing rail down
+  // its left edge.
+  await expect(page.locator(".js-plotly-plot .modebar-btn")).toHaveCount(0)
+
+  for (const label of ["Zoom in", "Zoom out", "Reset the view", "Download chart as PNG"]) {
+    await expect(
+      page.getByRole("button", { name: label }).first(),
+      `the chart toolbar lost "${label}"`,
+    ).toBeVisible()
   }
-  expect(titles.some((t) => /Download plot/i.test(t ?? ""))).toBe(true)
+  await expect(
+    page.getByRole("toolbar", { name: "Chart drawing tools" }).getByRole("button", { name: "Pan" }),
+    "the drawing rail lost Pan",
+  ).toBeVisible()
 })
 
 test("the Legend menu explains the chart and reads its live values", async () => {

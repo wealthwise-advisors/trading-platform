@@ -21,7 +21,7 @@
  */
 import { useState } from "react"
 import {
-  Bell, Rewind, Undo2, Redo2, Camera, Plus,
+  Bell, Rewind, Undo2, Redo2, Camera, Plus, ZoomIn, ZoomOut, Home,
 } from "lucide-react"
 
 import { IntervalPicker } from "@/components/IntervalPicker"
@@ -38,6 +38,7 @@ const BTN =
 
 export function ChartToolbar({
   symbol, lastPrice, canUndo, canRedo, onUndo, onRedo, onSnapshot, onAlertsChanged,
+  onZoomIn, onZoomOut, onResetView,
 }: {
   symbol: string
   lastPrice: number | null
@@ -47,6 +48,11 @@ export function ChartToolbar({
   onRedo: () => void
   onSnapshot: () => void
   onAlertsChanged: () => void
+  /** Moved off Plotly's floating modebar, which is switched off: it repeated
+   *  the camera this row already had and cost a strip of chart to sit in. */
+  onZoomIn: () => void
+  onZoomOut: () => void
+  onResetView: () => void
 }) {
   const cfg = useConfigStore()
   const setPage = useConfigStore((s) => s.setPage)
@@ -75,7 +81,7 @@ export function ChartToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 px-1 py-1 text-[11px]
+    <div className="flex items-center gap-1 overflow-x-auto tabs-scroll px-1 py-0.5 text-[11px]
                     border-b border-[color:var(--hairline-soft)]">
       {/* ── Interval quick buttons ── */}
       <div role="group" aria-label="Bar interval" className="flex items-center gap-0.5">
@@ -98,7 +104,7 @@ export function ChartToolbar({
       </div>
 
       {/* The full picker, with favourites and custom intervals. */}
-      <IntervalPicker value={cfg.timeframe} onChange={setInterval} />
+      <IntervalPicker value={cfg.timeframe} onChange={setInterval} compact />
 
       <span className="mx-1 h-4 w-px bg-[color:var(--hairline-soft)]" aria-hidden />
 
@@ -183,7 +189,21 @@ export function ChartToolbar({
         <Redo2 className="h-3 w-3" aria-hidden />
       </button>
 
-      {/* ── Snapshot ── */}
+      {/* ── View controls, moved off Plotly's modebar ── */}
+      <button type="button" onClick={onZoomIn} className={BTN}
+              aria-label="Zoom in" title="Zoom in">
+        <ZoomIn className="h-3 w-3" aria-hidden />
+      </button>
+      <button type="button" onClick={onZoomOut} className={BTN}
+              aria-label="Zoom out" title="Zoom out">
+        <ZoomOut className="h-3 w-3" aria-hidden />
+      </button>
+      <button type="button" onClick={onResetView} className={BTN}
+              aria-label="Reset the view" title="Reset the view to the default window">
+        <Home className="h-3 w-3" aria-hidden />
+      </button>
+
+      {/* ── Snapshot. The ONLY camera on the chart now. ── */}
       <button type="button" onClick={onSnapshot} className={BTN}
               aria-label="Download chart as PNG" title="Download this chart as a PNG">
         <Camera className="h-3 w-3" aria-hidden />

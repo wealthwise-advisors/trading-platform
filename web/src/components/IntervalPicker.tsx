@@ -74,10 +74,14 @@ function IntervalRow({
 }
 
 export function IntervalPicker({
-  value, onChange,
+  value, onChange, compact = false,
 }: {
   value: string
   onChange: (tf: string) => void
+  /** Inline size for the chart toolbar, where this sits in a row of buttons
+   *  rather than as a full-width field in the config panel. Same control and
+   *  same popup either way -- only the trigger's box changes. */
+  compact?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<"list" | "customize">("list")
@@ -118,10 +122,13 @@ export function IntervalPicker({
         <button
           type="button"
           aria-label={`Interval: ${value}`}
-          className="flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input
-                     bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none
+          className={`flex items-center justify-between gap-1.5 rounded border border-input
+                     bg-transparent whitespace-nowrap transition-colors outline-none
                      select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
-                     dark:bg-input/30 dark:hover:bg-input/50"
+                     dark:bg-input/30 dark:hover:bg-input/50 ${
+                       compact
+                         ? "h-[22px] px-1.5 text-[11px] rounded"
+                         : "h-8 w-full py-2 pr-2 pl-2.5 text-sm rounded-lg"}`}
         >
           <span className="flex items-center gap-2">
             <Clock aria-hidden className="h-3.5 w-3.5 text-[#7fb6cc]/80" />

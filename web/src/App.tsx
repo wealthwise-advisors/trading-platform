@@ -186,7 +186,15 @@ function App({ user }: { user: Me }) {
               missing element rather than as breathing room. justify-start
               parks the nav against the brand and lets the leftover space
               collect on the right, where the actions use it. */}
-          <div className="order-last w-full xl:order-none xl:ml-4 xl:w-auto xl:mr-auto xl:shrink-0 flex min-w-0">
+          {/* THE SECTIONS GET THEIR OWN ROW, at every width.
+              They used to join the brand and the action cluster on one line
+              above xl, which left the row crowded end to end and a ragged gap
+              between the last section and the search box. On its own line the
+              nav starts at the left margin under the brand, the actions keep
+              the first row to themselves, and neither has to be squeezed to
+              fit the other. Costs one strip of height and reads as two
+              deliberate rows rather than one overfull one. */}
+          <div className="order-last w-full flex min-w-0">
             <HeaderNav />
           </div>
           {/* Row one, right: find an instrument, reach the account. Sign out

@@ -20,7 +20,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
-  MoreHorizontal, Waves, LineChart, Activity, Shapes, Sparkles,
+  MoreHorizontal, Waves, Activity, Shapes, Sparkles,
 } from "lucide-react"
 
 export interface OverflowTab {
@@ -32,12 +32,13 @@ export interface OverflowTab {
 /** What did not fit in the strip. The list is the contract.
  *
  *  Grew when the reference's trading dock -- Positions, Orders, Order History,
- *  Balance History, Trading Journal -- was added to the strip. Five new tabs
- *  do not fit beside the eight that were already there, so the four analyses
- *  a trader reaches for least often moved here to join Elliott Wave. None was
- *  deleted and none changed: each is the same panel, selected the same way. */
+ *  Balance History, Trading Journal -- was added to the strip, pushing the
+ *  analyses a trader reaches for least often in here beside Elliott Wave.
+ *  Equity Curve has since gone back to the strip: there was room left after
+ *  the overflow button, and it is the view a reader wants straight after the
+ *  trade list. None of these was deleted and none changed -- each is the same
+ *  panel, selected the same way. */
 export const OVERFLOW_TABS: OverflowTab[] = [
-  { value: "equity", label: "Equity Curve", icon: <LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
   { value: "candles", label: "Candlestick Patterns", icon: <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
   { value: "chartpatterns", label: "Chart Patterns", icon: <Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
   { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },

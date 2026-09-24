@@ -25,10 +25,11 @@ import {
   TrendingUp, TrendingDown, Trophy, Gauge,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
-  // LineChart, Activity, Shapes and Sparkles left with their tabs when Equity
-  // Curve, Candlestick Patterns, Chart Patterns and Strategy Optimizer moved
-  // into MoreAnalyses -- the icons are declared there now, beside the entries.
-  ClipboardList, BarChart3, CalendarDays,
+  // Activity, Shapes and Sparkles left with their tabs when Candlestick
+  // Patterns, Chart Patterns and Strategy Optimizer moved into MoreAnalyses --
+  // those icons are declared there now, beside the entries. Equity Curve came
+  // back to the strip, so LineChart is needed here again.
+  ClipboardList, BarChart3, CalendarDays, LineChart,
   Sigma, Hash, ArrowUpRight, ArrowDownRight,
   // The reference's trading dock.
   Wallet, Inbox, History, Landmark, NotebookPen,
@@ -359,6 +360,7 @@ export function ResultsPage() {
                 is a worse trade than one extra tab. Everything the strip can
                 no longer hold moved to MoreAnalyses, not deleted. */}
             <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
+            <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
             <TabsTrigger value="positions">
               <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> Positions{openCount > 0 ? ` (${openCount})` : ""}
             </TabsTrigger>
