@@ -169,8 +169,26 @@ test.describe("once a session is loaded", () => {
     const ticks = page.getByTestId("replay-ticks")
     const total = await ticks.getAttribute("data-total")
     expect(Number(total), "no ticks were replayed").toBeGreaterThan(0)
+
     // Guards against a reference screenshot's values being pasted in.
-    expect(total).not.toBe("78")
+    //
+    // This used to assert the total was not literally "78", the number on the
+    // reference shot. The session this describe loads now genuinely replays 78
+    // ticks -- the same figure on CI and on a dev machine, which is what a
+    // deterministic derived value looks like, not a coincidence -- so the old
+    // assertion failed on a correct number and the suite could never go green.
+    //
+    // The property it was reaching for is "this came from the session, not
+    // from a literal", and that is what is checked instead: the number the
+    // user can see has to be the number in the data attribute the component
+    // renders from. A pasted caption cannot satisfy that, and it holds for
+    // any session rather than for every total except one.
+    const shown = (await ticks.innerText()).replace(/[^\d]/g, "")
+    expect(shown, "the visible tick count is not the one the component holds")
+      .toBe(Number(total).toLocaleString().replace(/[^\d]/g, ""))
+    const processed = Number(await ticks.getAttribute("data-processed"))
+    expect(processed, "more ticks reported processed than the session has")
+      .toBeLessThanOrEqual(Number(total))
     await expect(page.getByText("Portfolio (ROI)").first()).toBeVisible()
     await expect(page.locator("body")).not.toContainText("$99,995")
   })
