@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
+import { useRunBacktest } from "./useRunBacktest"
 import { api } from "@/lib/api"
 import {
   useConfigStore, ZIGZAG_DEV_MIN, ZIGZAG_DEV_MAX, ZIGZAG_DEV_STEP,
@@ -76,7 +77,6 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
     const start = startDateForTimeframe(cfg.endDate, tf, cfg.startDate)
     if (start) cfg.setField("startDate", start)
   }
-  const queryClient = useQueryClient()
   /**
    * Which clock the two Session Hours fields are typed and shown in.
    *
@@ -139,31 +139,9 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
   const currentStrategy = strategies?.find((s) => s.id === cfg.strategyId)
 
-  const runMutation = useMutation({
-    mutationFn: () =>
-      api.runBacktest({
-        data_source: cfg.dataSource,
-        symbol: cfg.symbol,
-        timeframe: cfg.timeframe,
-        strategy_id: cfg.strategyId,
-        params: cfg.params,
-        initial_capital: cfg.initialCapital,
-        contracts_per_trade: cfg.contractsPerTrade,
-        commission_per_contract: cfg.commission,
-        start_date: cfg.startDate,
-        end_date: cfg.endDate,
-        // null on both edges tells the engine to skip session filtering.
-        session_start: cfg.session24h ? null : cfg.sessionStart,
-        session_end: cfg.session24h ? null : cfg.sessionEnd,
-        zigzag_dev_3: cfg.zigzagDev3 / 100,
-        zigzag_dev_10: cfg.zigzagDev10 / 100,
-      }),
-    onSuccess: (summary) => {
-      cfg.setBacktestId(summary.backtest_id)
-      cfg.setLastRunAt(new Date().toISOString())
-      queryClient.invalidateQueries({ queryKey: ["backtest", summary.backtest_id] })
-    },
-  })
+  // One definition of a run request, shared with the chart toolbar so the
+  // two entry points cannot send different payloads. See useRunBacktest.
+  const runMutation = useRunBacktest()
 
   return (
     // cfg-scope: this panel's palette, and the same class on every popup it

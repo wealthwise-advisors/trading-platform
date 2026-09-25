@@ -174,3 +174,29 @@ test("Deploy is out of the header; both exports remain", async () => {
   // Export Report is a real <a download>, not a scripted button.
   await expect(header.locator("a[download]").filter({ hasText: "Export Report" })).toHaveCount(1)
 })
+
+test("the chart toolbar's interval buttons actually redraw the chart", async ({ browser }) => {
+  // THE BUG THIS CATCHES. The pills used to write cfg.timeframe and stop
+  // there. The chart draws a FINISHED backtest -- its bars are keyed on the
+  // backtest id and its header is labelled from that run's summary -- so a new
+  // interval could not appear until a run produced bars at it. The pill lit up,
+  // the chart did not move, and nothing said why. They re-run now.
+  //
+  // ITS OWN PAGE, for the same reason "dragging the chart still pans it" has
+  // one: this changes what the chart is SHOWING, and the shared-page tests
+  // above re-render the plot from props, which puts the interval back.
+  const own = await browser.newPage()
+  await signIn(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+
+  const shown = () => own.getByTestId("chart-interval").first().innerText()
+
+  const before = await shown()
+  await own.getByRole("group", { name: "Bar interval" })
+    .getByRole("button", { name: "1m", exact: true }).click()
+  await expect
+    .poll(shown, { message: "the chart kept its old interval", timeout: 30000 })
+    .not.toBe(before)
+  await own.close()
+})

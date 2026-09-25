@@ -4,12 +4,10 @@
  * WHAT EACH CONTROL ACTUALLY DOES, since a toolbar of decorative buttons is
  * the easiest thing in the world to build and the least useful:
  *
- *   intervals  Quick buttons plus the full IntervalPicker popup. Both write
- *              cfg.timeframe and move the start date, exactly as the Interval
- *              Picker in the Backtest panel does -- this is a THIRD control
- *              for one setting, so all of them always read the same value.
- *              Changing it needs a re-run to take effect, and the strip says
- *              so rather than pretending the chart redrew.
+ *   intervals  Quick buttons plus the full IntervalPicker popup. Both set
+ *              cfg.timeframe, move the start date, and RE-RUN the backtest so
+ *              the chart actually redraws at the new interval -- see
+ *              setInterval below for why the run is required.
  *   Alert      Opens a real price-alert form. The level is stored, drawn on
  *              the chart, and listed in the Alerts tab on the right rail.
  *   Replay     Opens the replay page. That page already exists; this is the
@@ -25,6 +23,7 @@ import {
 } from "lucide-react"
 
 import { IntervalPicker } from "@/components/IntervalPicker"
+import { useRunBacktest } from "@/features/backtest/useRunBacktest"
 import { useConfigStore } from "@/store/configStore"
 import { startDateForTimeframe } from "@/lib/chartSetup"
 import { loadAlerts, saveAlerts, newAlert } from "@/lib/priceAlerts"
@@ -64,12 +63,27 @@ export function ChartToolbar({
   const [price, setPrice] = useState("")
   const [direction, setDirection] = useState<"above" | "below">("above")
 
-  /** One place that changes the interval, so the quick buttons and the popup
-   *  cannot drift apart or skip the start-date move. */
+  const run = useRunBacktest()
+
+  /**
+   * Change the interval AND redraw the chart at it.
+   *
+   * Setting cfg.timeframe alone did nothing visible, which is the bug this
+   * fixes. The chart is drawn from a finished backtest -- its bars are keyed
+   * on the backtest id and its header is labelled from that run's own summary
+   * -- so a new interval cannot appear until a run has produced bars at it.
+   * The pill lit up, the chart did not move, and nothing said why.
+   *
+   * On a chart toolbar, picking an interval means "show me this interval", so
+   * this runs the backtest rather than quietly staging a value for later. The
+   * new timeframe is passed as an override rather than read back from the
+   * store, so the request cannot race this component's own re-render.
+   */
   const setInterval = (tf: string) => {
     cfg.setField("timeframe", tf)
     const start = startDateForTimeframe(cfg.endDate, tf, cfg.startDate)
     if (start) cfg.setField("startDate", start)
+    run.mutate({ timeframe: tf, startDate: start || undefined })
   }
 
   const addAlert = () => {
@@ -94,9 +108,10 @@ export function ChartToolbar({
             key={tf}
             type="button"
             aria-pressed={cfg.timeframe === tf}
+            disabled={run.isPending}
             onClick={() => setInterval(tf)}
-            title={`${tf} bars — takes effect on the next run`}
-            className={`rounded px-1.5 py-0.5 transition-colors ${
+            title={`Redraw the chart with ${tf} bars`}
+            className={`rounded px-1.5 py-0.5 transition-colors disabled:opacity-50 ${
               cfg.timeframe === tf
                 ? "bg-[#2563eb] text-white font-medium"
                 : "text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"

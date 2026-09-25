@@ -94,7 +94,12 @@ export function ChartHeader({
             bare number of minutes, as trading terminals do. Anything that is
             not plain minutes (1h, 1d, 1w) keeps its unit, because there the
             unit is the whole meaning. */}
-        <span className="text-muted-foreground">{intervalLabel(interval)}</span>
+        {/* data-testid: the interval the chart is actually DRAWN at, which is
+            the run's timeframe, not the one staged in the config panel. The
+            e2e test for the toolbar pills reads it here rather than scraping
+            body text -- the sidebar names the same instrument, so a text
+            search found that first and compared the wrong thing. */}
+        <span className="text-muted-foreground" data-testid="chart-interval">{intervalLabel(interval)}</span>
         {exchange && (
           <>
             <span className="text-muted-foreground/75">·</span>
