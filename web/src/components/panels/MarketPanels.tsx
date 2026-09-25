@@ -97,7 +97,7 @@ function Panel({ icon, title, action, children }: {
 }) {
   return (
     <section className="rail-card">
-      <header className="flex items-center gap-2 mb-1">
+      <header className="flex items-center gap-2 mb-0.5">
         <span className="text-[#38bdf8]" aria-hidden>{icon}</span>
         <h2 className="text-[13px] font-semibold text-foreground">{title}</h2>
         {action && <span className="ml-auto">{action}</span>}
@@ -224,7 +224,7 @@ export function WatchlistPanel() {
                   aria-current={r.symbol === activeSymbol ? "true" : undefined}
                   className={`group border-t border-[color:var(--hairline-soft)] ${
                     r.symbol === activeSymbol ? "bg-sky-500/10" : ""}`}>
-                <td className="py-[3px] font-semibold text-foreground"
+                <td className="py-[1.5px] font-semibold text-foreground"
                     title={r.contract ? `Quoting ${r.contract}` : undefined}>
                   {r.symbol}
                   <button type="button" onClick={() => remove(r.symbol)}
@@ -234,16 +234,16 @@ export function WatchlistPanel() {
                     ×
                   </button>
                 </td>
-                <td className="py-[3px] text-right tabular-nums text-foreground">{price(r.last)}</td>
-                <td className="py-[3px] text-right"><Delta value={r.change} /></td>
-                <td className="py-[3px] text-right"><Delta value={r.change_pct} suffix="%" /></td>
+                <td className="py-[1.5px] text-right tabular-nums text-foreground">{price(r.last)}</td>
+                <td className="py-[1.5px] text-right"><Delta value={r.change} /></td>
+                <td className="py-[1.5px] text-right"><Delta value={r.change_pct} suffix="%" /></td>
               </tr>
             ))}
             {/* A symbol that returns no quote is dropped by the backend, so
                 say which ones rather than leaving a silent gap in the list. */}
             {symbols.filter((sym) => !rows.some((r) => r.symbol === sym)).map((sym) => (
               <tr key={sym} className="group border-t border-[color:var(--hairline-soft)] text-muted-foreground/75">
-                <td className="py-[3px] font-semibold">
+                <td className="py-[1.5px] font-semibold">
                   {sym}
                   <button type="button" onClick={() => remove(sym)}
                           aria-label={`Remove ${sym} from the watchlist`}
@@ -252,7 +252,7 @@ export function WatchlistPanel() {
                     ×
                   </button>
                 </td>
-                <td colSpan={3} className="py-[3px] text-right text-[10.5px]">
+                <td colSpan={3} className="py-[1.5px] text-right text-[10.5px]">
                   {q.isLoading ? "loading…" : "no quote"}
                 </td>
               </tr>
@@ -392,7 +392,7 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
     <Panel icon={<Activity className="h-4 w-4" />} title="Trade Statistics">
       <ul className="text-[11.5px]">
         {rows.map(([label, value]) => (
-          <li key={label} className="flex items-center justify-between gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
+          <li key={label} className="flex items-center justify-between gap-2 py-[1.5px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
             <span className="text-muted-foreground">{label}</span>
             <span className="tabular-nums text-foreground">{value}</span>
           </li>
@@ -477,7 +477,7 @@ export function AccountSummaryPanel({ s, openPositions }: {
     >
       <ul className="text-[11.5px]">
         {rows.map(([label, value]) => (
-          <li key={label} className="flex items-center justify-between gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
+          <li key={label} className="flex items-center justify-between gap-2 py-[1.5px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
             <span className="text-muted-foreground">{label}</span>
             <span className="tabular-nums text-foreground">{value}</span>
           </li>
@@ -552,7 +552,7 @@ export function AlertsPanel({ bars }: { bars: Array<{ h: number; l: number }> })
             : { text: "Waiting", color: undefined }
           return (
             <li key={a.id}
-                className="flex items-center gap-2 py-[3px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
+                className="flex items-center gap-2 py-[1.5px] border-t border-[color:var(--hairline-soft)] first:border-t-0">
               <span className="text-foreground font-medium">{a.symbol}</span>
               <span className="text-muted-foreground">{a.direction === "above" ? "≥" : "≤"}</span>
               <span className="tabular-nums text-foreground">{a.price.toFixed(2)}</span>

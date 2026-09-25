@@ -497,11 +497,14 @@
    Watchlist, Market Summary and Trade Statistics. Deliberately quieter than
    .stat-card: the rail sits beside the chart all day, so it gets a flat
    surface and a hairline rather than an accent rail and a glow. */
+/* Four of these stack in the right rail, so every pixel of padding is paid
+   four times over and Account Summary -- the last one -- was falling off the
+   bottom of a 900px screen. Tightened from 6px 11px 7px. */
 .rail-card {
   background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
-  padding: 6px 11px 7px;
+  padding: 4px 9px 5px;
   box-shadow: 0 1px 2px var(--shadow-card);
 }
 
