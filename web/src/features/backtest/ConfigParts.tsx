@@ -77,23 +77,35 @@ interface SectionProps {
   children: ReactNode
   /** Extra note shown to the right of the heading. */
   aside?: ReactNode
+  /** Position in the panel, shown before the name.
+   *
+   *  The panel is a form you work down in order -- pick a source, then a
+   *  symbol, then a timeframe, and so on -- and the number says so. It also
+   *  gives a way to refer to a section out loud ("section 7") that a colour
+   *  and an icon do not. Passed in rather than counted automatically because
+   *  the sections are written out one by one, not mapped over a list. */
+  step?: number
+  /** Scroll target for the icon rail in App.tsx. */
+  anchor?: string
 }
 
 /**
  * One labelled group. The heading is the only place a section name is styled, so
  * they cannot diverge.
  */
-export function Section({ icon, label, accent = "blue", children, aside }: SectionProps) {
+export function Section({ icon, label, accent = "blue", children, aside, step, anchor }: SectionProps) {
   const Icon = SECTION_ICON[icon]
   const { text, hex } = ACCENT[accent]
   return (
     // --slider-accent: a slider in this section fills in the section's colour
     // unless the field sets its own (see .cfg-scope in index.css).
-    <section className="space-y-2.5" style={{ "--slider-accent": hex } as CSSProperties}>
+    <section className="space-y-2.5" data-cfg-section={anchor}
+             style={{ "--slider-accent": hex } as CSSProperties}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-4 w-4 ${text}`} aria-hidden />
           <h3 className={`text-[11px] font-bold uppercase tracking-[0.14em] ${text}`}>
+            {step != null && <span className="opacity-70">{step}. </span>}
             {label}
           </h3>
         </div>

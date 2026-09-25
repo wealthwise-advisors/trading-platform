@@ -19,11 +19,30 @@ import { OfflineBanner } from "@/components/OfflineBanner"
 // and cannot be themed. These are strokes in currentColor.
 import {
   Upload, Settings, Sun, Moon,
-  // The collapsed-config icon rail, one per ConfigForm section.
-  ChevronsRight, Database, LineChart, Clock, Sparkles, SlidersHorizontal,
-  Wallet, Waves, CalendarDays,
+  // The config icon rail, one per ConfigForm section.
+  ChevronsLeft, ChevronsRight, Database, LineChart, Clock, Sparkles,
+  SlidersHorizontal, Wallet, Waves, CalendarDays, Timer,
 } from "lucide-react"
 import { useThemeStore } from "@/store/themeStore"
+
+/** The rail's entries, in the panel's own order.
+ *
+ *  `anchor` matches the data-cfg-section each Section renders, which is what
+ *  lets an icon scroll to its part of the form. Kept here rather than derived
+ *  from ConfigForm because the sections are written out one by one there --
+ *  there is no list to map over -- so this is the one place the order lives. */
+const CONFIG_SECTIONS = [
+  { Icon: Database, label: "1. Data Source", anchor: "source" },
+  { Icon: LineChart, label: "2. Symbol", anchor: "symbol" },
+  { Icon: Clock, label: "3. Timeframe", anchor: "timeframe" },
+  { Icon: Timer, label: "4. Interval Picker", anchor: "interval" },
+  { Icon: Sparkles, label: "5. Strategy", anchor: "strategy" },
+  { Icon: SlidersHorizontal, label: "6. Strategy Parameters", anchor: "params" },
+  { Icon: Wallet, label: "7. Capital & Risk", anchor: "capital" },
+  { Icon: Waves, label: "8. ZigZag Swings", anchor: "zigzag" },
+  { Icon: CalendarDays, label: "9. Date Range", anchor: "dates" },
+  { Icon: Clock, label: "10. Session Hours", anchor: "session" },
+] as const
 
 function App({ user }: { user: Me }) {
   const page = useConfigStore((s) => s.page)
@@ -75,53 +94,55 @@ function App({ user }: { user: Me }) {
       {/* The two COLUMNS. Their own row, so the status strip below can be a
           full-width sibling of the pair rather than a child of one of them. */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
-      {page === "backtest" && configOpen && (
-        <aside className="relative w-full lg:w-[290px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
-               style={{ background: "var(--sidebar-ground-from)" }}>
-          <ConfigForm onCollapse={() => setConfigOpen(false)} />
-        </aside>
-      )}
-      {/* COLLAPSED CONFIG: an icon rail, not nothing.
-          Collapsing used to remove the panel outright, leaving the way back
-          only on a button up in the header -- far from where the panel was and
-          easy to miss. This strip keeps the affordance in place, and each icon
-          names the section it reopens to, so the rail also says what is in
-          there. Every control still lives in ConfigForm and its state is
-          untouched by collapsing: the panel is unmounted, but cfg is in the
-          store, so nothing typed is lost.
-          lg and up only -- below that the config is a full-width block above
-          the chart, and a 36px column beside it would have nothing to sit
-          next to. */}
-      {page === "backtest" && !configOpen && (
+      {/* THE ICON RAIL IS ALWAYS THERE, open or closed.
+          It used to appear only while the panel was collapsed, so the panel
+          and its handle swapped places and the left edge of the app moved
+          every time you folded it. Now the rail is the fixed edge and the
+          panel opens beside it: the controls stay where the eye left them,
+          and the rail doubles as a map of what is in the panel -- each icon
+          scrolls its section into view when the panel is open, and opens the
+          panel when it is not.
+          lg and up only. Below that the config is a full-width block above
+          the chart and there is no column for a 36px strip to sit beside. */}
+      {page === "backtest" && (
         <aside className="hidden lg:flex shrink-0 w-9 flex-col items-center gap-1 border-r
                           border-[color:var(--hairline-soft)] py-2"
                style={{ background: "var(--sidebar-ground-from)" }}
-               aria-label="Backtest configuration, collapsed">
-          <button type="button" onClick={() => setConfigOpen(true)}
-                  title="Show the backtest configuration"
-                  aria-label="Show the backtest configuration"
+               aria-label="Backtest configuration sections">
+          <button type="button" onClick={() => setConfigOpen((v) => !v)}
+                  title={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
+                  aria-label={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
+                  aria-expanded={configOpen}
                   className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
                              hover:text-foreground">
-            <ChevronsRight className="h-4 w-4" aria-hidden />
+            {configOpen
+              ? <ChevronsLeft className="h-4 w-4" aria-hidden />
+              : <ChevronsRight className="h-4 w-4" aria-hidden />}
           </button>
           <span className="my-0.5 h-px w-5 bg-[color:var(--hairline-soft)]" aria-hidden />
-          {[
-            { Icon: Database, label: "Data Source" },
-            { Icon: LineChart, label: "Symbol" },
-            { Icon: Clock, label: "Timeframe" },
-            { Icon: Sparkles, label: "Strategy" },
-            { Icon: SlidersHorizontal, label: "Strategy Parameters" },
-            { Icon: Wallet, label: "Capital & Risk" },
-            { Icon: Waves, label: "ZigZag Swings" },
-            { Icon: CalendarDays, label: "Date Range" },
-          ].map(({ Icon, label }) => (
-            <button key={label} type="button" onClick={() => setConfigOpen(true)}
-                    title={label} aria-label={`Show ${label}`}
+          {CONFIG_SECTIONS.map(({ Icon, label, anchor }) => (
+            <button key={label} type="button"
+                    title={label} aria-label={`Go to ${label}`}
+                    onClick={() => {
+                      setConfigOpen(true)
+                      // The panel may be mounting this tick; wait a frame so
+                      // the target exists before scrolling to it.
+                      requestAnimationFrame(() => {
+                        document.querySelector(`[data-cfg-section="${anchor}"]`)
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      })
+                    }}
                     className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
                                hover:text-foreground">
               <Icon className="h-4 w-4" aria-hidden />
             </button>
           ))}
+        </aside>
+      )}
+      {page === "backtest" && configOpen && (
+        <aside className="relative w-full lg:w-[290px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
+               style={{ background: "var(--sidebar-ground-from)" }}>
+          <ConfigForm onCollapse={() => setConfigOpen(false)} />
         </aside>
       )}
       <main className="flex-1 min-w-0 lg:h-full lg:min-h-0 flex flex-col lg:overflow-hidden">

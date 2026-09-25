@@ -64,6 +64,18 @@ function paramColor(name: string): string | undefined {
  *  the configuration or the request. Omitted, the chevron is not rendered. */
 export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
   const cfg = useConfigStore()
+
+  /** Every control that changes the interval goes through here.
+   *
+   *  Picking an interval also moves the start date, because the two are one
+   *  decision -- a 1-minute run over six months is not a thing anyone wants.
+   *  One function rather than the same two lines at each call site, so a pill
+   *  and the popup cannot end up doing subtly different things. */
+  const setInterval = (tf: string) => {
+    cfg.setField("timeframe", tf)
+    const start = startDateForTimeframe(cfg.endDate, tf, cfg.startDate)
+    if (start) cfg.setField("startDate", start)
+  }
   const queryClient = useQueryClient()
   /**
    * Which clock the two Session Hours fields are typed and shown in.
@@ -183,7 +195,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <div className="h-px bg-[color:var(--raise-4)]" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
-      <Section icon="source" label="Data Source" accent="sky">
+      <Section icon="source" label="Data Source" step={1} anchor="source" accent="sky">
         <Select value={cfg.dataSource} onValueChange={(v) => cfg.setField("dataSource", v)}>
           {/* A Radix select trigger is a button whose only content is the chosen
               value, so without a label it announces as that value and nothing
@@ -209,7 +221,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {cfg.dataSource === "schwab" && <SchwabAuthWidget />}
 
       {/* ── symbol ───────────────────────────────────────────────────────── */}
-      <Section icon="symbol" label="Symbol" accent="teal">
+      <Section icon="symbol" label="Symbol" step={2} anchor="symbol" accent="teal">
         {/* A dropdown was fine at five symbols. Schwab offers twenty-one across
             five asset classes, which is a list you hunt rather than scan --
             hence a searchable dialog with the same row markup inside. */}
@@ -237,7 +249,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe Selector" accent="blue">
+      <Section icon="timeframe" label="Timeframe Selector" step={3} anchor="timeframe" accent="blue">
         <Select
           value={cfg.timeframe}
           onValueChange={(v) => {
@@ -287,19 +299,37 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           Keep this handler identical to the Selector's onValueChange -- if one
           changes and the other does not, the two controls stop being one
           setting. */}
-      <Section icon="timeframe" label="Interval Picker" accent="steel">
-        <IntervalPicker
-          value={cfg.timeframe}
-          onChange={(v) => {
-            cfg.setField("timeframe", v)
-            const start = startDateForTimeframe(cfg.endDate, v, cfg.startDate)
-            if (start) cfg.setField("startDate", start)
-          }}
-        />
+      <Section icon="timeframe" label="Interval Picker" step={4} anchor="interval" accent="steel">
+        {/* THE COMMON INTERVALS AS PILLS, then the full picker beneath.
+            Nine intervals cover almost every run, and reading nine labels is
+            faster than opening a popup to find one of them. The popup stays
+            for the rest -- favourites, the customised list, anything not on
+            this grid -- and both write through setInterval, so the pills, the
+            popup, the Timeframe Selector above and the chart toolbar are one
+            setting with one code path and cannot drift apart. */}
+        <div role="group" aria-label="Common intervals" className="grid grid-cols-6 gap-1">
+          {["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"].map((tf) => (
+            <button
+              key={tf}
+              type="button"
+              aria-pressed={cfg.timeframe === tf}
+              onClick={() => setInterval(tf)}
+              title={`${tf} bars`}
+              className={`rounded px-1 py-1 text-[11px] transition-colors ${
+                cfg.timeframe === tf
+                  ? "bg-[#2563eb] text-white font-medium"
+                  : "bg-[color:var(--raise-2)] text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
+        </div>
+        <IntervalPicker value={cfg.timeframe} onChange={setInterval} />
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}
-      <Section icon="strategy" label="Strategy" accent="green">
+      <Section icon="strategy" label="Strategy" step={5} anchor="strategy" accent="green">
         <Select
           value={cfg.strategyId}
           onValueChange={(v) => {
@@ -326,7 +356,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
 
       {/* ── strategy parameters ──────────────────────────────────────────── */}
       {currentStrategy && currentStrategy.params.length > 0 && (
-        <Section icon="params" label="Strategy Parameters" accent="orange">
+        <Section icon="params" label="Strategy Parameters" step={6} anchor="params" accent="orange">
           <Panel>
             {currentStrategy.params.map((p) => (
               <SliderField
@@ -350,7 +380,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       )}
 
       {/* ── capital & risk ───────────────────────────────────────────────── */}
-      <Section icon="capital" label="Capital & Risk" accent="blue">
+      <Section icon="capital" label="Capital & Risk" step={7} anchor="capital" accent="blue">
         <Panel>
           <FieldRow icon={<Wallet className="h-4 w-4 text-[#60a5fa]" />} label="Initial Capital ($)">
             <Input type="number" step={10000} aria-label="Initial capital in dollars" value={cfg.initialCapital}
@@ -374,7 +404,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           session window decide which bars go in, and read as a group
           after it. Nothing moved out of the panel -- Capital & Risk and
           Session Hours are still here, below. */}
-      <Section icon="zigzag" label="ZigZag Swings" accent="violet">
+      <Section icon="zigzag" label="ZigZag Swings" step={8} anchor="zigzag" accent="violet">
         <Panel>
           {/* The dots tell the two sliders apart. The 10-leg dot is the chart's
               #2196f3. The 3-leg dot is the section's purple rather than the
@@ -405,7 +435,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           />
         </Panel>
       </Section>
-      <Section icon="dates" label="Date Range" accent="teal">
+      <Section icon="dates" label="Date Range" step={9} anchor="dates" accent="teal">
         <Panel>
           {/* ONE PER ROW once the rail is narrow.
               The rail is 290px wide from lg up, which leaves about 129px a
@@ -473,7 +503,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── session hours ────────────────────────────────────────────────── */}
-      <Section icon="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember">
+      <Section icon="session" step={10} anchor="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember">
         <Panel>
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
