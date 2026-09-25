@@ -25,7 +25,7 @@ import { TimeField } from "@/components/ui/time-field"
 import { DateField } from "@/components/ui/date-field"
 import { SymbolOption } from "@/components/SymbolOption"
 import { InstrumentPicker } from "@/components/InstrumentPicker"
-import { IntervalPicker } from "@/components/IntervalPicker"
+
 import { SourceMark } from "@/components/SourceMark"
 import { StrategyMark } from "@/components/StrategyMark"
 import {
@@ -168,7 +168,10 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
   return (
     // cfg-scope: this panel's palette, and the same class on every popup it
     // opens -- see "Backtest Config palette" in index.css.
-    <div className="cfg-scope space-y-5">
+    // space-y-3, not 5: ten sections at the old gap ran the panel well past a
+    // 900px viewport, so the last two were only reachable by scrolling and the
+    // panel read as unfinished.
+    <div className="cfg-scope space-y-3">
       {/* ── panel header ─────────────────────────────────────────────────── */}
       <header className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
@@ -325,7 +328,12 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             </button>
           ))}
         </div>
-        <IntervalPicker value={cfg.timeframe} onChange={setInterval} />
+        {/* NO SECOND CONTROL UNDER THE PILLS. The full IntervalPicker used to
+            sit here as well, which put two controls for one setting directly
+            on top of each other -- the pills and a dropdown showing the same
+            value. The pills cover every interval the picker's own list holds,
+            and the picker is still one row up on the chart toolbar for
+            favourites and custom intervals. */}
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}

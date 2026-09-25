@@ -98,9 +98,16 @@ const fmtPrice = (n: number | null | undefined) =>
  *  Five digits and a separator at 11px; 52 clears "7,713.31" with room. */
 const AXIS_W = 52
 /** Width reserved for the on-chart legend when it is showing, in pixels.
- *  Wide enough for the longest entry this chart produces ("Volume Profile")
- *  at 10px plus its marker column. Only applied while the legend is on. */
-const LEGEND_W = 104
+ *
+ *  Sized to the longest entry the chart can produce plus its marker column.
+ *  Raised from 104 when MFI started on by default: another row means another
+ *  legend entry, the box got wider, and at 104 it sat 6px over the price
+ *  ladder -- which e2e/dashboard.spec.ts measures and refuses.
+ *
+ *  It is a fixed number rather than a measurement because the margin has to
+ *  be known before Plotly lays the legend out. If a study with a longer name
+ *  than "Volume Profile" is ever added, this is the thing to raise. */
+const LEGEND_W = 124
 // Default view opens on the last ~2 hours rather than the whole session, or on
 // the last 40 bars once a bar is two hours wide -- see lib/chartWindow.ts. It is
 // worked out once per render (`defaultWindow`) because swing-header collision
@@ -281,7 +288,12 @@ export function CandlestickChart({
   // Oscillator panels as opt-in studies, the way VWAP and Volume Profile work.
   // RSI(2), StochRSI and RSI(13) start on. MFI starts off: four oscillator rows
   // at once are too short to read, which is why each has its own checkbox.
-  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: false })
+  // ALL FOUR OSCILLATOR ROWS ON BY DEFAULT. MFI used to start off, so the
+  // chart opened with three panels where the reference has four and the
+  // fourth looked like it did not exist. It is a real study with real data
+  // (lib/oscillatorStudies.ts marks it available); there was no reason for it
+  // to be the one that hides.
+  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: true })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)

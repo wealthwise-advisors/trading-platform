@@ -99,7 +99,7 @@ export function Section({ icon, label, accent = "blue", children, aside, step, a
   return (
     // --slider-accent: a slider in this section fills in the section's colour
     // unless the field sets its own (see .cfg-scope in index.css).
-    <section className="space-y-2.5" data-cfg-section={anchor}
+    <section className="space-y-1.5" data-cfg-section={anchor}
              style={{ "--slider-accent": hex } as CSSProperties}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export function Section({ icon, label, accent = "blue", children, aside, step, a
 /** A bordered group, for sections holding several related fields. */
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)] p-3.5 space-y-3.5 ${className}`}>
+    <div className={`rounded-xl border border-[color:var(--hairline-mid)] bg-[color:var(--raise-1)] p-2.5 space-y-2.5 ${className}`}>
       {children}
     </div>
   )
