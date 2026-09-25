@@ -342,49 +342,6 @@ export function ResultsPage() {
           tab strip owns its own state. */}
       <Tabs value={resultsTab} onValueChange={setResultsTab}
             className="xl:flex-1 xl:min-h-0 flex flex-col gap-0">
-        {/* ── Tab bar. Export Report + Live Replay now live in the header (App.tsx),
-             next to each other with the requested ~56px gap -- removed the
-             duplicates that used to sit here to avoid two visible "Live Replay"
-             entry points; same setPage("replay")/reportUrl() calls either way. ── */}
-        <div className="shrink-0 flex items-center gap-2 min-w-0">
-          <TabsList className="tabs-scroll">
-            {/* THE REFERENCE'S BOTTOM DOCK, in its order: Positions, Orders,
-                Order History, Trade Log, P&L Analysis, Monthly Returns,
-                Balance History, Trading Journal.
-
-                Chart stays first and stays in the strip. In the reference the
-                chart is not a tab at all -- it sits permanently above the dock
-                -- so there is no position in that row that corresponds to it.
-                Dropping it into the overflow menu to make the row match
-                exactly would bury the app's primary view behind a menu, which
-                is a worse trade than one extra tab. Everything the strip can
-                no longer hold moved to MoreAnalyses, not deleted. */}
-            <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
-            <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
-            <TabsTrigger value="positions">
-              <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> Positions{openCount > 0 ? ` (${openCount})` : ""}
-            </TabsTrigger>
-            <TabsTrigger value="orders"><Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden /> Orders</TabsTrigger>
-            <TabsTrigger value="orderhistory"><History className="h-3.5 w-3.5 shrink-0" aria-hidden /> Order History</TabsTrigger>
-            <TabsTrigger value="trades"><ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trade Log</TabsTrigger>
-            <TabsTrigger value="pnl"><BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> P&amp;L Analysis</TabsTrigger>
-            <TabsTrigger value="monthly"><CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> Monthly Returns</TabsTrigger>
-            <TabsTrigger value="balance"><Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> Balance History</TabsTrigger>
-            <TabsTrigger value="journal"><NotebookPen className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trading Journal</TabsTrigger>
-          </TabsList>
-          {/* ELLIOTT WAVE LIVES HERE NOW, not deleted.
-              The reference shows eight tabs and they fit; ours was nine and
-              the strip clipped after "Chart Patterns" at the reference width.
-              Rather than drop a working feature -- twelve modules and eight
-              structures sit behind it -- the ninth moves into an overflow
-              menu, which is where a ninth item belongs once a row of eight is
-              the design. It stays a real tab: the trigger below is the same
-              TabsTrigger the strip would have rendered, so selecting it
-              switches the panel exactly as before and the tab keeps its
-              roving-focus and aria wiring. */}
-          <MoreAnalyses value={resultsTab} onSelect={setResultsTab} />
-        </div>
-
         {/* ── Hero row: chart (fills remaining space) + narrow fixed sidebar ──
              This is a FLEX row now, not a CSS Grid. Grid rows default to
              auto-sizing (fit-content) unless grid-template-rows is set
@@ -513,6 +470,63 @@ export function ResultsPage() {
                 )}
               </Card>
             </TabsContent>
+
+            {/* ── THE TAB STRIP, UNDER THE CHART ──
+                 It sat above the panel it switches, which put three rows of
+                 chrome between the KPI cards and the first candle. The
+                 reference docks it beneath, the way a terminal does: the
+                 chart starts straight after the metrics and the strip reads
+                 as the row of things you can put in the space below it.
+
+                 Inside the chart column on purpose, not spanning the page --
+                 it switches this column's content and has nothing to say
+                 about the market rail beside it.
+
+                 shrink-0 so it keeps its height when the chart claims the
+                 rest, and mt-auto so it sits at the BOTTOM of the column
+                 rather than floating directly under a short panel. ── */}
+          {/* ── Tab bar. Export Report + Live Replay now live in the header (App.tsx),
+               next to each other with the requested ~56px gap -- removed the
+               duplicates that used to sit here to avoid two visible "Live Replay"
+               entry points; same setPage("replay")/reportUrl() calls either way. ── */}
+          <div className="shrink-0 mt-auto flex items-center gap-2 min-w-0 pt-1">
+              <TabsList className="tabs-scroll">
+              {/* THE REFERENCE'S BOTTOM DOCK, in its order: Positions, Orders,
+                  Order History, Trade Log, P&L Analysis, Monthly Returns,
+                  Balance History, Trading Journal.
+
+                  Chart stays first and stays in the strip. In the reference the
+                  chart is not a tab at all -- it sits permanently above the dock
+                  -- so there is no position in that row that corresponds to it.
+                  Dropping it into the overflow menu to make the row match
+                  exactly would bury the app's primary view behind a menu, which
+                  is a worse trade than one extra tab. Everything the strip can
+                  no longer hold moved to MoreAnalyses, not deleted. */}
+              <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
+              <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
+              <TabsTrigger value="positions">
+                <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> Positions{openCount > 0 ? ` (${openCount})` : ""}
+              </TabsTrigger>
+              <TabsTrigger value="orders"><Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden /> Orders</TabsTrigger>
+              <TabsTrigger value="orderhistory"><History className="h-3.5 w-3.5 shrink-0" aria-hidden /> Order History</TabsTrigger>
+              <TabsTrigger value="trades"><ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trade Log</TabsTrigger>
+              <TabsTrigger value="pnl"><BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> P&amp;L Analysis</TabsTrigger>
+              <TabsTrigger value="monthly"><CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> Monthly Returns</TabsTrigger>
+              <TabsTrigger value="balance"><Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> Balance History</TabsTrigger>
+              <TabsTrigger value="journal"><NotebookPen className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trading Journal</TabsTrigger>
+            </TabsList>
+            {/* ELLIOTT WAVE LIVES HERE NOW, not deleted.
+                The reference shows eight tabs and they fit; ours was nine and
+                the strip clipped after "Chart Patterns" at the reference width.
+                Rather than drop a working feature -- twelve modules and eight
+                structures sit behind it -- the ninth moves into an overflow
+                menu, which is where a ninth item belongs once a row of eight is
+                the design. It stays a real tab: the trigger below is the same
+                TabsTrigger the strip would have rendered, so selecting it
+                switches the panel exactly as before and the tab keeps its
+                roving-focus and aria wiring. */}
+            <MoreAnalyses value={resultsTab} onSelect={setResultsTab} />
+          </div>
           </div>
         </div>
       </Tabs>

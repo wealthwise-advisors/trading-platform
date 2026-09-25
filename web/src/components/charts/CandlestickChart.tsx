@@ -155,7 +155,15 @@ export function CandlestickChart({
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
   symbol, bars, indicators, zigzag, trades, showZigzag = true,
-  showStochRsi = true, showVwap = true, showVolumeProfile = true,
+  // VOLUME PROFILE STARTS OFF.
+  //
+  // It is the reason the candles used to sit in a band across the middle of
+  // an otherwise empty plot: the profile's histogram and its value-area lines
+  // share the PRICE axis, so the axis has to span both and the candles get
+  // whatever is left. Turning it on is one click in the indicator row and the
+  // chart rescales; leaving it on by default made every first look at a
+  // result worse. The reference has it off for the same reason.
+  showStochRsi = true, showVwap = true, showVolumeProfile = false,
   description, exchange, interval,
 }: CandlestickChartProps) {
   // Subscribing (rather than only calling chartTheme()) is what makes the
@@ -1820,11 +1828,11 @@ export function CandlestickChart({
     <div ref={containerRef}
          style={{ width: "100%", height: "100%", minHeight: chartMinHeight,
                   display: "flex", flexDirection: "column" }}>
-      {/* The instrument line, the OHLC quote, and the chart controls -- one
-          row, rendered here rather than by the page so that the controls can
-          sit on it. */}
+      {/* The instrument line and the OHLC quote. The controls that used to
+          ride here moved down to the toolbar row, where the reference keeps
+          every control together -- this line is the quote now, nothing else. */}
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
-                   interval={interval} bars={bars} actions={chartActions} />
+                   interval={interval} bars={bars} />
 
       {/* VWAP controls. The gear sits beside the toggle so the settings are
           discoverable from the thing they configure, rather than buried in a
@@ -2187,6 +2195,7 @@ export function CandlestickChart({
         onZoomIn={() => zoomBy(0.6)}
         onZoomOut={() => zoomBy(1 / 0.6)}
         onResetView={() => { setVisibleRange(null); setActiveRange(null) }}
+        actions={chartActions}
       />
 
       {/* The rail sits BESIDE the plot, not over it: an overlay would cover

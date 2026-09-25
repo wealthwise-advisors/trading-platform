@@ -38,7 +38,7 @@ const BTN =
 
 export function ChartToolbar({
   symbol, lastPrice, canUndo, canRedo, onUndo, onRedo, onSnapshot, onAlertsChanged,
-  onZoomIn, onZoomOut, onResetView,
+  onZoomIn, onZoomOut, onResetView, actions,
 }: {
   symbol: string
   lastPrice: number | null
@@ -53,6 +53,10 @@ export function ChartToolbar({
   onZoomIn: () => void
   onZoomOut: () => void
   onResetView: () => void
+  /** The chart's own controls -- Legend, Indicators, Save, full screen.
+   *  They used to ride on the instrument line above; the reference puts
+   *  every control on one row and leaves that line to the quote. */
+  actions?: React.ReactNode
 }) {
   const cfg = useConfigStore()
   const setPage = useConfigStore((s) => s.setPage)
@@ -208,6 +212,13 @@ export function ChartToolbar({
               aria-label="Download chart as PNG" title="Download this chart as a PNG">
         <Camera className="h-3 w-3" aria-hidden />
       </button>
+
+      {actions && (
+        <>
+          <span className="mx-1 h-4 w-px bg-[color:var(--hairline-soft)]" aria-hidden />
+          {actions}
+        </>
+      )}
 
       {/* The price scale's currency.
           A LABEL, not the reference's dropdown. Every contract this platform
