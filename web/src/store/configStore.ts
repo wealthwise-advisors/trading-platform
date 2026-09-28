@@ -93,14 +93,42 @@ export const CONFIG_SNAPSHOT_KEYS = [
 
 export type ConfigSnapshot = Pick<ConfigState, typeof CONFIG_SNAPSHOT_KEYS[number]>
 
-function defaultDateRange() {
-  const today = new Date()
-  const day = today.getDay()
-  // Roll back to the last trading day (skip Sat/Sun) — mirrors _last_trading_day in ui/app.py
-  const back = day === 0 ? 2 : day === 6 ? 1 : 1
+/** A local date as YYYY-MM-DD.
+ *
+ *  NOT toISOString(), which formats in UTC. `new Date()` is local, so mixing
+ *  the two shifts the answer by a day for anyone whose offset pushes the
+ *  current local time onto a different UTC date -- every morning before 05:30
+ *  in IST, for instance, which is where this app is used. */
+function localISODate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
+ * The last completed trading day.
+ *
+ * MONDAY IS THE CASE THIS GOT WRONG. The old table rolled back one day for
+ * everything except Sunday, so a Monday landed on SUNDAY -- a day the
+ * regular session does not exist. The run then fetched the Sunday-evening
+ * futures reopen (18:00 onwards) and the 09:30-16:00 session filter removed
+ * every bar, which surfaced as "No bars remain after applying the session
+ * filter" on the first run of the week.
+ *
+ * Sat and Sun roll back to Friday as before; Monday now rolls back three days
+ * to Friday too. Tue-Fri still take the previous weekday.
+ *
+ * Holidays are NOT handled -- this is the previous weekday, not an exchange
+ * calendar. A run on the day after a holiday can still land on a closed
+ * session, and the error message names the date and the window so it is
+ * obvious when that happens.
+ */
+export function defaultDateRange(now: Date = new Date()) {
+  const today = now
+  const day = today.getDay()          // 0 = Sunday ... 6 = Saturday
+  const back = day === 0 ? 2 : day === 1 ? 3 : 1
   const d = new Date(today)
   d.setDate(d.getDate() - back)
-  const iso = d.toISOString().slice(0, 10)
+  const iso = localISODate(d)
   return { start: iso, end: iso }
 }
 
