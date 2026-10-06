@@ -55,6 +55,13 @@
   "overrides": {
     "hono": "^4.13.5",
     "maplibre-gl": "^6.4.1",
-    "js-yaml": "^4.3.2"
+    "js-yaml": "^4.3.2",
+    "jsdom": {
+      "undici": "^8.11.2"
+    },
+    "shadcn": {
+      "undici": "^7.30.0"
+    },
+    "ip-address": "^10.7.3"
   }
 }
