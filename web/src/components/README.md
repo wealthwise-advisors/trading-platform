@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Holds** | Reusable pieces. Anything page-specific lives in [`features`](../features) |
-| 🎨 **Base kit** | shadcn/ui in [`ui`](ui) — do not edit those by hand |
+| 🎨 **Base kit** | shadcn/ui in [`ui`](ui) — do not edit those by hand. The CLI is not a dependency; its Tailwind layer is vendored in [`styles/shadcn-kit.css`](../styles/shadcn-kit.css) |
 | 📁 **Path** | `web/src/components/` |
 | 📦 **Holds** | `22` files · `3,273` lines · `5` subfolders |
 

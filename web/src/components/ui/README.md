@@ -65,6 +65,7 @@
 ## 💡 Worth knowing
 
 - ➜ **Re-running the shadcn generator overwrites the local theming here.** These files have been edited by hand since they were generated.
+- ➜ **The `shadcn` CLI is no longer a dependency.** It was removed on 2026-10-07: it was the sole source of 14 transitive packages and four unfixable `braces` advisories. Its Tailwind layer — the `data-*` variants these primitives are styled with, plus `shimmer` — is vendored verbatim at [`styles/shadcn-kit.css`](../../styles/shadcn-kit.css). Re-running the generator means installing it again deliberately.
 - ➜ **Colour comes from tokens** in [`index.css`](../../index.css), so one token change reaches all sixteen components at once.
 
 
