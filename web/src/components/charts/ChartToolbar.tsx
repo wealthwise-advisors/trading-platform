@@ -43,8 +43,8 @@ const QUICK = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"]
  * for no gain in clarity.
  */
 const BTN =
-  "chart-ctl chart-ctl-nogrow flex items-center gap-1 rounded border border-[color:var(--hairline-mid)] " +
-  "bg-[color:var(--raise-3)] px-2 hover:bg-[color:var(--raise-4)] text-foreground"
+  "chart-btn flex items-center gap-1.5 rounded-lg border border-[color:var(--hairline-mid)] " +
+  "bg-[color:var(--raise-2)] px-2.5 hover:bg-[color:var(--raise-4)] text-foreground"
 
 /**
  * A SEGMENTED CLUSTER: one border around related icons, divided inside.
@@ -53,19 +53,22 @@ const BTN =
  * row, so the eye had to read six objects to find one. Grouping says "these
  * belong together" with less ink, not more.
  */
-const GROUP =
-  "chart-ctl chart-ctl-nogrow flex items-center overflow-hidden rounded border " +
-  "border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)]"
+/**
+ * A cluster of related icons. BORDERLESS, as the reference draws them: the
+ * divider between clusters does the grouping, so the row carries two rules
+ * instead of six boxes.
+ *
+ * No overflow-hidden here any more. It was what turned the earlier bordered
+ * version invisible when the cluster was squeezed -- the icons were clipped
+ * rather than merely cramped. The children keep flex:none so they cannot be
+ * squeezed in the first place.
+ */
+const GROUP = "flex items-center gap-0.5"
 
 const GROUP_BTN =
-  "grid h-full chart-ctl-icon place-items-center text-foreground transition-colors " +
-  "hover:bg-[color:var(--raise-4)] disabled:opacity-35 disabled:cursor-not-allowed " +
+  "grid chart-ico place-items-center rounded-md text-foreground transition-colors " +
+  "hover:bg-[color:var(--raise-4)] disabled:opacity-30 disabled:cursor-not-allowed " +
   "disabled:hover:bg-transparent"
-
-/** Hairline between two icons inside a cluster. */
-function Div() {
-  return <span className="h-full w-px bg-[color:var(--hairline-soft)]" aria-hidden />
-}
 
 export function ChartToolbar({
   symbol, lastPrice, canUndo, canRedo, onUndo, onRedo, onSnapshot, onAlertsChanged,
@@ -131,7 +134,7 @@ export function ChartToolbar({
   }
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto tabs-scroll px-1 py-0.5 text-[11px]
+    <div className="flex items-center gap-2 overflow-x-auto tabs-scroll px-1 py-1 text-[12px]
                     border-b border-[color:var(--hairline-soft)]">
       {/* ── Interval quick buttons ── */}
       <div role="group" aria-label="Bar interval" className="flex items-center gap-0.5">
@@ -143,7 +146,7 @@ export function ChartToolbar({
             disabled={run.isPending}
             onClick={() => setInterval(tf)}
             title={`Redraw the chart with ${tf} bars`}
-            className={`grid chart-ctl-pill chart-ctl-nogrow place-items-center rounded px-1.5 transition-colors
+            className={`grid chart-pill place-items-center rounded-lg px-2 transition-colors
                         disabled:opacity-50 ${
               cfg.timeframe === tf
                 ? "bg-[#2563eb] text-white font-medium"
@@ -171,7 +174,7 @@ export function ChartToolbar({
                   setAlertOpen((v) => !v)
                 }}
                 title="Set a price alert on this instrument">
-          <Bell className="h-3 w-3" aria-hidden /> Alert
+          <Bell className="h-3.5 w-3.5" aria-hidden /> Alert
         </button>
         {alertOpen && (
           <div role="dialog" aria-label="New price alert"
@@ -224,7 +227,7 @@ export function ChartToolbar({
       {/* ── Replay ── */}
       <button type="button" className={BTN} onClick={() => setPage("replay")}
               title="Replay the market bar by bar">
-        <Rewind className="h-3 w-3" aria-hidden /> Replay
+        <Rewind className="h-3.5 w-3.5" aria-hidden /> Replay
       </button>
 
       <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
@@ -234,13 +237,12 @@ export function ChartToolbar({
         <button type="button" onClick={onUndo} disabled={!canUndo}
                 aria-label="Undo drawing" title="Undo the last drawing"
                 className={GROUP_BTN}>
-          <Undo2 className="h-3 w-3" aria-hidden />
+          <Undo2 className="h-3.5 w-3.5" aria-hidden />
         </button>
-        <Div />
         <button type="button" onClick={onRedo} disabled={!canRedo}
                 aria-label="Redo drawing" title="Redo the drawing you just undid"
                 className={GROUP_BTN}>
-          <Redo2 className="h-3 w-3" aria-hidden />
+          <Redo2 className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
 
@@ -250,22 +252,19 @@ export function ChartToolbar({
       <div className={GROUP} role="group" aria-label="Chart view">
         <button type="button" onClick={onZoomIn} className={GROUP_BTN}
                 aria-label="Zoom in" title="Zoom in">
-          <ZoomIn className="h-3 w-3" aria-hidden />
+          <ZoomIn className="h-3.5 w-3.5" aria-hidden />
         </button>
-        <Div />
         <button type="button" onClick={onZoomOut} className={GROUP_BTN}
                 aria-label="Zoom out" title="Zoom out">
-          <ZoomOut className="h-3 w-3" aria-hidden />
+          <ZoomOut className="h-3.5 w-3.5" aria-hidden />
         </button>
-        <Div />
         <button type="button" onClick={onResetView} className={GROUP_BTN}
                 aria-label="Reset the view" title="Reset the view to the default window">
-          <Home className="h-3 w-3" aria-hidden />
+          <Home className="h-3.5 w-3.5" aria-hidden />
         </button>
-        <Div />
         <button type="button" onClick={onSnapshot} className={GROUP_BTN}
                 aria-label="Download chart as PNG" title="Download this chart as a PNG">
-          <Camera className="h-3 w-3" aria-hidden />
+          <Camera className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
 

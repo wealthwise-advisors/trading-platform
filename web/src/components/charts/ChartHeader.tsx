@@ -20,7 +20,6 @@
  * themed by the stylesheet, and cannot hold a collapse control.
  */
 
-import { Crosshair } from "lucide-react"
 import type { OHLCVRecord } from "@/lib/types"
 
 /** "5m" -> "5"; "1h", "1d", "1w" unchanged. */
@@ -72,65 +71,75 @@ export function ChartHeader({
 
   return (
     <div className="shrink-0 px-1 pb-1">
-      {/* The instrument line, with the chart's controls at its right end.
-          ONE ROW: the controls used to sit on a line of their own below the
-          study checkboxes, which cost the plot a whole row of height and put
-          three buttons a long way from the chart they act on.
-          The description and the exchange are omitted rather than guessed when
-          the catalogue has not got them -- a symbol with an invented venue
-          beside it is worse than a symbol alone. */}
-      <div className="flex items-start justify-between gap-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[13px] min-w-0">
-        <Crosshair className="h-3.5 w-3.5 shrink-0 self-center text-muted-foreground" aria-hidden />
-        <span className="font-semibold tracking-tight text-foreground">{symbol}</span>
-        {description && (
-          <>
-            <span className="text-muted-foreground/75">·</span>
-            <span className="text-muted-foreground">{description}</span>
-          </>
-        )}
-        <span className="text-muted-foreground/75">·</span>
-        {/* "5", not "5m" -- the reference writes an intraday interval as a
-            bare number of minutes, as trading terminals do. Anything that is
-            not plain minutes (1h, 1d, 1w) keeps its unit, because there the
-            unit is the whole meaning. */}
-        {/* data-testid: the interval the chart is actually DRAWN at, which is
-            the run's timeframe, not the one staged in the config panel. The
-            e2e test for the toolbar pills reads it here rather than scraping
-            body text -- the sidebar names the same instrument, so a text
-            search found that first and compared the wrong thing. */}
-        <span className="text-muted-foreground" data-testid="chart-interval">{intervalLabel(interval)}</span>
-        {exchange && (
-          <>
-            <span className="text-muted-foreground/75">·</span>
-            <span className="text-muted-foreground">{exchange}</span>
-          </>
-        )}
-      </div>
+      {/* ONE LINE: badge, instrument, interval, venue, then the quote.
+          The reference puts all of it on a single row, and it fits -- the
+          quote was on a second line only because it grew there.
+
+          No chevron beside the name, which the reference draws: here it would
+          be a dropdown that opens nothing. The instrument is changed in the
+          config panel, and a control that looks interactive and is not is
+          worse than no control.
+
+          The description and the exchange are omitted rather than guessed
+          when the catalogue has not got them -- a symbol with an invented
+          venue beside it is worse than a symbol alone. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap min-w-0">
+          {/* The instrument's initials, as the reference marks it. Derived
+              from the symbol, never a logo we do not have. */}
+          <span className="chart-badge grid place-items-center rounded-full text-[11px]
+                           font-bold tracking-tight"
+                aria-hidden>
+            {symbol.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">{symbol}</span>
+          {description && (
+            <span className="text-[13px] text-muted-foreground truncate">{description}</span>
+          )}
+
+          <span className="h-4 w-px bg-[color:var(--hairline-firm)]" aria-hidden />
+
+          {/* "5", not "5m" -- the reference writes an intraday interval as a
+              bare number of minutes, as trading terminals do. Anything that is
+              not plain minutes (1h, 1d, 1w) keeps its unit, because there the
+              unit is the whole meaning. */}
+          {/* data-testid: the interval the chart is actually DRAWN at, which is
+              the run's timeframe, not the one staged in the config panel. The
+              e2e test for the toolbar pills reads it here rather than scraping
+              body text -- the sidebar names the same instrument, so a text
+              search found that first and compared the wrong thing. */}
+          <span className="text-[13px] text-muted-foreground" data-testid="chart-interval">
+            {intervalLabel(interval)}
+          </span>
+          {exchange && (
+            <>
+              <span className="text-muted-foreground/60" aria-hidden>&bull;</span>
+              <span className="text-[13px] text-muted-foreground">{exchange}</span>
+            </>
+          )}
+
+          {/* The quote, on the same line. tabular-nums so the figures do not
+              jitter as the last bar updates. */}
+          {last ? (
+            <span className="flex items-baseline gap-x-3 flex-wrap text-[13px] tabular-nums ml-1">
+              <Quote label="O" value={px(last.o)} />
+              <Quote label="H" value={px(last.h)} />
+              <Quote label="L" value={px(last.l)} />
+              <Quote label="C" value={px(last.c)} />
+              <span className="font-medium" style={{ color: changeColor }}>
+                {change == null ? "—" : `${change > 0 ? "+" : ""}${px(change)}`}
+                {changePct != null && ` (${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%)`}
+              </span>
+            </span>
+          ) : (
+            <span className="text-[13px] text-muted-foreground">No bars loaded</span>
+          )}
+        </div>
+
         {actions && (
           <div className="shrink-0 flex items-center gap-1.5 text-xs">{actions}</div>
         )}
       </div>
-
-      {/* The quote line. tabular-nums so the figures do not jitter as the
-          last bar updates. */}
-      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5 text-[12px] tabular-nums">
-        {last ? (
-          <>
-            <Quote label="O" value={px(last.o)} />
-            <Quote label="H" value={px(last.h)} />
-            <Quote label="L" value={px(last.l)} />
-            <Quote label="C" value={px(last.c)} />
-            <span style={{ color: changeColor }}>
-              {change == null ? "—" : `${change > 0 ? "+" : ""}${px(change)}`}
-              {changePct != null && ` (${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%)`}
-            </span>
-          </>
-        ) : (
-          <span className="text-muted-foreground">No bars loaded</span>
-        )}
-      </div>
-
     </div>
   )
 }

@@ -22,7 +22,7 @@ import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
-import { ChevronDown, Maximize, Minimize, Save } from "lucide-react"
+import { ChevronDown, Maximize, Minimize, Save, Settings } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
@@ -146,8 +146,8 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
  * on one line.
  */
 const STUDY_CHIP =
-  "chart-ctl flex items-center gap-1.5 rounded-md border border-[color:var(--hairline-soft)] " +
-  "bg-[color:var(--raise-2)] pl-2 pr-1"
+  "chart-chip flex items-center gap-2 rounded-lg border border-[color:var(--hairline-mid)] " +
+  "bg-[color:var(--raise-2)] pl-2.5 pr-1.5"
 
 /**
  * A study's settings gear, INSIDE its chip.
@@ -167,10 +167,10 @@ function StudyGear({ label, title, onClick }: {
       aria-label={label}
       title={title}
       onClick={onClick}
-      className="grid chart-ctl-sq shrink-0 place-items-center rounded text-[11px] leading-none
+      className="grid h-6 w-6 shrink-0 place-items-center rounded-md
                  text-muted-foreground transition-colors
                  hover:bg-[color:var(--raise-4)] hover:text-foreground"
-    >⚙</button>
+    ><Settings className="h-3.5 w-3.5" aria-hidden /></button>
   )
 }
 
@@ -1901,7 +1901,7 @@ export function CandlestickChart({
           unavailable, and clicking it did nothing at all. Clicking now
           switches the study on and opens its panel, which is what someone
           reaching for the settings wanted anyway. */}
-      <div className="shrink-0 flex flex-wrap items-center gap-1.5 pb-1 text-xs relative">
+      <div className="shrink-0 flex flex-wrap items-center gap-2 pb-1.5 text-[12px] relative">
         <div className={STUDY_CHIP}>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" checked={vwapOn}

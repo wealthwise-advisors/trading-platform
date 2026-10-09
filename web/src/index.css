@@ -2368,3 +2368,25 @@ button, [role="button"] {
    They were on screen, measurable, and completely invisible. */
 .chart-ctl-icon { width: 26px; flex: none; }
 .chart-ctl-nogrow { flex: none; }
+
+/* ── Chart chrome, sized to the reference ─────────────────────────────────
+   Larger, airier controls than the 22px compact set above. Real classes, not
+   h-[30px]: arbitrary Tailwind values emit nothing in this project. */
+.chart-chip { height: 30px; }
+.chart-chip input[type="checkbox"] {
+  width: 15px; height: 15px; accent-color: #2563eb; cursor: pointer;
+}
+/* Borderless toolbar icon, as the reference draws them -- the divider does
+   the grouping instead of a box per icon. flex:none for the same reason the
+   clusters needed it: this row is a crowded overflow-x-auto flex container
+   and its children will otherwise squeeze to nothing. */
+.chart-ico { width: 30px; height: 28px; flex: none; }
+.chart-pill { height: 28px; min-width: 34px; flex: none; }
+.chart-btn { height: 28px; flex: none; }
+/* The instrument badge on the header line. */
+.chart-badge {
+  width: 28px; height: 28px; flex: none;
+  background: linear-gradient(145deg, #3b1d2e, #2a1622);
+  border: 1px solid #e0507a66;
+  color: #f0789c;
+}
