@@ -130,6 +130,50 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
 }
 
 
+/**
+ * One study'scontrol group on the row above the plot.
+ *
+ * THE BUG THE BORDER FIXES. These used to be bare labels and bare gear
+ * buttons separated by a `|` that was `hidden wide:inline` -- so at any width
+ * below `wide` the separators vanished and the row read
+ * "VWAP (gear) BB(20,2) Volume Profile (gear) RSI(2) (gear)", with nothing
+ * saying whether a gear belonged to the study on its left or its right. That
+ * is exactly how the Volume Profile gear came to be reported as missing.
+ * A box around each study answers it at every width, so the separators are
+ * gone rather than merely restyled.
+ *
+ * Fixed height, so the row stops being nine different control heights stacked
+ * on one line.
+ */
+const STUDY_CHIP =
+  "chart-ctl flex items-center gap-1.5 rounded-md border border-[color:var(--hairline-soft)] " +
+  "bg-[color:var(--raise-2)] pl-2 pr-1"
+
+/**
+ * A study's settings gear, INSIDE its chip.
+ *
+ * No border of its own any more: it sits in a bordered chip, and a box inside
+ * a box reads as two controls. Still a real button with the same aria-label
+ * and the same "turn it on and open it" behaviour.
+ */
+function StudyGear({ label, title, onClick }: {
+  label: string
+  title?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      onClick={onClick}
+      className="grid chart-ctl-sq shrink-0 place-items-center rounded text-[11px] leading-none
+                 text-muted-foreground transition-colors
+                 hover:bg-[color:var(--raise-4)] hover:text-foreground"
+    >⚙</button>
+  )
+}
+
 /** One study in the Indicators menu: a checkbox row that reads as a menu item. */
 function MenuToggle({
   label, checked, onChange, disabled, hint,
@@ -1846,54 +1890,57 @@ export function CandlestickChart({
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
                    interval={interval} bars={bars} />
 
-      {/* VWAP controls. The gear sits beside the toggle so the settings are
-          discoverable from the thing they configure, rather than buried in a
-          global preferences screen. */}
-      <div className="shrink-0 flex flex-wrap items-center gap-x-1.5 gap-y-1 pb-1 text-xs relative">
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input type="checkbox" checked={vwapOn}
-                 onChange={(e) => setVwapOn(e.target.checked)} />
-          <span>VWAP</span>
-        </label>
-        {/* Deliberately NOT disabled when the indicator is off.
-            A gear greyed to 40% next to a bright one reads as missing rather
-            than as unavailable, and clicking it did nothing at all -- which is
-            exactly how the Volume Profile gear below came to be reported as
-            absent. Clicking now switches the indicator on and opens its panel,
-            which is what someone reaching for the settings wanted anyway. */}
-        <button
-          type="button"
-          aria-label="VWAP settings"
-          title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
-                        : "Turn VWAP on and open its settings"}
-          onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
-          className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
-                     hover:bg-[color:var(--raise-4)]"
-        >⚙</button>
+      {/* THE STUDY ROW. One bordered chip per study, each holding its own
+          toggle and its own gear -- see STUDY_CHIP for why the box is load
+          bearing rather than decoration. The `|` separators that used to
+          stand in for the grouping are gone: they were hidden below the
+          `wide` breakpoint, which is where the ambiguity was worst.
 
-        <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]">|</span>
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input type="checkbox" checked={bbOn}
-                 aria-label="Show Bollinger Bands"
-                 onChange={(e) => setBbOn(e.target.checked)} />
-          <span>BB(20,2)</span>
-        </label>
+          The gear is deliberately NOT disabled when its study is off. A gear
+          greyed to 40% beside a bright one reads as missing rather than as
+          unavailable, and clicking it did nothing at all. Clicking now
+          switches the study on and opens its panel, which is what someone
+          reaching for the settings wanted anyway. */}
+      <div className="shrink-0 flex flex-wrap items-center gap-1.5 pb-1 text-xs relative">
+        <div className={STUDY_CHIP}>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={vwapOn}
+                   onChange={(e) => setVwapOn(e.target.checked)} />
+            <span>VWAP</span>
+          </label>
+          <StudyGear
+            label="VWAP settings"
+            title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
+                          : "Turn VWAP on and open its settings"}
+            onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
+          />
+        </div>
 
-        <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]">|</span>
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input type="checkbox" checked={vpOn}
-                 onChange={(e) => setVpOn(e.target.checked)} />
-          <span>Volume Profile</span>
-        </label>
-        <button
-          type="button"
-          aria-label="Volume Profile settings"
-          title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
-                      : "Turn Volume Profile on and open its settings"}
-          onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
-          className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
-                     hover:bg-[color:var(--raise-4)]"
-        >⚙</button>
+        {/* Bollinger Bands has no settings panel, so no gear. The chip still
+            wraps it, so a study without a gear looks like a study rather than
+            like one that lost its button. */}
+        <div className={`${STUDY_CHIP} pr-2`}>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={bbOn}
+                   aria-label="Show Bollinger Bands"
+                   onChange={(e) => setBbOn(e.target.checked)} />
+            <span>BB(20,2)</span>
+          </label>
+        </div>
+
+        <div className={STUDY_CHIP}>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={vpOn}
+                   onChange={(e) => setVpOn(e.target.checked)} />
+            <span>Volume Profile</span>
+          </label>
+          <StudyGear
+            label="Volume Profile settings"
+            title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
+                        : "Turn Volume Profile on and open its settings"}
+            onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
+          />
+        </div>
 
         {/* Oscillator panels, switched on and configured the same way as VWAP
             and Volume Profile. Switching one off removes its row, handing the
@@ -1901,8 +1948,7 @@ export function CandlestickChart({
         {OSC_ORDER.map((key) => {
           const info = OSC_STUDIES[key]
           return (
-            <span key={key} className="flex items-center gap-1.5">
-              <span className="mx-0.5 hidden wide:inline text-[color:var(--hairline-firm)]" aria-hidden>|</span>
+            <div key={key} className={STUDY_CHIP}>
               <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
                      title={info.available ? undefined : info.pending}>
                 <input type="checkbox" checked={osc[key]} disabled={!info.available}
@@ -1910,20 +1956,15 @@ export function CandlestickChart({
                        onChange={(e) => setOsc((o) => ({ ...o, [key]: e.target.checked }))} />
                 <span>{info.label}</span>
               </label>
-              <button
-                type="button"
-                aria-label={`${info.label} settings`}
+              <StudyGear
+                label={`${info.label} settings`}
                 title={info.available ? `${info.label} settings` : info.pending}
                 onClick={() => {
-                  // Same as the VWAP gear: reaching for the settings of a study
-                  // that is off switches it on.
                   if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
                   setOscPanel(key)
                 }}
-                className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5
-                           hover:bg-[color:var(--raise-4)]"
-              >⚙</button>
-            </span>
+              />
+            </div>
           )
         })}
 

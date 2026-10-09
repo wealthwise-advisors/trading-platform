@@ -2344,3 +2344,27 @@ button, [role="button"] {
     linear-gradient(180deg, var(--page-ground-from) 0%, var(--page-ground-to) 100%);
   background-attachment: fixed;
 }
+
+/* ── Chart chrome control sizing ───────────────────────────────────────────
+   ONE HEIGHT for the study chips, the toolbar buttons and the interval pills
+   above the plot. Before this, the card rendered four different control
+   heights on two rows -- pills at 20, icon buttons at 18, everything else at
+   22 -- which is most of what read as clutter.
+
+   Written as real classes rather than `h-[22px]` because ARBITRARY TAILWIND
+   VALUES PRODUCE NO CSS IN THIS PROJECT AND FAIL SILENTLY. That is not a
+   guess: `h-[22px]`, `h-[18px]` and `min-w-[30px]` were all written inline
+   first and every one of them emitted zero rules into the built stylesheet,
+   so the markup looked styled and rendered unchanged. The same trap is noted
+   against arbitrary media variants (`min-[1697px]:`) elsewhere in this file.
+   If a size is needed, it goes here. */
+.chart-ctl { height: 22px; }
+.chart-ctl-sq { height: 18px; width: 18px; }
+.chart-ctl-pill { height: 22px; min-width: 30px; }
+/* Icon buttons inside a toolbar cluster.
+   flex:none is load bearing. The toolbar row is a crowded flex container with
+   overflow-x-auto, so without it the clusters were squeezed to 2px wide --
+   border only, every icon clipped away by the cluster's own overflow-hidden.
+   They were on screen, measurable, and completely invisible. */
+.chart-ctl-icon { width: 26px; flex: none; }
+.chart-ctl-nogrow { flex: none; }

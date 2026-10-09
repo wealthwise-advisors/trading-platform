@@ -63,6 +63,25 @@ test("the chart carries no Plotly badge, and every way of driving it survives", 
   ).toBeVisible()
 })
 
+test("the toolbar's icon clusters cannot collapse to nothing", async () => {
+  // THE BUG THIS CATCHES. undo/redo and zoom/reset/snapshot are grouped into
+  // two bordered clusters. They are flex children of a crowded
+  // overflow-x-auto row, so without flex:none they were squeezed to 2px wide
+  // -- the border and nothing else, every icon clipped away by the cluster's
+  // own overflow-hidden. Playwright still called them visible, their computed
+  // opacity was 1, and they were completely invisible on screen. Only a width
+  // assertion catches that.
+  for (const name of ["Drawing history", "Chart view"]) {
+    const box = await page.getByRole("group", { name }).first().boundingBox()
+    expect(box!.width, `the ${name} cluster collapsed`).toBeGreaterThan(40)
+  }
+  // And the icons inside it are a real target, not a clipped sliver.
+  for (const name of ["Zoom in", "Reset the view", "Download chart as PNG"]) {
+    const box = await page.getByRole("button", { name }).first().boundingBox()
+    expect(box!.width, `${name} is too narrow to hit`).toBeGreaterThan(20)
+  }
+})
+
 test("the Legend menu explains the chart and reads its live values", async () => {
   await page.getByRole("button", { name: "Legend" }).first().click()
   const menu = page.getByRole("menu").last()

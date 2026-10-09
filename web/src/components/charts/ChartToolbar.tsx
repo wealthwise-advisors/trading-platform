@@ -31,9 +31,41 @@ import { loadAlerts, saveAlerts, newAlert } from "@/lib/priceAlerts"
 /** The intervals the reference puts on the strip, as quick buttons. */
 const QUICK = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"]
 
+/**
+ * ONE HEIGHT FOR EVERY CONTROL ON THIS ROW -- 22px, the same as the study
+ * chips above and as Alert/Replay/Legend already were.
+ *
+ * Measured on the chart card before this change, the chrome above the plot
+ * rendered FOUR distinct control heights: the interval pills at 20, the icon
+ * buttons at 18, everything else at 22, and the native checkboxes at 13. The
+ * icons and the pills are brought onto 22 here; 13 stays, because that is the
+ * browser's own checkbox and resizing it to match would cost a custom control
+ * for no gain in clarity.
+ */
 const BTN =
-  "flex items-center gap-1 rounded border border-[color:var(--hairline-mid)] " +
-  "bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)] text-foreground"
+  "chart-ctl chart-ctl-nogrow flex items-center gap-1 rounded border border-[color:var(--hairline-mid)] " +
+  "bg-[color:var(--raise-3)] px-2 hover:bg-[color:var(--raise-4)] text-foreground"
+
+/**
+ * A SEGMENTED CLUSTER: one border around related icons, divided inside.
+ *
+ * undo/redo and zoom/reset/snapshot were six separately-bordered boxes in a
+ * row, so the eye had to read six objects to find one. Grouping says "these
+ * belong together" with less ink, not more.
+ */
+const GROUP =
+  "chart-ctl chart-ctl-nogrow flex items-center overflow-hidden rounded border " +
+  "border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)]"
+
+const GROUP_BTN =
+  "grid h-full chart-ctl-icon place-items-center text-foreground transition-colors " +
+  "hover:bg-[color:var(--raise-4)] disabled:opacity-35 disabled:cursor-not-allowed " +
+  "disabled:hover:bg-transparent"
+
+/** Hairline between two icons inside a cluster. */
+function Div() {
+  return <span className="h-full w-px bg-[color:var(--hairline-soft)]" aria-hidden />
+}
 
 export function ChartToolbar({
   symbol, lastPrice, canUndo, canRedo, onUndo, onRedo, onSnapshot, onAlertsChanged,
@@ -99,7 +131,7 @@ export function ChartToolbar({
   }
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto tabs-scroll px-1 py-0.5 text-[11px]
+    <div className="flex items-center gap-1.5 overflow-x-auto tabs-scroll px-1 py-0.5 text-[11px]
                     border-b border-[color:var(--hairline-soft)]">
       {/* ── Interval quick buttons ── */}
       <div role="group" aria-label="Bar interval" className="flex items-center gap-0.5">
@@ -111,7 +143,8 @@ export function ChartToolbar({
             disabled={run.isPending}
             onClick={() => setInterval(tf)}
             title={`Redraw the chart with ${tf} bars`}
-            className={`rounded px-1.5 py-0.5 transition-colors disabled:opacity-50 ${
+            className={`grid chart-ctl-pill chart-ctl-nogrow place-items-center rounded px-1.5 transition-colors
+                        disabled:opacity-50 ${
               cfg.timeframe === tf
                 ? "bg-[#2563eb] text-white font-medium"
                 : "text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
@@ -125,7 +158,7 @@ export function ChartToolbar({
       {/* The full picker, with favourites and custom intervals. */}
       <IntervalPicker value={cfg.timeframe} onChange={setInterval} compact />
 
-      <span className="mx-1 h-4 w-px bg-[color:var(--hairline-soft)]" aria-hidden />
+      <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
 
       {/* ── Alert ── */}
       <span className="relative">
@@ -152,7 +185,7 @@ export function ChartToolbar({
                 <button key={d} type="button"
                         aria-pressed={direction === d}
                         onClick={() => setDirection(d)}
-                        className={`flex-1 rounded px-2 py-1 text-[11px] ${
+                        className={`flex-1 rounded px-2 py-0.5 text-[11px] ${
                           direction === d
                             ? "bg-[#2563eb] text-white"
                             : "bg-[color:var(--raise-3)] text-muted-foreground hover:text-foreground"}`}>
@@ -171,11 +204,11 @@ export function ChartToolbar({
             />
             <div className="flex gap-1">
               <button type="button" onClick={addAlert}
-                      className="flex-1 rounded bg-[#2563eb] px-2 py-1 text-[11px] text-white hover:bg-[#1d4ed8]">
+                      className="flex-1 rounded bg-[#2563eb] px-2 py-0.5 text-[11px] text-white hover:bg-[#1d4ed8]">
                 <Plus className="mr-0.5 inline h-3 w-3" aria-hidden /> Add
               </button>
               <button type="button" onClick={() => setAlertOpen(false)}
-                      className="rounded border border-[color:var(--hairline-mid)] px-2 py-1 text-[11px]
+                      className="rounded border border-[color:var(--hairline-mid)] px-2 py-0.5 text-[11px]
                                  text-muted-foreground hover:text-foreground">
                 Cancel
               </button>
@@ -194,43 +227,51 @@ export function ChartToolbar({
         <Rewind className="h-3 w-3" aria-hidden /> Replay
       </button>
 
-      <span className="mx-1 h-4 w-px bg-[color:var(--hairline-soft)]" aria-hidden />
+      <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
 
       {/* ── Drawing undo / redo ── */}
-      <button type="button" onClick={onUndo} disabled={!canUndo}
-              aria-label="Undo drawing" title="Undo the last drawing"
-              className={`${BTN} disabled:opacity-35 disabled:cursor-not-allowed`}>
-        <Undo2 className="h-3 w-3" aria-hidden />
-      </button>
-      <button type="button" onClick={onRedo} disabled={!canRedo}
-              aria-label="Redo drawing" title="Redo the drawing you just undid"
-              className={`${BTN} disabled:opacity-35 disabled:cursor-not-allowed`}>
-        <Redo2 className="h-3 w-3" aria-hidden />
-      </button>
+      <div className={GROUP} role="group" aria-label="Drawing history">
+        <button type="button" onClick={onUndo} disabled={!canUndo}
+                aria-label="Undo drawing" title="Undo the last drawing"
+                className={GROUP_BTN}>
+          <Undo2 className="h-3 w-3" aria-hidden />
+        </button>
+        <Div />
+        <button type="button" onClick={onRedo} disabled={!canRedo}
+                aria-label="Redo drawing" title="Redo the drawing you just undid"
+                className={GROUP_BTN}>
+          <Redo2 className="h-3 w-3" aria-hidden />
+        </button>
+      </div>
 
-      {/* ── View controls, moved off Plotly's modebar ── */}
-      <button type="button" onClick={onZoomIn} className={BTN}
-              aria-label="Zoom in" title="Zoom in">
-        <ZoomIn className="h-3 w-3" aria-hidden />
-      </button>
-      <button type="button" onClick={onZoomOut} className={BTN}
-              aria-label="Zoom out" title="Zoom out">
-        <ZoomOut className="h-3 w-3" aria-hidden />
-      </button>
-      <button type="button" onClick={onResetView} className={BTN}
-              aria-label="Reset the view" title="Reset the view to the default window">
-        <Home className="h-3 w-3" aria-hidden />
-      </button>
-
-      {/* ── Snapshot. The ONLY camera on the chart now. ── */}
-      <button type="button" onClick={onSnapshot} className={BTN}
-              aria-label="Download chart as PNG" title="Download this chart as a PNG">
-        <Camera className="h-3 w-3" aria-hidden />
-      </button>
+      {/* ── View controls, moved off Plotly's modebar, plus the snapshot.
+             One cluster: they all act on what the plot is SHOWING. The camera
+             is the only one on the chart now. ── */}
+      <div className={GROUP} role="group" aria-label="Chart view">
+        <button type="button" onClick={onZoomIn} className={GROUP_BTN}
+                aria-label="Zoom in" title="Zoom in">
+          <ZoomIn className="h-3 w-3" aria-hidden />
+        </button>
+        <Div />
+        <button type="button" onClick={onZoomOut} className={GROUP_BTN}
+                aria-label="Zoom out" title="Zoom out">
+          <ZoomOut className="h-3 w-3" aria-hidden />
+        </button>
+        <Div />
+        <button type="button" onClick={onResetView} className={GROUP_BTN}
+                aria-label="Reset the view" title="Reset the view to the default window">
+          <Home className="h-3 w-3" aria-hidden />
+        </button>
+        <Div />
+        <button type="button" onClick={onSnapshot} className={GROUP_BTN}
+                aria-label="Download chart as PNG" title="Download this chart as a PNG">
+          <Camera className="h-3 w-3" aria-hidden />
+        </button>
+      </div>
 
       {actions && (
         <>
-          <span className="mx-1 h-4 w-px bg-[color:var(--hairline-soft)]" aria-hidden />
+          <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
           {actions}
         </>
       )}
