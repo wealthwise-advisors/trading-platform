@@ -25,6 +25,7 @@ import { Clock, Info, Globe, Landmark, CalendarRange, BarChart3, Check,
          Activity, TrendingDown, Ruler, ArrowRight } from "lucide-react"
 import { SummaryPanel, makeSummaryRows, ParamCard } from "./SetupPanels"
 import { IconField, TfGlyph } from "./SetupFields"
+import { TimeframePills } from "./TimeframePills"
 import { DateField } from "@/components/ui/date-field"
 import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-react"
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
@@ -2495,6 +2496,37 @@ export function ReplayPage() {
                   </span>
                 )}
               </div>
+              {/* WHICH TIMEFRAMES THIS TABLE SHOWS, chosen here.
+                  Moved off the Consolidated tape's jump bar. The set was only
+                  ever changeable from the selector at the top of the page or
+                  from down inside the tape -- neither of which is where you
+                  are looking when you are reading THIS table, which is the one
+                  with a row per timeframe. The tape still answers for the same
+                  set; it just no longer offers a second control over it.
+
+                  Ticking one that is not loaded adds it and backfills it, the
+                  same handler the page selector uses -- these are one
+                  selection, not a filter layered on top of it. */}
+              <div className="tape-bar" hidden={!liveOpen}>
+                <div className="space-y-1">
+                  <span className="tape-bar-lbl">
+                    Timeframes &mdash; {shownTimeframes.length} shown
+                  </span>
+                  <TimeframePills
+                    all={ALL_TIMEFRAMES}
+                    selected={timeframes}
+                    onToggle={handleTimeframeToggle}
+                    ariaPrefix="live timeframe"
+                    refetchReason={(tf) =>
+                      ready && !!dataTimeframe && !isBuildableFrom(tf, dataTimeframe)
+                        ? `${tf} cannot be built from the loaded ${dataTimeframe} bars — selecting it refetches`
+                        : null}
+                    describe={(tf, on) =>
+                      on ? `${tf} has a row in this table` : `Add a ${tf} row to this table`}
+                  />
+                </div>
+              </div>
+
               {/* BOUNDED, so the sticky header has something to stick to and
                   a long list of panes cannot push the tape off the screen.
                   In full screen the cap lifts -- the whole point of going full
@@ -2749,14 +2781,10 @@ export function ReplayPage() {
                   <TimeField value={jumpTime} onChange={setJumpTime} label="Jump time" />
                 </div>
 
-                {/* Which timeframes the jump answers for, chosen HERE.
-                    Jump has always returned a row per active timeframe, but the
-                    only place to change that set was the selector at the top of
-                    the page -- so picking "this moment on 1m, 5m and 10m" meant
-                    scrolling away from the control you were using. These are the
-                    same toggles and the same handler, put where the question is
-                    asked. Ticking one that is not loaded adds it and backfills
-                    it, exactly as it does above. */}
+                {/* Jump returns a row per selected timeframe. WHICH ones is
+                    chosen on the Live state panel above, not here: it is one
+                    selection governing both tables, and offering it twice read
+                    as two filters that mysteriously moved together. */}
                 <Button size="sm" onClick={jumpToTime} disabled={shownTape.length === 0}
                         className="tape-jump"
                         title={shownTape.length === 0
@@ -2765,40 +2793,6 @@ export function ReplayPage() {
                   Jump
                 </Button>
 
-                {/* Primary above, filter below. The date, the time and Jump are
-                    one decision; the pills narrow which timeframes it answers
-                    for, which is a different kind of choice. */}
-                <span className="tape-bar-sep" aria-hidden />
-
-                <div className="space-y-1">
-                  <span className="tape-bar-lbl">
-                    Timeframes &mdash; {shownTimeframes.length} shown
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {ALL_TIMEFRAMES.map((tf) => {
-                      const on = timeframes.includes(tf)
-                      const needsRefetch =
-                        ready && !!dataTimeframe && !isBuildableFrom(tf, dataTimeframe)
-                      return (
-                        <button
-                          key={tf} type="button"
-                          className={`tape-pill${on ? " tape-pill-on" : ""}`}
-                          aria-pressed={on}
-                          aria-label={`jump timeframe ${tf}`}
-                          title={
-                            needsRefetch
-                              ? `${tf} cannot be built from the loaded ${dataTimeframe} bars — selecting it refetches`
-                              : on ? `${tf} is included in the jump` : `Add ${tf} to the jump`
-                          }
-                          onClick={() => handleTimeframeToggle(tf)}
-                        >
-                          {tf}
-                          {needsRefetch && <span className="ml-0.5 opacity-60">↻</span>}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
                 {/* Disabled with nothing in the tape, and saying so. A greyed
                     button that explains nothing is what sent the last three
                     "where is it?" rounds: Jump can only reach bars that have

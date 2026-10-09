@@ -73,12 +73,16 @@ test.describe("light theme", () => {
     await expectContrast(on, UI, "selected pill label")
   })
 
-  test("the tape's own pills follow it too", async () => {
+  test("the in-panel timeframe pills follow it too", async () => {
     // Same rule, different component: .tape-pill is a separate class that had
-    // its own hardcoded pair.
+    // its own hardcoded pair. It is named for the Consolidated tape it shipped
+    // on; the pills themselves now live on the Live state panel, which is the
+    // table with a row per timeframe and so the place the set is chosen. The
+    // class name stayed put -- a rename with no behaviour behind it buys
+    // nothing and costs a red suite.
     const pill = page.locator("button.tape-pill").first()
-    if (await pill.count() === 0) test.skip(true, "tape pills only exist once a session is loaded")
-    await expectContrast(pill, TEXT, "tape pill label")
+    if (await pill.count() === 0) test.skip(true, "the pills only exist once a session is loaded")
+    await expectContrast(pill, TEXT, "timeframe pill label")
   })
 
   test("dark theme still reads, so the tokens work both ways", async () => {

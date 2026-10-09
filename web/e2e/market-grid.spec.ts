@@ -225,6 +225,34 @@ test.describe("once a session is loaded", () => {
     expect(m.newest, "the newest bar is not marked").toBeGreaterThan(0)
   })
 
+  /**
+   * The timeframe pills live on Live state, and ONLY there.
+   *
+   * They used to sit in the Consolidated tape's jump bar, which is the wrong
+   * place twice over: the tape has a row per BAR, while Live state has a row
+   * per TIMEFRAME, and offering the control in both read as two filters that
+   * mysteriously moved together. It is one selection.
+   */
+  test("the timeframe pills sit on Live state, not in the tape", async () => {
+    await expect(
+      page.locator("button[aria-label^='jump timeframe']"),
+      "the tape kept a second copy of the timeframe pills",
+    ).toHaveCount(0)
+    await expect(page.locator("button[aria-label^='live timeframe']").first()).toBeVisible()
+
+    // Live state is the first panel, so its bar is the first .tape-bar; the
+    // tape's own bar keeps Jump and loses the pills.
+    const bars = page.locator("div.tape-bar")
+    await expect(bars.first().locator("button.tape-pill").first()).toBeVisible()
+    await expect(
+      bars.nth(1).locator("button.tape-pill"),
+      "pills are still rendering inside the tape's jump bar",
+    ).toHaveCount(0)
+    // exact: the time field's steppers are labelled "Jump time hour up" and
+    // friends, so a loose name matches six buttons.
+    await expect(bars.nth(1).getByRole("button", { name: "Jump", exact: true })).toBeVisible()
+  })
+
   test("Reset rewinds, and Change Setup unlocks the fields", async () => {
     await page.getByRole("button", { name: /^↺?\s*Reset$/ }).first().click()
     await expect(page.getByTestId("replay-ticks")).toHaveAttribute("data-processed", "0")
