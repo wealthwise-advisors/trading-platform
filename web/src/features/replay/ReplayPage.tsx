@@ -10,7 +10,7 @@
 // Selecting a single timeframe yields a grid of one, so the original
 // single-pane behaviour is the degenerate case rather than a separate path.
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
@@ -33,6 +33,9 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
+import {
+  POC_SIDE_COLOR, POC_SIDE_GLYPH, buildPocConsensus, pocConsensusLabel, pocLevelColor,
+} from "@/lib/pocConsensus"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -494,6 +497,15 @@ export function ReplayPage() {
   }
   const [vpBins, setVpBins] = useState(48)
   const [vpValueArea, setVpValueArea] = useState(70)
+  /**
+   * The level the POC side column is measured against.
+   *
+   * Empty means "where we are now" -- the clock-base timeframe's last close,
+   * which is the reference a bias is actually read against. A typed value pins
+   * it instead, for checking the table against a level someone named rather
+   * than against a price that moves every tick.
+   */
+  const [pocRefInput, setPocRefInput] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -1284,6 +1296,53 @@ export function ReplayPage() {
     upperPalette: devPalettes.upper,
     lowerPalette: devPalettes.lower,
   })
+
+  // ── POC across the timeframes ──────────────────────────────────────
+  /**
+   * One profile per shown timeframe, computed once per tick.
+   *
+   * `profileFor` is a full pass over every bar a pane holds, and the table
+   * used to call it inline for each of the POC, VAHigh and VALow cells -- so
+   * the same profile was rebuilt three times per row, every render. Doing it
+   * here is both what the consensus needs (it has to see all the POCs before
+   * the first row renders) and strictly less work than before.
+   *
+   * Keyed on the timeframe list as a STRING: `shownTimeframes` is rebuilt by
+   * filter+sort on every render, so passing the array itself would invalidate
+   * this on every render and memoise nothing.
+   */
+  const shownTfKey = shownTimeframes.join(",")
+  const paneProfiles = useMemo(() => {
+    const out = new Map<string, ReturnType<typeof profileFor>>()
+    if (!showVp) return out
+    for (const tf of shownTimeframes) {
+      out.set(tf, profileFor(panes[tf] ?? emptyPane(initialCapital)))
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showVp, shownTfKey, panes, vpBins, vpValueArea, initialCapital])
+
+  /**
+   * Where the POC sides are measured from.
+   *
+   * The clock base is the row every other time column is already aligned to,
+   * so using its close keeps "now" meaning one thing on this page. Falls back
+   * to the focused row when the base timeframe is hidden -- picking the finest
+   * row instead would silently change the reference as rows are toggled.
+   */
+  const pinnedPocRef = pocRefInput.trim() === "" ? null : Number(pocRefInput)
+  const livePocRefTf = shownTimeframes.includes(baseTimeframe) ? baseTimeframe : focusedTimeframe
+  const livePocRefBars = (panes[livePocRefTf] ?? emptyPane(initialCapital)).bars
+  const pocReference =
+    pinnedPocRef != null && Number.isFinite(pinnedPocRef)
+      ? pinnedPocRef
+      : livePocRefBars[livePocRefBars.length - 1]?.c ?? null
+
+  const pocConsensus = buildPocConsensus(
+    shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
+    pocReference,
+  )
+  const pocLabel = pocConsensusLabel(pocConsensus)
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
   // built from -- which is what turns its badge from a number into a tick.
@@ -2235,7 +2294,14 @@ export function ReplayPage() {
                   many price buckets that range is divided into. <b>VA</b> is the
                   share of total volume the value area covers, which is what sets
                   the VAHigh and VALow columns. <b>POC</b> is the single busiest
-                  bucket.
+                  bucket, coloured by the whole number it lands on — timeframes
+                  agreeing on a level share a colour, read down the column.
+                  <b> POC side</b> says whether that POC is above or below the
+                  reference level, one colour per side, so a table where every
+                  timeframe sits on the same side is obvious at a glance; the
+                  header tallies it and says <b>ONE-SIDED</b> when they all
+                  agree. A POC on the reference's own whole number is
+                  <b> level</b>, not above or below.
                 </InfoDot>
                 <span className="text-xs text-muted-foreground font-mono">
                   {vpBins} rows · VA {vpValueArea}%
@@ -2294,6 +2360,22 @@ export function ReplayPage() {
                   <span className="text-xs text-muted-foreground">value area percent</span>
                   <Input type="number" min={1} max={100} value={vpValueArea} aria-label="value area percent"
                          onChange={(e) => setVpValueArea(Number(e.target.value))} />
+                </label>
+                {/* The level the POC side column measures against. Blank is
+                    the common case -- it tracks the clock base's last close --
+                    so the placeholder shows the price being used rather than
+                    leaving the field looking unset. */}
+                <label className="space-y-1">
+                  <span className="text-xs text-muted-foreground">POC side vs. level</span>
+                  <Input type="number" step="0.01" inputMode="decimal"
+                         value={pocRefInput} aria-label="POC side reference level"
+                         placeholder={pocReference != null ? `now ${pocReference.toFixed(2)}` : "last close"}
+                         onChange={(e) => setPocRefInput(e.target.value)} />
+                  <span className="block text-[10px] text-muted-foreground/80">
+                    {pocRefInput.trim() === ""
+                      ? `tracking ${livePocRefTf || "—"} close`
+                      : "pinned — clear to track price"}
+                  </span>
                 </label>
                 <div className="text-xs text-muted-foreground self-end pb-2">
                   Bands re-scale from the session sigma already computed for
@@ -2451,7 +2533,47 @@ export function ReplayPage() {
                         <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                         <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                       ])}
+                      {/* POC is coloured by the whole number it lands on, the
+                          same rule the band columns use, so timeframes that
+                          agree on a level share a colour down the column. */}
                       {showVp && <th className="text-right p-2 font-medium">POC</th>}
+                      {/* The one-sidedness column. Reading nine POCs and
+                          holding "is that above or below where we are" in your
+                          head for each is the work this replaces: one colour
+                          for every timeframe above the reference, one for
+                          every timeframe below it, so the split is a glance
+                          down a column. The header carries the tally. */}
+                      {showVp && (
+                        <th className="text-right p-2 font-medium whitespace-nowrap">
+                          POC side
+                          {pocLabel && (
+                            <span
+                              className="ml-1.5 rounded px-1 py-0.5 text-[10px] font-semibold align-middle"
+                              style={{
+                                color: pocConsensus.oneSided
+                                  ? "#0d1117"
+                                  : POC_SIDE_COLOR[pocConsensus.dominantSide ?? "at"],
+                                background: pocConsensus.oneSided
+                                  ? POC_SIDE_COLOR[
+                                    pocConsensus.above.length === pocConsensus.counted
+                                      ? "above" : "below"
+                                  ]
+                                  : "transparent",
+                                border: pocConsensus.oneSided
+                                  ? undefined
+                                  : `1px solid ${POC_SIDE_COLOR[pocConsensus.dominantSide ?? "at"]}`,
+                              }}
+                              title={
+                                pocConsensus.oneSided
+                                  ? `Every timeframe's POC is on the same side of ${pocConsensus.reference?.toFixed(2)}`
+                                  : `POC above / below / on ${pocConsensus.reference?.toFixed(2)}`
+                              }
+                            >
+                              {pocLabel}
+                            </span>
+                          )}
+                        </th>
+                      )}
                       {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
                       {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                       <th className="text-left p-2 font-medium">Last signal</th>
@@ -2465,7 +2587,9 @@ export function ReplayPage() {
                       const pnl = pane.portfolioValue - initialCapital
                       // One pair of values per selected deviation level.
                       const bands = devLevels.flatMap((d) => [atDev(pane, d), atDev(pane, -d)])
-                      const vp = profileFor(pane)
+                      // From the per-tick map, not a fresh pass over the pane's
+                      // bars -- the consensus above has already built it.
+                      const vp = paneProfiles.get(tf) ?? null
                       const num = price
                       return (
                         <tr key={tf} className="border-t border-[color:var(--hairline-soft)]">
@@ -2520,7 +2644,29 @@ export function ReplayPage() {
                                   style={c ? { color: c } : undefined}>{num(b)}</td>
                             )
                           })}
-                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>{num(vp?.poc)}</td>}
+                          {showVp && (() => {
+                            const lvl = pocLevelColor(pocConsensus, vp?.poc)
+                            return (
+                              <td className="p-2 text-right font-mono"
+                                  style={{ color: lvl ?? "#38bdf8" }}>{num(vp?.poc)}</td>
+                            )
+                          })()}
+                          {showVp && (() => {
+                            const side = pocConsensus.sides.get(tf)
+                            return (
+                              <td className="p-2 text-right font-mono whitespace-nowrap"
+                                  style={{ color: side ? POC_SIDE_COLOR[side] : NEUTRAL }}
+                                  title={
+                                    side && pocConsensus.reference != null
+                                      ? `POC ${vp?.poc?.toFixed(2)} is ${side} ${pocConsensus.reference.toFixed(2)}`
+                                      : undefined
+                                  }>
+                                {side
+                                  ? `${POC_SIDE_GLYPH[side]} ${side === "at" ? "level" : side}`
+                                  : "—"}
+                              </td>
+                            )
+                          })()}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
                           <td className="p-2 text-xs">
