@@ -49,7 +49,11 @@ function App({ user }: { user: Me }) {
   // Display-only: whether the config panel is showing. Hiding it changes nothing
   // about the configuration or the request -- the same store backs the form
   // either way, so reopening restores exactly what was there.
-  const [configOpen, setConfigOpen] = useState(true)
+  //
+  // In the STORE rather than here, because navigation sets it: "Chart" is the
+  // full-width chart and "Backtest" is the config. See goTo in configStore.
+  const configOpen = useConfigStore((s) => s.configOpen)
+  const setConfigOpen = useConfigStore((s) => s.setConfigOpen)
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
   // The account dialog is opened from the avatar menu now, so the page owns
@@ -109,7 +113,7 @@ function App({ user }: { user: Me }) {
                           border-[color:var(--hairline-soft)] py-2"
                style={{ background: "var(--sidebar-ground-from)" }}
                aria-label="Backtest configuration sections">
-          <button type="button" onClick={() => setConfigOpen((v) => !v)}
+          <button type="button" onClick={() => setConfigOpen(!configOpen)}
                   title={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
                   aria-label={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
                   aria-expanded={configOpen}

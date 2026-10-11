@@ -63,6 +63,41 @@ test("the chart carries no Plotly badge, and every way of driving it survives", 
   ).toBeVisible()
 })
 
+/**
+ * "Chart" is the full-width chart; "Backtest" is the configuration.
+ *
+ * THE COMPLAINT THIS FIXES. On the Chart view the 290px config column sat
+ * between the sidebar rail and the plot, and it read as dead space beside a
+ * squeezed chart -- which is exactly what it was, since the config is not
+ * what you opened the Chart view to look at. Navigation decides it now, and
+ * the panel is still one click away on the rail.
+ *
+ * Asserts the PLOT GETS WIDER, not merely that a panel element vanished: the
+ * point is the chart, and a panel that hides without the plot reflowing
+ * would leave the same dead space it started with.
+ */
+test("the Chart view gives the plot the config panel's width back", async () => {
+  const plotWidth = () =>
+    page.locator(".js-plotly-plot").first().evaluate((e) => Math.round(e.getBoundingClientRect().width))
+  const configShowing = () =>
+    page.locator("button[aria-label='Hide the config panel']").count()
+
+  await page.getByRole("button", { name: "Backtest", exact: true }).first().click()
+  await expect.poll(configShowing, { message: "Backtest lost its config panel" }).toBe(1)
+  const narrow = await plotWidth()
+
+  await page.getByRole("button", { name: "Chart", exact: true }).first().click()
+  await expect.poll(configShowing, { message: "Chart view still shows the config panel" }).toBe(0)
+  await expect
+    .poll(plotWidth, { message: "the config panel hid but the plot did not reflow into the space" })
+    .toBeGreaterThan(narrow)
+
+  // And going back restores it, so this is navigation rather than a one-way door.
+  await page.getByRole("button", { name: "Backtest", exact: true }).first().click()
+  await expect.poll(configShowing).toBe(1)
+  await expect.poll(plotWidth).toBe(narrow)
+})
+
 test("the toolbar's icon clusters cannot collapse to nothing", async () => {
   // THE BUG THIS CATCHES. undo/redo and zoom/reset/snapshot are grouped into
   // two bordered clusters. They are flex children of a crowded

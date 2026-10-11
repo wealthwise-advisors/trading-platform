@@ -1890,84 +1890,109 @@ export function CandlestickChart({
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
                    interval={interval} bars={bars} />
 
-      {/* THE STUDY ROW. One bordered chip per study, each holding its own
-          toggle and its own gear -- see STUDY_CHIP for why the box is load
-          bearing rather than decoration. The `|` separators that used to
-          stand in for the grouping are gone: they were hidden below the
-          `wide` breakpoint, which is where the ambiguity was worst.
+      {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
+          line, as the reference draws them. They were two stacked rows,
+          which cost the plot a strip of height to say nothing the one row
+          does not.
 
-          The gear is deliberately NOT disabled when its study is off. A gear
-          greyed to 40% beside a bright one reads as missing rather than as
-          unavailable, and clicking it did nothing at all. Clicking now
-          switches the study on and opens its panel, which is what someone
-          reaching for the settings wanted anyway. */}
-      <div className="shrink-0 flex flex-wrap items-center gap-2 pb-1.5 text-[12px] relative">
-        <div className={STUDY_CHIP}>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={vwapOn}
-                   onChange={(e) => setVwapOn(e.target.checked)} />
-            <span>VWAP</span>
-          </label>
-          <StudyGear
-            label="VWAP settings"
-            title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
-                          : "Turn VWAP on and open its settings"}
-            onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
-          />
-        </div>
+          One bordered chip per study, each holding its own toggle and its
+          own gear -- see STUDY_CHIP for why the box is load bearing rather
+          than decoration. The `|` separators that used to group them were
+          hidden below the `wide` breakpoint, which is where the ambiguity
+          was worst.
 
-        {/* Bollinger Bands has no settings panel, so no gear. The chip still
-            wraps it, so a study without a gear looks like a study rather than
-            like one that lost its button. */}
-        <div className={`${STUDY_CHIP} pr-2`}>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={bbOn}
-                   aria-label="Show Bollinger Bands"
-                   onChange={(e) => setBbOn(e.target.checked)} />
-            <span>BB(20,2)</span>
-          </label>
-        </div>
+          The gear is deliberately NOT disabled when its study is off. A
+          gear greyed to 40% beside a bright one reads as missing rather
+          than as unavailable, and clicking it did nothing at all. Clicking
+          now switches the study on and opens its panel. */}
+      <ChartToolbar
+        symbol={symbol}
+        lastPrice={bars.length ? bars[bars.length - 1].c : null}
+        canUndo={userShapes.length > 0 || userNotes.length > 0}
+        canRedo={redoStack.length > 0}
+        onUndo={undoDrawing}
+        onRedo={redoDrawing}
+        onSnapshot={downloadPng}
+        onAlertsChanged={() => setAlertTick((n) => n + 1)}
+        onZoomIn={() => zoomBy(0.6)}
+        onZoomOut={() => zoomBy(1 / 0.6)}
+        onResetView={() => { setVisibleRange(null); setActiveRange(null) }}
+        actions={chartActions}
+        studies={<>
+          <div className={STUDY_CHIP}>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={vwapOn}
+                     onChange={(e) => setVwapOn(e.target.checked)} />
+              <span>VWAP</span>
+            </label>
+            <StudyGear
+              label="VWAP settings"
+              title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
+                            : "Turn VWAP on and open its settings"}
+              onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
+            />
+          </div>
 
-        <div className={STUDY_CHIP}>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={vpOn}
-                   onChange={(e) => setVpOn(e.target.checked)} />
-            <span>Volume Profile</span>
-          </label>
-          <StudyGear
-            label="Volume Profile settings"
-            title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
-                        : "Turn Volume Profile on and open its settings"}
-            onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
-          />
-        </div>
+          {/* Bollinger Bands has no settings panel, so no gear. The chip still
+              wraps it, so a study without a gear looks like a study rather than
+              like one that lost its button. */}
+          <div className={`${STUDY_CHIP} pr-2`}>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={bbOn}
+                     aria-label="Show Bollinger Bands"
+                     onChange={(e) => setBbOn(e.target.checked)} />
+              <span>BB(20,2)</span>
+            </label>
+          </div>
 
-        {/* Oscillator panels, switched on and configured the same way as VWAP
-            and Volume Profile. Switching one off removes its row, handing the
-            space to price and the rest. */}
-        {OSC_ORDER.map((key) => {
-          const info = OSC_STUDIES[key]
-          return (
-            <div key={key} className={STUDY_CHIP}>
-              <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
-                     title={info.available ? undefined : info.pending}>
-                <input type="checkbox" checked={osc[key]} disabled={!info.available}
-                       aria-label={`Show ${info.label}`}
-                       onChange={(e) => setOsc((o) => ({ ...o, [key]: e.target.checked }))} />
-                <span>{info.label}</span>
-              </label>
-              <StudyGear
-                label={`${info.label} settings`}
-                title={info.available ? `${info.label} settings` : info.pending}
-                onClick={() => {
-                  if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
-                  setOscPanel(key)
-                }}
-              />
-            </div>
-          )
-        })}
+          <div className={STUDY_CHIP}>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={vpOn}
+                     onChange={(e) => setVpOn(e.target.checked)} />
+              <span>Volume Profile</span>
+            </label>
+            <StudyGear
+              label="Volume Profile settings"
+              title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
+                          : "Turn Volume Profile on and open its settings"}
+              onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
+            />
+          </div>
 
+          {/* Oscillator panels, switched on and configured the same way as VWAP
+              and Volume Profile. Switching one off removes its row, handing the
+              space to price and the rest. */}
+          {OSC_ORDER.map((key) => {
+            const info = OSC_STUDIES[key]
+            return (
+              <div key={key} className={STUDY_CHIP}>
+                <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
+                       title={info.available ? undefined : info.pending}>
+                  <input type="checkbox" checked={osc[key]} disabled={!info.available}
+                         aria-label={`Show ${info.label}`}
+                         onChange={(e) => setOsc((o) => ({ ...o, [key]: e.target.checked }))} />
+                  <span>{info.label}</span>
+                </label>
+                <StudyGear
+                  label={`${info.label} settings`}
+                  title={info.available ? `${info.label} settings` : info.pending}
+                  onClick={() => {
+                    if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
+                    setOscPanel(key)
+                  }}
+                />
+              </div>
+            )
+          })}
+
+        </>}
+      />
+
+      {/* The studies' settings popovers. Their own positioning context,
+          directly under the row whose gears open them, and zero height of
+          its own -- every child is absolutely positioned, so this costs
+          the plot nothing when they are all closed. */}
+      <div className="relative">
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]
                           bg-[var(--surface-1)] p-3 shadow-xl space-y-3">
@@ -2235,21 +2260,6 @@ export function CandlestickChart({
                                 className="absolute right-0 top-7 z-20" />
         )}
       </div>
-
-      <ChartToolbar
-        symbol={symbol}
-        lastPrice={bars.length ? bars[bars.length - 1].c : null}
-        canUndo={userShapes.length > 0 || userNotes.length > 0}
-        canRedo={redoStack.length > 0}
-        onUndo={undoDrawing}
-        onRedo={redoDrawing}
-        onSnapshot={downloadPng}
-        onAlertsChanged={() => setAlertTick((n) => n + 1)}
-        onZoomIn={() => zoomBy(0.6)}
-        onZoomOut={() => zoomBy(1 / 0.6)}
-        onResetView={() => { setVisibleRange(null); setActiveRange(null) }}
-        actions={chartActions}
-      />
 
       {/* The rail sits BESIDE the plot, not over it: an overlay would cover
           the candles at the left edge, which is exactly where a trend line

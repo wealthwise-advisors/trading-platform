@@ -72,7 +72,7 @@ const GROUP_BTN =
 
 export function ChartToolbar({
   symbol, lastPrice, canUndo, canRedo, onUndo, onRedo, onSnapshot, onAlertsChanged,
-  onZoomIn, onZoomOut, onResetView, actions,
+  onZoomIn, onZoomOut, onResetView, actions, studies,
 }: {
   symbol: string
   lastPrice: number | null
@@ -91,6 +91,19 @@ export function ChartToolbar({
    *  They used to ride on the instrument line above; the reference puts
    *  every control on one row and leaves that line to the quote. */
   actions?: React.ReactNode
+  /**
+   * The study chips -- VWAP, Bollinger, Volume Profile and the oscillators.
+   *
+   * They had a row of their own above this one. The reference puts the
+   * studies and the chart's tools on a single line, and the second row was
+   * costing the plot height to say nothing this one does not.
+   *
+   * Passed in rather than built here for the same reason `actions` is: they
+   * are driven by CandlestickChart's own state (which studies are on, which
+   * settings panel is open), and lifting that out to place seven chips would
+   * be a large change for a small one.
+   */
+  studies?: React.ReactNode
 }) {
   const cfg = useConfigStore()
   const setPage = useConfigStore((s) => s.setPage)
@@ -134,8 +147,15 @@ export function ChartToolbar({
   }
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto tabs-scroll px-1 py-1 text-[12px]
+    <div className="flex flex-wrap items-center gap-2 px-1 py-1 text-[12px]
                     border-b border-[color:var(--hairline-soft)]">
+      {studies && (
+        <>
+          {studies}
+          <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
+        </>
+      )}
+
       {/* ── Interval quick buttons ── */}
       <div role="group" aria-label="Bar interval" className="flex items-center gap-0.5">
         {QUICK.map((tf) => (

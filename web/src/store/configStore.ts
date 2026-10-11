@@ -38,6 +38,18 @@ interface ConfigState {
   setBacktestId: (id: string | null) => void
   setPage: (page: "backtest" | "replay" | "export") => void
   setResultsTab: (tab: string) => void
+  /**
+   * Whether the backtest configuration panel is showing.
+   *
+   * Display-only: hiding it changes nothing about the configuration or the
+   * request, because the same store backs the form either way.
+   *
+   * It lives here rather than in App's own useState because NAVIGATION has to
+   * set it -- "Chart" is the full-width chart view and "Backtest" is the
+   * config, and a local useState in App cannot be reached from the header.
+   */
+  configOpen: boolean
+  setConfigOpen: (open: boolean) => void
   /** Go to a page and, on the results page, a specific tab in one step. */
   /** The header section last chosen, so the lit pill reflects intent.
    *  Null means "nothing chosen yet, derive it from the page and tab". */
@@ -154,6 +166,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   backtestId: null,
   lastRunAt: null,
   page: "backtest",
+  configOpen: true,
   resultsTab: "price",
 
   setField: (key, value) => set({ [key]: value } as Pick<ConfigState, typeof key>),
@@ -163,9 +176,29 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   setPage: (page) => set({ page }),
   setResultsTab: (resultsTab) => set({ resultsTab }),
   navSection: null,
-  goTo: (page, tab, section) =>
-    set(tab ? { page, resultsTab: tab, navSection: section ?? null }
-            : { page, navSection: section ?? null }),
+  setConfigOpen: (open) => set({ configOpen: open }),
+  /**
+   * Navigate, and let the destination decide whether the config panel belongs.
+   *
+   * "Chart" is the price chart and nothing else -- the reference gives it the
+   * full width, and a 290px config column beside it is the dead space it was
+   * reported as. "Backtest" IS the configuration, so it opens the panel.
+   *
+   * Every other destination leaves the panel exactly as the user left it.
+   * Optimiser and the analytics tabs do not obviously want it either way, and
+   * silently reopening a panel someone had folded is the kind of thing that
+   * reads as the app forgetting.
+   */
+  goTo: (page, tab, section) => {
+    const next: Record<string, unknown> = tab
+      ? { page, resultsTab: tab, navSection: section ?? null }
+      : { page, navSection: section ?? null }
+    if (page === "backtest") {
+      if (tab === "price") next.configOpen = false
+      else if (tab === undefined) next.configOpen = true
+    }
+    set(next)
+  },
   setLastRunAt: (iso) => set({ lastRunAt: iso }),
   getSnapshot: () => {
     const s = get()
