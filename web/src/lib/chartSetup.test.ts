@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest"
 import {
   ALL_CHART_TIMEFRAMES, INTRADAY_TIMEFRAMES, daysFor, daysForSet, isDailyOrLonger, isMaxHistory,
-  isSpecified, maxRangeDaysFor, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
+  isSpecified, maxRangeDaysFor, rangeLabel, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
 } from "./chartSetup"
 import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS } from "./dayRange"
 
@@ -19,7 +19,7 @@ describe("the specified table", () => {
   it("loads 5 days for 20m", () => expect(daysFor("20m")).toBe(5))
   it("loads 15 days for 30m", () => expect(daysFor("30m")).toBe(15))
   it("loads 20 days for 45m", () => expect(daysFor("45m")).toBe(20))
-  it("loads 2 days for 2m", () => expect(daysFor("2m")).toBe(2))
+  it("loads 2 days for 3m", () => expect(daysFor("3m")).toBe(2))
   it("loads 25 days for 1h", () => expect(daysFor("1h")).toBe(25))
   it("loads 180 days for 2h", () => expect(daysFor("2h")).toBe(180))
   it("loads 180 days for 4h", () => expect(daysFor("4h")).toBe(180))
@@ -45,6 +45,13 @@ describe("timeframes the table does not cover", () => {
   // 2m was here until 2026-10-11, when it was specified as 2 and moved into
   // the table. 25m was asked about in the same message and not answered, so
   // it stays uncovered; 35m was not raised.
+  it("no longer offers 2m at all", () => {
+    // Replaced by 3m in the selector on 2026-10-11. The API still accepts it
+    // -- see TF_MINUTES -- but the app does not offer it.
+    expect(ALL_CHART_TIMEFRAMES).not.toContain("2m")
+    expect(ALL_CHART_TIMEFRAMES).toContain("3m")
+  })
+
   it("has no entry for 25m or 35m", () => {
     for (const tf of ["25m", "35m"]) {
       expect(isSpecified(tf)).toBe(false)
@@ -96,13 +103,13 @@ describe("a set of timeframes sharing one range", () => {
 describe("the timeframe list", () => {
   it("covers every interval Backtest and Export Data offer, in bar-interval order", () => {
     expect(ALL_CHART_TIMEFRAMES).toEqual([
-      "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
+      "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
     ])
   })
 
   it("gives Market Grid everything but daily and weekly, which it cannot replay", () => {
     expect(INTRADAY_TIMEFRAMES).toEqual([
-      "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
+      "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h",
     ])
   })
 
@@ -111,7 +118,7 @@ describe("the timeframe list", () => {
     expect(maxRangeDaysFor("1d")).toBe(MAX_HISTORY_DAYS)
     expect(maxRangeDaysFor("1w")).toBe(MAX_HISTORY_DAYS)
     expect(maxRangeDaysFor("4h")).toBe(MAX_RANGE_DAYS)
-    expect(maxRangeDaysFor("2m")).toBe(MAX_RANGE_DAYS)
+    expect(maxRangeDaysFor("3m")).toBe(MAX_RANGE_DAYS)
   })
 })
 
@@ -186,5 +193,30 @@ describe("the start date a Market Grid selection produces", () => {
   it("moves nothing when the selection is empty or wholly uncovered", () => {
     expect(startDateForTimeframes(END, [])).toBeNull()
     expect(startDateForTimeframes(END, ["25m", "35m"])).toBeNull()
+  })
+})
+
+/**
+ * rangeLabel moved here from lib/intervalPicker when the interval-picker
+ * popup was removed. Its tests moved with it -- the Volume Profile dialog's
+ * day-range column is the only caller now, and the numbers it prints are the
+ * specified table verbatim.
+ */
+describe("rangeLabel reads the specified table and invents nothing", () => {
+  it.each([
+    ["1m", "2 D"], ["3m", "2 D"], ["5m", "2 D"], ["10m", "3 D"], ["15m", "4 D"],
+    ["20m", "5 D"], ["30m", "15 D"], ["45m", "20 D"], ["1h", "25 D"],
+    ["2h", "180 D"], ["4h", "180 D"], ["1d", "Max"], ["1w", "Max"],
+  ])("%s -> %s", (tf, label) => {
+    expect(rangeLabel(tf)).toBe(label)
+  })
+
+  it.each(["25m", "35m"])("%s has no day count, so no label", (tf) => {
+    expect(rangeLabel(tf)).toBeNull()
+  })
+
+  it("covers every offered interval except the two still unspecified", () => {
+    const unlabelled = ALL_CHART_TIMEFRAMES.filter((tf) => rangeLabel(tf) == null)
+    expect(unlabelled).toEqual(["25m", "35m"])
   })
 })

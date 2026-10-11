@@ -55,9 +55,11 @@ import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS, daysInRange, startDateForDays } from 
 /** Exactly as specified. Thirteen entries; do not add a fourteenth by inference. */
 const SPECIFIED: Record<string, number> = {
   "1m": 2,
-  // 2m adopted 2026-10-11, the value UNSPECIFIED had proposed and the one 1m
-  // and 5m already agree on either side of it.
-  "2m": 2,
+  // 3m, 2026-10-11. It REPLACED 2m in the selector that day, and takes the
+  // 2 days 2m had been given hours earlier -- 1m and 5m are both 2, so the
+  // interval between them is bracketed rather than inferred across a gap.
+  // Flagged on delivery as the one number in this change not stated outright.
+  "3m": 2,
   "5m": 2,
   "10m": 3,
   "15m": 4,
@@ -84,9 +86,12 @@ const SPECIFIED: Record<string, number> = {
  *   25m → 5, as specified for 20m
  *   35m → 10, as specified for 30m
  *
- * 2m was here until 2026-10-11, when its proposed 2 was specified and moved
- * into SPECIFIED. 25m was asked for in the same message and not given -- the
- * sentence naming it broke off -- so it stays a proposal. 35m was not raised.
+ * 2m is gone entirely as of 2026-10-11 -- 3m replaced it in the selector, and
+ * carries the 2 days 2m had been given. 25m was asked for and not given -- the
+ * sentence naming its value broke off -- so it stays a proposal. 35m was not
+ * raised. The API still ACCEPTS 2m (see TF_MINUTES in src/data/resample.py):
+ * a saved snapshot may name it, and the app no longer offering a timeframe is
+ * not a reason to start rejecting one.
  *
  * Move an entry into SPECIFIED to adopt it. Until then the UI shows these
  * timeframes as unset and selecting one leaves the date range alone.
@@ -98,7 +103,7 @@ export const UNSPECIFIED: Record<string, number> = {
 
 /** Every timeframe Backtest and Export Data offer, in bar-interval order. */
 export const ALL_CHART_TIMEFRAMES = [
-  "1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
+  "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
 ] as const
 
 /** Daily and weekly bars -- whole trading days, not a bin within one. */
@@ -138,6 +143,20 @@ export function isMaxHistory(timeframe: string): boolean {
  */
 export function daysFor(timeframe: string): number | null {
   return SPECIFIED[timeframe] ?? null
+}
+
+/**
+ * A timeframe's lookback as a short label -- "15 D", or "Max".
+ *
+ * Null when the table has no entry, so a caller prints the interval alone
+ * rather than a number nobody chose. Moved here from lib/intervalPicker when
+ * the interval-picker popup was removed on 2026-10-11; it sits beside
+ * `daysFor`, which is the only thing it reads.
+ */
+export function rangeLabel(timeframe: string): string | null {
+  const days = daysFor(timeframe)
+  if (days == null) return null
+  return isMaxHistory(timeframe) ? "Max" : `${days} D`
 }
 
 /**

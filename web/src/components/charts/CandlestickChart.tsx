@@ -22,6 +22,7 @@ import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
+import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { ChevronDown, Maximize, Minimize, Save, Settings } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
@@ -2100,6 +2101,51 @@ export function CandlestickChart({
                 <span>on expansion <span className="text-muted-foreground">
                   (draw the whole-chart profile in the space right of price)</span></span>
               </label>
+            </div>
+
+            {/* INTERVAL DAY RANGE.
+                How much history each bar interval loads. It is a property of
+                the profile -- how far back the volume being counted goes --
+                so it belongs in this dialog rather than inside a timeframe
+                menu, which is where it used to be printed as "2 D : 5m".
+
+                READ-ONLY, and deliberately. These numbers were specified one
+                by one and the table they come from says not to add an entry
+                by inference; a field that let one be typed here would make
+                them look like preferences. The two intervals with no entry
+                show a dash rather than a number nobody chose -- selecting one
+                leaves the date range exactly as it was. */}
+            <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
+              <div className="text-muted-foreground mb-1">Interval day range</div>
+              <div role="table" aria-label="History loaded per bar interval"
+                   className="rounded border border-[color:var(--hairline-soft)]
+                              bg-[color:var(--raise-2)] overflow-hidden">
+                <div role="row" className="flex items-center justify-between px-2 py-1
+                                           border-b border-[color:var(--hairline-soft)]
+                                           text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span role="columnheader">Interval</span>
+                  <span role="columnheader">History</span>
+                </div>
+                <div className="max-h-44 overflow-y-auto">
+                  {ALL_CHART_TIMEFRAMES.map((tf) => {
+                    const label = rangeLabel(tf)
+                    return (
+                      <div key={tf} role="row"
+                           className="flex items-center justify-between px-2 py-0.5
+                                      odd:bg-[color:var(--raise-1)]">
+                        <span role="cell" className="font-mono tabular-nums">{tf}</span>
+                        <span role="cell"
+                              className={`font-mono tabular-nums ${
+                                label ? "text-foreground" : "text-muted-foreground/60"}`}
+                              title={label ? `${tf} loads ${label.replace(" D", " days")}`
+                                           : `${tf} has no specified day range — selecting it leaves the dates alone`}>
+                          {label ?? "—"}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">

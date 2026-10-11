@@ -4,10 +4,18 @@
  * WHAT EACH CONTROL ACTUALLY DOES, since a toolbar of decorative buttons is
  * the easiest thing in the world to build and the least useful:
  *
- *   intervals  Quick buttons plus the full IntervalPicker popup. Both set
- *              cfg.timeframe, move the start date, and RE-RUN the backtest so
- *              the chart actually redraws at the new interval -- see
- *              setInterval below for why the run is required.
+ *   intervals  Quick buttons. They set cfg.timeframe, move the start date,
+ *              and RE-RUN the backtest so the chart actually redraws at the
+ *              new interval -- see setInterval below for why the run is
+ *              required.
+ *
+ *              THE DROPDOWN IS GONE. A second control for one setting sat
+ *              beside these pills showing the same value, and it was the only
+ *              place in the app that printed an interval's lookback as
+ *              "2 D : 5m" -- a day range belongs with the Volume Profile
+ *              settings that own it, not hidden inside a timeframe menu.
+ *              Removed on request 2026-10-11. The config panel's own pills
+ *              still cover every interval this list does not.
  *   Alert      Opens a real price-alert form. The level is stored, drawn on
  *              the chart, and listed in the Alerts tab on the right rail.
  *   Replay     Opens the replay page. That page already exists; this is the
@@ -22,7 +30,6 @@ import {
   Bell, Rewind, Undo2, Redo2, Camera, Plus, ZoomIn, ZoomOut, Home,
 } from "lucide-react"
 
-import { IntervalPicker } from "@/components/IntervalPicker"
 import { useRunBacktest } from "@/features/backtest/useRunBacktest"
 import { useConfigStore } from "@/store/configStore"
 import { startDateForTimeframe } from "@/lib/chartSetup"
@@ -177,9 +184,6 @@ export function ChartToolbar({
           </button>
         ))}
       </div>
-
-      {/* The full picker, with favourites and custom intervals. */}
-      <IntervalPicker value={cfg.timeframe} onChange={setInterval} compact />
 
       <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
 

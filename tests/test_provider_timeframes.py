@@ -13,7 +13,7 @@ from src.data.resample import ALL_TIMEFRAMES as TF_MINUTES   # every timeframe t
 
 #: What the Backtest selector offers, mirroring ALL_CHART_TIMEFRAMES in
 #: web/src/lib/chartSetup.ts. Market Grid offers the same list without 1d and 1w.
-UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m",
+UI_TIMEFRAMES = ["1m", "3m", "5m", "10m", "15m", "20m", "25m",
                  "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w"]
 
 
@@ -34,8 +34,11 @@ def test_every_selectable_timeframe_is_one_the_engine_knows():
 
 def test_the_engine_may_know_more_than_the_selector_offers():
     """The reverse direction is allowed, and is stated so it is not read as drift."""
+    # 40m: dropped from the selector earlier, kept so stored configs load.
+    # 2m: replaced by 3m in the selector on 2026-10-11, kept for the same reason
+    # -- a saved snapshot or an optimiser run may still name it.
     retired = sorted(set(TF_MINUTES) - set(UI_TIMEFRAMES))
-    assert retired == ["40m"], (
+    assert retired == ["2m", "40m"], (
         f"unexpected engine-only timeframes {retired}; if one was retired from the "
         f"selector deliberately, name it here so the next reader knows it was a choice"
     )

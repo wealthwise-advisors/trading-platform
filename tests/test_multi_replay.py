@@ -56,8 +56,12 @@ class TestResampling:
         assert out.iloc[0]["volume"] == df.iloc[0:5]["volume"].sum()
 
     def test_rejects_an_unknown_timeframe(self):
+        # "3m" was the example here until 2026-10-11, when it became a real
+        # timeframe -- it replaced 2m in the selector. "7m" is not in
+        # TF_MINUTES and is not a divisor of anything Schwab serves natively,
+        # so it is unlikely to be adopted the same way.
         with pytest.raises(ValueError, match="Unsupported timeframe"):
-            resample_ohlcv(_minute_bars(10), "3m")
+            resample_ohlcv(_minute_bars(10), "7m")
 
 
 class TestClockSynchronisation:
@@ -173,8 +177,9 @@ class TestLifecycle:
             MultiReplaySession(pd.DataFrame(), ["1m"], lambda: MACrossoverStrategy(), "ES")
 
     def test_rejects_unknown_timeframe(self):
+        # "7m", not "3m": 3m became a real timeframe on 2026-10-11.
         with pytest.raises(ValueError, match="Unsupported timeframe"):
-            _session(["1m", "3m"])
+            _session(["1m", "7m"])
 
 
 class TestEmissionInvariant:
