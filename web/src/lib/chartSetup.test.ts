@@ -1,5 +1,5 @@
 /**
- * The twelve specified numbers are the point of this module, so each is
+ * The thirteen specified numbers are the point of this module, so each is
  * asserted on its own line rather than looped over. A loop that reads the
  * table and checks itself against the table proves nothing; if a value is
  * edited by accident, these say which one.
@@ -17,8 +17,9 @@ describe("the specified table", () => {
   it("loads 3 days for 10m", () => expect(daysFor("10m")).toBe(3))
   it("loads 4 days for 15m", () => expect(daysFor("15m")).toBe(4))
   it("loads 5 days for 20m", () => expect(daysFor("20m")).toBe(5))
-  it("loads 10 days for 30m", () => expect(daysFor("30m")).toBe(10))
-  it("loads 15 days for 45m", () => expect(daysFor("45m")).toBe(15))
+  it("loads 15 days for 30m", () => expect(daysFor("30m")).toBe(15))
+  it("loads 20 days for 45m", () => expect(daysFor("45m")).toBe(20))
+  it("loads 2 days for 2m", () => expect(daysFor("2m")).toBe(2))
   it("loads 25 days for 1h", () => expect(daysFor("1h")).toBe(25))
   it("loads 180 days for 2h", () => expect(daysFor("2h")).toBe(180))
   it("loads 180 days for 4h", () => expect(daysFor("4h")).toBe(180))
@@ -35,14 +36,17 @@ describe("the specified table", () => {
     expect(daysFor("1m")).toBe(daysFor("5m"))
   })
 
-  it("holds exactly twelve entries — nothing inferred has been added", () => {
-    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(12)
+  it("holds exactly thirteen entries — nothing inferred has been added", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(13)
   })
 })
 
 describe("timeframes the table does not cover", () => {
-  it("has no entry for 2m, 25m or 35m", () => {
-    for (const tf of ["2m", "25m", "35m"]) {
+  // 2m was here until 2026-10-11, when it was specified as 2 and moved into
+  // the table. 25m was asked about in the same message and not answered, so
+  // it stays uncovered; 35m was not raised.
+  it("has no entry for 25m or 35m", () => {
+    for (const tf of ["25m", "35m"]) {
       expect(isSpecified(tf)).toBe(false)
       expect(daysFor(tf)).toBeNull()
     }
@@ -54,8 +58,8 @@ describe("timeframes the table does not cover", () => {
     for (const tf of Object.keys(UNSPECIFIED)) expect(daysFor(tf)).toBeNull()
   })
 
-  it("proposes a value for each of the three, for a human to accept or not", () => {
-    expect(UNSPECIFIED).toEqual({ "2m": 2, "25m": 5, "35m": 10 })
+  it("proposes a value for each remaining one, for a human to accept or not", () => {
+    expect(UNSPECIFIED).toEqual({ "25m": 5, "35m": 10 })
   })
 })
 
@@ -75,16 +79,16 @@ describe("a set of timeframes sharing one range", () => {
   })
 
   it("matches the single value when only one is selected", () => {
-    expect(daysForSet(["30m"])).toBe(10)
+    expect(daysForSet(["30m"])).toBe(15)
   })
 
   it("skips uncovered timeframes rather than treating them as zero", () => {
     expect(daysForSet(["25m", "15m"])).toBe(4)
-    expect(daysForSet(["2m", "1h"])).toBe(25)
+    expect(daysForSet(["25m", "1h"])).toBe(25)
   })
 
   it("returns null when it covers none of them, so the range is left alone", () => {
-    expect(daysForSet(["2m", "25m", "35m"])).toBeNull()
+    expect(daysForSet(["25m", "35m"])).toBeNull()
     expect(daysForSet([])).toBeNull()
   })
 })
@@ -122,7 +126,7 @@ describe("the start date a timeframe change produces", () => {
 
   it("reaches back further the coarser the bar", () => {
     expect(startDateForTimeframe(END, "10m")).toBe("2026-08-30")   // 3 days
-    expect(startDateForTimeframe(END, "30m")).toBe("2026-08-23")   // 10 days
+    expect(startDateForTimeframe(END, "30m")).toBe("2026-08-18")   // 15 days
     expect(startDateForTimeframe(END, "1h")).toBe("2026-08-08")    // 25 days
     expect(startDateForTimeframe(END, "2h")).toBe("2026-03-06")    // 180 days
     expect(startDateForTimeframe(END, "4h")).toBe("2026-03-06")    // 180 days
@@ -131,10 +135,10 @@ describe("the start date a timeframe change produces", () => {
   })
 
   it("shortens a range too long for the new timeframe, as after Daily's twenty years", () => {
-    // 2m has no day count, so its range normally stays -- but not at 20 years.
-    expect(startDateForTimeframe(END, "2m", "2006-09-02")).toBe("2026-03-06")   // 180 days
+    // 25m has no day count, so its range normally stays -- but not at 20 years.
+    expect(startDateForTimeframe(END, "25m", "2006-09-02")).toBe("2026-03-06")   // 180 days
     // A range it can serve is left exactly as it was.
-    expect(startDateForTimeframe(END, "2m", "2026-08-20")).toBeNull()
+    expect(startDateForTimeframe(END, "25m", "2026-08-20")).toBeNull()
   })
 
   it("gives 1m and 5m the same start, as the table intends", () => {
@@ -142,7 +146,7 @@ describe("the start date a timeframe change produces", () => {
   })
 
   it("moves nothing for a timeframe the table does not cover", () => {
-    for (const tf of ["2m", "25m", "35m", "3h"]) {
+    for (const tf of ["25m", "35m", "3h"]) {
       expect(startDateForTimeframe(END, tf)).toBeNull()
     }
   })
@@ -176,11 +180,11 @@ describe("the start date a Market Grid selection produces", () => {
   })
 
   it("ignores uncovered timeframes in the selection", () => {
-    expect(startDateForTimeframes(END, ["2m", "15m"])).toBe(startDateForTimeframe(END, "15m"))
+    expect(startDateForTimeframes(END, ["25m", "15m"])).toBe(startDateForTimeframe(END, "15m"))
   })
 
   it("moves nothing when the selection is empty or wholly uncovered", () => {
     expect(startDateForTimeframes(END, [])).toBeNull()
-    expect(startDateForTimeframes(END, ["2m", "25m", "35m"])).toBeNull()
+    expect(startDateForTimeframes(END, ["25m", "35m"])).toBeNull()
   })
 })

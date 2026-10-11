@@ -121,7 +121,7 @@ export function IntervalPicker({
         {/* Same box as the dropdown it replaces, so the panel does not shift. */}
         <button
           type="button"
-          aria-label={`Interval: ${value}`}
+          aria-label={`Interval: ${rowName(value)}`}
           className={`flex items-center justify-between gap-1.5 rounded border border-input
                      bg-transparent whitespace-nowrap transition-colors outline-none
                      select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
@@ -130,9 +130,14 @@ export function IntervalPicker({
                          ? "h-[22px] px-1.5 text-[11px] rounded"
                          : "h-8 w-full py-2 pr-2 pl-2.5 text-sm rounded-lg"}`}
         >
+          {/* THE SAME LABEL THE ROWS USE. The button showed a bare "5m" while
+              the row it reflects read "2 D : 5m", so the closed picker and the
+              open one disagreed about what the selection was called. An
+              interval with no specified day count still shows its name alone
+              -- here as in the rows -- rather than a number nobody chose. */}
           <span className="flex items-center gap-2">
             <Clock aria-hidden className="h-3.5 w-3.5 text-[#7fb6cc]/80" />
-            {value}
+            {rangeLabel(value) ? `${rangeLabel(value)} : ${value}` : value}
           </span>
           <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
         </button>

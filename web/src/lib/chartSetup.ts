@@ -43,7 +43,7 @@
  *
  * TIMEFRAMES THIS TABLE DOES NOT COVER
  * ------------------------------------
- * The app offers fifteen; the table covers twelve. 2m, 25m and 35m have no
+ * The app offers fifteen; the table covers thirteen. 25m and 35m have no
  * entry, and deliberately get none: `daysFor` returns null and the caller
  * leaves the range exactly as the user had it -- unless it is longer than that
  * timeframe can be served (see startDateForTimeframe). Proposed values for
@@ -52,15 +52,20 @@
  */
 import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS, daysInRange, startDateForDays } from "./dayRange"
 
-/** Exactly as specified. Twelve entries; do not add a thirteenth by inference. */
+/** Exactly as specified. Thirteen entries; do not add a fourteenth by inference. */
 const SPECIFIED: Record<string, number> = {
   "1m": 2,
+  // 2m adopted 2026-10-11, the value UNSPECIFIED had proposed and the one 1m
+  // and 5m already agree on either side of it.
+  "2m": 2,
   "5m": 2,
   "10m": 3,
   "15m": 4,
   "20m": 5,
-  "30m": 10,
-  "45m": 15,
+  // 30m and 45m RAISED 2026-10-11, from 10 and 15. Specified directly, not
+  // derived: the run of 2/2/2/3/4/5 beneath them would not predict 15 and 20.
+  "30m": 15,
+  "45m": 20,
   "1h": 25,
   "2h": 180,
   "4h": 180,
@@ -76,15 +81,17 @@ const SPECIFIED: Record<string, number> = {
  * across the gap -- so that adopting one would never hand a coarser bar less
  * history than the finer bar beneath it:
  *
- *   2m  → 2, the same as 1m and 5m, which agree either side of it
  *   25m → 5, as specified for 20m
  *   35m → 10, as specified for 30m
+ *
+ * 2m was here until 2026-10-11, when its proposed 2 was specified and moved
+ * into SPECIFIED. 25m was asked for in the same message and not given -- the
+ * sentence naming it broke off -- so it stays a proposal. 35m was not raised.
  *
  * Move an entry into SPECIFIED to adopt it. Until then the UI shows these
  * timeframes as unset and selecting one leaves the date range alone.
  */
 export const UNSPECIFIED: Record<string, number> = {
-  "2m": 2,
   "25m": 5,
   "35m": 10,
 }

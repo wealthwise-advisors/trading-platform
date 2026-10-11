@@ -42,7 +42,17 @@ async function violations(node: Element) {
 function setup(value = "5m") {
   const onChange = vi.fn()
   render(<IntervalPicker value={value} onChange={onChange} />)
-  return { onChange, trigger: screen.getByRole("button", { name: `Interval: ${value}` }) }
+  // The closed control's name carries the lookback as well as the interval --
+  // "Interval: 5m, 2 days" -- so a screen reader hears what the row it mirrors
+  // says. Matched by prefix so this helper does not have to restate the table.
+  return {
+    onChange,
+    trigger: screen.getByRole("button", {
+      // Startswith, not equality: every interval name here is plain
+      // ("5m", "1h"), so there is nothing to escape.
+      name: (accessibleName: string) => accessibleName.startsWith(`Interval: ${value}`),
+    }),
+  }
 }
 
 function openPicker(trigger: HTMLElement) {
@@ -84,8 +94,8 @@ describe("Interval Picker", () => {
     const dialog = openPicker(trigger)
     showTab(/time frame/i)
     expect(rowNames()).toEqual([
-      "1m, 2 days", "2m", "5m, 2 days", "10m, 3 days", "15m, 4 days", "20m, 5 days",
-      "25m", "30m, 10 days", "35m", "45m, 15 days", "1h, 25 days",
+      "1m, 2 days", "2m, 2 days", "5m, 2 days", "10m, 3 days", "15m, 4 days", "20m, 5 days",
+      "25m", "30m, 15 days", "35m", "45m, 20 days", "1h, 25 days",
       "2h, 180 days", "4h, 180 days", "1d, maximum history", "1w, maximum history",
     ])
     const row1m = within(dialog).getByRole("button", { name: "1m, 2 days" })
@@ -93,8 +103,9 @@ describe("Interval Picker", () => {
     // Daily and weekly read as the reference platform prints them: "Max : 1d".
     const row1d = within(dialog).getByRole("button", { name: "1d, maximum history" })
     expect(row1d.textContent).toContain("Max : 1d")
-    // No day count in the table -> no number shown.
-    expect(within(dialog).getByRole("button", { name: "2m" }).textContent).not.toMatch(/\d+ D/)
+    // No day count in the table -> no number shown. 25m is the case now; 2m
+    // was specified on 2026-10-11 and moved into the table.
+    expect(within(dialog).getByRole("button", { name: "25m" }).textContent).not.toMatch(/\d+ D/)
   })
 
   it("marks the current interval", () => {
@@ -157,7 +168,7 @@ describe("Interval Picker", () => {
     showTab(/time frame/i)
     const names = rowNames()
     expect(names).not.toContain("1m, 2 days")
-    expect(names.indexOf("5m, 2 days")).toBeLessThan(names.indexOf("2m"))
+    expect(names.indexOf("5m, 2 days")).toBeLessThan(names.indexOf("2m, 2 days"))
     const stored = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "{}")
     expect(stored.hidden).toEqual(["1m"])
   })
