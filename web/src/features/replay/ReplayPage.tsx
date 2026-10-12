@@ -2265,8 +2265,7 @@ export function ReplayPage() {
                   share of total volume the value area covers, which is what sets
                   the VAHigh and VALow columns. <b>POC</b> is the single busiest
                   bucket. <b>POC Match</b> colours timeframes whose POC has the
-                  same whole number alike, and says how many of the selection
-                  sit on that level. <b>POC vs Avg</b> compares each POC with
+                  same whole number alike, and different numbers differently. <b>POC vs Avg</b> compares each POC with
                   the average POC of the selected timeframes &mdash; green
                   above it, red below it; the average is in the header.
                 </InfoDot>
@@ -2518,7 +2517,7 @@ export function ReplayPage() {
                       {showVp && <th className="text-right p-2 font-medium">POC</th>}
                       {/* POC MATCH: the timeframes whose POC shares the same
                           digits before the decimal point, in one colour per
-                          level, with how many of the selection sit on it. */}
+                          level. */}
                       {showVp && (
                         <th className="text-right p-2 font-medium whitespace-nowrap"
                             title="Timeframes whose POC has the same whole number share a colour">
@@ -2615,8 +2614,12 @@ export function ReplayPage() {
                             return (
                               <td className="p-2 text-right font-mono whitespace-nowrap"
                                   style={lv ? { color: lv.color } : undefined}
-                                  title={lv ? `${lv.count} of ${pocCols.counted} timeframes have a POC at ${lv.level}.xx` : undefined}>
-                                {lv ? <>{lv.level} <span className="opacity-75">· {lv.count}/{pocCols.counted}</span></> : "—"}
+                                  title={lv ? `POC level ${lv.level} — timeframes in this colour share it` : undefined}>
+                                {/* The level alone, coloured by its group. A
+                                    "6/7" count sat beside it at first and was
+                                    removed on request: the colour is the
+                                    signal, and the count was noise. */}
+                                {lv ? lv.level : "—"}
                               </td>
                             )
                           })()}

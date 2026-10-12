@@ -324,11 +324,10 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
     if (r.poc < mean - 1e-6) expect(r.avgColor, `${r.poc} is below ${mean} but not red`).toBe(red)
   }
 
-  // Same whole number <-> same Match colour, and the count is right.
+  // Same whole number <-> same Match colour. The cell shows the level and
+  // nothing else -- a "6/7" count was removed on request.
   for (const a of live) {
-    const same = live.filter((b) => Math.trunc(b.poc) === Math.trunc(a.poc))
-    expect(a.matchText).toContain(`${Math.trunc(a.poc)}`)
-    expect(a.matchText).toContain(`${same.length}/${live.length}`)
+    expect(a.matchText).toBe(`${Math.trunc(a.poc)}`)
     for (const b of live) {
       if (Math.trunc(a.poc) === Math.trunc(b.poc)) expect(b.matchColor).toBe(a.matchColor)
       else expect(b.matchColor).not.toBe(a.matchColor)
