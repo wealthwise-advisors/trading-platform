@@ -10,7 +10,7 @@
 // Selecting a single timeframe yields a grid of one, so the original
 // single-pane behaviour is the degenerate case rather than a separate path.
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
@@ -34,6 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
+import { buildPocColumns } from "@/lib/pocColumns"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -1285,6 +1286,33 @@ export function ReplayPage() {
     upperPalette: devPalettes.upper,
     lowerPalette: devPalettes.lower,
   })
+
+  // ── The two POC columns ────────────────────────────────────────────
+  /**
+   * One profile per shown timeframe, computed once per tick.
+   *
+   * The POC columns need EVERY timeframe's POC before the first row renders --
+   * the average is over all of them -- so the profiles are built here rather
+   * than inline per cell. That is also less work than before: the table used
+   * to call profileFor for the POC, VAHigh and VALow cells separately, a full
+   * pass over each pane's bars three times per row, every render.
+   *
+   * Keyed on the timeframe list as a STRING: shownTimeframes is rebuilt by
+   * filter+sort every render, so the array itself would memoise nothing.
+   */
+  const shownTfKey = shownTimeframes.join(",")
+  const paneProfiles = useMemo(() => {
+    const out = new Map<string, ReturnType<typeof profileFor>>()
+    if (!showVp) return out
+    for (const tf of shownTimeframes) out.set(tf, profileFor(panes[tf] ?? emptyPane(initialCapital)))
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showVp, shownTfKey, panes, vpBins, vpValueArea, initialCapital])
+
+  /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
+  const pocCols = buildPocColumns(
+    shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
+  )
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
   // built from -- which is what turns its badge from a number into a tick.
@@ -2236,7 +2264,11 @@ export function ReplayPage() {
                   many price buckets that range is divided into. <b>VA</b> is the
                   share of total volume the value area covers, which is what sets
                   the VAHigh and VALow columns. <b>POC</b> is the single busiest
-                  bucket.
+                  bucket. <b>POC Match</b> colours timeframes whose POC has the
+                  same whole number alike, and says how many of the selection
+                  sit on that level. <b>POC vs Avg</b> compares each POC with
+                  the average POC of the selected timeframes &mdash; green
+                  above it, red below it; the average is in the header.
                 </InfoDot>
                 <span className="text-xs text-muted-foreground font-mono">
                   {vpBins} rows · VA {vpValueArea}%
@@ -2484,6 +2516,30 @@ export function ReplayPage() {
                         <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                       ])}
                       {showVp && <th className="text-right p-2 font-medium">POC</th>}
+                      {/* POC MATCH: the timeframes whose POC shares the same
+                          digits before the decimal point, in one colour per
+                          level, with how many of the selection sit on it. */}
+                      {showVp && (
+                        <th className="text-right p-2 font-medium whitespace-nowrap"
+                            title="Timeframes whose POC has the same whole number share a colour">
+                          POC Match
+                        </th>
+                      )}
+                      {/* POC VS AVG: each POC against the average POC of the
+                          selected timeframes. Green above, red below. The
+                          average is printed in the header so the reference
+                          the colours are measured from is never hidden. */}
+                      {showVp && (
+                        <th className="text-right p-2 font-medium whitespace-nowrap"
+                            title="Each timeframe's POC against the average POC of the selected timeframes">
+                          POC vs Avg
+                          {pocCols.average != null && (
+                            <span className="ml-1 font-mono text-[10px] text-muted-foreground normal-case">
+                              ({pocCols.average.toFixed(2)})
+                            </span>
+                          )}
+                        </th>
+                      )}
                       {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
                       {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                       <th className="text-left p-2 font-medium">Last signal</th>
@@ -2497,7 +2553,8 @@ export function ReplayPage() {
                       const pnl = pane.portfolioValue - initialCapital
                       // One pair of values per selected deviation level.
                       const bands = devLevels.flatMap((d) => [atDev(pane, d), atDev(pane, -d)])
-                      const vp = profileFor(pane)
+                      // From the per-tick map: the POC columns already built it.
+                      const vp = paneProfiles.get(tf) ?? null
                       const num = price
                       return (
                         <tr key={tf} className="border-t border-[color:var(--hairline-soft)]">
@@ -2553,6 +2610,32 @@ export function ReplayPage() {
                             )
                           })}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>{num(vp?.poc)}</td>}
+                          {showVp && (() => {
+                            const lv = pocCols.level.get(tf)
+                            return (
+                              <td className="p-2 text-right font-mono whitespace-nowrap"
+                                  style={lv ? { color: lv.color } : undefined}
+                                  title={lv ? `${lv.count} of ${pocCols.counted} timeframes have a POC at ${lv.level}.xx` : undefined}>
+                                {lv ? <>{lv.level} <span className="opacity-75">· {lv.count}/{pocCols.counted}</span></> : "—"}
+                              </td>
+                            )
+                          })()}
+                          {showVp && (() => {
+                            const sd = pocCols.side.get(tf)
+                            const d = pocCols.diff.get(tf)
+                            const color = sd === "above" ? GOOD : sd === "below" ? CRITICAL : NEUTRAL
+                            return (
+                              <td className="p-2 text-right font-mono whitespace-nowrap"
+                                  style={sd ? { color } : undefined}
+                                  title={sd && pocCols.average != null
+                                    ? `POC ${vp?.poc?.toFixed(2)} is ${sd === "equal" ? "at" : sd} the average ${pocCols.average.toFixed(2)}`
+                                    : undefined}>
+                                {sd && d != null
+                                  ? `${sd === "above" ? "▲" : sd === "below" ? "▼" : "="} ${d > 0 ? "+" : ""}${d.toFixed(2)}`
+                                  : "—"}
+                              </td>
+                            )
+                          })()}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
                           <td className="p-2 text-xs">

@@ -262,3 +262,77 @@ test.describe("once a session is loaded", () => {
     await expect(page.getByRole("button", { name: /LOCKED FOR THIS SESSION/ })).toHaveCount(0)
   })
 })
+
+/**
+ * POC Match and POC vs Avg, as sir specified them on 2026-10-11.
+ *
+ * Asserted against the RULE rather than against fixed numbers, so it holds
+ * whatever POCs the shipped session produces: every row's colour is checked
+ * against its own POC, the average printed in the header, and the other rows.
+ * Its own page because it needs several timeframes switched on.
+ */
+test("POC Match groups by whole number, POC vs Avg is green above / red below", async ({ browser }) => {
+  test.setTimeout(360_000)
+  const page = await browser.newPage()
+  await signIn(page)
+  await goToMarketGrid(page)
+  await widenRsiWindow(page)
+  for (const tf of ["10m", "15m", "20m", "30m"]) {
+    const pill = page.locator("button.tf-pill", { hasText: new RegExp(`^${tf}$`) }).first()
+    if (await pill.count() && !((await pill.getAttribute("class")) ?? "").includes("tf-pill-on")) await pill.click()
+  }
+  await loadAndPlay(page)
+
+  const table = page.locator("table.grid-table").first()
+  const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+  const iPoc = headers.findIndex((h) => /^POC$/i.test(h))
+  const iMatch = headers.findIndex((h) => /^POC MATCH/i.test(h))
+  const iAvg = headers.findIndex((h) => /^POC VS AVG/i.test(h))
+  expect(iMatch, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
+  expect(iAvg, "no POC vs Avg column").toBeGreaterThan(-1)
+  const average = Number(/\(([\d.]+)\)/.exec(headers[iAvg])?.[1])
+  expect(Number.isFinite(average), `no average in the header: ${headers[iAvg]}`).toBe(true)
+
+  const rows = await table.locator("tbody tr").evaluateAll((trs, [a, b, c]) => trs.map((tr) => {
+    const td = tr.querySelectorAll("td")
+    return {
+      poc: Number((td[a] as HTMLElement).innerText.trim()),
+      matchColor: getComputedStyle(td[b]).color,
+      matchText: (td[b] as HTMLElement).innerText.trim(),
+      avgColor: getComputedStyle(td[c]).color,
+    }
+  }), [iPoc, iMatch, iAvg])
+  const live = rows.filter((r) => Number.isFinite(r.poc))
+  expect(live.length).toBeGreaterThan(1)
+
+  // The header's average IS the mean of the POCs on screen.
+  const mean = live.reduce((s, r) => s + r.poc, 0) / live.length
+  expect(average).toBeCloseTo(mean, 1)
+
+  // Green above, red below -- read the theme's own tokens rather than
+  // hard-coding a shade.
+  const [green, red] = await page.evaluate(() => {
+    const probe = document.createElement("span")
+    document.body.appendChild(probe)
+    probe.style.color = "var(--gain)"; const g = getComputedStyle(probe).color
+    probe.style.color = "var(--loss)"; const r = getComputedStyle(probe).color
+    probe.remove()
+    return [g, r]
+  })
+  for (const r of live) {
+    if (r.poc > mean + 1e-6) expect(r.avgColor, `${r.poc} is above ${mean} but not green`).toBe(green)
+    if (r.poc < mean - 1e-6) expect(r.avgColor, `${r.poc} is below ${mean} but not red`).toBe(red)
+  }
+
+  // Same whole number <-> same Match colour, and the count is right.
+  for (const a of live) {
+    const same = live.filter((b) => Math.trunc(b.poc) === Math.trunc(a.poc))
+    expect(a.matchText).toContain(`${Math.trunc(a.poc)}`)
+    expect(a.matchText).toContain(`${same.length}/${live.length}`)
+    for (const b of live) {
+      if (Math.trunc(a.poc) === Math.trunc(b.poc)) expect(b.matchColor).toBe(a.matchColor)
+      else expect(b.matchColor).not.toBe(a.matchColor)
+    }
+  }
+  await page.close()
+})
