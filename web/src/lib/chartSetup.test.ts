@@ -1,5 +1,5 @@
 /**
- * The thirteen specified numbers are the point of this module, so each is
+ * The twelve specified numbers are the point of this module, so each is
  * asserted on its own line rather than looped over. A loop that reads the
  * table and checks itself against the table proves nothing; if a value is
  * edited by accident, these say which one.
@@ -19,7 +19,11 @@ describe("the specified table", () => {
   it("loads 5 days for 20m", () => expect(daysFor("20m")).toBe(5))
   it("loads 15 days for 30m", () => expect(daysFor("30m")).toBe(15))
   it("loads 20 days for 45m", () => expect(daysFor("45m")).toBe(20))
-  it("loads 2 days for 3m", () => expect(daysFor("3m")).toBe(2))
+  // 3m was given 2 days by inference on 2026-10-11 and that was overruled the
+  // next day: it has no specified range. Guarded explicitly so the same
+  // "1m and 5m are both 2" argument cannot quietly bring it back.
+  it("gives 3m no range, even though 1m and 5m agree around it", () =>
+    expect(daysFor("3m")).toBeNull())
   it("loads 25 days for 1h", () => expect(daysFor("1h")).toBe(25))
   it("loads 180 days for 2h", () => expect(daysFor("2h")).toBe(180))
   it("loads 180 days for 4h", () => expect(daysFor("4h")).toBe(180))
@@ -36,8 +40,8 @@ describe("the specified table", () => {
     expect(daysFor("1m")).toBe(daysFor("5m"))
   })
 
-  it("holds exactly thirteen entries — nothing inferred has been added", () => {
-    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(13)
+  it("holds exactly twelve entries — nothing inferred has been added", () => {
+    expect(ALL_CHART_TIMEFRAMES.filter(isSpecified)).toHaveLength(12)
   })
 })
 
@@ -204,19 +208,19 @@ describe("the start date a Market Grid selection produces", () => {
  */
 describe("rangeLabel reads the specified table and invents nothing", () => {
   it.each([
-    ["1m", "2 D"], ["3m", "2 D"], ["5m", "2 D"], ["10m", "3 D"], ["15m", "4 D"],
+    ["1m", "2 D"], ["5m", "2 D"], ["10m", "3 D"], ["15m", "4 D"],
     ["20m", "5 D"], ["30m", "15 D"], ["45m", "20 D"], ["1h", "25 D"],
     ["2h", "180 D"], ["4h", "180 D"], ["1d", "Max"], ["1w", "Max"],
   ])("%s -> %s", (tf, label) => {
     expect(rangeLabel(tf)).toBe(label)
   })
 
-  it.each(["25m", "35m"])("%s has no day count, so no label", (tf) => {
+  it.each(["3m", "25m", "35m"])("%s has no day count, so no label", (tf) => {
     expect(rangeLabel(tf)).toBeNull()
   })
 
-  it("covers every offered interval except the two still unspecified", () => {
+  it("covers every offered interval except the three left blank", () => {
     const unlabelled = ALL_CHART_TIMEFRAMES.filter((tf) => rangeLabel(tf) == null)
-    expect(unlabelled).toEqual(["25m", "35m"])
+    expect(unlabelled).toEqual(["3m", "25m", "35m"])
   })
 })

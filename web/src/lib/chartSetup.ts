@@ -43,23 +43,22 @@
  *
  * TIMEFRAMES THIS TABLE DOES NOT COVER
  * ------------------------------------
- * The app offers fifteen; the table covers thirteen. 25m and 35m have no
- * entry, and deliberately get none: `daysFor` returns null and the caller
+ * The app offers fifteen; the table covers twelve. 3m, 25m and 35m have
+ * no entry, and deliberately get none: `daysFor` returns null and the caller
  * leaves the range exactly as the user had it -- unless it is longer than that
- * timeframe can be served (see startDateForTimeframe). Proposed values for
- * those three are in UNSPECIFIED below, awaiting a decision -- they are NOT
- * applied.
+ * timeframe can be served (see startDateForTimeframe). 25m and 35m carry
+ * proposals in UNSPECIFIED below, NOT applied. 3m carries none: a value for
+ * it was inferred once and explicitly rejected, so it gets no proposal either.
  */
 import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS, daysInRange, startDateForDays } from "./dayRange"
 
-/** Exactly as specified. Thirteen entries; do not add a fourteenth by inference. */
+/** Exactly as specified. Twelve entries; do not add a thirteenth by inference. */
 const SPECIFIED: Record<string, number> = {
   "1m": 2,
-  // 3m, 2026-10-11. It REPLACED 2m in the selector that day, and takes the
-  // 2 days 2m had been given hours earlier -- 1m and 5m are both 2, so the
-  // interval between them is bracketed rather than inferred across a gap.
-  // Flagged on delivery as the one number in this change not stated outright.
-  "3m": 2,
+  // NO 3m. It replaced 2m in the selector on 2026-10-11 and was briefly given
+  // 2 days by inference from 1m and 5m on either side; on 2026-10-12 that was
+  // explicitly overruled -- 3m has no specified range and stays blank, like
+  // 25m and 35m. Do not reinstate it by the same bracketing argument.
   "5m": 2,
   "10m": 3,
   "15m": 4,
@@ -86,8 +85,8 @@ const SPECIFIED: Record<string, number> = {
  *   25m → 5, as specified for 20m
  *   35m → 10, as specified for 30m
  *
- * 2m is gone entirely as of 2026-10-11 -- 3m replaced it in the selector, and
- * carries the 2 days 2m had been given. 25m was asked for and not given -- the
+ * 2m is gone entirely as of 2026-10-11 -- 3m replaced it in the selector. 3m
+ * has no specified range (see the note in SPECIFIED). 25m was asked for and not given -- the
  * sentence naming its value broke off -- so it stays a proposal. 35m was not
  * raised. The API still ACCEPTS 2m (see TF_MINUTES in src/data/resample.py):
  * a saved snapshot may name it, and the app no longer offering a timeframe is
