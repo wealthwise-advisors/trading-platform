@@ -23,6 +23,8 @@ import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
+import { useConfigStore } from "@/store/configStore"
+import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
@@ -318,6 +320,11 @@ export function CandlestickChart({
   // the delivered histogram cannot reconstruct. See lib/volumeProfile.ts.
   const [vpOn, setVpOn] = useState(showVolumeProfile)
   const [vpPanelOpen, setVpPanelOpen] = useState(false)
+  // The Volume Profile dialog's day-range table is a picker as well as a
+  // reference: clicking a row selects that interval, exactly as the toolbar
+  // buttons do. The lit row follows the store, as the toolbar's does.
+  const selectedTf = useConfigStore((st) => st.timeframe)
+  const { select: selectInterval, pending: intervalPending } = useSelectInterval()
   const [vpBins, setVpBins] = useState(48)
   const [vpValueArea, setVpValueArea] = useState(70)
   const [vpOpacity, setVpOpacity] = useState(50)
@@ -2103,45 +2110,59 @@ export function CandlestickChart({
               </label>
             </div>
 
-            {/* INTERVAL DAY RANGE.
+            {/* INTERVAL DAY RANGE -- and the place to pick one.
                 How much history each bar interval loads. It is a property of
                 the profile -- how far back the volume being counted goes --
                 so it belongs in this dialog rather than inside a timeframe
                 menu, which is where it used to be printed as "2 D : 5m".
 
-                READ-ONLY, and deliberately. These numbers were specified one
-                by one and the table they come from says not to add an entry
-                by inference; a field that let one be typed here would make
-                them look like preferences. The two intervals with no entry
-                show a dash rather than a number nobody chose -- selecting one
-                leaves the date range exactly as it was. */}
+                SELECTABLE. Each row is an option: clicking it switches the
+                chart to that interval and loads its range, the same action as
+                the toolbar's interval buttons (useSelectInterval). It was a
+                read-only list at first, and a list of intervals you cannot
+                pick from read as broken.
+
+                The NUMBERS stay read-only, and deliberately: they were
+                specified one by one, and an editable field would make them
+                look like preferences. 25m and 35m have no specified range and
+                show a dash -- picking one leaves the dates exactly as they
+                were. */}
             <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
               <div className="text-muted-foreground mb-1">Interval day range</div>
-              <div role="table" aria-label="History loaded per bar interval"
-                   className="rounded border border-[color:var(--hairline-soft)]
+              <div className="rounded border border-[color:var(--hairline-soft)]
                               bg-[color:var(--raise-2)] overflow-hidden">
-                <div role="row" className="flex items-center justify-between px-2 py-1
-                                           border-b border-[color:var(--hairline-soft)]
-                                           text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <span role="columnheader">Interval</span>
-                  <span role="columnheader">History</span>
+                <div aria-hidden className="flex items-center justify-between px-2 py-1
+                                            border-b border-[color:var(--hairline-soft)]
+                                            text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span>Interval</span>
+                  <span>History</span>
                 </div>
-                <div className="max-h-44 overflow-y-auto">
+                <div role="radiogroup" aria-label="Bar interval and the history it loads"
+                     className="max-h-44 overflow-y-auto">
                   {ALL_CHART_TIMEFRAMES.map((tf) => {
                     const label = rangeLabel(tf)
+                    const on = selectedTf === tf
                     return (
-                      <div key={tf} role="row"
-                           className="flex items-center justify-between px-2 py-0.5
-                                      odd:bg-[color:var(--raise-1)]">
-                        <span role="cell" className="font-mono tabular-nums">{tf}</span>
-                        <span role="cell"
-                              className={`font-mono tabular-nums ${
-                                label ? "text-foreground" : "text-muted-foreground/60"}`}
-                              title={label ? `${tf} loads ${label.replace(" D", " days")}`
-                                           : `${tf} has no specified day range — selecting it leaves the dates alone`}>
+                      <button key={tf} type="button" role="radio" aria-checked={on}
+                              disabled={intervalPending}
+                              aria-label={label
+                                ? `${tf}, loads ${label === "Max" ? "maximum history" : label.replace(" D", " days")}`
+                                : `${tf}, no specified range`}
+                              title={label
+                                ? `Switch the chart to ${tf} and load ${label === "Max" ? "all history" : label.replace(" D", " days")}`
+                                : `Switch the chart to ${tf} — no specified range, so the dates stay as they are`}
+                              onClick={() => { if (!on) selectInterval(tf) }}
+                              className={`flex w-full items-center justify-between px-2 py-1 text-left
+                                          transition-colors disabled:cursor-wait ${
+                                on
+                                  ? "bg-[#2563eb] text-white"
+                                  : "odd:bg-[color:var(--raise-1)] hover:bg-[color:var(--raise-4)]"}`}>
+                        <span className="font-mono tabular-nums">{tf}</span>
+                        <span className={`font-mono tabular-nums ${
+                          on ? "text-white" : label ? "text-foreground" : "text-muted-foreground/60"}`}>
                           {label ?? "—"}
                         </span>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>

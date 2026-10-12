@@ -17,19 +17,17 @@ import { CandlestickPatternsTable } from "@/components/tables/CandlestickPattern
 import { ChartPatternsTable } from "@/components/tables/ChartPatternsTable"
 import { MonthlyReturnsHeatmap } from "@/components/charts/MonthlyReturnsHeatmap"
 import { OptimizerPanel } from "@/components/tables/OptimizerPanel"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MoreAnalyses } from "@/features/backtest/MoreAnalyses"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { ResultsTabStrip } from "@/features/backtest/ResultsTabStrip"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
 import {
   TrendingUp, TrendingDown, Trophy, Gauge,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
-  // Activity, Shapes and Sparkles left with their tabs when Candlestick
-  // Patterns, Chart Patterns and Strategy Optimizer moved into MoreAnalyses --
-  // those icons are declared there now, beside the entries. Equity Curve came
-  // back to the strip, so LineChart is needed here again.
-  ClipboardList, BarChart3, CalendarDays, LineChart,
+  // Every tab's icon is declared here again: the strip shows each one inline
+  // whenever it fits, and only folds the rest into its menu.
+  ClipboardList, BarChart3, CalendarDays, LineChart, Shapes, Sparkles, Waves,
   Sigma, Hash, ArrowUpRight, ArrowDownRight,
   // The reference's trading dock.
   Wallet, Inbox, History, Landmark, NotebookPen,
@@ -489,43 +487,35 @@ export function ResultsPage() {
                next to each other with the requested ~56px gap -- removed the
                duplicates that used to sit here to avoid two visible "Live Replay"
                entry points; same setPage("replay")/reportUrl() calls either way. ── */}
-          <div className="shrink-0 mt-auto flex items-center gap-2 min-w-0 pt-1">
-              <TabsList className="tabs-scroll">
-              {/* THE REFERENCE'S BOTTOM DOCK, in its order: Positions, Orders,
-                  Order History, Trade Log, P&L Analysis, Monthly Returns,
-                  Balance History, Trading Journal.
+          <div className="shrink-0 mt-auto flex items-center min-w-0 pt-1">
+            {/* THE REFERENCE'S BOTTOM DOCK, in its order: Positions, Orders,
+                Order History, Trade Log, P&L Analysis, Monthly Returns,
+                Balance History, Trading Journal -- then the analyses.
 
-                  Chart stays first and stays in the strip. In the reference the
-                  chart is not a tab at all -- it sits permanently above the dock
-                  -- so there is no position in that row that corresponds to it.
-                  Dropping it into the overflow menu to make the row match
-                  exactly would bury the app's primary view behind a menu, which
-                  is a worse trade than one extra tab. Everything the strip can
-                  no longer hold moved to MoreAnalyses, not deleted. */}
-              <TabsTrigger value="price"><CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> Chart</TabsTrigger>
-              <TabsTrigger value="equity"><LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> Equity Curve</TabsTrigger>
-              <TabsTrigger value="positions">
-                <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> Positions{openCount > 0 ? ` (${openCount})` : ""}
-              </TabsTrigger>
-              <TabsTrigger value="orders"><Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden /> Orders</TabsTrigger>
-              <TabsTrigger value="orderhistory"><History className="h-3.5 w-3.5 shrink-0" aria-hidden /> Order History</TabsTrigger>
-              <TabsTrigger value="trades"><ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trade Log</TabsTrigger>
-              <TabsTrigger value="pnl"><BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> P&amp;L Analysis</TabsTrigger>
-              <TabsTrigger value="monthly"><CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> Monthly Returns</TabsTrigger>
-              <TabsTrigger value="balance"><Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> Balance History</TabsTrigger>
-              <TabsTrigger value="journal"><NotebookPen className="h-3.5 w-3.5 shrink-0" aria-hidden /> Trading Journal</TabsTrigger>
-            </TabsList>
-            {/* ELLIOTT WAVE LIVES HERE NOW, not deleted.
-                The reference shows eight tabs and they fit; ours was nine and
-                the strip clipped after "Chart Patterns" at the reference width.
-                Rather than drop a working feature -- twelve modules and eight
-                structures sit behind it -- the ninth moves into an overflow
-                menu, which is where a ninth item belongs once a row of eight is
-                the design. It stays a real tab: the trigger below is the same
-                TabsTrigger the strip would have rendered, so selecting it
-                switches the panel exactly as before and the tab keeps its
-                roving-focus and aria wiring. */}
-            <MoreAnalyses value={resultsTab} onSelect={setResultsTab} />
+                Chart stays first and never folds. In the reference the chart
+                is not a tab at all, so there is no position in that row for
+                it; burying the app's primary view behind a menu would be a
+                worse trade than one extra tab.
+
+                The strip measures itself: it shows every tab that fits and
+                moves only the rest behind "...". See ResultsTabStrip for what
+                the fixed ten-plus-four split it replaced got wrong. */}
+            <ResultsTabStrip value={resultsTab} onSelect={setResultsTab} tabs={[
+              { value: "price", label: "Chart", icon: <CandlestickIcon className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "equity", label: "Equity Curve", icon: <LineChart className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "positions", label: `Positions${openCount > 0 ? ` (${openCount})` : ""}`, icon: <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "orders", label: "Orders", icon: <Inbox className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "orderhistory", label: "Order History", icon: <History className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "trades", label: "Trade Log", icon: <ClipboardList className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "pnl", label: "P&L Analysis", icon: <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "monthly", label: "Monthly Returns", icon: <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "balance", label: "Balance History", icon: <Landmark className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "journal", label: "Trading Journal", icon: <NotebookPen className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "candles", label: "Candlestick Patterns", icon: <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "chartpatterns", label: "Chart Patterns", icon: <Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "elliottwave", label: "Elliott Wave", icon: <Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+            ].map((t) => ({ ...t, content: <>{t.icon} {t.label}</> }))} />
           </div>
           </div>
         </div>

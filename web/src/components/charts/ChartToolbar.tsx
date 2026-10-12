@@ -30,9 +30,8 @@ import {
   Bell, Rewind, Undo2, Redo2, Camera, Plus, ZoomIn, ZoomOut, Home,
 } from "lucide-react"
 
-import { useRunBacktest } from "@/features/backtest/useRunBacktest"
+import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { useConfigStore } from "@/store/configStore"
-import { startDateForTimeframe } from "@/lib/chartSetup"
 import { loadAlerts, saveAlerts, newAlert } from "@/lib/priceAlerts"
 
 /** The intervals the reference puts on the strip, as quick buttons. */
@@ -118,28 +117,9 @@ export function ChartToolbar({
   const [price, setPrice] = useState("")
   const [direction, setDirection] = useState<"above" | "below">("above")
 
-  const run = useRunBacktest()
-
-  /**
-   * Change the interval AND redraw the chart at it.
-   *
-   * Setting cfg.timeframe alone did nothing visible, which is the bug this
-   * fixes. The chart is drawn from a finished backtest -- its bars are keyed
-   * on the backtest id and its header is labelled from that run's own summary
-   * -- so a new interval cannot appear until a run has produced bars at it.
-   * The pill lit up, the chart did not move, and nothing said why.
-   *
-   * On a chart toolbar, picking an interval means "show me this interval", so
-   * this runs the backtest rather than quietly staging a value for later. The
-   * new timeframe is passed as an override rather than read back from the
-   * store, so the request cannot race this component's own re-render.
-   */
-  const setInterval = (tf: string) => {
-    cfg.setField("timeframe", tf)
-    const start = startDateForTimeframe(cfg.endDate, tf, cfg.startDate)
-    if (start) cfg.setField("startDate", start)
-    run.mutate({ timeframe: tf, startDate: start || undefined })
-  }
+  // Set the interval, move to its lookback, and re-run -- the same action the
+  // Volume Profile dialog's day-range table takes. See useSelectInterval.
+  const { select: setInterval, pending: runPending } = useSelectInterval()
 
   const addAlert = () => {
     const p = Number(price)
@@ -170,7 +150,7 @@ export function ChartToolbar({
             key={tf}
             type="button"
             aria-pressed={cfg.timeframe === tf}
-            disabled={run.isPending}
+            disabled={runPending}
             onClick={() => setInterval(tf)}
             title={`Redraw the chart with ${tf} bars`}
             className={`grid chart-pill place-items-center rounded-lg px-2 transition-colors

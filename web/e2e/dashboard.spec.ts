@@ -254,3 +254,94 @@ test("the chart toolbar's interval buttons actually redraw the chart", async ({ 
     .not.toBe(before)
   await own.close()
 })
+
+/**
+ * The results tab strip shows what fits and folds only the rest.
+ *
+ * THREE BUGS THIS GUARDS, all reported together:
+ *   1. four analyses were hard-coded into "..." -- closing the market rail
+ *      freed the room and they never came back;
+ *   2. with the rail open, Trading Journal was clipped at the edge;
+ *   3. "..." opened DOWNWARD from a strip at the bottom of the column, below
+ *      the fold and under the status bar, so the button looked dead.
+ *
+ * Asserted by geometry, not by "it rendered": a menu that exists but sits off
+ * screen is exactly bug 3, and toBeVisible() passed it.
+ */
+test("the tab strip fits what it can, and its menu opens where it can be used", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const own = await browser.newPage()
+  await own.setViewportSize({ width: 1536, height: 864 })
+  await signIn(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  await own.getByRole("button", { name: "Chart", exact: true }).first().click()
+
+  const results = own.getByRole("tablist").first()
+  const state = () => results.evaluate((list) => {
+    const sb = list.getBoundingClientRect()
+    const shown = (Array.from(list.querySelectorAll("[role='tab']")) as HTMLElement[])
+      .filter((t) => t.offsetParent !== null)
+    return {
+      shown: shown.length,
+      clipped: shown.filter((t) => t.getBoundingClientRect().right > sb.right + 1).length,
+      more: document.querySelectorAll("button[title='More analyses']").length,
+    }
+  })
+
+  const withRail = await state()
+  expect(withRail.clipped, "a tab is cut off at the strip's edge").toBe(0)
+  expect(withRail.more, "tabs are folded but there is no menu to reach them").toBe(1)
+
+  // The menu must open on screen and on top, then actually switch the panel.
+  await own.getByRole("button", { name: "More analyses" }).click()
+  const menu = own.getByRole("menu")
+  const box = (await menu.boundingBox())!
+  expect(box.y + box.height, "the menu opens below the window").toBeLessThanOrEqual(864)
+  expect(await menu.evaluate((m) => {
+    const b = m.getBoundingClientRect()
+    return !!document.elementFromPoint(b.left + b.width / 2, b.top + 10)?.closest("[role='menu']")
+  }), "something is drawn over the menu").toBe(true)
+  const entry = (await menu.getByRole("menuitem").allInnerTexts()).at(-1)!.trim()
+  await menu.getByRole("menuitem", { name: entry }).click()
+  // A folded tab stays folded once picked -- it is hidden, so getByRole will
+  // not find it. Match it by text, which reaches hidden elements, and check
+  // the "..." button lights to say the open panel lives behind it.
+  await expect(results.locator("[role='tab']", { hasText: entry })).toHaveAttribute("aria-selected", "true")
+  await expect(own.locator("button[title='More analyses']")).toHaveAttribute("data-variant", "default")
+  await expect(menu).toHaveCount(0)
+
+  // Close the rail: the room it frees must go to the tabs.
+  await own.getByRole("button", { name: "Chart", exact: true }).first().click()
+  await own.getByRole("button", { name: "Hide the market and trade panels" }).click()
+  await expect.poll(async () => (await state()).shown).toBeGreaterThan(withRail.shown)
+  const noRail = await state()
+  expect(noRail.clipped).toBe(0)
+  expect(noRail.shown === 14 ? noRail.more : 1, "every tab fits but '...' is still there").toBe(noRail.shown === 14 ? 0 : 1)
+  await own.close()
+})
+
+/**
+ * The Volume Profile dialog's day-range table is a picker, not just a list.
+ * Reported as "I can't select it". Its own page: it changes what the chart
+ * shows, and the shared page's other tests read the chart.
+ */
+test("a Volume Profile day-range row switches the chart to that interval", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const own = await browser.newPage()
+  await signIn(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+
+  const shown = () => own.getByTestId("chart-interval").first().innerText()
+  const before = await shown()
+  await own.locator("button[aria-label='Volume Profile settings']").first().click()
+  const rows = own.getByRole("radiogroup", { name: "Bar interval and the history it loads" })
+  // The current interval is the checked row, before anything is clicked.
+  await expect(rows.locator("[aria-checked='true']")).toHaveCount(1)
+  await rows.getByRole("radio", { name: /^15m,/ }).click()
+  await expect.poll(shown, { message: "the row was clicked and the chart did not move", timeout: 60_000 })
+    .not.toBe(before)
+  expect(await shown()).toBe("15")
+  await own.close()
+})
