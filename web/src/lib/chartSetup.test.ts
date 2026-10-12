@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest"
 import {
   ALL_CHART_TIMEFRAMES, INTRADAY_TIMEFRAMES, daysFor, daysForSet, isDailyOrLonger, isMaxHistory,
-  isSpecified, maxRangeDaysFor, rangeLabel, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
+  isSpecified, maxRangeDaysFor, rangeLabel, TF_MINUTES, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
 } from "./chartSetup"
 import { MAX_HISTORY_DAYS, MAX_RANGE_DAYS } from "./dayRange"
 
@@ -222,5 +222,27 @@ describe("rangeLabel reads the specified table and invents nothing", () => {
   it("covers every offered interval except the three left blank", () => {
     const unlabelled = ALL_CHART_TIMEFRAMES.filter((tf) => rangeLabel(tf) == null)
     expect(unlabelled).toEqual(["3m", "25m", "35m"])
+  })
+})
+
+/**
+ * Every intraday timeframe the app offers must have a minutes entry.
+ *
+ * THE BUG THIS CATCHES. 3m replaced 2m in the list and the minutes table,
+ * then in another file, was not updated. Market Grid divided by undefined,
+ * marked 3m as needing a refetch it did not need, and mis-sorted it.
+ */
+describe("TF_MINUTES covers every offered intraday timeframe", () => {
+  it.each([...INTRADAY_TIMEFRAMES])("%s has a minutes entry", (tf) => {
+    expect(Number.isInteger(TF_MINUTES[tf]) && TF_MINUTES[tf] > 0).toBe(true)
+  })
+
+  it("can build 3m from 1-minute bars, so it needs no refetch", () => {
+    expect(TF_MINUTES["3m"] % TF_MINUTES["1m"]).toBe(0)
+  })
+
+  it("orders the offered timeframes by length, as Market Grid sorts its rows", () => {
+    const sorted = [...INTRADAY_TIMEFRAMES].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])
+    expect(sorted).toEqual([...INTRADAY_TIMEFRAMES])
   })
 })

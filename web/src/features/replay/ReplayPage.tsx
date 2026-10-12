@@ -31,7 +31,7 @@ import { DollarSign, Boxes, Link2, Gauge as GaugeIcon, RotateCcw } from "lucide-
 import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
-import { INTRADAY_TIMEFRAMES, startDateForTimeframes } from "@/lib/chartSetup"
+import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { buildPocColumns } from "@/lib/pocColumns"
@@ -172,10 +172,6 @@ const TZ_CHOICES = SESSION_ZONES
 // intraday part of it: daily and weekly bars cannot be replayed from the
 // 1-minute bars every pane is built from.
 const ALL_TIMEFRAMES = INTRADAY_TIMEFRAMES
-const TF_MINUTES: Record<string, number> = {
-  "1m": 1, "2m": 2, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
-  "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60, "2h": 120, "4h": 240,
-}
 
 /** Can `tf` be resampled out of a frame held at `source`?
  *

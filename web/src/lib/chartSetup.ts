@@ -105,6 +105,24 @@ export const ALL_CHART_TIMEFRAMES = [
   "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
 ] as const
 
+/**
+ * Minutes per intraday timeframe -- the frontend's copy of TF_MINUTES in
+ * src/data/resample.py.
+ *
+ * MOVED HERE from ReplayPage on 2026-10-12, beside the list it has to cover.
+ * When 3m replaced 2m, the list was updated and this table, sitting alone in
+ * another file, was not: TF_MINUTES["3m"] was undefined, so Market Grid
+ * computed 3 % 1 as NaN, decided 3m could not be built from 1-minute bars and
+ * marked it "refetches", and its bar-close times and row order came out wrong
+ * too. A test now fails if any offered intraday timeframe is missing here.
+ *
+ * 2m and 40m stay: the engine still accepts both for stored sessions.
+ */
+export const TF_MINUTES: Record<string, number> = {
+  "1m": 1, "2m": 2, "3m": 3, "5m": 5, "10m": 10, "15m": 15, "20m": 20, "25m": 25,
+  "30m": 30, "35m": 35, "40m": 40, "45m": 45, "1h": 60, "2h": 120, "4h": 240,
+}
+
 /** Daily and weekly bars -- whole trading days, not a bin within one. */
 export function isDailyOrLonger(timeframe: string): boolean {
   return timeframe === "1d" || timeframe === "1w"
