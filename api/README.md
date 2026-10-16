@@ -15,11 +15,11 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Does** | Turns HTTP requests into calls on [`src`](../src), and answers **who is asking** |
-| 🔐 **Guards** | Every route except sign-in, OAuth and health needs a session |
+| 🎯 **Does** | Turns HTTP requests into calls on [`src`](../src), as the workspace account |
+| 🔐 **Guards** | No sign-in. Every route refuses cross-origin writes |
 | 🧩 **Owns nothing** | No strategy or indicator logic lives here — it is a thin consumer |
 | 📁 **Path** | `api/` |
-| 📦 **Holds** | `12` files · `2,895` lines · `4` subfolders |
+| 📦 **Holds** | `8` files · `1,026` lines · `4` subfolders |
 
 
 ---
@@ -30,10 +30,10 @@
    browser
       │
       ▼
-   ┌──────────────┐   session cookie    ┌──────────────┐
-   │  routers/    │ ──────────────────► │   auth.py    │  argon2id · sessions
-   │  the routes  │ ◄────────────────── │   the guard  │  throttles · the guard
-   └──────┬───────┘      user or 401    └──────────────┘
+   ┌──────────────┐   every request     ┌──────────────┐
+   │  routers/    │ ──────────────────► │   auth.py    │  workspace account
+   │  the routes  │ ◄────────────────── │              │  cross-origin check
+   └──────┬───────┘  workspace or 403   └──────────────┘
           │
           ▼
    ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
@@ -49,10 +49,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`auth.py`](auth.py) | 🔐 argon2id hashing, session cookies, the route guard, and the three rate limiters. | 564 |
-| [`oauth.py`](oauth.py) | 🌐 The four providers — Google · LinkedIn · GitHub · X — PKCE, token exchange, profile normalising. | 403 |
-| [`verification.py`](verification.py) | ✉️ Resend delivery: confirmation, password reset, username reminder. | 655 |
-| [`captcha.py`](captcha.py) | 🛡 Cloudflare Turnstile. Dormant without keys, and fails **closed** with them. | 127 |
+| [`auth.py`](auth.py) | 🔐 No sign-in: resolves the workspace account and refuses cross-origin writes. | 83 |
 | [`serializers.py`](serializers.py) | Turns engine objects into the JSON the UI expects; blanks VWAP on daily and weekly bars, which have no session to anchor it to. | 359 |
 | [`main.py`](main.py) | The app object: routers, CORS, logging, and the unhandled-error handler. | 200 |
 | [`store.py`](store.py) | Result cache keyed by **(user_id, backtest_id)** — a hit returns before any query, so the owner must be in the key. | 132 |

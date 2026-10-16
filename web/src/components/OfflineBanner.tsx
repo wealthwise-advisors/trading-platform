@@ -1,14 +1,11 @@
 /**
  * Says so when the browser loses the network, and says so again when it comes back.
  *
- * WHY THIS IS NOT A LOGOUT
- * ------------------------
- * Losing the network and losing a session look identical from inside a failed
- * fetch, and treating the first as the second is the classic version of this
- * bug: it strands someone on a sign-in page that also cannot reach the server.
- * AuthGate already refuses to make that mistake; this is the other half of the
- * same rule -- tell them the connection is gone, leave the app exactly where it
- * was, and let them retry when it returns.
+ * WHY IT LEAVES THE APP WHERE IT IS
+ * ---------------------------------
+ * A lost connection is temporary. Tell the user it is gone, leave the app
+ * exactly where it was, and let them retry when it returns -- rather than
+ * replacing the screen with an error they would have to navigate back from.
  *
  * `navigator.onLine` is honest about being offline and optimistic about being
  * online: it reports true for a machine on a wifi network with no route out.

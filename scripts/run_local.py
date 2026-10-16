@@ -1,10 +1,10 @@
-"""Run the whole AutoTrader app on this machine: sign-in page + dashboard.
+"""Run the whole AutoTrader app on this machine.
 
     py -3.12 scripts/run_local.py
 
-Serves the sign-in page, the built dashboard and the API from ONE origin on
-http://127.0.0.1:8800 -- the same shape nginx gives in production, which is
-what makes the session cookie behave identically here and there.
+Serves the built dashboard and the API from ONE origin on
+http://127.0.0.1:8800 -- the same shape nginx gives in production. There is no
+sign-in (removed 2026-10-16): the browser opens straight onto the dashboard.
 
 Nothing about this touches the deployed server, and nothing here needs GitHub.
 
@@ -34,29 +34,16 @@ DB = ROOT / "data" / "local-demo.db"
 env = dict(
     os.environ,
     AUTOTRADER_DB_PATH=str(DB),
-    # This is plain http on localhost. A Secure cookie would never be stored by
-    # the browser here, so the login would appear to do nothing at all.
-    AUTOTRADER_INSECURE_COOKIE="1",
     PYTHONPATH=str(ROOT),
 )
 
 
 def find_pages() -> Path:
-    """Collect the sign-in pages and the built dashboard into one folder."""
+    """Collect the built dashboard into one folder."""
     site = ROOT / "data" / "local-site"
     site.mkdir(parents=True, exist_ok=True)
     found = []
 
-    # ORDER MATTERS: the dashboard bundle goes down FIRST, the sign-in pages
-    # on top of it.
-    #
-    # Vite copies web/public/ verbatim into web/dist/, so a stale local build
-    # carries its own copy of both pages. Copying dist last therefore
-    # overwrote the fresh pages with whatever the last `npm run build`
-    # happened to contain -- and web/dist is gitignored, so it can be weeks
-    # old while everything else is current. The rig then served a version of
-    # the sign-in page that existed nowhere else, which reads as "my change
-    # did not work" and is impossible to explain by looking at the files.
     dist = ROOT / "web" / "dist"
     if dist.is_dir():
         import shutil
@@ -69,12 +56,11 @@ def find_pages() -> Path:
                 shutil.copy2(item, dest)
         found.append("dashboard (web/dist)")
 
+    # The sign-in and sign-up pages used to be layered on top here. They went
+    # with sign-in; drop any copies an earlier run left behind, so the rig
+    # cannot serve a login page that no longer exists anywhere else.
     for name in ("autotrader_signin.html", "autotrader_signup.html"):
-        for src in (DESKTOP / name, ROOT / "web" / "public" / name):
-            if src.is_file():
-                (site / name).write_bytes(src.read_bytes())
-                found.append(name)
-                break
+        (site / name).unlink(missing_ok=True)
     return site, found
 
 
@@ -112,11 +98,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if self.headers.get(h):
                 req.add_header(h, self.headers[h])
         try:
-            # _NoRedirect, not urlopen: urlopen FOLLOWS a redirect itself, so an
-            # OAuth start -- which answers 303 to accounts.google.com -- would be
-            # fetched by this dev server instead of by the browser. The person
-            # would never see the consent screen, and this process would be the
-            # one talking to Google. A proxy must hand the 303 back untouched.
+            # _NoRedirect, not urlopen: urlopen FOLLOWS a redirect itself, so a
+            # redirect from the API would be fetched by this dev server instead
+            # of by the browser. A proxy hands a 3xx back untouched, as nginx
+            # does in production.
             with _NO_REDIRECT.open(req, timeout=120) as r:
                 data, status, hdrs = r.read(), r.status, r.headers
         except urllib.error.HTTPError as e:
@@ -137,11 +122,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/api/"):
             return self._proxy("GET")
         if self.path in ("/", "/index.html"):
-            # Land on the dashboard if it is built -- its own gate will send an
-            # unauthenticated visitor to the sign-in page, which is the flow
-            # worth seeing. Without a build, go straight to sign-in.
-            self.path = "/index.html" if (self.site / "index.html").is_file() \
-                else "/autotrader_signin.html"
+            self.path = "/index.html"
         return super().do_GET()
 
     def do_POST(self):
@@ -177,10 +158,9 @@ def main() -> int:
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
     print(f"\n  AutoTrader is running at  {BASE}")
-    print(f"  sign-in page:             {BASE}/autotrader_signin.html")
     print(f"  database:                 {DB}")
-    print("\n  No account yet?  py -3.12 scripts/manage_users.py add <username>")
-    print("     (set AUTOTRADER_DB_PATH to the database above first)")
+    if not (site / "index.html").is_file():
+        print("\n  No dashboard build found -- run `npm run build` in web/ first.")
     print("\n  Ctrl+C to stop.\n")
     webbrowser.open(BASE)
 

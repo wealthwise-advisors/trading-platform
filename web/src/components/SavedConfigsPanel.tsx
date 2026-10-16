@@ -145,8 +145,8 @@ export function SavedConfigsPanel() {
         !error && (
           <p className="text-xs text-muted-foreground">
             No saved configurations yet. Set up the panel above the way you like
-            it, give it a name, and press Save — it will be here on any device
-            you sign in from.
+            it, give it a name, and press Save — it is kept on the server, so
+            it will be here on any device that opens the app.
           </p>
         )
       ) : (

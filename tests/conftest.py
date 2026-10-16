@@ -2,21 +2,22 @@
 
 WHY THIS EXISTS
 ---------------
-Every API route now requires a session. Six test modules predate that and build
-a TestClient directly, so from the guard's point of view they became anonymous
-callers and started collecting 401s. The fix is to sign them in, not to loosen
-the guard.
+Every API route runs through require_user, which resolves the workspace
+account from the database (sign-in was removed on 2026-10-16). Most test
+modules build a TestClient against whatever database happens to be configured,
+so require_user is overridden at SESSION scope with a fixed stand-in -- the
+tests do not depend on, or write an account into, a real database.
 
 ORDERING MATTERS HERE
 ---------------------
 The override is installed at SESSION scope. A function-scoped fixture is not
-early enough: several of those modules build their fixtures at module scope --
-posting a backtest once and reusing the id -- and those run before any
-function-scoped fixture, so the setup itself was collecting the 401.
+early enough: several modules build their fixtures at module scope -- posting
+a backtest once and reusing the id -- and those run before any
+function-scoped fixture.
 
-tests/test_auth.py is exempted per-test, because it is the file asserting the
-guard actually refuses people. Exempting it would leave a security suite that
-proves nothing.
+A handful of modules exercise the REAL dependency against their own scratch
+database -- the workspace account itself, onboarding, the cross-origin check,
+a restored backup. They are listed in _REAL_WORKSPACE_SUITES below.
 """
 
 import pytest
@@ -26,7 +27,7 @@ from api.auth import require_user
 from api.main import app
 from db.users import User
 
-#: A stand-in for a signed-in operator. Never written to a database -- the
+#: A stand-in for the workspace account. Never written to a database -- the
 #: dependency is replaced outright, so nothing looks this user up.
 TEST_USER = User(id=1, username="testrunner", password_hash="", full_name="Test Runner",
                  email="test@example.invalid", country="", phone="", is_active=True)
@@ -36,11 +37,9 @@ def _override():
     return TEST_USER
 
 
-#: The websocket guard is NOT a FastAPI dependency -- it reads the cookie
-#: itself, because a socket handshake never runs the dependency chain. So
-#: dependency_overrides does not reach it and it has to be swapped separately.
-#: That asymmetry is the whole reason websockets get left unprotected, and it
-#: shows up here as two overrides rather than one.
+#: The websocket resolver is NOT a FastAPI dependency -- a socket handshake
+#: never runs the dependency chain -- so dependency_overrides does not reach it
+#: and it has to be swapped separately.
 _REAL_WS_GUARD = auth_mod.user_for_websocket
 
 
@@ -49,7 +48,7 @@ async def _override_ws(websocket):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _signed_in_for_the_session():
+def _workspace_for_the_session():
     """Installed before any module-scoped fixture gets a chance to call the API."""
     app.dependency_overrides[require_user] = _override
     auth_mod.user_for_websocket = _override_ws
@@ -58,58 +57,24 @@ def _signed_in_for_the_session():
     auth_mod.user_for_websocket = _REAL_WS_GUARD
 
 
-#: The suites that assert the guard REFUSES people. They must run against the
-#: real dependency; exempting them would leave a security suite proving nothing.
+#: Modules that run against the REAL require_user and their own scratch
+#: database, because what they test IS the workspace account: which account it
+#: resolves to, onboarding stored on it, the cross-origin refusal, and a
+#: restored backup coming up as the same workspace. Under the override every
+#: one of those would be answered by the stand-in above and prove nothing.
 #:
-#: An explicit set, and not `name.endswith("test_auth")`, because that spelling
-#: silently decided the question for every file added later: a new module called
-#: test_oauth.py would have run with require_user overridden and its refusal
-#: assertions would have passed without ever reaching the guard.
-#:
-#: test_isolation matters most of all here: it signs in as two DIFFERENT people
-#: and asserts neither can reach the other's data. Under the override both
-#: clients resolve to the same TEST_USER, so every assertion would pass while
-#: testing nothing at all.
-_SECURITY_SUITES = {"test_auth", "test_oauth_auth", "test_isolation",
-                    "test_reset_auth",
-                    # Asserts that a RESTORED database still refuses an
-                    # anonymous caller. Without this entry that assertion runs
-                    # against the override below, which can never produce a
-                    # 401 -- so it would pass while testing nothing, which is
-                    # the exact failure this set exists to prevent.
-                    "test_backup_restore",
-                    # Both assert refusals: the delete route must turn away an
-                    # anonymous caller and a wrong password, and the gate suite
-                    # exists precisely to watch require_user refuse an unproved
-                    # address. Under the override neither reaches the guard.
-                    "test_account_deletion", "test_verification_gate",
-                    # Signs in as two different people and asserts
-                    # neither can reach the other's saved configs.
-                    "test_account_data",
-                    # Asserts that registration, login and recovery all
-                    # refuse IDENTICALLY whether or not an account exists.
-                    "test_enumeration",
-                    # Code sign-in: asserts the code dies after five wrong
-                    # guesses and that neither route reveals whether an
-                    # address has an account.
-                    "test_login_code",
-                    # Asserts both phone routes refuse an anonymous
-                    # caller with 401 rather than 422, and that a number
-                    # proved by one account cannot be claimed by another.
-                    "test_phone_verification",
-                    # Paper-trading sessions. Asserts every /api/live route
-                    # refuses an anonymous caller, and that one account's
-                    # session is invisible to another -- under the override
-                    # both clients resolve to the same TEST_USER and the
-                    # isolation assertion would pass while proving nothing.
-                    "test_live_sessions"}
+#: An explicit set, not a name pattern, so a new file is never swept in or out
+#: by accident.
+_REAL_WORKSPACE_SUITES = {"test_isolation", "test_backup_restore",
+                          "test_account_deletion", "test_account_data",
+                          "test_live_sessions"}
 
 
 @pytest.fixture(autouse=True)
-def _real_guard_for_auth_tests(request):
-    """The security suites run against the genuine dependency, not the override."""
+def _real_workspace_for_its_suites(request):
+    """Those suites run against the genuine dependency, not the override."""
     name = getattr(request.module, "__name__", "").rsplit(".", 1)[-1]
-    if name not in _SECURITY_SUITES:
+    if name not in _REAL_WORKSPACE_SUITES:
         yield
         return
 

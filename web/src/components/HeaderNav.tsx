@@ -19,7 +19,7 @@ import {
   BarChart2, BarChart3, CandlestickChart, FileText, LineChart, Search, Settings, Zap,
 } from "lucide-react"
 
-import { api, auth, SIGN_IN_PAGE, type Me } from "@/lib/api"
+import { api, type Me } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
 
 type Page = "backtest" | "replay" | "export"
@@ -197,52 +197,25 @@ export function SymbolSearch() {
   )
 }
 
-/** The avatar, and the two things that used to be loose buttons in the bar. */
-export function AccountMenu({ user, onOpenAccount }: { user: Me; onOpenAccount: () => void }) {
-  const [open, setOpen] = useState(false)
-  const box = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const away = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", away)
-    return () => document.removeEventListener("mousedown", away)
-  }, [])
-
+/**
+ * The workspace badge: the account's initials, where the reference puts the
+ * avatar.
+ *
+ * It used to open a menu holding "Account settings" and "Sign out". Both went
+ * with sign-in on 2026-10-16 -- there is no account to manage and no session
+ * to end -- so this is a badge now, not a button. It stays because the
+ * header's design has it, and it still says whose workspace this is.
+ */
+export function WorkspaceBadge({ user }: { user: Me }) {
   return (
-    <div ref={box} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Account menu for ${user.full_name || user.username}`}
-        title={user.email}
-        className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,var(--accent),#5a49d8)]
-                   text-[11px] font-bold text-white ring-1 ring-[color:var(--hairline-firm)]"
-      >
-        {initials(user)}
-      </button>
-      {open && (
-        <div role="menu"
-             className="absolute right-0 z-50 mt-1 w-52 overflow-hidden rounded-lg border border-[color:var(--hairline-mid)]
-                        bg-[var(--surface-1)] py-1 shadow-xl">
-          <p className="truncate px-3 py-1.5 text-[11px] text-muted-foreground" title={user.email}>
-            {user.full_name || user.username}
-          </p>
-          <button type="button" role="menuitem"
-                  onClick={() => { setOpen(false); onOpenAccount() }}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-[color:var(--raise-3)]">
-            Account settings
-          </button>
-          <button type="button" role="menuitem"
-                  onClick={async () => { await auth.logout(); window.location.assign(SIGN_IN_PAGE) }}
-                  className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-[color:var(--raise-3)]">
-            Sign out
-          </button>
-        </div>
-      )}
-    </div>
+    <span
+      role="img"
+      aria-label={`Workspace: ${user.full_name || user.username}`}
+      title={user.full_name || user.username}
+      className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,var(--accent),#5a49d8)]
+                 text-[11px] font-bold text-white ring-1 ring-[color:var(--hairline-firm)] select-none"
+    >
+      {initials(user)}
+    </span>
   )
 }

@@ -6,6 +6,12 @@
 **Status:** Phases 1–7 complete · Phase 8 (beta testing) not started
 **Created:** 2026-08-31
 
+> **Note, 2026-10-16 — sign-in has since been removed.** The app now opens
+> straight from its link and every request runs as one workspace account.
+> The phases below that built accounts, email verification, password reset,
+> OAuth and account deletion are kept as the historical record of what was
+> done; those features no longer exist in the codebase.
+
 > [!NOTE]
 > **This document was newly created on 2026-08-31.** The repository had no
 > project-wide implementation plan: [`ELLIOTT_WAVE.md`](ELLIOTT_WAVE.md#implementation)

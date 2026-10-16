@@ -2,9 +2,9 @@
 
 # 🗄 The Database
 
-**SQLite. Every account, session and saved backtest.**
+**SQLite. The workspace account, saved configurations and saved backtests.**
 
-![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white) ![passwords](https://img.shields.io/badge/passwords-argon2id-7c6cf5?style=flat-square) ![tokens](https://img.shields.io/badge/tokens-SHA----256-22c55e?style=flat-square)
+![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=flat-square&logo=sqlite&logoColor=white) ![tokens](https://img.shields.io/badge/tokens-SHA----256-22c55e?style=flat-square)
 
 </div>
 
@@ -27,9 +27,7 @@
 ## 🔄 How it fits together
 
 ```
-   users ─┬─► sessions          SHA-256 of the cookie, never the cookie
-          ├─► oauth_identities  matched on the provider's permanent subject
-          ├─► email_tokens      confirm · reset · reminder, single-use
+   users ─┬─► user_configs      saved sidebar setups
           └─► backtests ──► trades · equity · patterns · waves
                   ▲
                   └── every row carries user_id. That is the isolation.
@@ -42,7 +40,7 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`users.py`](users.py) | 👥 Accounts, sessions, OAuth identities and email tokens — everything about **people**. | 1,056 |
+| [`users.py`](users.py) | 👥 The workspace account, saved configurations and onboarding. The old session/OAuth tables remain in the schema, unused. | 359 |
 | [`schema.sql`](schema.sql) | 🧱 The tables. Every statement is `IF NOT EXISTS`, so applying it is idempotent. | 375 |
 | [`connection.py`](connection.py) | 🔌 Opening the file, the PRAGMAs, and applying + versioning the schema. | 243 |
 | [`backtests.py`](backtests.py) | 📊 The only module that knows the backtest table layout. | 280 |

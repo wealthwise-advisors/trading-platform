@@ -322,54 +322,9 @@ jobs:
             esac
             echo "TLS hostname: $TLS_DOMAIN"
 
-            # OAuth sign-in. Each of these is unset until the matching repo
-            # secret exists, and unset means that provider reports itself as
-            # unconfigured and its button says so -- the deploy still succeeds.
-            #
-            # AUTOTRADER_PUBLIC_BASE_URL must equal the origin registered as the
-            # redirect URI at each provider, character for character. It follows
-            # $TLS_DOMAIN by default, which follows the elastic IP: if that IP
-            # ever changes, TLS_DOMAIN changes with it and every registered
-            # redirect URI stops matching until they are re-registered. Set the
-            # OAUTH_PUBLIC_BASE_URL secret to a stable custom domain to break
-            # that dependency.
-            OAUTH_BASE="${{ secrets.OAUTH_PUBLIC_BASE_URL }}"
-            [ -n "$OAUTH_BASE" ] || OAUTH_BASE="https://$TLS_DOMAIN"
-            echo "OAuth redirect base: $OAUTH_BASE"
-
-            # Which optional integrations is this deploy carrying?
-            #
-            # PRESENCE only -- never a value, and never a length, which for a
-            # key of known format is a fingerprint.
-            #
-            # This exists because the failure it catches is invisible from
-            # outside: an application reporting a feature as "dormant" looks
-            # identical whether the secret was never created or was created and
-            # never plumbed through to the container. The second case is what
-            # happened to all four of the names below, and it cost a full
-            # round-trip of "the secrets are set" / "the app says they are not".
-            report_secret() {
-              if [ -n "$2" ]; then echo "  present: $1"; else echo "  ABSENT : $1"; fi
-            }
-            echo "---- optional integrations ----"
-            report_secret AUTOTRADER_RESEND_API_KEY \
-              "${{ secrets.AUTOTRADER_RESEND_API_KEY }}"
-            report_secret AUTOTRADER_MAIL_FROM \
-              "${{ secrets.AUTOTRADER_MAIL_FROM }}"
-            report_secret AUTOTRADER_SMS_PROVIDER "${{ secrets.AUTOTRADER_SMS_PROVIDER }}"
-            report_secret AUTOTRADER_SMTP_HOST "${{ secrets.AUTOTRADER_SMTP_HOST }}"
-            report_secret AUTOTRADER_SMTP_USER "${{ secrets.AUTOTRADER_SMTP_USER }}"
-            report_secret AUTOTRADER_SMTP_PASSWORD "${{ secrets.AUTOTRADER_SMTP_PASSWORD }}"
-            report_secret AUTOTRADER_REQUIRE_VERIFIED_EMAIL \
-              "${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}"
-            report_secret AUTOTRADER_TURNSTILE_SITE_KEY \
-              "${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}"
-            report_secret AUTOTRADER_TURNSTILE_SECRET_KEY \
-              "${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}"
-            report_secret GOOGLE_CLIENT_ID "${{ secrets.GOOGLE_CLIENT_ID }}"
-            report_secret LINKEDIN_CLIENT_ID "${{ secrets.LINKEDIN_CLIENT_ID }}"
-            report_secret TWITTER_CLIENT_ID "${{ secrets.TWITTER_CLIENT_ID }}"
-            report_secret GH_OAUTH_CLIENT_ID "${{ secrets.GH_OAUTH_CLIENT_ID }}"
+            # Sign-in was removed on 2026-10-16: the OAuth, mail, SMS and
+            # CAPTCHA secrets fed only that, and are no longer passed to the
+            # container. The repo secrets themselves are untouched.
 
             WEB_PORT=80 \
             TLS_PORT=443 \
@@ -377,31 +332,6 @@ jobs:
             AUTOTRADER_CORS_ORIGINS="http://${{ secrets.EC2_HOST }},https://$TLS_DOMAIN" \
             AUTOTRADER_COMMIT="${{ github.sha }}" \
             AUTOTRADER_ENABLE_DOCS="0" \
-            AUTOTRADER_PUBLIC_BASE_URL="$OAUTH_BASE" \
-            AUTOTRADER_GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            AUTOTRADER_GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            AUTOTRADER_LINKEDIN_CLIENT_ID="${{ secrets.LINKEDIN_CLIENT_ID }}" \
-            AUTOTRADER_LINKEDIN_CLIENT_SECRET="${{ secrets.LINKEDIN_CLIENT_SECRET }}" \
-            AUTOTRADER_TWITTER_CLIENT_ID="${{ secrets.TWITTER_CLIENT_ID }}" \
-            AUTOTRADER_TWITTER_CLIENT_SECRET="${{ secrets.TWITTER_CLIENT_SECRET }}" \
-            AUTOTRADER_GITHUB_CLIENT_ID="${{ secrets.GH_OAUTH_CLIENT_ID }}" \
-            AUTOTRADER_GITHUB_CLIENT_SECRET="${{ secrets.GH_OAUTH_CLIENT_SECRET }}" \
-            AUTOTRADER_RESEND_API_KEY="${{ secrets.AUTOTRADER_RESEND_API_KEY }}" \
-            AUTOTRADER_MAIL_FROM="${{ secrets.AUTOTRADER_MAIL_FROM }}" \
-            AUTOTRADER_SMTP_HOST="${{ secrets.AUTOTRADER_SMTP_HOST }}" \
-            AUTOTRADER_SMTP_PORT="${{ secrets.AUTOTRADER_SMTP_PORT }}" \
-            AUTOTRADER_SMTP_USER="${{ secrets.AUTOTRADER_SMTP_USER }}" \
-            AUTOTRADER_SMTP_PASSWORD="${{ secrets.AUTOTRADER_SMTP_PASSWORD }}" \
-            AUTOTRADER_SMS_PROVIDER="${{ secrets.AUTOTRADER_SMS_PROVIDER }}" \
-            AUTOTRADER_TWILIO_ACCOUNT_SID="${{ secrets.AUTOTRADER_TWILIO_ACCOUNT_SID }}" \
-            AUTOTRADER_TWILIO_AUTH_TOKEN="${{ secrets.AUTOTRADER_TWILIO_AUTH_TOKEN }}" \
-            AUTOTRADER_TWILIO_FROM="${{ secrets.AUTOTRADER_TWILIO_FROM }}" \
-            AUTOTRADER_MSG91_AUTH_KEY="${{ secrets.AUTOTRADER_MSG91_AUTH_KEY }}" \
-            AUTOTRADER_MSG91_SENDER_ID="${{ secrets.AUTOTRADER_MSG91_SENDER_ID }}" \
-            AUTOTRADER_MSG91_TEMPLATE_ID="${{ secrets.AUTOTRADER_MSG91_TEMPLATE_ID }}" \
-            AUTOTRADER_REQUIRE_VERIFIED_EMAIL="${{ secrets.AUTOTRADER_REQUIRE_VERIFIED_EMAIL }}" \
-            AUTOTRADER_TURNSTILE_SITE_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SITE_KEY }}" \
-            AUTOTRADER_TURNSTILE_SECRET_KEY="${{ secrets.AUTOTRADER_TURNSTILE_SECRET_KEY }}" \
             docker compose up --build -d --remove-orphans
 
             docker image prune -f          # t3.micro has an 8 GiB disk

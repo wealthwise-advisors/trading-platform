@@ -10,35 +10,29 @@
  */
 
 import { expect, type Locator, type Page } from "@playwright/test"
-import { E2E_PASSWORD, E2E_USER } from "./global-setup"
-
-/** Sign in and land on the dashboard. */
-export async function signIn(page: Page) {
+/**
+ * Open the app and land on the dashboard.
+ *
+ * There is no sign-in any more (removed 2026-10-16): the link opens straight
+ * into the app. This replaces signIn(), which filled the login form.
+ *
+ * The workspace account starts un-onboarded on a fresh test database, so the
+ * first visit shows the introduction. Skip is on every step of it by design,
+ * so this takes the same way out a user has.
+ *
+ * WAIT FOR EITHER, THEN DECIDE. Asking `isVisible()` straight after the
+ * navigation reads the page before anything has rendered: it answers false,
+ * the skip never happens, and the run fails later on a nav that never came.
+ * `.or()` waits until one of the two is actually on screen.
+ */
+export async function openApp(page: Page) {
   await page.goto("/")
-  const user = page.locator("input[name='username'], #username")
-  await expect(user).toBeVisible()
-  await user.fill(E2E_USER)
-  await page.locator("input[type='password']").fill(E2E_PASSWORD)
-  await page.locator("button[type='submit']").first().click()
-
-  // A brand-new account lands on onboarding, which is right for a person and
-  // in the way of a test. Skip is on every step of it by design, so this takes
-  // the same way out a user has.
-  //
-  // WAIT FOR EITHER, THEN DECIDE. Asking `isVisible()` straight after the
-  // click reads the page before the sign-in response has rendered anything:
-  // it answers false, the skip never happens, and the run then fails fifteen
-  // seconds later on a nav that was never going to appear. `.or()` waits until
-  // one of the two is actually on screen before anything is decided.
   const skip = page.getByRole("button", { name: "Skip" })
   const nav = page.getByRole("button", { name: "Market Grid" })
   await expect(skip.or(nav).first()).toBeVisible({ timeout: 30_000 })
   if (await skip.isVisible()) {
     await skip.click()
   }
-
-  // The nav only exists once authenticated, so it is the signal that the
-  // session cookie was accepted -- not merely that the POST returned.
   await expect(nav).toBeVisible()
 }
 

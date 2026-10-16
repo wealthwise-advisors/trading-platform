@@ -1,20 +1,15 @@
-"""The backup can be restored and signed in to.
+"""The backup can be restored, and the restored app works.
 
 A backup nobody restores is a guess, and this is the guess that costs the most
-when it turns out wrong -- signup is open, so the database now holds other
-people's accounts, not just the operator's.
+when it turns out wrong.
 
 These tests exercise scripts/sqlite_online_backup.py ITSELF rather than a
 re-implementation of it. A test that copies the logic it is testing proves only
 that two copies of the same mistake agree with each other.
 
-WHY THIS MODULE IS IN _SECURITY_SUITES
---------------------------------------
-It asserts that an anonymous caller is REFUSED by the restored database. Every
-suite outside `_SECURITY_SUITES` runs with `require_user` overridden to a
-signed-in user, so without that entry this file would assert a 401 against a
-fixture that can never produce one -- and pass while testing nothing. See
-tests/conftest.py.
+Sign-in was removed on 2026-10-16, so "can it be signed in to" is no longer the
+question. The question is the same one underneath: pointed at the restored
+file, does the app come up as the same workspace with the same data?
 """
 
 from __future__ import annotations
@@ -34,29 +29,25 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from sqlite_online_backup import BackupError, online_backup  # noqa: E402
 
-PASSWORD = "Restore-Test-Passw0rd"
 USERNAME = "restoreprobe"
+CONFIG_NAME = "restore-probe-config"
 
 
 @pytest.fixture()
 def seeded(tmp_path, monkeypatch):
-    """A database with a real account, an OAuth identity and a session."""
+    """A database with an account and a saved configuration on it."""
     from db import connection
     from db import users as repo
-    from api import auth
 
     db = tmp_path / "live" / "autotrader.db"
     db.parent.mkdir(parents=True)
     monkeypatch.setattr(connection, "DB_PATH", db)
     connection.connect(db).close()
 
-    uid = repo.create_user(USERNAME, auth.hash_password(PASSWORD),
-                           full_name="Restore Probe",
+    uid = repo.create_user(USERNAME, "!", full_name="Restore Probe",
                            email="restore@example.invalid",
-                           email_verified=True, db=db)
-    repo.link_identity(uid, "google", "restore-subject-1",
-                       email="restore@example.invalid")
-    repo.new_session(uid, ip="127.0.0.1", user_agent="restore-test", db=db)
+                           has_password=False, db=db)
+    repo.save_config(uid, CONFIG_NAME, '{"symbol": "ES"}', db=db)
     return db, uid
 
 
@@ -115,13 +106,12 @@ def test_the_snapshot_is_consistent_under_a_concurrent_writer(seeded):
         c = sqlite3.connect(db, timeout=30)
         c.execute("PRAGMA journal_mode=WAL")
         while not stop.is_set():
+            # Saved configurations: real, still-used account data, and a
+            # unique name per row so every insert genuinely writes.
             c.execute(
-                "INSERT INTO sessions (user_id, token_hash, created_at,"
-                " expires_at, last_seen_at, ip, user_agent)"
-                " VALUES (?,?,?,?,?,?,?)",
-                (uid, os.urandom(16).hex(), "2026-01-01T00:00:00",
-                 "2099-01-01T00:00:00", "2026-01-01T00:00:00",
-                 "127.0.0.1", "churn"))
+                "INSERT INTO user_configs (user_id, name, payload, saved_at)"
+                " VALUES (?,?,?,?)",
+                (uid, os.urandom(8).hex(), "{}", "2026-01-01T00:00:00"))
             c.commit()
             written["n"] += 1
             time.sleep(0.001)
@@ -153,7 +143,7 @@ def test_an_empty_database_is_refused_as_a_backup(tmp_path, monkeypatch):
         online_backup(empty, tmp_path / "out.db")
 
 
-def test_a_restored_backup_can_be_signed_in_to(seeded, tmp_path, monkeypatch):
+def test_a_restored_backup_opens_as_the_same_workspace(seeded, tmp_path, monkeypatch):
     """The only question that actually matters."""
     db, _ = seeded
     snap = tmp_path / "snap" / "autotrader.db"
@@ -178,36 +168,19 @@ def test_a_restored_backup_can_be_signed_in_to(seeded, tmp_path, monkeypatch):
 
     check = sqlite3.connect(f"file:{restored}?mode=ro", uri=True)
     assert check.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-    assert check.execute("SELECT COUNT(*) FROM oauth_identities").fetchone()[0] == 1
+    assert check.execute("SELECT COUNT(*) FROM user_configs").fetchone()[0] == 1
     check.close()
 
-    # Point the real application at the restored file and sign in over HTTP.
+    # Point the real application at the restored file and open it over HTTP.
     from db import connection
-    from api import auth as auth_mod
     monkeypatch.setattr(connection, "DB_PATH", restored)
-    # Patch the FLAG, not the environment variable. _INSECURE is read once at
-    # import time, and api.auth is already imported by the time this test runs
-    # -- so setenv here would leave Secure=True on the cookie, TestClient would
-    # drop it over http, and the session would vanish between login and the
-    # very next request. That failure looks exactly like a broken restore,
-    # which is the wrong thing for this test to be able to say.
-    monkeypatch.setattr(auth_mod, "_INSECURE", True)
     from api.main import app
 
     with TestClient(app) as client:
-        assert client.get("/api/auth/me").status_code == 401, \
-            "the restored database must still refuse an anonymous caller"
-
-        signed_in = client.post("/api/auth/login",
-                                json={"username": USERNAME, "password": PASSWORD})
-        assert signed_in.status_code == 200, \
-            f"could not sign in to the restored data: {signed_in.text}"
-
         me = client.get("/api/auth/me")
-        assert me.status_code == 200
-        assert me.json()["username"] == USERNAME
-
-        assert client.post("/api/auth/login",
-                           json={"username": USERNAME, "password": "wrong"}
-                           ).status_code != 200, \
-            "a restored database must not accept a wrong password"
+        assert me.status_code == 200, f"the restored app did not open: {me.text}"
+        assert me.json()["username"] == USERNAME, (
+            "the restored app came up as a different workspace -- "
+            "the data is not the original's")
+        names = [c["name"] for c in client.get("/api/account/configs").json()]
+        assert CONFIG_NAME in names, "the saved configuration did not survive the restore"

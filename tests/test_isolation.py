@@ -1,31 +1,20 @@
-"""One user must never reach another user's data.
+"""One account must never reach another account's data -- at the data layer.
 
-Until schema v4 the backtests and trades tables had no owner column. Every
-signed-in account could read, and delete, every result any other account had
-ever produced. With a single administrator that was invisible; the moment
-anyone can sign up it is the entire security model.
+Until schema v4 the backtests and trades tables had no owner column. That
+gap was closed in the repository layer, and these tests keep it closed.
 
-WHY THIS SUITE ENUMERATES RATHER THAN LISTING
----------------------------------------------
-The obvious way to write this is to name the endpoints. That test passes
-forever and protects nothing: the thirteenth sub-resource added next year is
-not in the list, so the one route that leaks is the one nobody wrote a case
-for. `_owned_routes()` reads the app's own OpenAPI schema instead, so a route
-added later is covered on the day it is added, and a route added later that
-leaks fails this suite without anyone remembering it exists.
+SIGN-IN WAS REMOVED on 2026-10-16. Every HTTP request now runs as one
+workspace account, so "Bob signs in and requests Alice's backtest over HTTP"
+is no longer a scenario that can happen, and those route-level tests went with
+sign-in. What stays is everything BELOW the router: the repository and store
+still scope every read, write and delete by owner, and a second account in the
+same database still cannot see the first one's rows. That guarantee does not
+depend on sign-in, and is what any future multi-account setup would rest on.
 
-WHY 404 AND NOT 403
--------------------
-Someone else's backtest must be indistinguishable from one that does not
-exist. A 403 confirms the id is real, which turns any of these endpoints into
-an oracle for enumerating other people's runs -- the same reasoning that makes
-/api/auth/login refuse an unknown username and a wrong password identically.
-
-NOTE ON conftest.py
--------------------
-This module is listed in _SECURITY_SUITES there. Without that it would run with
-require_user overridden to a single fixed user, both clients would resolve to
-the same person, and every assertion below would pass while proving nothing.
+The one HTTP sweep kept is the positive half: every route addressed by a
+{backtest_id} must still serve the workspace's own result. It enumerates the
+app's own OpenAPI schema rather than a hand-written list, so a route added
+later is covered on the day it is added.
 """
 
 
@@ -33,7 +22,7 @@ the same person, and every assertion below would pass while proving nothing.
 import pytest
 from fastapi.testclient import TestClient
 
-from api import auth, store
+from api import store
 from api.main import app
 from db import backtests as bt_repo
 from db import connection
@@ -44,7 +33,7 @@ from db import users as repo
 
 @pytest.fixture
 def db(tmp_path, monkeypatch):
-    """A scratch database, an empty throttle, and an empty result cache.
+    """A scratch database and an empty result cache.
 
     The store cache is module-level and survives between tests in one process,
     so it is cleared here -- otherwise a backtest saved by an earlier test
@@ -53,48 +42,21 @@ def db(tmp_path, monkeypatch):
     """
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "isolation.db")
     monkeypatch.setattr(bt_repo, "BLOB_DIR", tmp_path / "blobs")
-    monkeypatch.setattr(auth, "throttle", auth.Throttle())
-    # Reset the signup budget too. It is module-level and counts
-    # SUCCESSES, so without this an early test that registers
-    # accounts spends the allowance and later tests collect 429
-    # where they expected a validation error.
-    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
-    monkeypatch.setattr(auth, "recovery_throttle", auth.RecoveryThrottle())
-    monkeypatch.setattr(auth, "username_throttle", auth.RecoveryThrottle())
-    monkeypatch.setattr(auth, "verify_throttle", auth.RecoveryThrottle())
-    monkeypatch.setattr(auth, "_INSECURE", True)
     monkeypatch.setattr(store, "_store", {})
     return tmp_path
 
 
 def _make(username: str, email: str) -> int:
-    return repo.create_user(username, auth.hash_password("Correct-Horse-99"),
-                            full_name=username.title(), email=email, country="IN")
-
-
-def _sign_in(username: str) -> TestClient:
-    c = TestClient(app)
-    c.__enter__()
-    r = c.post("/api/auth/login",
-               json={"username": username, "password": "Correct-Horse-99"})
-    assert r.status_code == 200, f"{username} could not sign in: {r.text}"
-    return c
+    """An account row. No password: nothing signs in any more."""
+    return repo.create_user(username, "!", full_name=username.title(),
+                            email=email, country="IN", has_password=False)
 
 
 @pytest.fixture
-def alice(db):
-    _make("alice", "alice@example.com")
-    c = _sign_in("alice")
-    yield c
-    c.__exit__(None, None, None)
-
-
-@pytest.fixture
-def bob(db):
-    _make("bob", "bob@example.com")
-    c = _sign_in("bob")
-    yield c
-    c.__exit__(None, None, None)
+def client(db):
+    """The app as a visitor sees it: no sign-in, every request is the workspace."""
+    with TestClient(app) as c:
+        yield c
 
 
 #: The cheapest run that still produces a real stored result with trades.
@@ -108,8 +70,8 @@ RUN = {
 
 
 @pytest.fixture
-def alice_backtest(alice) -> str:
-    r = alice.post("/api/backtests", json=RUN)
+def workspace_backtest(client) -> str:
+    r = client.post("/api/backtests", json=RUN)
     assert r.status_code == 200, r.text
     return r.json()["backtest_id"]
 
@@ -136,36 +98,20 @@ def _owned_routes() -> list[tuple[str, str]]:
     return out
 
 
-def test_no_backtest_route_serves_another_users_result(bob, alice_backtest):
-    """The whole point. Every id-addressed route, swept, as the wrong user."""
-    leaked = []
-    for method, path in _owned_routes():
-        url = path.replace("{backtest_id}", alice_backtest)
-        r = bob.request(method, url)
-        # 404 is the requirement. 200 is a leak. Anything else (422, 500) means
-        # the handler ran far enough to process the id before deciding, which
-        # is not a leak but is not the contract either.
-        if r.status_code != 404:
-            leaked.append(f"{method} {path} -> {r.status_code}")
-    assert not leaked, (
-        "these served, or acknowledged, another user's backtest:\n  "
-        + "\n  ".join(leaked)
-    )
+def test_every_backtest_route_serves_the_workspaces_own_result(client, workspace_backtest):
+    """Every id-addressed route, swept, returns 200 for the result it names.
 
-
-def test_the_owner_can_still_read_every_one_of_those_routes(alice, alice_backtest):
-    """The sweep above is only meaningful if these return 200 for the owner.
-
-    Without this, deleting the feature entirely would make the isolation test
-    pass.
+    The positive half of what used to be a two-user sweep. It is what proves
+    the store's owner scoping is applied with the RIGHT owner: a route that
+    looked results up under the wrong account would 404 its own runs here.
     """
     broken = []
     for method, path in _owned_routes():
-        url = path.replace("{backtest_id}", alice_backtest)
-        r = alice.request(method, url)
+        url = path.replace("{backtest_id}", workspace_backtest)
+        r = client.request(method, url)
         if r.status_code != 200:
             broken.append(f"{method} {path} -> {r.status_code}")
-    assert not broken, "the owner cannot read their own result:\n  " + "\n  ".join(broken)
+    assert not broken, "the workspace cannot read its own result:\n  " + "\n  ".join(broken)
 
 
 # ── listing, summarising, deleting ───────────────────────────────────────────
@@ -176,54 +122,53 @@ def test_the_owner_can_still_read_every_one_of_those_routes(alice, alice_backtes
 #: They are tested at the store layer instead of through a route that does not
 #: exist, because that is the layer any future listing endpoint would call, so
 #: the isolation is already in place on the day someone adds one.
-def test_listing_shows_only_your_own_runs(db, alice_backtest):
+def _seed(user_id: int, bid: str) -> str:
+    from tests._isolation_helpers import tiny_results
+    bt_repo.insert(bid, tiny_results(), "synthetic", _t("09:30"), _t("16:00"), user_id=user_id)
+    return bid
+
+
+def test_listing_shows_only_your_own_runs(db):
     """store.list_ids is what a listing endpoint would be built on."""
-    alice_id = repo.get_user("alice").id
-    bob_id = _make("bob2", "bob2@example.com")
-
-    assert alice_backtest in store.list_ids(user_id=alice_id)
-    assert store.list_ids(user_id=bob_id) == [], "another user's runs were listed"
-
-
-def test_summaries_show_only_your_own_runs(db, alice_backtest):
-    alice_id = repo.get_user("alice").id
-    bob_id = _make("bob3", "bob3@example.com")
-
-    mine = store.summaries(user_id=alice_id)
-    assert any(r["id"] == alice_backtest for r in mine)
-    assert store.summaries(user_id=bob_id) == [], "another user's runs were summarised"
+    a, b = _make("alice", "alice@example.com"), _make("bob", "bob@example.com")
+    bid = _seed(a, "AT-list")
+    assert bid in store.list_ids(user_id=a)
+    assert store.list_ids(user_id=b) == [], "another account's runs were listed"
 
 
-def test_delete_cannot_reach_another_users_run(db, alice_backtest):
-    alice_id = repo.get_user("alice").id
-    bob_id = _make("bob4", "bob4@example.com")
+def test_summaries_show_only_your_own_runs(db):
+    a, b = _make("alice", "alice@example.com"), _make("bob", "bob@example.com")
+    bid = _seed(a, "AT-sum")
+    assert any(r["id"] == bid for r in store.summaries(user_id=a))
+    assert store.summaries(user_id=b) == [], "another account's runs were summarised"
 
-    assert store.delete(alice_backtest, user_id=bob_id) is False
+
+def test_delete_cannot_reach_another_users_run(db):
+    a, b = _make("alice", "alice@example.com"), _make("bob", "bob@example.com")
+    bid = _seed(a, "AT-del")
+    assert store.delete(bid, user_id=b) is False
     # Still there afterwards -- a delete that reports "nothing here" while
     # actually deleting would be the worst of both outcomes.
-    assert store.get(alice_backtest, user_id=alice_id) is not None
+    assert store.get(bid, user_id=a) is not None
 
 
-def test_deleting_your_own_run_still_works(db, alice_backtest):
-    alice_id = repo.get_user("alice").id
-    assert store.delete(alice_backtest, user_id=alice_id) is True
-    assert store.get(alice_backtest, user_id=alice_id) is None
+def test_deleting_your_own_run_still_works(db):
+    a = _make("alice", "alice@example.com")
+    bid = _seed(a, "AT-own")
+    assert store.delete(bid, user_id=a) is True
+    assert store.get(bid, user_id=a) is None
 
 
-# ── the cache, which bypasses SQL entirely ───────────────────────────────────
+def test_the_in_memory_cache_does_not_leak(client, workspace_backtest):
+    """A cache hit returns before any query runs, so the cache must be scoped too.
 
-
-def test_the_in_memory_cache_does_not_leak(bob, alice_backtest):
-    """A cache hit returns before any query runs.
-
-    Scoping the SQL alone would not have been enough: the result Alice just ran
-    is in the process cache, and a lookup keyed by backtest_id alone would hand
-    it to Bob without SQLite ever being consulted.
+    The run just made over HTTP is in the process cache under the workspace
+    account. A lookup for the same id under any OTHER account must still miss.
     """
-    assert (1, alice_backtest) in store._store or any(
-        bid == alice_backtest for _, bid in store._store
-    ), "precondition: Alice's result should be cached in-process"
-    assert bob.get(f"/api/backtests/{alice_backtest}").status_code == 404
+    assert any(bid == workspace_backtest for _, bid in store._store), (
+        "precondition: the result should be cached in-process")
+    other = _make("someone-else", "else@example.com")
+    assert store.get(workspace_backtest, user_id=other) is None
 
 
 # ── the repository layer, below the HTTP guard ───────────────────────────────
@@ -373,9 +318,9 @@ def test_schema_v4_columns_exist_on_an_upgraded_database(tmp_path, monkeypatch):
 def test_new_accounts_never_get_the_broker_role(db):
     """is_owner must default to 0 for anything that creates a user.
 
-    Open signup is coming. There is exactly one Schwab connection and it
-    belongs to the operator, so no registration path -- present or future --
-    may hand it out.
+    There is exactly one Schwab connection and it belongs to the operator,
+    so nothing that creates an account may hand it out -- including the
+    workspace account created when the app is first opened.
     """
     uid = _make("newcomer", "newcomer@example.com")
     conn = connection.connect()

@@ -43,9 +43,9 @@ def tmp_store(tmp_path, monkeypatch):
 
     # backtests.user_id is a foreign key and PRAGMA foreign_keys is ON, so the
     # owner has to actually exist or every insert fails the constraint.
-    from api import auth
+    # No password: nothing signs in any more (removed 2026-10-16).
     from db import users as user_repo
-    uid = user_repo.create_user("persistence-owner", auth.hash_password("x" * 14))
+    uid = user_repo.create_user("persistence-owner", "!", has_password=False)
     assert uid == OWNER, f"expected the first user to be id {OWNER}, got {uid}"
     return store
 

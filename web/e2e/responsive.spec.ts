@@ -14,7 +14,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test"
-import { goToMarketGrid, runBacktest, signIn } from "./helpers"
+import { goToMarketGrid, runBacktest, openApp } from "./helpers"
 
 const WIDTHS = [
   { width: 1280, height: 800 },
@@ -48,7 +48,7 @@ test.describe("the backtest dashboard holds its shape", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await signIn(page)
+    await openApp(page)
     await runBacktest(page)
   })
   test.afterAll(async () => { await page.close() })
@@ -100,7 +100,7 @@ test.describe("market grid holds its shape", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await signIn(page)
+    await openApp(page)
     await goToMarketGrid(page)
   })
   test.afterAll(async () => { await page.close() })

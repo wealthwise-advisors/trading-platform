@@ -12,7 +12,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test"
-import { contrastOf, expectContrast, goToMarketGrid, signIn, useLightTheme } from "./helpers"
+import { contrastOf, expectContrast, goToMarketGrid, openApp, useLightTheme } from "./helpers"
 
 const UI = 3.0
 const TEXT = 4.5
@@ -23,7 +23,7 @@ test.describe("light theme", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await signIn(page)
+    await openApp(page)
     await useLightTheme(page)
     await goToMarketGrid(page)
   })

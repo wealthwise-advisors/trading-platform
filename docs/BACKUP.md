@@ -17,7 +17,7 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Protects** | Accounts, sessions, OAuth identities, saved backtests, and the two credential files |
+| 🎯 **Protects** | The workspace account, saved configurations, saved backtests, and the two credential files |
 | ⏰ **Runs** | 03:15 UTC daily, from cron on the EC2 host |
 | 🔐 **Auth** | An **IAM instance role** — no long-lived keys on the box |
 | 🧪 **Proven by** | [`tests/test_backup_restore.py`](../tests/test_backup_restore.py) — restores, then signs in |

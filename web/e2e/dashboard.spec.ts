@@ -8,7 +8,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test"
-import { chartRangeStart, runBacktest, signIn, waitForChartSettled } from "./helpers"
+import { chartRangeStart, runBacktest, openApp, waitForChartSettled } from "./helpers"
 
 test.describe.configure({ mode: "serial" })
 
@@ -16,7 +16,7 @@ let page: Page
 
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage()
-  await signIn(page)
+  await openApp(page)
   await runBacktest(page)
 })
 
@@ -198,7 +198,7 @@ test("VWAP offers +/-1 to +/-5, and a preset writes both multipliers", async () 
  */
 test("dragging the chart still pans it", async ({ browser }) => {
   const own = await browser.newPage()
-  await signIn(own)
+  await openApp(own)
   await runBacktest(own)
 
   await waitForChartSettled(own)
@@ -240,7 +240,7 @@ test("the chart toolbar's interval buttons actually redraw the chart", async ({ 
   // one: this changes what the chart is SHOWING, and the shared-page tests
   // above re-render the plot from props, which puts the interval back.
   const own = await browser.newPage()
-  await signIn(own)
+  await openApp(own)
   await runBacktest(own)
   await waitForChartSettled(own)
 
@@ -272,7 +272,7 @@ test("the tab strip fits what it can, and its menu opens where it can be used", 
   test.setTimeout(240_000)
   const own = await browser.newPage()
   await own.setViewportSize({ width: 1536, height: 864 })
-  await signIn(own)
+  await openApp(own)
   await runBacktest(own)
   await waitForChartSettled(own)
   await own.getByRole("button", { name: "Chart", exact: true }).first().click()
@@ -329,7 +329,7 @@ test("the tab strip fits what it can, and its menu opens where it can be used", 
 test("a Volume Profile day-range row switches the chart to that interval", async ({ browser }) => {
   test.setTimeout(240_000)
   const own = await browser.newPage()
-  await signIn(own)
+  await openApp(own)
   await runBacktest(own)
   await waitForChartSettled(own)
 

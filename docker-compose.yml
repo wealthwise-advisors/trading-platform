@@ -53,62 +53,9 @@ services:
       # Swagger UI + /openapi.json. The deploy sets 0; local dev leaves it on.
       AUTOTRADER_ENABLE_DOCS: "${AUTOTRADER_ENABLE_DOCS:-}"
 
-      # ── OAuth sign-in (Google / LinkedIn / Twitter) ────────────────────────
-      # Every one of these defaults to empty, and empty means the provider is
-      # reported as unconfigured and its button explains itself. Nothing here
-      # is a secret in the repo: the values come from GitHub repo secrets via
-      # the inline env prefix in .github/workflows/deploy.yml.
-      #
-      # The base URL is the public origin a browser reaches this deployment on.
-      # It cannot be derived from the request -- Host is client-supplied -- and
-      # it has to match the redirect URI registered at each provider byte for
-      # byte, so it is stated rather than guessed.
-      #
-      # Apple is deliberately absent: "Sign in with Apple" needs a paid Apple
-      # Developer Program membership and an ES256-signed JWT in place of a
-      # client secret. api/oauth.py has no Apple provider, so its button keeps
-      # showing the honest "not connected yet" notice until that account exists.
-      AUTOTRADER_PUBLIC_BASE_URL: "${AUTOTRADER_PUBLIC_BASE_URL:-}"
-
-      # Email verification and password reset (Resend), and the CAPTCHA.
-      # Empty is a supported state: the application reports each as dormant
-      # and the features that depend on them stay shut, rather than the
-      # container refusing to start. See api/verification.py and api/captcha.py.
-      AUTOTRADER_RESEND_API_KEY: "${AUTOTRADER_RESEND_API_KEY:-}"
-      AUTOTRADER_MAIL_FROM: "${AUTOTRADER_MAIL_FROM:-}"
-      # SMTP, an alternative to Resend that needs no verified domain --
-      # see api/verification.py. Set these and mail reaches ANY recipient;
-      # leave them empty and Resend is used as before.
-      AUTOTRADER_SMTP_HOST: "${AUTOTRADER_SMTP_HOST:-}"
-      AUTOTRADER_SMTP_PORT: "${AUTOTRADER_SMTP_PORT:-}"
-      AUTOTRADER_SMTP_USER: "${AUTOTRADER_SMTP_USER:-}"
-      AUTOTRADER_SMTP_PASSWORD: "${AUTOTRADER_SMTP_PASSWORD:-}"
-      # SMS, dormant until a provider and its credentials exist. See
-      # api/sms.py -- the blockers are DLT registration and a paid
-      # account, not code.
-      AUTOTRADER_SMS_PROVIDER: "${AUTOTRADER_SMS_PROVIDER:-}"
-      AUTOTRADER_TWILIO_ACCOUNT_SID: "${AUTOTRADER_TWILIO_ACCOUNT_SID:-}"
-      AUTOTRADER_TWILIO_AUTH_TOKEN: "${AUTOTRADER_TWILIO_AUTH_TOKEN:-}"
-      AUTOTRADER_TWILIO_FROM: "${AUTOTRADER_TWILIO_FROM:-}"
-      AUTOTRADER_MSG91_AUTH_KEY: "${AUTOTRADER_MSG91_AUTH_KEY:-}"
-      AUTOTRADER_MSG91_SENDER_ID: "${AUTOTRADER_MSG91_SENDER_ID:-}"
-      AUTOTRADER_MSG91_TEMPLATE_ID: "${AUTOTRADER_MSG91_TEMPLATE_ID:-}"
-      # Escape hatch for the confirm-your-address gate. The gate turns itself
-      # ON as soon as mail can reach a stranger (a verified sending domain),
-      # which is the right default but a surprising one to meet mid-deploy.
-      # Set to 0 to keep it off -- e.g. while verifying a new domain, before
-      # the operator's own address has been marked confirmed.
-      AUTOTRADER_REQUIRE_VERIFIED_EMAIL: "${AUTOTRADER_REQUIRE_VERIFIED_EMAIL:-}"
-      AUTOTRADER_TURNSTILE_SITE_KEY: "${AUTOTRADER_TURNSTILE_SITE_KEY:-}"
-      AUTOTRADER_TURNSTILE_SECRET_KEY: "${AUTOTRADER_TURNSTILE_SECRET_KEY:-}"
-      AUTOTRADER_GITHUB_CLIENT_ID: "${AUTOTRADER_GITHUB_CLIENT_ID:-}"
-      AUTOTRADER_GITHUB_CLIENT_SECRET: "${AUTOTRADER_GITHUB_CLIENT_SECRET:-}"
-      AUTOTRADER_GOOGLE_CLIENT_ID: "${AUTOTRADER_GOOGLE_CLIENT_ID:-}"
-      AUTOTRADER_GOOGLE_CLIENT_SECRET: "${AUTOTRADER_GOOGLE_CLIENT_SECRET:-}"
-      AUTOTRADER_LINKEDIN_CLIENT_ID: "${AUTOTRADER_LINKEDIN_CLIENT_ID:-}"
-      AUTOTRADER_LINKEDIN_CLIENT_SECRET: "${AUTOTRADER_LINKEDIN_CLIENT_SECRET:-}"
-      AUTOTRADER_TWITTER_CLIENT_ID: "${AUTOTRADER_TWITTER_CLIENT_ID:-}"
-      AUTOTRADER_TWITTER_CLIENT_SECRET: "${AUTOTRADER_TWITTER_CLIENT_SECRET:-}"
+      # Sign-in was removed on 2026-10-16. The OAuth client ids and secrets,
+      # mail (Resend/SMTP), SMS and CAPTCHA settings that used to be passed in
+      # here fed only that, so they are no longer handed to the container.
     volumes:
       # NOT read-only. The Schwab client persists refreshed OAuth tokens back
       # to config/schwab_tokens.json (see src/data/schwab_provider.py), so a

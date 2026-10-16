@@ -18,7 +18,7 @@
 | ▶️ **Dev** | `npm run dev` ➜ proxies `/api/*` to the backend |
 | 📦 **Build** | `npm run build` ➜ `dist` |
 | 🎨 **Theme** | Graphite + violet-blue. Warm colours are reserved for **meaning** — red for a loss |
-| 📄 **`public` is copied verbatim** | The sign-in pages live there and never load `index.css` |
+| 📄 **`public` is copied verbatim** | Terms, privacy, help and 404 — they never load `index.css` |
 | 📁 **Path** | `web/` |
 | 📦 **Holds** | `9` files · `612` lines · `2` subfolders |
 
@@ -31,7 +31,7 @@
    src/ ──► vite build ──► dist/ ──┐
                                    ├──► nginx ──► browser
    public/ ─── copied verbatim ────┘     │
-   (sign-in, sign-up, terms, privacy)    └── /api/* ──► FastAPI
+   (terms, privacy, help, 404)           └── /api/* ──► FastAPI
 ```
 
 
@@ -58,7 +58,7 @@
 
 | Folder | ➜ What lives there |
 |:--|:--|
-| [`public`](public) | 📄 Copied verbatim — sign-in, sign-up, terms, privacy, help |
+| [`public`](public) | 📄 Copied verbatim — terms, privacy, help, 404 |
 | [`src`](src) | ⚛️ The application source |
 
 

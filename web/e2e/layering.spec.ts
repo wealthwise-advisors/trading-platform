@@ -7,7 +7,7 @@
  */
 
 import { expect, test } from "@playwright/test"
-import { goToMarketGrid, loadAndPlay, runBacktest, scrollHost, signIn } from "./helpers"
+import { goToMarketGrid, loadAndPlay, runBacktest, scrollHost, openApp } from "./helpers"
 
 test.describe("regressions that reached production", () => {
   /**
@@ -28,7 +28,7 @@ test.describe("regressions that reached production", () => {
    * holding if the fix is later done some other way.
    */
   test("the page does not scroll past its own content", async ({ page }) => {
-    await signIn(page)
+    await openApp(page)
     await runBacktest(page)
 
     const host = await scrollHost(page)
@@ -102,7 +102,7 @@ test.describe("regressions that reached production", () => {
    * whatever once broke it.
    */
   test("the Market Grid tables really scroll, and their headers stay put", async ({ page }) => {
-    await signIn(page)
+    await openApp(page)
     await goToMarketGrid(page)
     await loadAndPlay(page)
 
@@ -143,7 +143,7 @@ test.describe("regressions that reached production", () => {
    * whole class of mistake and the utility class is not.
    */
   test("folding a panel hides all of it, toolbar included", async ({ page }) => {
-    await signIn(page)
+    await openApp(page)
     await goToMarketGrid(page)
     await loadAndPlay(page)
 

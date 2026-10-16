@@ -214,10 +214,10 @@ def run_backtest(req: BacktestRequest, user=PROTECTED):
 def _get_or_404(backtest_id: str, user) -> store.StoredBacktest:
     """This user's backtest, or 404.
 
-    Someone else's backtest is a 404, not a 403. A 403 would confirm the id
-    exists, turning this into an oracle for enumerating other people's runs --
-    the same reason /api/auth/login refuses an unknown username and a wrong
-    password with identical wording.
+    Another account's backtest is a 404, not a 403. A 403 would confirm the
+    id exists, turning this into an oracle for enumerating other accounts'
+    runs. (Every request runs as the workspace account now, so over HTTP this
+    is the not-found case; the rule stays for the data layer beneath it.)
     """
     stored = store.get(backtest_id, user_id=user.id)
     if stored is None:

@@ -78,7 +78,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 - [Backtesting & Execution](#-backtesting--execution)
 - [Database](#-database)
 - [Dashboard](#-dashboard)
-- [Accounts & Access](#-accounts--access)
+- [Access](#-access)
 - [API Reference](#-api-reference)
 
 </td><td valign="top" width="33%">
@@ -738,106 +738,39 @@ A React 19 single-page application over the FastAPI backend.
 
 ---
 
-## 🔐 Accounts & Access
+## 🔐 Access
 
-Open registration. Four ways in, or a password.
+No sign-in. The link opens straight onto the dashboard.
 
-<table>
-<tr><td width="50%" valign="top">
-
-**◆ Ways to sign in**
-- **Google** — one click, address already verified
-- **GitHub** — one click, verified address read from `/user/emails`
-- **LinkedIn** — one click, OpenID Connect
-- **Twitter / X** — asks for an address on first use, then one click
-- **Username + password** — argon2id, 12 characters minimum
-
-</td><td width="50%" valign="top">
-
-**◆ Getting back in**
-- **Forgot password** — single-use link, expires in 1 hour
-- **Forgot username** — emailed to the address on the account
-- Completing a reset **revokes every existing session**
-- Both refuse to say whether an address has an account
-
-</td></tr>
-</table>
+- **One workspace** — every request runs as a single account (`db.users.workspace_user`)
+- **The owner account, when there is one** — it holds the Schwab entitlement, so live data works from the link
+- **Shared state** — everyone with the link sees the same saved configurations, paper session and journal
+- **Sign-in removed 2026-10-16** — login, registration, password reset, Google / GitHub / LinkedIn / X sign-in, email and phone verification, CAPTCHA
 
 <details>
-<summary><b>What an account does not grant</b> — the broker stays out of reach</summary>
+<summary><b>What still protects the app</b></summary>
 <br>
-
-There is exactly one Schwab connection: one `credentials.yaml`, one
-`schwab_tokens.json`, no per-user notion anywhere in `schwab_provider.py`. It is
-the operator's own brokerage authorisation, not the application's.
-
-So it is **not** a permission an account can earn — not by registering, and not
-by verifying an email, because verifying an inbox says nothing about whether
-someone should reach somebody else's broker.
 
 | Control | Effect |
 |---|---|
-| `users.is_owner` defaults to `0` | Every account created by any route starts without it |
-| No parameter on `create_user` | No argument any endpoint could pass to grant it |
-| Set only by `manage_users.py` | Requires shell access on the server |
+| Cross-origin refusal | A `POST` / `PUT` / `DELETE` whose `Origin` names another site is a `403` — another page cannot drive this API through a visitor's browser |
+| Same check on the replay socket | A WebSocket opened from another site is refused before `accept()` |
+| `users.is_owner` | The Schwab entitlement; set only by the operator, never by any route |
+| Network access | **The URL is now the access control.** Anyone who can reach it can use every feature |
 
 </details>
 
 <details>
-<summary><b>Per-user isolation</b> — schema v4, and why the cache mattered too</summary>
+<summary><b>Per-account isolation</b> — kept at the data layer</summary>
 <br>
 
 `backtests` and `trades` carry a `user_id`. Every read, write and delete filters
 on it, and no repository function takes a default — a forgotten argument is a
-`TypeError`, not a leak.
+`TypeError`, not a leak. The in-memory result cache is keyed by
+`(user_id, backtest_id)` for the same reason.
 
-Scoping the SQL alone was not enough. `store.py` held an in-memory cache
-keyed by `backtest_id`, and a cache hit returns **before any query runs** — so a
-second user asking for a cached id would have been handed the first user's
-result without SQLite being consulted. The key is `(user_id, backtest_id)`.
-
-Another user's backtest is **404, not 403**. A 403 confirms the id exists, which
-turns every result endpoint into an oracle for enumerating other people's runs.
-
-</details>
-
-<details>
-<summary><b>Abuse controls</b> — CAPTCHA, rate limits, verified addresses</summary>
-<br>
-
-| Control | Where |
-|---|---|
-| Cloudflare Turnstile | Registration, forgot-password, forgot-username |
-| Per-IP signup budget | Registration and both recovery endpoints |
-| Per-`(ip, username)` throttle | Password login |
-| argon2id | Every stored password |
-| SHA-256 hashed tokens | Sessions, verification links, reset links |
-
-**Turnstile fails closed.** Once a key is configured, a token that cannot be
-checked — Cloudflare unreachable, timeout, malformed reply — is a refusal. A
-verifier that waves people through on a network hiccup is one outage away from
-being no verifier, and an attacker can cause that outage.
-
-**Only a provider-verified address matches an account.** An unverified address
-is a claim by whoever is signing in; honouring it would let someone assert
-another person's email and be handed the account that owns it.
-
-</details>
-
-<details>
-<summary><b>Dormant until configured</b> — nothing breaks without credentials</summary>
-<br>
-
-Every integration treats "no key" as a supported state rather than an error.
-
-| Environment variable | Unset behaviour |
-|---|---|
-| `AUTOTRADER_{GOOGLE,LINKEDIN,GITHUB,TWITTER}_CLIENT_ID` / `_SECRET` | That provider reports itself unconfigured and its button says so |
-| `AUTOTRADER_TURNSTILE_SITE_KEY` / `_SECRET_KEY` | The CAPTCHA slot collapses; registration still works |
-| `AUTOTRADER_RESEND_API_KEY`, `AUTOTRADER_MAIL_FROM` | Verification and reset emails are logged as dormant, never faked |
-
-The deploy prints `present:` / `ABSENT :` per integration — by presence only,
-never a value or a length.
+Over HTTP there is one account now, so this matters for the database rather than
+the routes — it is what any future multi-account setup would rest on.
 
 </details>
 
@@ -863,15 +796,8 @@ FastAPI, with interactive documentation at **`/docs`** while running.
 | Market | `GET` | `/api/strategies` | Available strategies and parameters |
 | Schwab | `GET` | `/api/schwab/status` | Auth state and token life |
 | Export | `GET` | `/api/export/...` | CSV · XLSX · PDF · DOCX |
-| Auth | `POST` | `/api/auth/register` | Create an account |
-| Auth | `POST` | `/api/auth/login` · `/logout` | Start and end a session |
-| Auth | `GET` | `/api/auth/me` | Who the caller is |
-| Auth | `POST` | `/api/auth/forgot-password` · `/reset-password` | Recover by email |
-| Auth | `POST` | `/api/auth/forgot-username` | Email the account name |
-| Auth | `GET` | `/api/auth/verify-email` | Spend a confirmation link |
-| OAuth | `GET` | `/api/auth/oauth/providers` | Which providers are configured |
-| OAuth | `GET` | `/api/auth/oauth/{name}/start` · `/callback` | Google · LinkedIn · GitHub · X |
-| OAuth | `POST` | `/api/auth/oauth/complete` | Finish an X sign-up |
+| Workspace | `GET` | `/api/auth/me` | The workspace account the app runs as |
+| Workspace | `POST` | `/api/auth/onboarded` | Record that the introduction was seen |
 | Meta | `GET` | `/api/version` | Build commit — used by the deploy assertion |
 
 </details>
@@ -1270,7 +1196,7 @@ on ports 5173/8000 are never touched.
 | ⏱ **Bar aggregation** | **One** aggregator — so no two code paths can disagree about what a bar is. Minutes tile from the exchange midnight; `1d` and `1w` group by trading date, where an 18:00 ET open belongs to the next day |
 | 🔁 **Determinism** | A session grown bar by bar is **byte-identical** to one handed all the data at once |
 | 🌊 **Elliott Wave** | A count that breaks a rule is **rejected**, not drawn |
-| 🚧 **Isolation** | One account cannot reach another's data — routes swept from the app's own OpenAPI schema |
+| 🚧 **Isolation** | One account's rows are invisible to another at the data layer; every result route is swept from the app's own OpenAPI schema |
 | ⚠️ **Error messages** | A bad request **names the field to change**. It never returns a 500 |
 
 <br>

@@ -15,11 +15,10 @@
 
 |   |   |
 |:--|:--|
-| 🎯 **Holds** | The sign-in journey and the legal pages |
+| 🎯 **Holds** | The legal pages, help, and the 404 page |
 | 🔒 **Self-contained** | Styles are inline, so app theming **cannot** change them |
-| ⚠️ **Also on the Desktop** | [`run_local.py`](../../scripts/run_local.py) prefers the Desktop copies — edit both, or the local rig shows a stale page |
 | 📁 **Path** | `web/public/` |
-| 📦 **Holds** | `9` files · `3,059` lines |
+| 📦 **Holds** | `11` files · `639` lines of HTML |
 
 
 ---
@@ -31,9 +30,6 @@
 
    these pages never load index.css. Styles are inline, so
    app theming cannot reach them -- and cannot break them.
-
-   ⚠️ run_local.py prefers the DESKTOP copies of the sign-in pages.
-      Edit both, or the local rig shows you a stale page.
 ```
 
 
@@ -43,13 +39,9 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`autotrader_signin.html`](autotrader_signin.html) | 🔐 Sign in · forgot password · reset password. | 1,354 |
-| [`autotrader_signup.html`](autotrader_signup.html) | 📝 Create an account. | 1,147 |
 | [`terms.html`](terms.html) | 📜 Terms of Service. | 169 |
 | [`privacy.html`](privacy.html) | 🔏 Privacy Policy. | 196 |
 | [`help.html`](help.html) | 💬 Help Center. | 193 |
-| [`trading-office.jpg`](trading-office.jpg) | 🌃 The photograph behind the sign-in card. | 1,786 |
-| [`TwemojiCountryFlags.woff2`](TwemojiCountryFlags.woff2) | 🏳 Flag font for the 234-country picker. | 610 |
 | [`icons.svg`](icons.svg) | Sprite sheet. | 24 |
 | [`favicon.svg`](favicon.svg) | Tab icon. | 1 |
 
@@ -58,7 +50,7 @@
 
 ## 💡 Worth knowing
 
-- ➜ **These are the only pages a signed-out visitor sees.** A mistake here is the first thing anyone notices.
+- ➜ **There is no sign-in page any more** (removed 2026-10-16). The link opens the app directly; the old sign-in and sign-up addresses redirect to it.
 
 
 ---

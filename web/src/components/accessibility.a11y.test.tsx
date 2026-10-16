@@ -31,7 +31,6 @@ import { cleanup, render } from "@testing-library/react"
 import axe from "axe-core"
 
 import { ErrorBoundary } from "./ErrorBoundary"
-import { VerifyEmailNotice } from "./VerifyEmailNotice"
 import { Onboarding } from "./Onboarding"
 import { OfflineBanner } from "./OfflineBanner"
 import { CopyButton } from "./ui/copy-button"
@@ -44,8 +43,6 @@ const USER: Me = {
   full_name: "A Trader",
   email: "trader@example.com",
   country: "IN",
-  email_verified: false,
-  verification_required: true,
   onboarded: false,
 }
 
@@ -80,11 +77,6 @@ describe("accessibility (axe-core)", () => {
         <Explodes />
       </ErrorBoundary>,
     )
-    expect(await violationsIn(container)).toEqual([])
-  })
-
-  it("the confirm-your-address screen has no violations", async () => {
-    const { container } = render(<VerifyEmailNotice user={USER} />)
     expect(await violationsIn(container)).toEqual([])
   })
 
@@ -124,16 +116,6 @@ describe("keyboard and screen-reader affordances", () => {
     const { container } = render(<CopyButton value="x" />)
     const status = container.querySelector('[role="status"]')
     expect(status?.getAttribute("aria-live")).toBe("polite")
-  })
-
-  it("every control on the verify screen has an accessible name", () => {
-    const { container } = render(<VerifyEmailNotice user={USER} />)
-    // A button whose only content is an icon reads as "button" and nothing
-    // else. axe catches the empty case; this catches the whitespace one.
-    for (const el of container.querySelectorAll("button")) {
-      const name = el.getAttribute("aria-label") ?? el.textContent ?? ""
-      expect(name.trim().length).toBeGreaterThan(0)
-    }
   })
 
   it("the offline banner announces itself politely", () => {

@@ -8,9 +8,9 @@
 #
 # WHAT IS IN IT, AND WHY EACH THING IS IRREPLACEABLE
 # --------------------------------------------------
-#   autotrader.db            accounts, sessions, OAuth identities, saved runs.
-#                            Signup is open, so this now holds other people's
-#                            data, not just the operator's.
+#   autotrader.db            the workspace account, saved configurations and
+#                            saved runs. (Sign-in was removed 2026-10-16; the
+#                            old session/OAuth tables remain but are unused.)
 #   config/credentials.yaml  gitignored -- exists nowhere else, not in the
 #   config/schwab_tokens.json  image, not in the repository, not on a laptop.
 #                            Losing these means re-authenticating Schwab from

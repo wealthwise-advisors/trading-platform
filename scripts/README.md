@@ -39,8 +39,8 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`run_local.py`](run_local.py) | 🖥 Serves the sign-in pages, the built dashboard and the API on **one** port, so local matches production. | 203 |
-| [`manage_users.py`](manage_users.py) | 👤 Create, inspect, disable and link accounts. | 367 |
+| [`run_local.py`](run_local.py) | 🖥 Serves the built dashboard and the API on **one** port, so local matches production. | 183 |
+| [`manage_users.py`](manage_users.py) | 👤 List, disable, enable and delete accounts. | 126 |
 | [`run_backtest.py`](run_backtest.py) | ⏱ Run a backtest from the terminal, no browser. | 109 |
 | [`generate_data.py`](generate_data.py) | 🎲 Write synthetic bars. | 34 |
 | [`download_rithmic_data.py`](download_rithmic_data.py) | 📡 Pull history from Rithmic. | 70 |
@@ -51,7 +51,7 @@
 
 ## 💡 Worth knowing
 
-- ➜ **`run_local.py` prefers the Desktop copies of the sign-in pages** over [`public`](../web/public). If a change seems not to apply locally, that is why.
+- ➜ **There is no sign-in.** `run_local.py` opens straight onto the dashboard, and clears any sign-in pages an older run left behind.
 
 
 ---

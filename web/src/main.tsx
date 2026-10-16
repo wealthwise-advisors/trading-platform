@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
-import { AuthGate } from './components/AuthGate'
+import { WorkspaceLoader } from './components/WorkspaceLoader'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { installGlobalCrashHandlers } from './lib/crashReporter'
 
@@ -15,16 +15,16 @@ installGlobalCrashHandlers()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* OUTSIDE the providers and the gate, deliberately. A boundary only
-        catches what renders beneath it, so one placed inside AuthGate would
-        miss a throw in the gate itself -- and the gate is the first thing that
+    {/* OUTSIDE the providers and the loader, deliberately. A boundary only
+        catches what renders beneath it, so one placed inside the loader would
+        miss a throw in the loader itself -- and it is the first thing that
         runs, which makes it the most expensive place to go blank. */}
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* The gate wraps the whole app so no panel mounts, and no request is
-            fired, before the session is known. The real boundary is the API's
-            401 -- this only avoids a dashboard of failed panels. */}
-        <AuthGate>{(user) => <App user={user} />}</AuthGate>
+        {/* No sign-in (removed 2026-10-16): the loader fetches the workspace
+            account the app runs as, shows the first-run introduction if it is
+            due, and then renders the dashboard straight away. */}
+        <WorkspaceLoader>{(user) => <App user={user} />}</WorkspaceLoader>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

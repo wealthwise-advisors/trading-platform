@@ -1,478 +1,53 @@
-"""Authentication: password hashing, sessions, and the guards that use them.
+"""Who a request runs as, now that there is no sign-in.
 
-WHY A COOKIE AND NOT A TOKEN IN JAVASCRIPT
-------------------------------------------
-nginx serves the dashboard at / and proxies /api/ to this process, so the
-browser and the API are one origin. That makes an HttpOnly cookie the simplest
-correct choice: the value never reaches JavaScript, so an XSS bug cannot read
-it, and nothing has to be stored in localStorage. A bearer token would have to
-live somewhere script can reach, which is strictly worse here for no gain.
+SIGN-IN WAS REMOVED on 2026-10-16, on request: the app opens straight from its
+link, with no login page, registration, password, session or OAuth. This
+module used to hold password hashing, session cookies, throttles and an
+email-verification gate; all of that is gone.
 
-CSRF
-----
-The cookie is SameSite=Lax, so a browser will not attach it to a cross-site
-POST/PUT/DELETE -- which is the request shape a CSRF attack needs. Top-level
-GET navigation still carries it, and GETs in this API do not change state.
-`require_user` additionally refuses a state-changing request that arrives
-without a same-origin marker, so the protection does not rest on one control.
+WHAT REMAINS
+------------
+The data model is still per-account -- saved configurations, the paper-trading
+session and the journal key on a user id -- so every request is attributed to
+ONE account, `db.users.workspace_user()`: the owner account when there is one
+(it holds the Schwab entitlement, so live data keeps working), otherwise the
+oldest active account, otherwise a fresh "workspace" account.
 
-WHAT IS DELIBERATELY NOT HERE
------------------------------
-No registration. Accounts are created with scripts/manage_users.py by someone
-with shell access. This is a two-person instance; a self-serve endpoint would
-let anyone who reaches the URL provision themselves an account, and hiding the
-button is not a control.
+WHAT IS DELIBERATELY KEPT: the cross-origin check
+-------------------------------------------------
+A state-changing request (POST/PUT/DELETE) that arrives with an Origin header
+naming another site is still refused. That was defence in depth beside the
+session cookie, and it matters MORE without sign-in, not less: with no
+session to forge, the only thing stopping another website from driving this
+API through a visitor's browser is that the request does not come from here.
 
-No OAuth. The four provider buttons are inert until real credentials exist,
-and those belong in the server environment, never in a page the browser reads.
+ACCESS NOTE
+-----------
+With sign-in gone, anyone who can reach the URL can use every route. The
+remaining restrictions are the cross-origin check above and the per-account
+Schwab entitlement (`is_owner`), which this instance satisfies because the
+workspace IS the owner account. Restricting who can reach the URL at all is
+now a network-level decision.
 """
 
 import logging
-import os
-import re
-import time
-from dataclasses import dataclass, field
 
-from argon2 import PasswordHasher
-from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 from fastapi import Depends, HTTPException, Request, status
 
 from db import users as repo
 
 log = logging.getLogger(__name__)
 
-COOKIE = "autotrader_session"
-
-#: Set AUTOTRADER_INSECURE_COOKIE=1 only for local http:// development. In the
-#: deployed stack nginx terminates TLS, so the cookie must be Secure.
-_INSECURE = os.environ.get("AUTOTRADER_INSECURE_COOKIE") == "1"
-
-#: argon2id at the library's defaults (64 MiB, t=3, p=4). Tuned by the library
-#: rather than by us; raising it later is safe because each stored hash carries
-#: the parameters it was made with.
-_ph = PasswordHasher()
-
 _SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
-# ── passwords ────────────────────────────────────────────────────────────────
-def hash_password(plain: str) -> str:
-    return _ph.hash(plain)
-
-
-def verify_password(stored_hash: str, plain: str) -> bool:
-    try:
-        _ph.verify(stored_hash, plain)
-        return True
-    except (VerifyMismatchError, VerificationError, InvalidHashError):
-        return False
-
-
-def needs_rehash(stored_hash: str) -> bool:
-    try:
-        return _ph.check_needs_rehash(stored_hash)
-    except InvalidHashError:
-        return False
-
-
-# ── brute-force throttle ─────────────────────────────────────────────────────
-@dataclass
-class _Bucket:
-    fails: int = 0
-    blocked_until: float = 0.0
-    seen: list[float] = field(default_factory=list)
-
-
-class Throttle:
-    """Delay-then-block, keyed on (ip, username) together.
-
-    Keying on the pair matters: keying on username alone would let anyone lock
-    a known account out by failing logins for it, which is a denial of service
-    dressed up as a security control. An attacker changing IP gets a fresh
-    budget, but they also lose the one they had -- and a per-IP ceiling still
-    applies underneath.
-
-    WHERE THE COUNTERS LIVE
-    -----------------------
-    In the database, not in this process. They were a dict, which meant a
-    restart cleared them -- and a deploy is a restart, so anyone being slowed
-    down got a fresh budget every time the app shipped. It also meant a second
-    uvicorn worker would have counted independently, each allowing the full
-    quota. The deployment runs one worker today (see the Dockerfile CMD), so
-    that half was latent rather than live, but the restart half was real.
-
-    SQLite rather than Redis: the database is already here, already shared, and
-    already backed up, and this is two integers per key. Adding an in-memory
-    store to a single-container deployment would be new infrastructure to
-    operate for no property this does not already have.
-
-    The security properties are unchanged: same pair keying, same ceilings, same
-    block. Only the per-IP window became fixed rather than sliding -- see
-    repo.throttle_record_failure.
-    """
-
-    MAX_FAILS = 6
-    BLOCK_SECONDS = 300
-    IP_MAX_FAILS = 30
-    IP_WINDOW = 900
-
-    @staticmethod
-    def _pair_key(ip: str, username: str) -> str:
-        return f"pair:{ip}|{username.lower()}"
-
-    @staticmethod
-    def _ip_key(ip: str) -> str:
-        return f"ip:{ip}"
-
-    def retry_after(self, ip: str, username: str) -> int:
-        for key in (self._pair_key(ip, username), self._ip_key(ip)):
-            wait = repo.throttle_blocked_for(key)
-            if wait:
-                return wait
-        return 0
-
-    def record_failure(self, ip: str, username: str) -> None:
-        repo.throttle_record_failure(
-            self._pair_key(ip, username),
-            max_fails=self.MAX_FAILS, block_seconds=self.BLOCK_SECONDS)
-        repo.throttle_record_failure(
-            self._ip_key(ip),
-            max_fails=self.IP_MAX_FAILS, block_seconds=self.BLOCK_SECONDS,
-            window_seconds=self.IP_WINDOW)
-
-    def failures_for(self, ip: str, username: str) -> int:
-        """How many times this pair has failed inside the current budget.
-
-        Read-only, and it exists so the login route can raise a CAPTCHA before
-        the ceiling is reached rather than only blocking at it. Counts reset on
-        a success, and the row is spent when a block is issued, so this returns
-        0 again after a lockout expires -- which is correct: the block was the
-        punishment, and the challenge is for the run-up to the next one.
-        """
-        return repo.throttle_failures(self._pair_key(ip, username))
-
-    def record_success(self, ip: str, username: str) -> None:
-        # The pair budget only. The per-IP ceiling deliberately survives a
-        # success: one correct password among thirty wrong ones is what a
-        # spraying attack looks like when it lands.
-        repo.throttle_clear(self._pair_key(ip, username))
-
-
-throttle = Throttle()
-
-
-class SignupThrottle:
-    """A budget for creating accounts, per IP.
-
-    The login Throttle above is the wrong shape for this. It keys on
-    (ip, username) and counts FAILURES, which suits a password guesser
-    hammering one account -- and does nothing at all about registration, where
-    every attempt uses a NEW username and every attempt succeeds. A thousand
-    signups from one address would not register as a single failure.
-
-    So this counts successes, keys on the address alone, and uses a long
-    window: a person signs up once, and the second account from the same
-    address within the hour is already unusual. Bots are the normal caller of
-    a burst.
-
-    Deliberately in front of the CAPTCHA rather than behind it: Turnstile costs
-    a network round-trip to Cloudflare, so verifying first would let a flood
-    turn into a flood of outbound requests. The cheap local check runs first.
-    """
-
-    MAX_PER_WINDOW = 5
-    WINDOW_SECONDS = 3600
-    BLOCK_SECONDS = 3600
-
-    def __init__(self) -> None:
-        self._ips: dict[str, _Bucket] = {}
-
-    def retry_after(self, ip: str) -> int:
-        b = self._ips.get(ip)
-        if b and b.blocked_until > time.monotonic():
-            return int(b.blocked_until - time.monotonic()) + 1
-        return 0
-
-    def record(self, ip: str) -> None:
-        """Count one account creation attempt against this address."""
-        now = time.monotonic()
-        b = self._ips.setdefault(ip, _Bucket())
-        b.seen = [t for t in b.seen if now - t < self.WINDOW_SECONDS]
-        b.seen.append(now)
-        if len(b.seen) >= self.MAX_PER_WINDOW:
-            b.blocked_until = now + self.BLOCK_SECONDS
-            b.seen.clear()
-
-
-signup_throttle = SignupThrottle()
-
-
-class RecoveryThrottle:
-    """A sliding window for recovery. No punishment block.
-
-    THE PROBLEM THIS REPLACES
-    -------------------------
-    SignupThrottle does not merely refuse the request over the limit -- it sets
-    a fixed block and refuses EVERYTHING for the next quarter of an hour. So a
-    person who pressed the button a few times too many was not slowed down,
-    they were shut out, and nothing they could do shortened it. Reported twice:
-    "one time is working, but the second time the email is not coming."
-
-    It also shared one counter with registration, so signing up spent the
-    allowance for forgetting a password.
-
-    WHAT THIS DOES INSTEAD
-    ----------------------
-    Counts what happened in the last WINDOW_SECONDS and allows the request if
-    that is under the cap. Nothing is punished, nothing is cleared, no penalty
-    period is imposed. Ask ten times in a minute and the eleventh waits only
-    until the oldest of the ten ages out -- seconds or a couple of minutes, not
-    a flat fifteen. For anybody using this like a person it is invisible.
-
-    WHY THERE IS A CAP AT ALL
-    -------------------------
-    Not to stop guessing -- there is nothing to guess here. It stops one person
-    typing somebody else's address and burying them in mail, and it protects a
-    shared, finite resource: the mail provider's free tier is a few hundred
-    messages a day for the WHOLE application. Uncapped, one bored visitor
-    exhausts it and nobody can register or reset anything until tomorrow.
-
-    Keyed per IP, so one caller cannot spend anyone else's share.
-    """
-
-    MAX_PER_WINDOW = 12
-    WINDOW_SECONDS = 600
-
-    def __init__(self) -> None:
-        self._ips: dict[str, list[float]] = {}
-
-    def retry_after(self, ip: str) -> int:
-        """Seconds until the caller may try again. 0 when they may go now."""
-        now = time.monotonic()
-        seen = [t for t in self._ips.get(ip, []) if now - t < self.WINDOW_SECONDS]
-        self._ips[ip] = seen
-        if len(seen) < self.MAX_PER_WINDOW:
-            return 0
-        # The oldest request in the window is the one whose expiry frees a slot.
-        return int(self.WINDOW_SECONDS - (now - seen[0])) + 1
-
-    def record(self, ip: str) -> None:
-        now = time.monotonic()
-        seen = [t for t in self._ips.get(ip, []) if now - t < self.WINDOW_SECONDS]
-        seen.append(now)
-        self._ips[ip] = seen
-
-
-#: One budget per FLOW, not one shared between them.
-#:
-#: They shared a counter, on the reasoning that what matters is how much mail a
-#: caller can cause. True in the abstract, and wrong in practice: asking for a
-#: password reset a few times then trying "forgot username" met a refusal the
-#: person had no way to connect to anything they had done. Two buttons, two
-#: purposes, one invisible shared allowance -- the second one appearing broken.
-#:
-#: Twelve each in a rolling ten minutes. The ceiling on mail is now twice what
-#: it was, which is still far below anything that troubles a sending domain,
-#: and each flow answers only for its own use.
-recovery_throttle = RecoveryThrottle()          # password reset
-username_throttle = RecoveryThrottle()          # username reminder
-verify_throttle = RecoveryThrottle()            # resend verification
-
-
-#: Rejected outright regardless of length. Not a substitute for a real
-#: breach-corpus check -- it is the shortlist that a determined guesser tries
-#: first, and it costs nothing to refuse them.
-_OBVIOUS_PASSWORDS = {
-    "password", "passw0rd", "letmein", "welcome", "iloveyou", "admin",
-    "qwerty", "qwertyuiop", "abc123", "123456", "1234567890", "monkey",
-    "dragon", "football", "baseball", "sunshine", "princess", "trustno1",
-    "autotrader", "tradingplatform", "changeme", "secret",
-}
-
-#: Twelve, matching what the sign-up page has always told people. Length is
-#: the only password rule that reliably helps; composition rules mostly push
-#: people towards Password1! and a sticky note.
-MIN_PASSWORD_LENGTH = 12
-
-
-#: Names the application needs for itself, or that would let one account
-#: impersonate a system message. Case-insensitive, matched whole.
-_RESERVED_USERNAMES = {
-    "admin", "administrator", "root", "system", "support", "help", "security",
-    "autotrader", "api", "auth", "login", "logout", "register", "me", "owner",
-    "operator", "moderator", "staff", "null", "none", "undefined", "anonymous",
-}
-
-_USERNAME_RE = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{1,30})[a-zA-Z0-9]$")
-
-#: Deliberately loose. The only proof an address works is a message arriving at
-#: it, which is what verification is for -- so this rejects what cannot
-#: possibly be an address rather than trying to decide what is one. Strict
-#: regexes here mostly succeed at rejecting real, unusual, valid addresses.
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
-
-
-def username_problem(username: str) -> str | None:
-    """Why this username is unacceptable, or None if it is fine."""
-    if not _USERNAME_RE.match(username or ""):
-        return ("Username must be 3-32 characters, letters, numbers, dot, "
-                "underscore or hyphen, starting and ending with a letter or number.")
-    if username.lower() in _RESERVED_USERNAMES:
-        return "That username is reserved. Please choose another."
-    return None
-
-
-def email_problem(email: str) -> str | None:
-    """Why this address is unacceptable, or None if it is fine.
-
-    An address is REQUIRED to register. It is the only way to recover an
-    account, and from v5 it is what an OAuth identity matches against -- an
-    account with no address can never be reached by either.
-    """
-    if not (email or "").strip():
-        return "An email address is required."
-    if not _EMAIL_RE.match(email.strip()):
-        return "That does not look like an email address."
-    return None
-
-
-def password_problem(password: str, *, username: str = "",
-                     email: str = "") -> str | None:
-    """Why this password is unacceptable, or None if it is fine."""
-    if len(password) < MIN_PASSWORD_LENGTH:
-        return f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
-    if len(password) > 256:
-        # argon2 will hash anything, but an unbounded field is a free way to
-        # make the server do expensive work on demand.
-        return "Password must be at most 256 characters."
-
-    # Kept from the original rule this function replaced. Composition rules are
-    # weak next to length, but dropping one silently while merging two
-    # functions would have quietly weakened every existing caller.
-    classes = sum((any(c.islower() for c in password),
-                   any(c.isupper() for c in password),
-                   any(c.isdigit() for c in password),
-                   any(not c.isalnum() for c in password)))
-    if classes < 3:
-        return ("Password must combine at least three of: lowercase, uppercase, "
-                "digits, symbols.")
-
-    flat = password.strip().lower()
-    if flat in _OBVIOUS_PASSWORDS:
-        return "That password is too easy to guess. Choose something else."
-    if len(set(flat)) <= 2:
-        return "That password is too repetitive. Choose something else."
-    for other, label in ((username, "username"), (email.split("@")[0], "email")):
-        if other and len(other) >= 4 and other.lower() in flat:
-            return f"Password must not contain your {label}."
-    return None
-
-
-def client_ip(request: Request) -> str:
-    """The peer address, taking one hop of X-Forwarded-For from our own nginx.
-
-    Only the LAST entry is trusted -- the header is client-controlled, and
-    reading the first entry would let a caller forge whatever IP it liked and
-    walk around the throttle.
-    """
-    xff = request.headers.get("x-forwarded-for", "")
-    if xff:
-        return xff.split(",")[-1].strip()[:64]
-    return (request.client.host if request.client else "unknown")[:64]
-
-
-# ── guards ───────────────────────────────────────────────────────────────────
-def _unauthorised() -> HTTPException:
-    # One shape for every failure: no hint about which part was wrong.
-    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                         detail="Authentication required.")
-
-
-#: Failures on one (ip, username) pair before a sign-in must also pass a
-#: CAPTCHA. Below MAX_FAILS on purpose: the challenge is the step BEFORE the
-#: lockout, so an automated attacker meets it while a person who mistyped once
-#: never does.
-CAPTCHA_AFTER_FAILURES = 3
-
-#: Set to 0/false to let unverified addresses through even once mail works.
-#: An escape hatch for the operator, not a default -- see verification_enforced.
-REQUIRE_VERIFIED_ENV = "AUTOTRADER_REQUIRE_VERIFIED_EMAIL"
-
-
-def verification_enforced() -> bool:
-    """Whether an unproved address blocks the app AT ALL right now.
-
-    Tied to whether mail actually works, and that coupling is the point. If
-    this returned True unconditionally, then every deployment without a Resend
-    key -- a laptop, a test run, and this product's own production host until
-    its sending domain is verified -- would lock every account out of the
-    application behind a confirmation email that is never sent. A gate whose
-    key cannot be delivered is not a security control, it is an outage.
-
-    So the gate switches itself on when the means of passing it exists.
-    Verifying the sending domain is what turns it on; nothing else has to be
-    remembered at the same time.
-
-    Configured is NOT sufficient, and this is the case that would have caused
-    the outage. This product's live host has a Resend key, a sender and a base
-    URL -- configured() is already True there -- but the sender is on Resend's
-    shared sandbox domain, which delivers only to the account owner. Enforcing
-    on configured() alone would have locked every user out of an application
-    they could not unlock, because the confirmation mail they were told to look
-    for is dropped before it reaches them. So the gate additionally requires a
-    sender that can actually reach a stranger.
-    """
-    flag = os.environ.get(REQUIRE_VERIFIED_ENV, "").strip().lower()
-    if flag in {"0", "false", "no", "off"}:
-        return False
-    # Imported here, not at module scope: api.verification imports db.users,
-    # and this module is imported by db-adjacent code early in startup.
-    from api import verification
-    return verification.configured() and not verification.sandboxed()
-
-
-def verification_blocks(user) -> bool:
-    """True when THIS account is currently held back by an unproved address.
-
-    Three accounts are deliberately NOT blocked:
-
-    * one whose address a provider already vouched for -- Google, LinkedIn and
-      GitHub report a verified address, and oauth.py only accepts it when they
-      positively say so, so it is proved by a stronger means than our own link;
-    * one with no address at all -- an X sign-in reports none at any scope, and
-      there is nothing to send a link to. Blocking it would be a lockout with
-      no exit;
-    * every account, while mail is unconfigured. See verification_enforced.
-    """
-    if not verification_enforced():
-        return False
-    if not getattr(user, "email", ""):
-        return False
-    return not bool(getattr(user, "email_verified", False))
-
-
-#: Sent with the 403 so the dashboard can tell "confirm your address" apart
-#: from a genuine authorisation refusal without parsing prose.
-UNVERIFIED_HEADER = "X-Auth-Reason"
-UNVERIFIED_REASON = "email_unverified"
-
-
 async def require_user(request: Request):
-    """Every protected route depends on this. Returns the signed-in user.
+    """Every protected route depends on this. Returns the workspace account.
 
-    The cookie is read off the request rather than declared as a Cookie()
-    parameter on purpose: a declared parameter is added to the OpenAPI schema
-    of EVERY route that depends on this, so `autotrader_session` would appear
-    in the documented parameters of all 26 endpoints. Reading it here keeps
-    each endpoint's published contract exactly as it was before auth existed.
+    The name stays: it is what every router already depends on, and renaming
+    it would touch every route for no change in behaviour. There is nothing to
+    require any more except that a state-changing request come from this site.
     """
-    user = repo.resolve_session(request.cookies.get(COOKIE, ""))
-    if user is None:
-        raise _unauthorised()
-
-    # Defence in depth beside SameSite=Lax: a state-changing request must look
-    # same-origin. Browsers set Origin on cross-site POSTs, so a forged one is
-    # rejected here even if a future cookie policy change let it through.
     if request.method not in _SAFE_METHODS:
         origin = request.headers.get("origin")
         if origin:
@@ -483,23 +58,7 @@ async def require_user(request: Request):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                     detail="Cross-origin request refused.")
 
-    # The address gate sits AFTER the session is resolved and after the
-    # cross-origin check, and returns 403 rather than 401 on purpose. 401 means
-    # "we do not know who you are" and web/src/lib/api.ts bounces it to the
-    # sign-in page -- which would send a signed-in person to a login form they
-    # would pass, landing them right back here. 403 says "we know who you are
-    # and this is not allowed yet", which is the truth and which the client
-    # already surfaces instead of redirecting.
-    if verification_blocks(user):
-        log.info("unverified address blocked %s on %s", user.username,
-                 request.url.path)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Confirm your email address to continue. "
-                   "We sent a link when you registered.",
-            headers={UNVERIFIED_HEADER: UNVERIFIED_REASON},
-        )
-
+    user = repo.workspace_user()
     request.state.user = user
     return user
 
@@ -509,56 +68,16 @@ PROTECTED = Depends(require_user)
 
 
 async def user_for_websocket(websocket) -> object | None:
-    """Resolve the session for a WebSocket handshake.
+    """The account a WebSocket handshake runs as.
 
-    A WebSocket upgrade carries cookies like any other request, but it does NOT
-    pass through the HTTP dependency chain -- protecting the routers does
-    nothing for it, which is the usual way a socket is left open.
-
-    The address gate applies here too, for the same reason the session check
-    does: the replay socket streams the same data the HTTP routes serve, so a
-    rule enforced only on the HTTP half is a rule with a documented way round
-    it. Returning None is the existing "refuse the handshake" signal.
+    The same cross-site rule as the HTTP routes. A browser always sends Origin
+    on a WebSocket upgrade, and a socket opened from another site is refused
+    here, because the replay socket streams the same data the HTTP routes
+    serve. Returning None is the existing "refuse the handshake" signal.
     """
-    user = repo.resolve_session(websocket.cookies.get(COOKIE, ""))
-    if user is None or verification_blocks(user):
+    origin = websocket.headers.get("origin")
+    host = websocket.headers.get("host", "")
+    if origin and host and not origin.endswith("//" + host):
+        log.warning("cross-origin websocket from %s", origin)
         return None
-    return user
-
-
-def set_session_cookie(response, raw_token: str, remember: bool = True) -> None:
-    """Hand the browser its half of the session.
-
-    `remember` is the "Remember me" box, and until now the box was decorative:
-    it was ticked by default, the page never sent it, this function had no
-    parameter for it, and the cookie always carried a seven-day Max-Age. So
-    closing every tab -- or the whole browser -- left someone signed in for a
-    week, and unticking the box changed nothing.
-
-    A cookie with NO Max-Age lives only as long as the browser process; one
-    WITH it survives restarts. That is precisely the choice the box appears to
-    offer, so it now makes it.
-
-    Note this governs the BROWSER's half only. The row in `sessions` expires on
-    its own schedule either way -- a discarded cookie leaves a harmless orphan
-    that ages out, which is the safe direction. The reverse, a browser holding
-    a cookie for a session the server has revoked, is what must never happen,
-    and does not: the guard resolves every request against the database.
-
-    Defaults to True so any caller that does not pass it behaves as before.
-    """
-    response.set_cookie(
-        COOKIE, raw_token,
-        # None, not 0. Omitting Max-Age makes it a session cookie; a Max-Age of
-        # 0 would delete the cookie on arrival.
-        max_age=(int(repo.SESSION_TTL.total_seconds()) if remember else None),
-        httponly=True,               # unreadable from JavaScript
-        secure=not _INSECURE,        # HTTPS only, unless explicitly relaxed
-        samesite="lax",              # not sent on cross-site state changes
-        path="/",
-    )
-
-
-def clear_session_cookie(response) -> None:
-    response.delete_cookie(COOKIE, path="/", httponly=True,
-                           secure=not _INSECURE, samesite="lax")
+    return repo.workspace_user()

@@ -14,7 +14,7 @@
 |   |   |
 |:--|:--|
 | 🎯 **Does** | Validate input ➜ call [`src`](../../src) ➜ serialise the answer |
-| 🔐 **Guarded** | All of these except `auth.py`, `oauth.py` and `meta.py` |
+| 🔐 **Guarded** | No sign-in. All but `meta.py` run as the workspace account and refuse cross-origin writes |
 | 📐 **Rule** | Business logic belongs in `src`, not in a route |
 | 📁 **Path** | `api/routers/` |
 | 📦 **Holds** | `9` files · `2,946` lines |
@@ -50,8 +50,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`replay.py`](replay.py) | ▶️ Live replay: create a session, then drive it bar-by-bar over a WebSocket. | 561 |
-| [`auth.py`](auth.py) | 🔐 Sign in · register · sign out · password reset · username reminder · email verification. | 1,044 |
-| [`oauth.py`](oauth.py) | 🌐 `/providers`, `/{name}/start`, `/{name}/callback` — the whole redirect dance. | 324 |
+| [`auth.py`](auth.py) | 🔐 `/me` — the workspace account · `/onboarded` — the introduction flag. | 50 |
 | [`backtests.py`](backtests.py) | 📊 Run a backtest, then fetch its trades, equity, patterns and waves. | 390 |
 | [`meta.py`](meta.py) | ❤️ Health, version, symbols, timeframes and other reference data. | 254 |
 | [`optimize.py`](optimize.py) | 🎯 Sweeps a strategy's own parameter grid and ranks the runs. | 117 |

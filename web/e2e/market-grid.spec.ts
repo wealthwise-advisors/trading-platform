@@ -8,7 +8,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test"
-import { goToMarketGrid, loadAndPlay, signIn, widenRsiWindow } from "./helpers"
+import { goToMarketGrid, loadAndPlay, openApp, widenRsiWindow } from "./helpers"
 
 /** Every control that must be able to explain itself. */
 const EXPLAINED = [
@@ -32,7 +32,7 @@ test.describe("before a session is loaded", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await signIn(page)
+    await openApp(page)
     await goToMarketGrid(page)
   })
   test.afterAll(async () => { await page.close() })
@@ -118,7 +118,7 @@ test.describe("once a session is loaded", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage()
-    await signIn(page)
+    await openApp(page)
     await goToMarketGrid(page)
     await widenRsiWindow(page)
     await loadAndPlay(page)
@@ -274,7 +274,7 @@ test.describe("once a session is loaded", () => {
 test("POC Match groups by whole number, POC vs Avg is green above / red below", async ({ browser }) => {
   test.setTimeout(360_000)
   const page = await browser.newPage()
-  await signIn(page)
+  await openApp(page)
   await goToMarketGrid(page)
   await widenRsiWindow(page)
   for (const tf of ["10m", "15m", "20m", "30m"]) {

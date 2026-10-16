@@ -14,18 +14,16 @@ the code could not keep. `repo.delete_account` deals with the dependents first;
 these tests hold it to that, and the FK regression is asserted directly so it
 cannot come back quietly.
 
-Registered in tests/conftest.py's _SECURITY_SUITES: several tests here assert a
-REFUSAL, and under the session-wide require_user override they would pass
-without reaching the guard.
+Closing an account is an OPERATOR action now -- scripts/manage_users.py
+delete. The "Close this account" screen and its DELETE /api/auth/me route went
+with sign-in on 2026-10-16, and their tests with them; what is tested here is
+the repository function that command calls.
 """
 
 import sqlite3
 
 import pytest
-from fastapi.testclient import TestClient
 
-from api import auth
-from api.main import app
 from db import backtests as blobs
 from db import connection
 from db import users as repo
@@ -33,33 +31,16 @@ from db import users as repo
 
 @pytest.fixture
 def db(tmp_path, monkeypatch):
-    """A scratch database, fresh throttles, and sidecars under tmp_path."""
+    """A scratch database and sidecars under tmp_path."""
     monkeypatch.setattr(connection, "DB_PATH", tmp_path / "accounts.db")
     monkeypatch.setattr(blobs, "BLOB_DIR", tmp_path / "backtests")
-    monkeypatch.setattr(auth, "throttle", auth.Throttle())
-    monkeypatch.setattr(auth, "signup_throttle", auth.SignupThrottle())
-    monkeypatch.setattr(auth, "_INSECURE", True)     # TestClient speaks http://
     return tmp_path
 
 
-@pytest.fixture
-def client(db):
-    with TestClient(app) as c:
-        yield c
-
-
-PASSWORD = "Correct-Horse-99-Battery"
-
-
 def make_user(username="trader", email="") -> int:
-    return repo.create_user(username, auth.hash_password(PASSWORD),
-                            full_name="A Trader", email=email, country="IN")
-
-
-def sign_in(client, username=PASSWORD and "trader", password=PASSWORD):
-    r = client.post("/api/auth/login", json={"username": username, "password": password})
-    assert r.status_code == 200, r.text
-    return r
+    """An account row. No password: nothing signs in any more."""
+    return repo.create_user(username, "!", full_name="A Trader", email=email,
+                            country="IN", has_password=False)
 
 
 def add_backtest(user_id: int, backtest_id: str, *, trades: int = 0) -> None:
@@ -218,107 +199,3 @@ def test_database_is_still_consistent_afterwards(db):
     finally:
         conn.close()
     assert orphans == 0
-
-
-# ── the HTTP route ───────────────────────────────────────────────────────────
-
-def test_route_refuses_an_anonymous_caller(client):
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "trader", "password": PASSWORD})
-    assert r.status_code == 401
-
-
-def test_route_closes_the_account_and_its_data(client, db):
-    uid = make_user()
-    add_backtest(uid, "bt-http", trades=3)
-    sign_in(client)
-
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "trader", "password": PASSWORD})
-
-    assert r.status_code == 200, r.text
-    assert r.json() == {"ok": True, "backtests": 1, "trades": 3}
-    assert counts() == {"users": 0, "backtests": 0, "trades": 0, "sessions": 0}
-
-
-def test_the_session_is_dead_immediately_afterwards(client, db):
-    make_user()
-    sign_in(client)
-    assert client.get("/api/auth/me").status_code == 200
-
-    client.request("DELETE", "/api/auth/me",
-                   json={"confirm": "trader", "password": PASSWORD})
-
-    # The same client, still holding whatever the server left it.
-    assert client.get("/api/auth/me").status_code == 401
-    assert client.get("/api/strategies").status_code == 401
-
-
-def test_a_closed_account_cannot_sign_in_again(client, db):
-    make_user()
-    sign_in(client)
-    client.request("DELETE", "/api/auth/me",
-                   json={"confirm": "trader", "password": PASSWORD})
-
-    r = client.post("/api/auth/login",
-                    json={"username": "trader", "password": PASSWORD})
-    assert r.status_code == 401
-
-
-def test_a_wrong_password_does_not_close_the_account(client, db):
-    make_user()
-    sign_in(client)
-
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "trader", "password": "not-the-password"})
-
-    assert r.status_code == 401
-    assert counts()["users"] == 1
-    assert client.get("/api/auth/me").status_code == 200   # still signed in
-
-
-def test_the_username_must_be_typed(client, db):
-    make_user()
-    sign_in(client)
-
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "", "password": PASSWORD})
-
-    assert r.status_code == 400
-    assert counts()["users"] == 1
-
-
-def test_confirming_someone_elses_name_does_not_reach_them(client, db):
-    """There is no parameter that aims this at another account.
-
-    The identity comes from the session, so the closest thing to an attempt is
-    typing somebody else's username into the confirmation box -- which fails
-    the confirmation check rather than deleting either account.
-    """
-    make_user("mine")
-    victim = make_user("victim")
-    add_backtest(victim, "bt-victim")
-    sign_in(client, "mine")
-
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "victim", "password": PASSWORD})
-
-    assert r.status_code == 400
-    assert repo.get_user("victim") is not None
-    assert repo.get_user("mine") is not None
-
-
-def test_an_oauth_only_account_closes_without_a_password(client, db):
-    """No password to re-enter, so the typed username is the confirmation."""
-    uid = repo.create_user("googler", auth.hash_password("unreachable-by-design"),
-                           email="g@example.com", email_verified=True,
-                           has_password=False)
-    add_backtest(uid, "bt-oauth")
-    token = repo.new_session(uid)
-    client.cookies.set(auth.COOKIE, token)
-
-    r = client.request("DELETE", "/api/auth/me",
-                       json={"confirm": "googler", "password": ""})
-
-    assert r.status_code == 200, r.text
-    assert counts()["users"] == 0

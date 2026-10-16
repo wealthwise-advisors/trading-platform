@@ -112,10 +112,7 @@ Trading/
 │   ├── deps.py                 # Contract specs, config loading
 │   ├── store.py                # (user_id, backtest_id) -> BacktestResults; cache
 │   │                           #   in front of the SQLite database in db/
-│   ├── auth.py                 # argon2id, sessions, the route guard, throttles
-│   ├── oauth.py                # the four sign-in providers and the code exchange
-│   ├── verification.py         # Resend: confirmation, reset, username reminder
-│   ├── captcha.py              # Cloudflare Turnstile; fails closed when enabled
+│   ├── auth.py                 # no sign-in: resolves the workspace account, refuses cross-origin writes
 │   ├── strategy_registry.py    # Strategy id/label/param-schema -> build_strategy()
 │   ├── serializers.py          # BacktestResults/DataFrame -> JSON dicts
 │   ├── routers/                # backtests, replay, schwab, optimize, meta
@@ -137,12 +134,9 @@ Trading/
 │   ├── generate_data.py           # Generate synthetic CSV data for all symbols
 │   └── download_rithmic_data.py   # Download real Rithmic bars
 │
-├── tests/                      # 27 files, 1,840 tests -- see "Tests" below
-│   ├── test_auth.py                       # the guard: every route refuses anon
-│   ├── test_reset_auth.py                 # password + username recovery
-│   ├── test_oauth_auth.py                 # Google · LinkedIn · GitHub · Twitter
-│   ├── test_isolation.py                  # one user must not reach another's data
-│   ├── conftest.py                        # _SECURITY_SUITES -- read before adding a suite
+├── tests/                      # 40 files, 2,177 tests -- see "Tests" below
+│   ├── test_isolation.py                  # one account's rows invisible to another (data layer)
+│   ├── conftest.py                        # _REAL_WORKSPACE_SUITES -- read before adding a suite
 │   ├── test_engine.py                     # 5 backtest engine smoke tests
 │   └── test_swing_zigzag_regression.py    # 29 tests -- regression baseline for the
 │                                            #   Swing/3-Leg Deviation zigzag overlay
@@ -354,25 +348,25 @@ timestamp,open,high,low,close,volume
 py -3.12 -m pytest tests/ -v
 ```
 
-**27 files, 1,840 tests** (plus 307 in `web/`). The four below are the security suite and have a
-rule of their own -- see the warning after them.
+**40 files, 2,177 tests** (plus 533 unit and 45 end-to-end in `web/`).
+
+The suites that exercise the workspace account itself -- which account it
+resolves to, onboarding, the cross-origin refusal, a restored backup -- have a
+rule of their own; see the warning below.
 
 | Suite | Holds |
 |---|---|
-| `test_auth.py` | Every route refuses an anonymous caller. Sessions die on logout. A new account never receives the broker. |
-| `test_reset_auth.py` | Recovery leaks nothing -- not by body, status, or timing. Tokens are single-use, expiring, and purpose-scoped. |
-| `test_oauth_auth.py` | Only a **provider-verified** address may match an account. A disabled account is refused, never re-provisioned. |
-| `test_isolation.py` | One user cannot reach another's data. Routes are swept from the app's own OpenAPI schema. |
+| `test_isolation.py` | One account's rows are invisible to another at the data layer. Every result route is swept from the app's own OpenAPI schema. |
+| `test_live_sessions.py` | Paper trading; every live route refuses a request from another website. |
+| `test_account_data.py` | Saved configurations and onboarding; cross-site writes refused. |
 
-> ⚠️ **Adding a test file that asserts a refusal?** Add its name to
-> `_SECURITY_SUITES` in [`tests/conftest.py`](tests/conftest.py). Every other
-> suite runs with `require_user` overridden to a signed-in user, so without
-> that entry your refusal assertions pass **without ever reaching the guard**.
+> ⚠️ **Adding a test file that needs the REAL workspace account?** Add its name
+> to `_REAL_WORKSPACE_SUITES` in [`tests/conftest.py`](tests/conftest.py). Every
+> other suite runs with `require_user` overridden to a fixed stand-in, so
+> without that entry your assertions are answered by the stand-in instead.
 
-> ⚠️ **Adding an API route?** Two guards will fail, and both are meant to.
-> `test_every_api_route_is_either_public_or_guarded` enumerates the schema and
-> demands a 401 from anything not in `PUBLIC`; `test_only_one_new_path_added`
-> asserts an exact route count. Raise them deliberately rather than by reflex.
+> ⚠️ **Adding an API route?** `test_only_one_new_path_added` asserts an exact
+> route count, and is meant to fail. Raise it deliberately rather than by reflex.
 
 `test_engine.py`: 5 tests cover MA crossover, RSI, Breakout, equity curve
 length, and trade P&L types (synthetic data, seed=99).
@@ -404,40 +398,38 @@ All tests must pass before committing.
 
 ---
 
-## Accounts & Access
+## Access
 
-Registration is open. Signing in is by **username + password**, or by
-**Google, LinkedIn, GitHub or Twitter/X**.
+**There is no sign-in** (removed 2026-10-16, on request). The link opens straight
+onto the dashboard; login, registration, password reset, OAuth, email/phone
+verification and CAPTCHA are gone.
 
 | Concern | Where |
 |---|---|
-| Hashing, sessions, the guard, rate limits | [`api/auth.py`](api/auth.py) |
-| Providers, PKCE, token exchange | [`api/oauth.py`](api/oauth.py) |
-| Confirmation / reset / reminder mail | [`api/verification.py`](api/verification.py) |
-| Turnstile | [`api/captcha.py`](api/captcha.py) |
-| Accounts, sessions, identities, tokens | [`db/users.py`](db/users.py) |
-| Operator-side account admin (add · passwd · disable · link) | [`scripts/manage_users.py`](scripts/manage_users.py) |
+| Which account a request runs as, the cross-origin refusal | [`api/auth.py`](api/auth.py) |
+| The workspace account, saved configurations, onboarding | [`db/users.py`](db/users.py) |
+| Account housekeeping (list · disable · enable · delete) | [`scripts/manage_users.py`](scripts/manage_users.py) |
 
-> `is_owner` is deliberately absent from that table. **Nothing in the codebase
-> sets it to 1** — not a route, not `create_user`, not `manage_users.py`. It is
-> granted by hand, in SQL, on the server. This entry used to name the script as
-> the way to grant it, which was worse than a missing line: it implied a
-> supported path where the real answer is that there isn't one.
+**Rules worth knowing before changing any of it:**
 
-**Four rules worth knowing before changing any of it:**
+1. **Every request is the workspace account** (`db.users.workspace_user`): the
+   owner account if there is one, else the oldest active account, else a fresh
+   `workspace` account. Everyone with the link shares it.
+2. **The owner account holds the broker.** `users.is_owner` is the Schwab
+   entitlement; nothing in the codebase sets it to 1 -- it is granted by hand,
+   in SQL, on the server. Disabling the owner account moves the workspace to
+   an account without it, and live data stops.
+3. **Cross-origin state changes are still refused** -- a `POST`/`PUT`/`DELETE`
+   whose `Origin` names another site is a 403, and a WebSocket from another
+   site is refused. With no session, this is what stops another website
+   driving the API through a visitor's browser. Do not remove it.
+4. **No repository function takes a default `user_id`.** A forgotten argument
+   is a `TypeError`, not a leak -- the data model is still per-account.
+5. **The URL is the access control now.** Anyone who can reach it can use
+   every feature, including live data.
 
-1. **An account never grants the broker.** There is one Schwab connection and
-   it is the operator's own. `users.is_owner` defaults to `0` and
-   `create_user` has no parameter for it, so no route can hand it out.
-2. **Only a provider-VERIFIED address may match an account.** An unverified one
-   is a claim by whoever is signing in.
-3. **No repository function takes a default `user_id`.** A forgotten argument
-   is a `TypeError`, not a leak.
-4. **Another user's backtest is 404, never 403.** A 403 confirms the id exists.
-
-**Every integration is dormant without credentials** — the provider reports
-itself unconfigured and its button says so. Nothing is faked. The deploy prints
-`present:` / `ABSENT :` per integration, by presence only.
+The old `sessions`, `oauth_*` and token tables are still in the schema, unused.
+They were left rather than dropped: a migration for no functional gain.
 
 ---
 

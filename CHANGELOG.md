@@ -9,6 +9,21 @@ commits — this is the first release with a formal changelog process.
 
 ### Removed
 
+- **Sign-in, 2026-10-16.** The app now opens straight from its link; every
+  request runs as one workspace account (`db.users.workspace_user` — the owner
+  account when there is one, so Schwab live data keeps working). Removed: the
+  sign-in and sign-up pages, login, logout, registration, password reset,
+  username reminder, email and phone verification, code sign-in, data export,
+  account deletion over HTTP, Google / GitHub / LinkedIn / X sign-in, the
+  Turnstile CAPTCHA, the login throttles, and the account-settings screen.
+  Seventeen API routes went (52 → 35); `/api/auth/me` and `/api/auth/onboarded`
+  remain. `api/oauth.py`, `api/captcha.py`, `api/sms.py`, `api/verification.py`
+  and `api/routers/oauth.py` are deleted, as is the `argon2-cffi` dependency.
+  The deploy no longer passes the OAuth, mail, SMS or CAPTCHA secrets to the
+  container. **Kept:** the cross-origin refusal on every state-changing request
+  and on the replay WebSocket, per-account isolation in the data layer, and the
+  `is_owner` Schwab entitlement. The `sessions` and `oauth_*` tables remain in
+  the schema, unused. **Access is now controlled by who can reach the URL.**
 - The entire Elliott Wave analysis engine (`src/analysis/elliott_wave.py`,
   `wave_analysis.py`, `wave_numbering.py`, `diagonal_waves.py`,
   `recursive_structure.py`, `structure_classification.py`,

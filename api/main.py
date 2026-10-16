@@ -26,12 +26,9 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
-from api import auth as auth_mod
-from api import captcha, verification
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, account, quotes, live,
-                         oauth as oauth_router)
+                         schwab, optimize, data_export, account, quotes, live)
 
 try:
     _version = _pkg_version("autotrader")
@@ -40,19 +37,11 @@ except _PkgNotFound:
 
 # ── make the application's own logs visible ──────────────────────────────────
 #
-# There was no logging configuration anywhere in this app. api/auth.py,
-# api/routers/oauth.py and api/verification.py all use the STANDARD library's
-# logging; main.py uses loguru, which does not adopt stdlib records unless it
-# is told to. So no handler was ever attached to them: every log.info was
-# dropped outright, and log.warning survived only via Python's "handler of last
-# resort", which prints a bare message with no logger name, level or time.
-#
-# That was not a cosmetic gap. Those modules log the reason behind every OAuth
-# refusal, every throttle, and every rejected recovery attempt -- deliberately,
-# because none of it can be told apart from the outside: a failed token
-# exchange and a failed profile fetch produce the identical redirect. Debugging
-# a live sign-in problem meant guessing between branches that had each already
-# written down exactly which one they took.
+# Parts of this app log through the STANDARD library's logging (api/auth.py's
+# cross-origin refusals among them); main.py uses loguru, which does not adopt
+# stdlib records unless it is told to. Without this, every log.info from those
+# modules was dropped outright, and log.warning survived only via Python's
+# "handler of last resort", with no logger name, level or time.
 #
 # force=True because uvicorn installs its own handlers first; without it this
 # call is a silent no-op under the server we actually deploy on -- which is the
@@ -66,32 +55,13 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    """Say what mail and CAPTCHA are actually doing, once, at startup.
+    """Startup notice.
 
-    Both modules have had a describe() for a while and NOTHING CALLED EITHER --
-    the one line that says whether confirmation mail can leave the building was
-    computed by a function no code path reached. That matters more than it
-    sounds: `verification.describe()` is what reports the sandbox sender, the
-    state in which every send succeeds and only the recipients notice it did
-    not arrive. Silence there is indistinguishable from working.
-
-    It also reports whether the address gate is live, because the gate switches
-    itself on from mail's own configuration and an operator should not have to
-    infer that from two other lines.
-
-    A lifespan handler rather than @app.on_event("startup"): on_event is
-    deprecated and warns, and adding a warning to a clean build to carry a log
-    line is a poor trade.
+    This used to report what mail and CAPTCHA were doing and whether the email
+    gate was live. All three belonged to sign-in, which was removed on
+    2026-10-16; what is worth saying at startup now is that the app is open.
     """
-    logger.info(verification.describe())
-    logger.info(captcha.describe())
-    # An f-string, not %s with an argument: this is loguru's logger, which
-    # formats with str.format and would silently drop a %-style argument,
-    # printing the placeholder itself.
-    gate = ("ENFORCED -- unconfirmed addresses cannot use the app"
-            if auth_mod.verification_enforced()
-            else "off -- unconfirmed addresses are allowed through")
-    logger.info(f"Email gate: {gate}")
+    logger.info("Sign-in is disabled: every request runs as the workspace account.")
     yield
 
 
@@ -168,29 +138,19 @@ async def _unhandled_exception(request: Request, exc: Exception):
     )
 
 
-# Public: sign in/out, and the two liveness endpoints inside meta.
+# /auth/me and /auth/onboarded, and the two liveness endpoints inside meta.
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(meta.router, prefix="/api")
 
-# Also public, and necessarily so: someone signing in with Google has no
-# session yet, and the provider redirects the browser back to the callback
-# carrying none of our cookies. These routes defend themselves with a
-# single-use server-side state plus PKCE -- see api/routers/oauth.py.
-#
-# They CAN create an account, and only on an address the provider positively
-# states it has verified. (This comment used to say the opposite; that stopped
-# being true when signup was opened.) What they still cannot do is grant the
-# broker: is_owner is not a parameter of create_user, so no path through here
-# reaches it.
-app.include_router(oauth_router.router, prefix="/api")
 
-# Everything below requires a session. The dependency is declared on the
-# ROUTER, not on each function, so an endpoint added to any of these files
-# later is protected by default rather than by remembering to protect it.
+# Everything below runs through require_user: no sign-in any more, but it
+# attributes the request to the workspace account and refuses cross-origin
+# state changes. Declared on the ROUTER, not on each function, so an endpoint
+# added to any of these files later gets the same treatment by default.
 app.include_router(backtests.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(replay.router, prefix="/api", dependencies=[PROTECTED])
 # Not PROTECTED: a websocket handshake cannot resolve an HTTP dependency.
-# replay_ws authenticates the cookie itself, before accept().
+# replay_ws resolves the workspace account and checks Origin itself.
 app.include_router(replay.ws_router, prefix="/api")
 app.include_router(schwab.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(optimize.router, prefix="/api", dependencies=[PROTECTED])

@@ -334,4 +334,15 @@ class TestExistingApiUnchanged:
         # registered behind PROTECTED, tests/test_live_sessions.py asserts
         # each one refuses an anonymous caller, and the broker they trade
         # through is a PaperBroker chosen in api/routers/live.py.
-        assert len(paths) == 52, sorted(paths)
+        # 52 -> 35 (2026-10-16): SIGN-IN REMOVED, on request -- the app opens
+        # straight from its link. Seventeen routes went with it: /api/auth/
+        # {login, logout, register, signup-config, verify-email,
+        # resend-verification, forgot-password, reset-password,
+        # forgot-username, export, request-code, verify-code, phone,
+        # phone/confirm} and the three OAuth routes /api/auth/oauth/providers,
+        # {name}/start and {name}/callback. /api/auth/me and
+        # /api/auth/onboarded stay: the dashboard reads the workspace account
+        # and stores the introduction flag on it. Every remaining data route
+        # still runs through require_user, which now resolves the workspace
+        # account and refuses cross-origin state changes.
+        assert len(paths) == 35, sorted(paths)

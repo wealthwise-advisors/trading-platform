@@ -13,8 +13,7 @@ speed rather than a leak discovered later.
 
 A miss and a not-yours are deliberately indistinguishable here -- both come
 back as None/False/empty. Distinguishing them would tell an attacker which
-backtest ids exist, which is the same enumeration weakness the login endpoint
-avoids by refusing unknown users and wrong passwords identically.
+backtest ids exist -- an enumeration weakness, whatever the account model.
 """
 
 import logging

@@ -6,19 +6,17 @@ import { ReplayPage } from "@/features/replay/ReplayPage"
 import { DataExportPage } from "@/features/export/DataExportPage"
 import { useConfigStore } from "@/store/configStore"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { type Me } from "@/lib/api"
-import { AccountSettings } from "@/components/AccountSettings"
 import { ExportReportButton } from "@/components/ExportReportButton"
-import { HeaderNav, SymbolSearch, AccountMenu } from "@/components/HeaderNav"
+import { HeaderNav, SymbolSearch, WorkspaceBadge } from "@/components/HeaderNav"
 import { AlertsBell } from "@/components/panels/MarketPanels"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
 import {
-  Upload, Settings, Sun, Moon,
+  Upload, Sun, Moon,
   // The config icon rail, one per ConfigForm section.
   ChevronsLeft, ChevronsRight, Database, LineChart, Clock, Sparkles,
   SlidersHorizontal, Wallet, Waves, CalendarDays, Timer,
@@ -56,9 +54,6 @@ function App({ user }: { user: Me }) {
   const setConfigOpen = useConfigStore((s) => s.setConfigOpen)
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
-  // The account dialog is opened from the avatar menu now, so the page owns
-  // whether it is showing rather than the dialog's own trigger button.
-  const [accountOpen, setAccountOpen] = useState(false)
   // Sent with Export Report so the report draws what the price chart shows.
   const chartSettings = useChartSettingsStore((s) => s.settings)
   // Dark is the default and stays the default; this only offers the way out.
@@ -94,7 +89,6 @@ function App({ user }: { user: Me }) {
           config sidebar -- every input, slider and dropdown -- before reaching
           the results they came for, on every single page load. */}
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <AccountSettings user={user} open={accountOpen} onOpenChange={setAccountOpen} />
       {/* The two COLUMNS. Their own row, so the status strip below can be a
           full-width sibling of the pair rather than a child of one of them. */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
@@ -222,10 +216,8 @@ function App({ user }: { user: Me }) {
           <div className="order-last w-full flex min-w-0">
             <HeaderNav />
           </div>
-          {/* Row one, right: find an instrument, reach the account. Sign out
-              and Account live in the avatar menu, where the reference puts
-              them; nothing was removed and the sign-out still revokes the
-              session server-side rather than only clearing the cookie. */}
+          {/* Row one, right: find an instrument, and the workspace badge
+              where the reference puts the avatar. */}
           <div className="ml-auto flex items-center gap-1.5 shrink-0">
             <SymbolSearch />
             {/* The bell, with the count of price alerts currently set. It is a
@@ -253,11 +245,6 @@ function App({ user }: { user: Me }) {
               <span className="sr-only">
                 {theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
               </span>
-            </Button>
-            <Button size="sm" variant="secondary" className="px-2"
-                    onClick={() => setAccountOpen(true)} title="Account settings">
-              <Settings className="h-4 w-4" aria-hidden />
-              <span className="sr-only">Account settings</span>
             </Button>
 
             {/* THE ACTIONS, ON THIS ROW.
@@ -289,7 +276,7 @@ function App({ user }: { user: Me }) {
                 all still there, and DeployButton is still a component, so
                 bringing it back is one line. Nothing about the paper-only
                 restriction changed. */}
-            <AccountMenu user={user} onOpenAccount={() => setAccountOpen(true)} />
+            <WorkspaceBadge user={user} />
           </div>
         </header>
         {/* key={page} remounts this on every switch, which replays the

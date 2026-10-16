@@ -16,9 +16,9 @@
 |   |   |
 |:--|:--|
 | ▶️ **Run** | `py -3.12 -m pytest tests/ -q` |
-| 🔐 **Security suite** | `test_auth` · `test_reset_auth` · `test_oauth_auth` · `test_isolation` |
-| 🚨 **Adding a refusal test?** | Add the module to `_SECURITY_SUITES` in [`conftest.py`](conftest.py) — or it passes **without reaching the guard** |
-| 🚨 **Adding a route?** | Two guards fail on purpose: the OpenAPI sweep and an exact route count |
+| 🔐 **Workspace suites** | `test_isolation` · `test_account_data` · `test_live_sessions` · `test_backup_restore` · `test_account_deletion` |
+| 🚨 **Need the real workspace account?** | Add the module to `_REAL_WORKSPACE_SUITES` in [`conftest.py`](conftest.py) — or the stand-in answers instead |
+| 🚨 **Adding a route?** | An exact route count fails on purpose — raise it deliberately |
 | 📁 **Path** | `tests/` |
 | 📦 **Holds** | `33` files · `10,445` lines · `2` subfolders |
 
@@ -47,11 +47,8 @@
 
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
-| [`test_auth.py`](test_auth.py) | 🔐 Every route refuses an anonymous caller. Sessions die on logout. A new account never gets the broker. | 504 |
-| [`test_oauth_auth.py`](test_oauth_auth.py) | 🌐 Four providers. Only a **verified** address may match an account; a disabled one is refused, never re-provisioned. | 684 |
-| [`test_reset_auth.py`](test_reset_auth.py) | 🔑 Recovery leaks nothing — not by body, status or timing. Tokens single-use, expiring, purpose-scoped. | 678 |
-| [`test_isolation.py`](test_isolation.py) | 🚧 One user cannot reach another's data. Routes swept from the app's own OpenAPI schema. | 392 |
-| [`conftest.py`](conftest.py) | ⚙️ Shared setup. `_SECURITY_SUITES` exempts the four above from the signed-in override. | 116 |
+| [`test_isolation.py`](test_isolation.py) | 🚧 One account's rows are invisible to another at the data layer. Every result route swept from the app's own OpenAPI schema. | 337 |
+| [`conftest.py`](conftest.py) | ⚙️ Shared setup. `_REAL_WORKSPACE_SUITES` runs the workspace suites against the real account, not the stand-in. | 87 |
 | [`test_indicator_correctness.py`](test_indicator_correctness.py) | 📊 Bar construction: boundaries **and** OHLC, every intraday timeframe. | 1,188 |
 | [`test_multi_replay.py`](test_multi_replay.py) | 🕐 The multi-timeframe replay clock. | 663 |
 | [`test_replay_follow_live.py`](test_replay_follow_live.py) | 📡 Following the live market over the WebSocket. | 477 |

@@ -15,29 +15,6 @@ import type { ChartExportSettings } from "./chartExportSettings"
 
 const BASE = "/api"
 
-/** Where an unauthenticated visitor is sent. */
-export const SIGN_IN_PAGE = "/autotrader_signin.html"
-
-/**
- * Bounce to the sign-in page once, carrying a reason.
- *
- * Guarded by a module-level flag: several panels fetch in parallel, so a single
- * expired session produces a burst of 401s, and without this each one would
- * schedule its own navigation. The `next` parameter lets the user come back to
- * the page they were on rather than the dashboard root.
- */
-let redirecting = false
-function toSignIn(reason: string) {
-  if (redirecting) return
-  redirecting = true
-  const here = window.location.pathname + window.location.search
-  // Do not append `next` if we are ALREADY on the sign-in page: that is how a
-  // redirect loop starts.
-  if (window.location.pathname.endsWith("autotrader_signin.html")) return
-  const q = new URLSearchParams({ reason, next: here })
-  window.location.assign(`${SIGN_IN_PAGE}?${q}`)
-}
-
 /**
  * How long a request may take before it is abandoned.
  *
@@ -88,7 +65,7 @@ async function request<T>(path: string, init?: RequestInit & { timeoutMs?: numbe
   try {
     res = await fetch(`${BASE}${path}`, {
       headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",   // send the session cookie
+      credentials: "same-origin",
       signal: controller.signal,
       ...rest,
     })
@@ -103,14 +80,6 @@ async function request<T>(path: string, init?: RequestInit & { timeoutMs?: numbe
     throw new Error(`Could not reach the server. ${(e as Error)?.message ?? ""}`.trim())
   } finally {
     clearTimeout(timer)
-  }
-  // 401 means the session is gone or was never there. It is the ONLY status
-  // treated this way -- a 403 is a real authorisation refusal and a 500 is a
-  // defect, and bouncing either to a login screen would hide the actual
-  // problem behind a sign-in prompt.
-  if (res.status === 401) {
-    toSignIn("expired")
-    throw new Error("Your session has expired. Please sign in again.")
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "")
@@ -138,89 +107,27 @@ async function request<T>(path: string, init?: RequestInit & { timeoutMs?: numbe
   return res.json() as Promise<T>
 }
 
+/**
+ * The account the app runs as. There is no sign-in (removed 2026-10-16): the
+ * server attributes every request to one workspace account, and this is it.
+ * Used for the header's initials and the first-run introduction.
+ */
 export interface Me {
   username: string
   full_name: string
   email: string
   country: string
-  /** Whether the address has been proved, not merely typed. */
-  email_verified: boolean
-  /** Whether this person has already been shown the introduction. */
+  /** Whether the introduction has already been shown. */
   onboarded: boolean
-  /** Whether an unproved address is actually blocking this account right now.
-   *  False while mail is unconfigured or sandboxed -- the page must not send
-   *  someone to an inbox that will never receive anything. */
-  verification_required: boolean
 }
 
-/**
- * Auth calls, kept apart from `api` on purpose.
- *
- * `whoami` must NOT go through request(): request() bounces a 401 to the sign-in
- * page, and the whole point of whoami is to ASK whether there is a session.
- * Routing it through the same helper would turn "not signed in" into a redirect
- * before the caller ever saw the answer.
- */
 export const auth = {
-  async whoami(): Promise<Me | null> {
-    // Bypasses request() -- see above -- so it needs its own timeout, or the
-    // very first thing the app does can hang with no error and no dashboard.
-    const controller = new AbortController()
-    let timedOut = false
-    const timer = setTimeout(() => { timedOut = true; controller.abort() }, TIMEOUT_MS)
-    let res: Response
-    try {
-      res = await fetch(`${BASE}/auth/me`, {
-        credentials: "same-origin", signal: controller.signal,
-      })
-    } catch (e) {
-      if (timedOut) throw new TimeoutError(TIMEOUT_MS)
-      if (!navigator.onLine) {
-        throw new Error("You appear to be offline. Check your connection and try again.")
-      }
-      throw new Error(`Could not reach the server. ${(e as Error)?.message ?? ""}`.trim())
-    } finally {
-      clearTimeout(timer)
-    }
-    if (res.status === 401) return null
-    if (!res.ok) throw new Error(`Could not check the session (${res.status}).`)
-    return res.json() as Promise<Me>
-  },
-
-  async logout(): Promise<void> {
-    await fetch(`${BASE}/auth/logout`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    }).catch(() => {
-      /* the redirect below matters more than a failed POST */
-    })
-  },
+  /** The workspace account. Never null: there is no signed-out state. */
+  whoami: () => request<Me>("/auth/me"),
 
   /** Mark the introduction as seen. Server-side, so it holds across devices. */
   finishOnboarding: () =>
     request<{ ok: boolean }>("/auth/onboarded", { method: "POST", body: "{}" }),
-
-  /** Where the browser should go to download this account's data. */
-  exportUrl: () => "/api/auth/export",
-
-  /** Ask for another confirmation link. */
-  resendVerification: () =>
-    request<{ ok: boolean; detail?: string }>("/auth/resend-verification", {
-      method: "POST", body: JSON.stringify({}),
-    }),
-
-  /**
-   * Close the account for good.
-   *
-   * Takes no username: the server reads the identity from the session, so
-   * there is no parameter that could aim this at somebody else.
-   */
-  closeAccount: (confirm: string, password: string) =>
-    request<{ ok: boolean; backtests: number; trades: number }>("/auth/me", {
-      method: "DELETE", body: JSON.stringify({ confirm, password }),
-    }),
 }
 
 export const api = {
