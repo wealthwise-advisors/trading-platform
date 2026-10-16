@@ -404,30 +404,41 @@ jobs:
           curl -fsSL --max-time 30 "http://${{ secrets.EC2_HOST }}/" | grep -q '<title>AutoTrader</title>'
           echo "  dashboard served"
 
-          # /api/strategies is PROTECTED. This check used to read its body and
-          # grep for a strategy id, which stopped being possible the moment the
-          # app went behind a login -- an anonymous caller now gets 401, which
-          # is the whole point, and the deploy failed on the app working
-          # correctly. Asserting the 401 is the stronger check anyway: it
-          # proves the API is up AND that the guard is live.
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-                 "http://${{ secrets.EC2_HOST }}/api/strategies")
-          [ "$code" = "401" ] || { echo "  /api/strategies answered $code, expected 401"; exit 1; }
-          echo "  API up and refusing anonymous callers (401)"
+          # THE NO-LOGIN CONTRACT (sign-in removed 2026-10-16).
+          #
+          # These used to assert the opposite -- /api/strategies refusing an
+          # anonymous caller with 401, the sign-in page being served, the OAuth
+          # provider list answering -- and the first deploy after sign-in was
+          # removed FAILED here on the app working exactly as intended. They
+          # now assert what has to be true instead.
 
-          # The sign-in page must actually be served. It lives in web/public/
-          # and reaches the image through Vite's dist/. This catches both a
-          # missing page and one the box made unreadable (403).
+          # The API answers with no login, and with real data: a strategy id
+          # in the body proves more than a status code would.
+          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/strategies" | grep -q '"id"' \
+            || { echo "  /api/strategies did not answer with strategies"; exit 1; }
+          echo "  API answers with no login"
+
+          # It runs as the workspace account.
+          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/auth/me" | grep -q '"username"' \
+            || { echo "  /api/auth/me did not return the workspace account"; exit 1; }
+          echo "  workspace account resolved"
+
+          # The guard that REMAINS is live: a state-changing request from
+          # another website is refused. Nothing is written -- it is refused
+          # before the handler runs.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X PUT \
+                 -H 'Content-Type: application/json' -H 'Origin: https://smoke-test.invalid' \
+                 -d '{"config":{}}' "http://${{ secrets.EC2_HOST }}/api/account/configs/__smoke__")
+          [ "$code" = "403" ] || { echo "  cross-site write answered $code, expected 403"; exit 1; }
+          echo "  cross-site writes refused (403)"
+
+          # An old sign-in bookmark lands on the app, over HTTPS as people
+          # browse it -- nginx.conf AND ssl.conf.template both carry the
+          # redirect, and the first deploy proved one without the other.
           curl -fsSL --max-time 30 "http://${{ secrets.EC2_HOST }}/autotrader_signin.html" \
-            | grep -q 'AutoTrader' \
-            || { echo "  sign-in page not served"; exit 1; }
-          echo "  sign-in page served"
-
-          # The OAuth provider list must answer without a session -- it is what
-          # tells the sign-in page which buttons can do anything.
-          curl -fsS --max-time 20 "http://${{ secrets.EC2_HOST }}/api/auth/oauth/providers" \
-            | grep -q '"google"'
-          echo "  OAuth provider list reachable signed-out"
+            | grep -q '<title>AutoTrader</title>' \
+            || { echo "  old sign-in address does not reach the app"; exit 1; }
+          echo "  old sign-in address redirects to the app"
 
       - name: Close SSH again
         if: always()          # runs even when an earlier step fails

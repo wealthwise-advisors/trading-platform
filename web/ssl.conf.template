@@ -77,17 +77,17 @@ server {
         proxy_send_timeout 3600s;
     }
 
-    # The sign-in and sign-up pages must revalidate, for the same reason as
-    # index.html. See the longer note in nginx.conf.
+    # The old sign-in and sign-up addresses redirect to the app. Sign-in was
+    # removed on 2026-10-16; see the note in nginx.conf.
     #
-    # This file is a SECOND server block, and that is the trap: the rule was
-    # added to nginx.conf alone, the header did not appear, and port 80 is not
-    # what anybody browses -- everything redirects here. A change to caching,
-    # headers or locations belongs in BOTH files or it only half exists.
+    # This file is a SECOND server block, and that is the trap: a rule added
+    # to nginx.conf alone does not reach HTTPS, and port 80 is not what
+    # anybody browses -- everything redirects here. That is exactly how this
+    # redirect first shipped: 302 over http, still 404 over https. A change to
+    # caching, headers or locations belongs in BOTH files or it only half
+    # exists.
     location ~ ^/autotrader_(signin|signup)\.html$ {
-        add_header Cache-Control "no-cache, must-revalidate" always;
-        include /etc/nginx/security-headers.conf;
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        return 302 /;
     }
 
     location = /index.html {
@@ -109,10 +109,10 @@ server {
     # A typo'd PAGE gets a page saying so, instead of the dashboard. Mirrors
     # nginx.conf; see the longer note there. Split on the file extension so the
     # SPA catch-all above keeps every extension-less path.
-        # The sign-in / sign-up artwork. Unhashed filenames, so a week rather than
+        # The brand artwork. Unhashed filenames, so a week rather than
     # `immutable`: long enough that a returning visitor pays nothing, short
-    # enough that swapping web/public/trading-office.jpg actually shows up.
-    location ~ ^/(trading-office|brand-mark|brand-wordmark)\.(avif|webp|jpg|png)$ {
+    # enough that swapping a brand image actually shows up.
+    location ~ ^/(brand-mark|brand-wordmark)\.(avif|webp|jpg|png)$ {
         add_header Cache-Control "public, max-age=604800" always;
         include /etc/nginx/security-headers.conf;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
