@@ -2172,13 +2172,25 @@ button, [role="button"] {
   position: sticky;
   background: #0b1322;
 }
+/* FIXED WIDTHS that are exactly the left offsets of the next pinned column.
+   The offsets used to be 116px and 224px over columns that sized themselves
+   to their content, so the columns came out wider or narrower than the
+   offsets: gaps opened between the pinned cells and the scrolled cells showed
+   through them, and the OPEN figure slid half under the TF column. */
 .tape-table thead th:nth-child(1),
-.tape-table tbody td:nth-child(1) { left: 0; z-index: 2; }
+.tape-table tbody td:nth-child(1) { left: 0; z-index: 2; width: 124px; min-width: 124px; max-width: 124px; }
 .tape-table thead th:nth-child(2),
-.tape-table tbody td:nth-child(2) { left: 116px; z-index: 2; }
+.tape-table tbody td:nth-child(2) { left: 124px; z-index: 2; width: 124px; min-width: 124px; max-width: 124px; }
 .tape-table thead th:nth-child(3),
-.tape-table tbody td:nth-child(3) { left: 224px; z-index: 2; }
-.tape-table thead th:nth-child(-n + 3) { z-index: 4; }
+.tape-table tbody td:nth-child(3) { left: 248px; z-index: 2; width: 64px; min-width: 64px; max-width: 64px; }
+.tape-table thead th:nth-child(-n + 3) { z-index: 4; white-space: normal; }
+/* The header row above EVERY body cell. A sticky <thead> is its own stacking
+   context, so the z-index on its cells only counts inside it; without a
+   z-index on the thead itself the pinned body cells (z-index 2) painted over
+   the pinned header cells once the tape scrolled down, and BAR CLOSE / OPENED
+   / TF vanished under the rows. */
+.tape-table thead,
+.grid-thead { position: sticky; top: 0; z-index: 5; }
 /* The edge where the pinned columns end, so they read as pinned rather than as
    columns that happen to be there. */
 .tape-table thead th:nth-child(3),
