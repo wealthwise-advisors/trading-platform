@@ -18,7 +18,7 @@ from src.analysis.zigzag import (
     calc_zigzag as _calc_zigzag,
     assign_swing_labels as _assign_swing_labels,
     calc_nested_zigzag as _calc_nested_zigzag,  # noqa: F401 -- re-export, see below
-    spreadsheet_letter as _swing_letter,
+    minor_letter as _swing_letter,
 )
 
 # Re-exported under their old underscore-prefixed names (ui/report.py imports

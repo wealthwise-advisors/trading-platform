@@ -165,6 +165,15 @@ def spreadsheet_letter(n: int) -> str:
     return letters
 
 
+def minor_letter(n: int) -> str:
+    """The 3-leg (minor) pivot letter: a, b, ... z, aa -- LOWER case.
+
+    Sir's convention (2026-10-27): the 3-leg structure is written in small
+    letters so it never reads as the 10-leg swing structure on the same chart.
+    """
+    return spreadsheet_letter(n).lower()
+
+
 def calc_nested_zigzag(
     high: pd.Series,
     low: pd.Series,
@@ -195,7 +204,7 @@ def calc_nested_zigzag(
     independent grouping of the minor zigzag's own price channel), `sub` is
     the minor pivot's 0-indexed position within that parent swing (resets
     for every new parent swing), and `label` is the spreadsheet-style letter
-    (A, B, ... Z, AA, ...) for that position.
+    in lower case (a, b, ... z, aa, ...) for that position.
     """
     empty = pd.DataFrame(columns=["price", "type", "swing", "sub", "label"])
     if zz10.empty:
@@ -240,7 +249,7 @@ def calc_nested_zigzag(
 
         zz_minor["swing"] = swing_num
         zz_minor["sub"] = range(len(zz_minor))
-        zz_minor["label"] = [spreadsheet_letter(n + 1) for n in range(len(zz_minor))]
+        zz_minor["label"] = [minor_letter(n + 1) for n in range(len(zz_minor))]
         frames.append(zz_minor)
 
     if not frames:
@@ -262,7 +271,7 @@ def assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
     the next swing — its own price then starts establishing the NEXT swing's
     channel together with the pivot right after it.
 
-    Adds columns: swing (int), sub (int), label (str "swing.sub").
+    Adds columns: swing (int), sub (int), label (str: A, B, C... within the swing).
     """
     if zz.empty:
         return zz
@@ -297,5 +306,9 @@ def assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
 
     zz["swing"] = swing_nums
     zz["sub"] = sub_nums
-    zz["label"] = [f"{s}.{n}" for s, n in zip(swing_nums, sub_nums)]
+    # CAPITAL letters within each swing -- A, B, C, D -- per sir's convention
+    # (2026-10-27): 10-leg in capitals, 3-leg in small letters (minor_letter),
+    # so the two structures never read alike. Was "swing.sub" (3.0, 3.1, ...);
+    # the swing number itself still heads each swing box ("Swing 3").
+    zz["label"] = [spreadsheet_letter(n + 1) for n in sub_nums]
     return zz

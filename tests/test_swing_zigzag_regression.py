@@ -8,7 +8,7 @@ Locks in behavior verified end-to-end (real backtests, live browser
 screenshots, and direct API/DOM data extraction) on 2026-08-02:
   - major swing boundaries are contiguous, non-overlapping, and numbered
     sequentially from 1
-  - every swing's minor ("3-Leg") sequence starts at label "A"
+  - every swing's minor ("3-Leg") sequence starts at label "a" (lower case)
   - every minor pivot's timestamp falls strictly inside its own parent
     swing's boundary window (never bleeds into the next swing)
   - the live chart and the static HTML report use identical deviation
@@ -48,8 +48,8 @@ from api.report.report import generate_html_report
 DEV_10 = 0.0010
 DEV_3 = 0.0005
 
-DECIMAL_LABEL_RE = re.compile(r"^\d+\.\d+$")
-LETTER_LABEL_RE = re.compile(r"^[A-Z]+$")
+MAJOR_LABEL_RE = re.compile(r"^[A-Z]+$")    # 10-leg: capitals
+LETTER_LABEL_RE = re.compile(r"^[a-z]+$")   # 3-leg: small letters
 
 # Three fixed reference datasets (deterministic: same seed always produces
 # the same bars) of different sizes/seeds, so the invariants below are
@@ -106,18 +106,18 @@ class TestSwingHeaderData:
     both read `label` off these same records to build "Swing N (X to Y)")."""
 
     @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
-    def test_major_labels_are_decimal_format(self, bars, seed):
+    def test_major_labels_are_capital_letters(self, bars, seed):
         df = _reference_df(bars=bars, seed=seed)
         zz10, _ = _major_and_minor(df)
-        bad = [lbl for lbl in zz10["label"] if not DECIMAL_LABEL_RE.match(lbl)]
-        assert not bad, f"major swing labels not in 'N.M' format: {bad}"
+        bad = [lbl for lbl in zz10["label"] if not MAJOR_LABEL_RE.match(lbl)]
+        assert not bad, f"major swing labels not capital letters (A, B, C...): {bad}"
 
     @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
     def test_minor_labels_are_letter_format(self, bars, seed):
         df = _reference_df(bars=bars, seed=seed)
         _, zz3 = _major_and_minor(df)
         bad = [lbl for lbl in zz3["label"] if not LETTER_LABEL_RE.match(lbl)]
-        assert not bad, f"minor labels not spreadsheet-letter format (A, B, ... Z, AA, ...): {bad}"
+        assert not bad, f"minor labels not small-letter format (a, b, ... z, aa, ...): {bad}"
 
     @pytest.mark.parametrize("bars,seed", REFERENCE_DATASETS)
     def test_every_major_swing_has_header_data(self, bars, seed):
@@ -138,8 +138,8 @@ class TestMinorLabelsStartAtA:
         _, zz3 = _major_and_minor(df)
         for swing_num, grp in zz3.groupby("swing"):
             first_label = grp.sort_index().iloc[0]["label"]
-            assert first_label == "A", (
-                f"swing {swing_num}'s first minor label is {first_label!r}, expected 'A' -- "
+            assert first_label == "a", (
+                f"swing {swing_num}'s first minor label is {first_label!r}, expected 'a' -- "
                 f"a minor pivot coinciding with a major pivot may be getting labeled before "
                 f"exclusion again (see calc_nested_zigzag's own coincidence filter)"
             )
