@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { buildLevelColorMap, buildLevelMarkMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -1343,13 +1343,10 @@ export function ReplayPage() {
   ]
   // The Live table's levels take the first (most distinct) colours.
   const pocLevelColors = buildLevelColorMap(pocLevelValues, livePocs)
-  // A symbol per level as well as a colour, the same in both tables: sir is
-  // colour blind, so colour cannot be the only thing that tells levels apart.
-  const pocLevelMarks = buildLevelMarkMap(pocLevelValues, livePocs)
 
   const pocCols = buildPocColumns(
     shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
-    pocLevelColors, pocLevelMarks,
+    pocLevelColors,
   )
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
@@ -2654,11 +2651,11 @@ export function ReplayPage() {
                             return (
                               <td className="p-2 text-right font-mono whitespace-nowrap"
                                   style={lv ? { color: lv.color } : undefined}
-                                  title={lv ? `POC level ${lv.level} — timeframes with this symbol and colour share it` : undefined}>
-                                {/* The level with its group's symbol, coloured
-                                    by its group. Symbol + colour, not colour
-                                    alone, so it reads for a colour-blind eye. */}
-                                {lv ? <><span aria-hidden className="mr-1">{lv.mark}</span>{lv.level}</> : "—"}
+                                  title={lv ? `POC level ${lv.level} — timeframes in this colour share it` : undefined}>
+                                {/* The level alone, in its group's colour. A
+                                    symbol per level was tried 2026-10-27 and
+                                    removed on request: colour only. */}
+                                {lv ? lv.level : "—"}
                               </td>
                             )
                           })()}
@@ -2911,13 +2908,10 @@ export function ReplayPage() {
                               const poc = vp?.poc
                               const level = poc != null && Number.isFinite(poc) ? Math.trunc(poc) : null
                               const color = level != null ? pocLevelColors.get(level) : undefined
-                              const mark = level != null ? pocLevelMarks.get(level) : undefined
                               return (
                                 <td className="p-2 text-right font-mono whitespace-nowrap"
                                     style={color ? { color } : undefined}>
-                                  {level != null
-                                    ? <><span aria-hidden className="mr-1">{mark}</span>{level}</>
-                                    : "\u2014"}
+                                  {level ?? "\u2014"}
                                 </td>
                               )
                             })()}
