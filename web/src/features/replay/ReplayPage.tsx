@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { buildLevelColorMap, buildLevelMarkMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -335,6 +335,16 @@ export function ReplayPage() {
   const [sessionEnd, setSessionEnd] = useState("16:00")
   const [startDate, setStartDate] = useState(dr.start)
   const [endDate, setEndDate] = useState(dr.end)
+  /**
+   * True once the user has picked a date themselves -- either date field or
+   * the day stepper. From then on, selecting a timeframe never moves the
+   * range: "whatever date I select, keep it" (2026-10-27). Before that the
+   * range still follows the coarsest selected timeframe's preset days.
+   * Cleared by Reset, which puts the default range back.
+   */
+  const datesChosen = useRef(false)
+  const pickStartDate = (d: string) => { datesChosen.current = true; setStartDate(d) }
+  const pickEndDate = (d: string) => { datesChosen.current = true; setEndDate(d) }
   const [speed, setSpeed] = useState(0.1)
 
   // The universe the backend can actually serve for THIS source, rather than a
@@ -1059,7 +1069,8 @@ export function ReplayPage() {
       // were fetched for the range it started with, and rewriting the dates
       // underneath would describe a session that is not the one on screen --
       // which is also why the stepper and date fields lock on `ready`.
-      const start = startDateForTimeframes(endDate, next)
+      // Never once the user has chosen dates: the range they picked stands.
+      const start = datesChosen.current ? null : startDateForTimeframes(endDate, next)
       if (start) setStartDate(start)
       return                                        // no session yet: just a form
     }
@@ -1325,14 +1336,20 @@ export function ReplayPage() {
    * ONE colour per level for both tables, so 5823 is the same colour in the
    * Live state table and on the tape -- the rule the VWAP band columns follow.
    */
-  const pocLevelColors = buildLevelColorMap([
-    ...shownTimeframes.map((tf) => paneProfiles.get(tf)?.poc),
+  const livePocs = shownTimeframes.map((tf) => paneProfiles.get(tf)?.poc)
+  const pocLevelValues = [
+    ...livePocs,
     ...(showVp ? tapeWindow.map((r) => profileAtRow(r)?.poc) : []),
-  ])
+  ]
+  // The Live table's levels take the first (most distinct) colours.
+  const pocLevelColors = buildLevelColorMap(pocLevelValues, livePocs)
+  // A symbol per level as well as a colour, the same in both tables: sir is
+  // colour blind, so colour cannot be the only thing that tells levels apart.
+  const pocLevelMarks = buildLevelMarkMap(pocLevelValues, livePocs)
 
   const pocCols = buildPocColumns(
     shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
-    pocLevelColors,
+    pocLevelColors, pocLevelMarks,
   )
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
@@ -1365,6 +1382,7 @@ export function ReplayPage() {
     setSessionEnd("16:00")
     setStartDate(d.start)
     setEndDate(d.end)
+    datesChosen.current = false
     setSpeed(0.1)
   }
 
@@ -1613,7 +1631,7 @@ export function ReplayPage() {
               <div className="range-leg">
                 <span className="range-leg-label">From</span>
                 <DateField label="Start date" value={startDate}
-                           onChange={setStartDate} disabled={ready} />
+                           onChange={pickStartDate} disabled={ready} />
                 <span className="range-leg-day">{weekdayOf(startDate)}</span>
               </div>
 
@@ -1627,7 +1645,7 @@ export function ReplayPage() {
               <div className="range-leg">
                 <span className="range-leg-label">To</span>
                 <DateField label="End date" value={endDate}
-                           onChange={setEndDate} disabled={ready} />
+                           onChange={pickEndDate} disabled={ready} />
                 <span className="range-leg-day">{weekdayOf(endDate)}</span>
               </div>
             </div>
@@ -1641,11 +1659,12 @@ export function ReplayPage() {
             <DayCountStepper
               startDate={startDate}
               endDate={endDate}
-              onStep={(delta) =>
+              onStep={(delta) => {
+                datesChosen.current = true
                 // Functional update: prev is the latest committed end, so
                 // several clicks in one tick each advance a day.
                 setEndDate((prev) => steppedEndDate(startDate, prev, delta))
-              }
+              }}
               disabled={ready}
               disabledReason={lockTitle("data")}
               hideLabel
@@ -2635,12 +2654,11 @@ export function ReplayPage() {
                             return (
                               <td className="p-2 text-right font-mono whitespace-nowrap"
                                   style={lv ? { color: lv.color } : undefined}
-                                  title={lv ? `POC level ${lv.level} — timeframes in this colour share it` : undefined}>
-                                {/* The level alone, coloured by its group. A
-                                    "6/7" count sat beside it at first and was
-                                    removed on request: the colour is the
-                                    signal, and the count was noise. */}
-                                {lv ? lv.level : "—"}
+                                  title={lv ? `POC level ${lv.level} — timeframes with this symbol and colour share it` : undefined}>
+                                {/* The level with its group's symbol, coloured
+                                    by its group. Symbol + colour, not colour
+                                    alone, so it reads for a colour-blind eye. */}
+                                {lv ? <><span aria-hidden className="mr-1">{lv.mark}</span>{lv.level}</> : "—"}
                               </td>
                             )
                           })()}
@@ -2893,10 +2911,13 @@ export function ReplayPage() {
                               const poc = vp?.poc
                               const level = poc != null && Number.isFinite(poc) ? Math.trunc(poc) : null
                               const color = level != null ? pocLevelColors.get(level) : undefined
+                              const mark = level != null ? pocLevelMarks.get(level) : undefined
                               return (
                                 <td className="p-2 text-right font-mono whitespace-nowrap"
                                     style={color ? { color } : undefined}>
-                                  {level ?? "\u2014"}
+                                  {level != null
+                                    ? <><span aria-hidden className="mr-1">{mark}</span>{level}</>
+                                    : "\u2014"}
                                 </td>
                               )
                             })()}

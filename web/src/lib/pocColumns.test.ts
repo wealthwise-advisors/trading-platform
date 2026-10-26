@@ -4,7 +4,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  POC_LEVEL_PALETTE, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor, sideVsAverage,
+  POC_LEVEL_PALETTE, barsClosedBy, buildLevelColorMap, buildLevelMarkMap, buildPocColumns, levelColor,
+  sideVsAverage,
 } from "./pocColumns"
 
 const rows = (m: Record<string, number | null>) =>
@@ -47,14 +48,39 @@ describe("POC Match — same whole number, same colour", () => {
     const one = buildPocColumns(rows({ x: 7845, y: 7840 }))
     const two = buildPocColumns(rows({ x: 7840, y: 7845 }))
     expect(one.level.get("y")!.color).toBe(two.level.get("x")!.color)
-    // The lowest level opens on the column's original sky blue.
+    // The lowest level opens on the palette's first colour.
     expect(one.level.get("y")!.color).toBe(POC_LEVEL_PALETTE[0])
   })
 
-  it("every distinct level gets a distinct colour, past the palette's length", () => {
-    const many = Object.fromEntries(Array.from({ length: 14 }, (_, i) => [`t${i}`, 7800 + i]))
+  it("every distinct level gets a distinct colour + symbol pair, well past the palette", () => {
+    // Colour alone repeats after six -- the symbol is what keeps levels apart
+    // for a colour-blind reader, and the pair stays unique for 24 levels.
+    const many = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [`t${i}`, 7800 + i]))
     const c = buildPocColumns(rows(many))
-    expect(new Set([...c.level.values()].map((l) => l.color)).size).toBe(14)
+    expect(new Set([...c.level.values()].map((l) => l.color + l.mark)).size).toBe(24)
+    // Neighbouring levels never share either cue.
+    const sorted = [...c.level.values()].sort((a, b) => a.level - b.level)
+    for (let i = 1; i < sorted.length; i++) {
+      expect(sorted[i].color).not.toBe(sorted[i - 1].color)
+      expect(sorted[i].mark).not.toBe(sorted[i - 1].mark)
+    }
+  })
+
+  it("gives the Live table's levels the first colours, ahead of the tape's", () => {
+    const tape = [7800, 7801, 7802, 7803, 7850]
+    const live = [7850, 7802]
+    const colors = buildLevelColorMap([...live, ...tape], live)
+    const marks = buildLevelMarkMap([...live, ...tape], live)
+    expect(colors.get(7802)).toBe(POC_LEVEL_PALETTE[0])
+    expect(colors.get(7850)).toBe(POC_LEVEL_PALETTE[1])
+    expect(marks.get(7802)).toBe("●")
+    expect(marks.get(7850)).toBe("■")
+    expect(colors.get(7800)).toBe(POC_LEVEL_PALETTE[2])
+  })
+
+  it("never uses the ▲ / ▼ arrows as a level symbol", () => {
+    const m = buildLevelMarkMap(Array.from({ length: 30 }, (_, i) => 7800 + i))
+    for (const mark of m.values()) expect(["▲", "▼"]).not.toContain(mark)
   })
 
   it("never uses green or red, which mean above/below in the next column", () => {

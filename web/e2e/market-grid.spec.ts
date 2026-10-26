@@ -324,13 +324,17 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
     if (r.poc < mean - 1e-6) expect(r.avgColor, `${r.poc} is below ${mean} but not red`).toBe(red)
   }
 
-  // Same whole number <-> same Match colour. The cell shows the level and
-  // nothing else -- a "6/7" count was removed on request.
+  // Same whole number <-> same symbol AND colour; different numbers differ in
+  // at least one of them (colour alone repeats after six -- the symbol is the
+  // cue for a reader who cannot tell the colours apart). The cell shows the
+  // symbol and the level and nothing else -- a "6/7" count was removed.
+  const cue = (r: { matchText: string; matchColor: string }) => `${r.matchText.split(/\d/)[0]}|${r.matchColor}`
   for (const a of live) {
-    expect(a.matchText).toBe(`${Math.trunc(a.poc)}`)
+    expect(a.matchText).toMatch(/^\S\s*\d+$/)
+    expect(a.matchText.replace(/^\S\s*/, "")).toBe(`${Math.trunc(a.poc)}`)
     for (const b of live) {
-      if (Math.trunc(a.poc) === Math.trunc(b.poc)) expect(b.matchColor).toBe(a.matchColor)
-      else expect(b.matchColor).not.toBe(a.matchColor)
+      if (Math.trunc(a.poc) === Math.trunc(b.poc)) expect(cue(b)).toBe(cue(a))
+      else expect(cue(b)).not.toBe(cue(a))
     }
   }
   await page.close()
@@ -397,12 +401,13 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
   })
 
   const liveColor = new Map(live.filter((r) => Number.isFinite(r.poc))
-    .map((r) => [Math.trunc(r.poc), r.matchColor]))
+    .map((r) => [Math.trunc(r.poc), `${r.matchText.split(/\d/)[0]}|${r.matchColor}`]))
   for (const r of tape) {
-    // Match: the level, in the same colour the Live table gives that level.
-    expect(r.matchText).toBe(`${Math.trunc(r.poc)}`)
+    // Match: the level, with the same symbol and colour the Live table gives it.
+    expect(r.matchText).toMatch(/^\S\s*\d+$/)
+    expect(r.matchText.replace(/^\S\s*/, "")).toBe(`${Math.trunc(r.poc)}`)
     const lc = liveColor.get(Math.trunc(r.poc))
-    if (lc) expect(r.matchColor, `level ${Math.trunc(r.poc)} differs between tables`).toBe(lc)
+    if (lc) expect(`${r.matchText.split(/\d/)[0]}|${r.matchColor}`, `level ${Math.trunc(r.poc)} differs between tables`).toBe(lc)
 
     // vs Avg: arrow and colour agree.
     if (r.avgText.startsWith("▲")) expect(r.avgColor).toBe(green)

@@ -39,6 +39,8 @@ export interface PocLevel {
   /** The whole-number level, e.g. 7842. */
   level: number
   color: string
+  /** The level's symbol -- the cue that does not depend on seeing colour. */
+  mark: string
   /** How many of the counted timeframes sit on it. */
   count: number
 }
@@ -59,48 +61,43 @@ export interface PocColumns {
 }
 
 /**
- * Colours for the level groups. Opens on the sky blue the POC column already
- * used, so a table where every timeframe agrees looks as it always did; the
- * rest are picked to stay distinct from each other on the dark ground.
- * Deliberately NOT green or red: those mean above/below the average in the
- * column beside this one, and a level coloured green would read as "above".
+ * Colours for the level groups -- COLOUR-BLIND SAFE (2026-10-27).
+ *
+ * Sir is colour blind. The old eight (sky, amber, purple, cyan, orange, pink,
+ * pale blue, lilac) plus generated hues past them had several that read alike
+ * to him: sky / cyan / pale blue, purple / lilac / pink, amber / orange. These
+ * six are the Okabe-Ito set, chosen to stay apart under the common forms of
+ * colour blindness, with its blue lifted so it reads on the dark ground and
+ * its green and vermilion left out: green and red mean above/below the
+ * average in the column beside this one.
+ *
+ * Colour is never the only cue: every level also carries a SYMBOL
+ * (POC_LEVEL_MARKS), and the two cycle at different lengths (6 and 8), so the
+ * first 24 levels are 24 different colour + symbol pairs.
  */
 export const POC_LEVEL_PALETTE: readonly string[] = [
-  "#38bdf8", // sky -- the original POC colour
-  "#e3b341", // amber
-  "#bc8cff", // purple
-  "#39d0d8", // cyan
-  "#ffa657", // orange
-  "#f778ba", // pink
-  "#a5d6ff", // pale blue
-  "#d2a8ff", // lilac
+  "#56b4e9", // sky blue
+  "#e69f00", // orange
+  "#f2f2f2", // white
+  "#f0e442", // yellow
+  "#3d8bff", // strong blue
+  "#cc79a7", // reddish purple
 ]
 
 /**
- * Colour for the Nth level, from the palette and then generated.
- *
- * NOT deviationColors' colorForSlot: its overflow hues come from a 25-165
- * degree band, which runs straight through green. Eleven timeframes on a
- * trending day can easily sit on eleven different levels, and the ninth would
- * have come out green -- the colour that means "above the average" one column
- * over. Generated hues here are confined to bands that avoid both green
- * (roughly 85-165) and red (roughly 340-20), spread by the golden-ratio
- * conjugate so successive levels stay far apart.
+ * One symbol per level, beside the number. No ▲ or ▼: those are the POC vs Avg
+ * arrows one column over.
  */
-const SAFE_BANDS: ReadonlyArray<readonly [number, number]> = [[22, 82], [168, 336]]
-const SAFE_SPAN = SAFE_BANDS.reduce((s, [a, b]) => s + (b - a), 0)
+export const POC_LEVEL_MARKS: readonly string[] = ["●", "■", "◆", "★", "✚", "⬢", "✖", "◐"]
 
+/** Colour for the Nth level (Nth-lowest on screen). */
 export function levelColor(index: number): string {
-  if (index < POC_LEVEL_PALETTE.length) return POC_LEVEL_PALETTE[index]
-  const k = index - POC_LEVEL_PALETTE.length
-  let t = ((k + 1) * 0.618033988749895 % 1) * SAFE_SPAN
-  let hue = SAFE_BANDS[0][0]
-  for (const [a, b] of SAFE_BANDS) {
-    if (t <= b - a) { hue = a + t; break }
-    t -= b - a
-  }
-  const light = [66, 54, 74, 60][k % 4]
-  return `hsl(${hue.toFixed(1)} 70% ${light}%)`
+  return POC_LEVEL_PALETTE[index % POC_LEVEL_PALETTE.length]
+}
+
+/** Symbol for the Nth level. */
+export function levelMark(index: number): string {
+  return POC_LEVEL_MARKS[index % POC_LEVEL_MARKS.length]
 }
 
 /**
@@ -114,12 +111,41 @@ export function levelColor(index: number): string {
  */
 export function buildLevelColorMap(
   values: Iterable<number | null | undefined>,
+  first?: Iterable<number | null | undefined>,
 ): Map<number, string> {
-  const levels = new Set<number>()
-  for (const v of values) if (v != null && Number.isFinite(v)) levels.add(wholePart(v))
   const out = new Map<number, string>()
-  ;[...levels].sort((a, b) => a - b).forEach((w, i) => out.set(w, levelColor(i)))
+  levelOrder(values, first).forEach((w, i) => out.set(w, levelColor(i)))
   return out
+}
+
+/** The symbol for each level, in the same order as the colours. */
+export function buildLevelMarkMap(
+  values: Iterable<number | null | undefined>,
+  first?: Iterable<number | null | undefined>,
+): Map<number, string> {
+  const out = new Map<number, string>()
+  levelOrder(values, first).forEach((w, i) => out.set(w, levelMark(i)))
+  return out
+}
+
+/**
+ * The order levels take colours and symbols in: the `first` levels (the Live
+ * state table's, a handful) lowest-first, then every other level lowest-first.
+ * So the table read most gets the first and most distinct pairs -- sky blue
+ * ●, orange ■, white ◆ -- rather than whatever slot the tape's history left.
+ */
+function levelOrder(
+  values: Iterable<number | null | undefined>,
+  first?: Iterable<number | null | undefined>,
+): number[] {
+  const whole = (xs: Iterable<number | null | undefined>) => {
+    const set = new Set<number>()
+    for (const v of xs) if (v != null && Number.isFinite(v)) set.add(wholePart(v))
+    return [...set].sort((a, b) => a - b)
+  }
+  const head = first ? whole(first) : []
+  const seen = new Set(head)
+  return [...head, ...whole(values).filter((w) => !seen.has(w))]
 }
 
 /** Where one POC sits against a reference average. Raw value, not whole number. */
@@ -154,6 +180,8 @@ export function buildPocColumns(
   rows: ReadonlyArray<PocRow>,
   /** A colour map shared with another table; built from these rows if absent. */
   colors?: ReadonlyMap<number, string>,
+  /** The matching symbol map; built from these rows if absent. */
+  marks?: ReadonlyMap<number, string>,
 ): PocColumns {
   const valid = rows.filter(
     (r): r is { tf: string; poc: number } => r.poc != null && Number.isFinite(r.poc),
@@ -172,9 +200,13 @@ export function buildPocColumns(
   // Colour by the Nth-LOWEST level on screen (see buildLevelColorMap), unless
   // a map shared with another table was passed in.
   const colorOf = colors ?? buildLevelColorMap(valid.map((r) => r.poc))
+  const markOf = marks ?? buildLevelMarkMap(valid.map((r) => r.poc))
   for (const r of valid) {
     const w = wholePart(r.poc)
-    level.set(r.tf, { level: w, color: colorOf.get(w) ?? levelColor(0), count: counts.get(w)! })
+    level.set(r.tf, {
+      level: w, color: colorOf.get(w) ?? levelColor(0), mark: markOf.get(w) ?? levelMark(0),
+      count: counts.get(w)!,
+    })
   }
 
   // ── POC vs Avg: the mean of the selected timeframes' POCs ──
