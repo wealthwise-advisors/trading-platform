@@ -403,8 +403,14 @@ test("the Consolidated tape carries POC Match and POC vs Avg, measured at each r
     if (r.avgText.startsWith("▲")) expect(r.avgColor).toBe(green)
     if (r.avgText.startsWith("▼")) expect(r.avgColor).toBe(red)
 
+    // The cell prints the difference and, in brackets, the average it was
+    // measured against: "▲ +16.48 (5806.95)". The two must agree with the POC.
+    const m = /^[▲▼=]\s*([+-]?[\d.]+)\s*\(([\d.]+)\)$/.exec(r.avgText)
+    expect(m, `POC vs Avg cell is not "diff (avg)": ${r.avgText}`).not.toBeNull()
+    const diff = Number(m![1]), avg = Number(m![2])
+    expect(Math.abs(r.poc - diff - avg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
+
     // One average per moment: POC - diff is constant across that moment's rows.
-    const diff = Number(r.avgText.replace(/^[▲▼=]\s*/, ""))
     const implied = r.poc - diff
     const seen = avgByMoment.get(r.close)
     if (seen === undefined) avgByMoment.set(r.close, implied)

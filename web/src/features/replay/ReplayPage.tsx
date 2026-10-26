@@ -2941,6 +2941,12 @@ export function ReplayPage() {
                                 <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
                                     title={`POC ${poc.toFixed(2)} against the average ${avg.toFixed(2)} when this bar closed`}>
                                   {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
+                                  {/* The average this row was measured against,
+                                      in brackets as the Live table prints it in
+                                      its header. Per ROW here, not one header
+                                      value: every tape row has its own moment,
+                                      so its own average. */}
+                                  <span className="ml-1 text-[10px] text-muted-foreground">({avg.toFixed(2)})</span>
                                 </td>
                               )
                             })()}
