@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { buildPocColumns } from "@/lib/pocColumns"
+import { barsClosedBy, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -905,18 +905,17 @@ export function ReplayPage() {
    */
   const profileCache = useRef(new Map<string, ReturnType<typeof computeVolumeProfile> | null>())
 
-  const profileAtRow = (row: TapeRow) => {
+  /** The profile of one timeframe's first `n` bars, memoised. */
+  const profileAtCount = (tf: string, n: number) => {
     if (!showVp) return null
-    const pane = panes[row.tf]
+    const pane = panes[tf]
     if (!pane || pane.bars.length < 2) return null
-    const key = `${row.tf}|${row.barIndex}|${vpBins}|${vpValueArea}`
+    // pane.bars starts at the session's first bar except when a mid-session
+    // addition truncated its backfill, so clamp rather than slicing past the end.
+    const upto = Math.min(n, pane.bars.length)
+    const key = `${tf}|${upto}|${vpBins}|${vpValueArea}`
     const hit = profileCache.current.get(key)
     if (hit !== undefined) return hit
-
-    // The row's own history. pane.bars starts at the session's first bar except
-    // when a mid-session addition truncated its backfill, so clamp rather than
-    // slicing past the end.
-    const upto = Math.min(row.barIndex, pane.bars.length)
     const slice = pane.bars.slice(0, upto)
     const out = slice.length < 2
       ? null
@@ -924,11 +923,17 @@ export function ReplayPage() {
           slice.map((b) => ({ h: b.h, l: b.l, v: b.v })),
           vpBins, vpValueArea / 100,
         )
-    // Bounded: 400 rows x a few settings changes, not a leak.
-    if (profileCache.current.size > 4000) profileCache.current.clear()
+    // Bounded. The POC columns on the tape look up every shown timeframe at
+    // every row's moment -- up to 400 rows x a dozen timeframes -- so the cap
+    // is sized for that rather than one profile per row; at the old 4,000 it
+    // would clear itself on every render and cache nothing.
+    if (profileCache.current.size > 20000) profileCache.current.clear()
     profileCache.current.set(key, out)
     return out
   }
+
+  /** The profile as it stood at THIS tape row's bar. */
+  const profileAtRow = (row: TapeRow) => profileAtCount(row.tf, row.barIndex)
 
   /** POC / value-area for one pane, from the bars it has received so far. */
   const profileFor = (pane: PaneState) => {
@@ -1306,8 +1311,61 @@ export function ReplayPage() {
   }, [showVp, shownTfKey, panes, vpBins, vpValueArea, initialCapital])
 
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
+  // ── POC Match / POC vs Avg on the Consolidated tape ────────────────
+  /**
+   * The tape is the PAST of the Live state table, so its rows get the same two
+   * columns -- measured as the Live table WOULD HAVE measured them at that
+   * row's moment.
+   *
+   * The moment is when the row's bar closed. At that moment every shown
+   * timeframe had a POC: the profile of the bars it had closed by then (a 15m
+   * bar still forming is not counted). Their average is the row's reference,
+   * so "POC vs Avg" on a tape row answers the question the Live table answered
+   * then, not the one it answers now.
+   *
+   * One average per distinct moment, cached for the render: rows from
+   * different timeframes that closed together share it.
+   */
+  const tfOpensMs = useMemo(() => {
+    const out = new Map<string, number[]>()
+    for (const tf of shownTimeframes) {
+      out.set(tf, (panes[tf]?.bars ?? []).map((b) => Date.parse(b.t + "Z")))
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panes, shownTfKey])
+
+  const tapeAvgCache = new Map<number, number | null>()
+  const tapePocAvgAt = (moment: number, ownTf: string, ownCount: number): number | null => {
+    const hit = tapeAvgCache.get(moment)
+    if (hit !== undefined) return hit
+    const pocs: number[] = []
+    for (const tf of shownTimeframes) {
+      // The row's own timeframe uses its own bar count, so its POC in the
+      // average is exactly the POC printed on the row.
+      const n = tf === ownTf ? ownCount
+        : barsClosedBy(tfOpensMs.get(tf) ?? [], TF_MINUTES[tf] ?? 1, moment)
+      const poc = n >= 2 ? profileAtCount(tf, n)?.poc : null
+      if (poc != null && Number.isFinite(poc)) pocs.push(poc)
+    }
+    const avg = pocs.length ? pocs.reduce((x, y) => x + y, 0) / pocs.length : null
+    tapeAvgCache.set(moment, avg)
+    return avg
+  }
+  const tapeRowMoment = (r: TapeRow) => Date.parse(r.t + "Z") + (TF_MINUTES[r.tf] ?? 1) * 60_000
+
+  /**
+   * ONE colour per level for both tables, so 5823 is the same colour in the
+   * Live state table and on the tape -- the rule the VWAP band columns follow.
+   */
+  const pocLevelColors = buildLevelColorMap([
+    ...shownTimeframes.map((tf) => paneProfiles.get(tf)?.poc),
+    ...(showVp ? tapeWindow.map((r) => profileAtRow(r)?.poc) : []),
+  ])
+
   const pocCols = buildPocColumns(
     shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
+    pocLevelColors,
   )
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
@@ -2777,6 +2835,21 @@ export function ReplayPage() {
                           <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                         ])}
                         {showVp && <th className="text-right p-2 font-medium tape-g">POC</th>}
+                        {/* The Live state table's two POC columns, for the
+                            past: each row measured against every timeframe's
+                            POC as it stood when that bar closed. */}
+                        {showVp && (
+                          <th className="text-right p-2 font-medium whitespace-nowrap"
+                              title="Timeframes whose POC has the same whole number share a colour -- the same colours as the Live state table">
+                            POC Match
+                          </th>
+                        )}
+                        {showVp && (
+                          <th className="text-right p-2 font-medium whitespace-nowrap"
+                              title="This POC against the average POC of the shown timeframes when this bar closed">
+                            POC vs Avg
+                          </th>
+                        )}
                         {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
                         {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                       <th className="text-left p-2 font-medium tape-g">Position</th>
@@ -2844,6 +2917,33 @@ export function ReplayPage() {
                                 {tapeNum(vp?.poc)}
                               </td>
                             )}
+                            {showVp && (() => {
+                              const poc = vp?.poc
+                              const level = poc != null && Number.isFinite(poc) ? Math.trunc(poc) : null
+                              const color = level != null ? pocLevelColors.get(level) : undefined
+                              return (
+                                <td className="p-2 text-right font-mono whitespace-nowrap"
+                                    style={color ? { color } : undefined}>
+                                  {level ?? "\u2014"}
+                                </td>
+                              )
+                            })()}
+                            {showVp && (() => {
+                              const poc = vp?.poc
+                              const avg = poc != null && Number.isFinite(poc)
+                                ? tapePocAvgAt(tapeRowMoment(r), r.tf, r.barIndex) : null
+                              if (poc == null || avg == null) {
+                                return <td className="p-2 text-right font-mono text-muted-foreground">{"\u2014"}</td>
+                              }
+                              const v = sideVsAverage(poc, avg)
+                              const color = v.side === "above" ? GOOD : v.side === "below" ? CRITICAL : NEUTRAL
+                              return (
+                                <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
+                                    title={`POC ${poc.toFixed(2)} against the average ${avg.toFixed(2)} when this bar closed`}>
+                                  {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
+                                </td>
+                              )
+                            })()}
                             {showVp && (
                               <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>
                                 {tapeNum(vp?.vah)}

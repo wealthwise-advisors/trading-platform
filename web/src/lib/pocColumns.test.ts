@@ -3,7 +3,9 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { POC_LEVEL_PALETTE, buildPocColumns, levelColor } from "./pocColumns"
+import {
+  POC_LEVEL_PALETTE, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor, sideVsAverage,
+} from "./pocColumns"
 
 const rows = (m: Record<string, number | null>) =>
   Object.entries(m).map(([tf, poc]) => ({ tf, poc }))
@@ -133,5 +135,53 @@ describe("missing data", () => {
     expect(c.average).toBeNull()
     expect(c.counted).toBe(0)
     expect(c.level.size).toBe(0)
+  })
+})
+
+describe("shared level colours -- one level, one colour, in every table", () => {
+  it("gives the same level the same colour wherever it appears", () => {
+    // The Live state table and the Consolidated tape draw from one map, so a
+    // level read in one is the same colour in the other.
+    const shared = buildLevelColorMap([5823.43, 5708.05, 5823.9, 5801.2])
+    const live = buildPocColumns(rows({ "5m": 5823.43, "20m": 5708.05 }), shared)
+    expect(live.level.get("5m")!.color).toBe(shared.get(5823))
+    expect(live.level.get("20m")!.color).toBe(shared.get(5708))
+  })
+
+  it("colours by price order and skips missing values", () => {
+    const m = buildLevelColorMap([5810, null, undefined, Number.NaN, 5800])
+    expect([...m.keys()]).toEqual([5800, 5810])
+    expect(m.get(5800)).toBe(POC_LEVEL_PALETTE[0])
+  })
+})
+
+describe("sideVsAverage", () => {
+  it("is green above, red below, neither on the average", () => {
+    expect(sideVsAverage(10, 7)).toEqual({ side: "above", diff: 3 })
+    expect(sideVsAverage(4, 7)).toEqual({ side: "below", diff: -3 })
+    expect(sideVsAverage(0.1 + 0.2, 0.3).side).toBe("equal")
+  })
+})
+
+describe("barsClosedBy -- each timeframe's state at a past moment", () => {
+  const min = 60_000
+  // Four 5m bars opening at 09:30, 09:35, 09:40, 09:45 (ms offsets).
+  const opens = [0, 5, 10, 15].map((m) => m * min)
+
+  it("counts only bars that had CLOSED by the moment", () => {
+    expect(barsClosedBy(opens, 5, 4 * min)).toBe(0)   // 09:34: first bar still open
+    expect(barsClosedBy(opens, 5, 5 * min)).toBe(1)   // 09:35: first bar just closed
+    expect(barsClosedBy(opens, 5, 14 * min)).toBe(2)
+    expect(barsClosedBy(opens, 5, 60 * min)).toBe(4)
+  })
+
+  it("handles a coarser bar that has not closed yet", () => {
+    // A 15m bar opening at 0 is not closed at 14 minutes, closed at 15.
+    expect(barsClosedBy([0], 15, 14 * min)).toBe(0)
+    expect(barsClosedBy([0], 15, 15 * min)).toBe(1)
+  })
+
+  it("an empty pane has nothing closed", () => {
+    expect(barsClosedBy([], 5, 99 * min)).toBe(0)
   })
 })

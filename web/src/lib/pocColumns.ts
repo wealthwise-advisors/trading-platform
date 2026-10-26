@@ -103,7 +103,58 @@ export function levelColor(index: number): string {
   return `hsl(${hue.toFixed(1)} 70% ${light}%)`
 }
 
-export function buildPocColumns(rows: ReadonlyArray<PocRow>): PocColumns {
+/**
+ * One colour per whole-number POC level, for EVERY table that shows POC Match.
+ *
+ * Shared so that a level is the same colour in the Live state table and in
+ * the Consolidated tape -- 5823 is not amber up there and blue down here. The
+ * VWAP band columns already work this way (one grouping for both tables, see
+ * devColors in ReplayPage). Colour is by the Nth-LOWEST level among the values
+ * given, so it follows price, not which row happened to arrive first.
+ */
+export function buildLevelColorMap(
+  values: Iterable<number | null | undefined>,
+): Map<number, string> {
+  const levels = new Set<number>()
+  for (const v of values) if (v != null && Number.isFinite(v)) levels.add(wholePart(v))
+  const out = new Map<number, string>()
+  ;[...levels].sort((a, b) => a - b).forEach((w, i) => out.set(w, levelColor(i)))
+  return out
+}
+
+/** Where one POC sits against a reference average. Raw value, not whole number. */
+export function sideVsAverage(poc: number, average: number): { side: AvgSide; diff: number } {
+  const diff = poc - average
+  // A tolerance well below a tick, so floating-point noise in the mean can
+  // never paint a POC that IS the average green or red.
+  return { side: Math.abs(diff) < 1e-9 ? "equal" : diff > 0 ? "above" : "below", diff }
+}
+
+/**
+ * How many of a timeframe's bars had CLOSED by `moment` -- the bar count its
+ * volume profile stood at then.
+ *
+ * `opensMs` are the bars' open times in ms, oldest first. A bar closes at
+ * open + its length, so the count is the number whose close is at or before
+ * the moment. Binary search: the tape asks this for up to 400 rows times every
+ * shown timeframe, on every tick.
+ */
+export function barsClosedBy(opensMs: ReadonlyArray<number>, minutes: number, moment: number): number {
+  const span = minutes * 60_000
+  let lo = 0, hi = opensMs.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (opensMs[mid] + span <= moment) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+
+export function buildPocColumns(
+  rows: ReadonlyArray<PocRow>,
+  /** A colour map shared with another table; built from these rows if absent. */
+  colors?: ReadonlyMap<number, string>,
+): PocColumns {
   const valid = rows.filter(
     (r): r is { tf: string; poc: number } => r.poc != null && Number.isFinite(r.poc),
   )
@@ -118,24 +169,20 @@ export function buildPocColumns(rows: ReadonlyArray<PocRow>): PocColumns {
     const w = wholePart(r.poc)
     counts.set(w, (counts.get(w) ?? 0) + 1)
   }
-  // Colour by the Nth-LOWEST level on screen, so a level's colour is set by
-  // where it sits in price, not by which timeframe happened to report first.
-  const levels = [...counts.keys()].sort((a, b) => a - b)
-  const colorOf = new Map<number, string>()
-  levels.forEach((w, i) => colorOf.set(w, levelColor(i)))
+  // Colour by the Nth-LOWEST level on screen (see buildLevelColorMap), unless
+  // a map shared with another table was passed in.
+  const colorOf = colors ?? buildLevelColorMap(valid.map((r) => r.poc))
   for (const r of valid) {
     const w = wholePart(r.poc)
-    level.set(r.tf, { level: w, color: colorOf.get(w)!, count: counts.get(w)! })
+    level.set(r.tf, { level: w, color: colorOf.get(w) ?? levelColor(0), count: counts.get(w)! })
   }
 
   // ── POC vs Avg: the mean of the selected timeframes' POCs ──
   const average = valid.reduce((s, r) => s + r.poc, 0) / valid.length
   for (const r of valid) {
-    const d = r.poc - average
-    diff.set(r.tf, d)
-    // A tolerance well below a tick, so floating-point noise in the mean can
-    // never paint a POC that IS the average green or red.
-    side.set(r.tf, Math.abs(d) < 1e-9 ? "equal" : d > 0 ? "above" : "below")
+    const v = sideVsAverage(r.poc, average)
+    diff.set(r.tf, v.diff)
+    side.set(r.tf, v.side)
   }
 
   return { level, side, diff, average, counted: valid.length }

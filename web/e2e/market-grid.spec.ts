@@ -335,3 +335,80 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
   }
   await page.close()
 })
+
+/**
+ * The same two POC columns on the Consolidated tape -- the PAST of the Live
+ * state table. Requested 2026-10-26.
+ *
+ * Each tape row is measured against every shown timeframe's POC AS IT STOOD
+ * when that row's bar closed. Asserted by invariant, not by fixed numbers:
+ *   - rows that closed at the same moment share one average, so POC minus its
+ *     printed difference is the same for all of them;
+ *   - ▲ is always green and ▼ always red;
+ *   - a level is the same colour on the tape as in the Live state table.
+ */
+test("the Consolidated tape carries POC Match and POC vs Avg, measured at each row's moment", async ({ browser }) => {
+  test.setTimeout(360_000)
+  const page = await browser.newPage()
+  await openApp(page)
+  await goToMarketGrid(page)
+  await widenRsiWindow(page)
+  for (const tf of ["10m", "15m", "20m", "30m"]) {
+    const pill = page.locator("button.tf-pill", { hasText: new RegExp(`^${tf}$`) }).first()
+    if (await pill.count() && !((await pill.getAttribute("class")) ?? "").includes("tf-pill-on")) await pill.click()
+  }
+  await loadAndPlay(page)
+
+  const readTable = async (idx: number) => {
+    const table = page.locator("table.grid-table").nth(idx)
+    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+    const ix = (re: RegExp) => headers.findIndex((h) => re.test(h))
+    const cols = { close: 0, poc: ix(/^POC$/i), match: ix(/^POC MATCH/i), avg: ix(/^POC VS AVG/i) }
+    expect(cols.match, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
+    expect(cols.avg, "no POC vs Avg column").toBeGreaterThan(-1)
+    return table.locator("tbody tr").evaluateAll((trs, c) => trs.map((tr) => {
+      const td = tr.querySelectorAll("td")
+      const cell = (i: number) => td[i] as HTMLElement
+      return {
+        close: cell(c.close).innerText.split("\n")[0].trim(),
+        poc: Number(cell(c.poc).innerText.trim()),
+        matchText: cell(c.match).innerText.trim(),
+        matchColor: getComputedStyle(cell(c.match)).color,
+        avgText: cell(c.avg).innerText.trim(),
+        avgColor: getComputedStyle(cell(c.avg)).color,
+      }
+    }), cols)
+  }
+  const live = await readTable(0)
+  const tape = (await readTable(1)).filter((r) => Number.isFinite(r.poc) && /[▲▼=]/.test(r.avgText))
+  expect(tape.length, "no tape rows carry the POC columns").toBeGreaterThan(5)
+
+  const [green, red] = await page.evaluate(() => {
+    const p = document.createElement("span"); document.body.appendChild(p)
+    p.style.color = "var(--gain)"; const g = getComputedStyle(p).color
+    p.style.color = "var(--loss)"; const r = getComputedStyle(p).color
+    p.remove(); return [g, r]
+  })
+
+  const liveColor = new Map(live.filter((r) => Number.isFinite(r.poc))
+    .map((r) => [Math.trunc(r.poc), r.matchColor]))
+  const avgByMoment = new Map<string, number>()
+  for (const r of tape) {
+    // Match: the level, in the same colour the Live table gives that level.
+    expect(r.matchText).toBe(`${Math.trunc(r.poc)}`)
+    const lc = liveColor.get(Math.trunc(r.poc))
+    if (lc) expect(r.matchColor, `level ${Math.trunc(r.poc)} differs between tables`).toBe(lc)
+
+    // vs Avg: arrow and colour agree.
+    if (r.avgText.startsWith("▲")) expect(r.avgColor).toBe(green)
+    if (r.avgText.startsWith("▼")) expect(r.avgColor).toBe(red)
+
+    // One average per moment: POC - diff is constant across that moment's rows.
+    const diff = Number(r.avgText.replace(/^[▲▼=]\s*/, ""))
+    const implied = r.poc - diff
+    const seen = avgByMoment.get(r.close)
+    if (seen === undefined) avgByMoment.set(r.close, implied)
+    else expect(Math.abs(seen - implied), `rows closing at ${r.close} disagree on the average`).toBeLessThan(0.02)
+  }
+  await page.close()
+})
