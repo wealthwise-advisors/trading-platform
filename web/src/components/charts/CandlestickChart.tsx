@@ -1473,31 +1473,22 @@ export function CandlestickChart({
   // Axis definitions are built per active row (price + whichever oscillator
   // rows are on) instead of hardcoded blocks, so whichever row is last takes
   // over the bottom-axis role (tick labels, automargin).
-  // The row label carries the CURRENT reading, as the reference shows it:
-  // "RSI (2) 32.14" rather than a bare axis name. The value is the last
-  // non-null point of the series the row draws -- the same number the line
-  // ends on -- and the label falls back to the bare name when the series has
-  // no reading yet, rather than printing a fabricated zero.
-  const lastOf = (xs?: (number | null)[]) => {
-    if (!xs) return null
-    for (let i = xs.length - 1; i >= 0; i--) if (xs[i] != null) return xs[i] as number
-    return null
-  }
-  const withValue = (name: string, v: number | null, digits = 2) =>
-    v == null ? name : `${name}  ${v.toFixed(digits)}`
-  const kNow = lastOf(indicators.stochrsi_k)
-  const dNow = lastOf(indicators.stochrsi_d)
+  // The row label is the study's NAME ONLY -- "RSI (2)", "StochRSI". It used
+  // to carry the latest reading and the inputs ("StochRSI 14 14 3 3 49.26
+  // 59.67"); removed 2026-10-27 on request. The readings are in the hover.
+  // Each label is drawn in its own line's colour, bold, on a dark backing, so
+  // it reads at a glance -- the dim grey it was in did not.
   const rowTitles: Record<string, string> = {
-    price: "Price", rsi2: "RSI(2)", stochrsi: "StochRSI", rsi13: "RSI(13)", mfi: "MFI",
+    // Only the price row keeps a right-hand axis title; the oscillator rows'
+    // vertical "RSI(2)" / "MFI" titles repeated the label on the left.
+    price: "Price", rsi2: "", stochrsi: "", rsi13: "", mfi: "",
   }
-  /** The reading each oscillator row currently shows, for its own label. */
-  const rowReadout: Record<string, string> = {
-    rsi2: withValue("RSI (2)", lastOf(indicators.rsi2)),
-    stochrsi: kNow == null && dNow == null
-      ? "StochRSI 14 14 3 3"
-      : `StochRSI 14 14 3 3   ${kNow == null ? "--" : kNow.toFixed(2)}   ${dNow == null ? "--" : dNow.toFixed(2)}`,
-    rsi13: withValue("RSI (13)", lastOf(indicators.rsi13)),
-    mfi: withValue("MFI (20)", lastOf(indicators.mfi)),
+  /** Each oscillator row's label, and the colour of the line it names. */
+  const rowLabel: Record<string, { text: string; color: string }> = {
+    rsi2: { text: "RSI (2)", color: "#ce93d8" },
+    stochrsi: { text: "StochRSI", color: "#4fc3f7" },
+    rsi13: { text: "RSI (13)", color: "#ffcc80" },
+    mfi: { text: "MFI", color: "#facc15" },
   }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
@@ -1635,16 +1626,17 @@ export function CandlestickChart({
     // the one it described, because the domain list is not in the same order
     // as the row list. Tied to the axis, the label cannot land on the wrong
     // row however the studies are switched on and off.
-    const readout = rowReadout[name]
-    if (readout) {
+    const label = rowLabel[name]
+    if (label) {
       annotations.push({
-        text: readout,
+        text: `<b>${label.text}</b>`,
         xref: "x domain" as Annotations["xref"],
         yref: `y${suffix} domain` as Annotations["yref"],
         x: 0.004, xanchor: "left",
         y: 0.97, yanchor: "top",
         showarrow: false, align: "left",
-        font: { size: 9.5, color: INK_DIM, family: "Arial" },
+        font: { size: 11, color: label.color, family: "Arial" },
+        bgcolor: "rgba(10,14,22,0.85)", borderpad: 2,
       })
     }
   })
