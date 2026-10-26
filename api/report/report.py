@@ -159,7 +159,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
         name="Price", showlegend=False,
     ), row=1, col=1)
 
-    for span, color in [(9, "#ffa657"), (21, "#79c0ff")]:
+    for span, color in [(9, "#ffa657"), (21, "#79c0ff"), (20, "#a3e635"), (50, "#c4b5fd")]:
         ema = df["close"].ewm(span=span, adjust=False).mean()
         fig.add_trace(go.Scatter(
             x=df.index, y=ema, line=dict(color=color, width=1.2),

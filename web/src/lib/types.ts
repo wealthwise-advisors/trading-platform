@@ -145,6 +145,10 @@ export interface OHLCVRecord {
 export interface IndicatorSeries {
   ema9: (number | null)[]
   ema21: (number | null)[]
+  /** EMA 20 and 50, added 2026-10-26. Optional so an older cached response
+   *  without them still type-checks; the chart then draws neither. */
+  ema20?: (number | null)[]
+  ema50?: (number | null)[]
   rsi2: (number | null)[]
   rsi13: (number | null)[]
   /** StochRSI (RSI 14, K 3, D 3, Wilder's): FullK and FullD. */

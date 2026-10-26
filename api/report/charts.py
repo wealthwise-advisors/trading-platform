@@ -149,7 +149,7 @@ def candlestick_with_trades(
         hoverlabel=dict(bgcolor=_BG),
     ), row=1, col=1)
 
-    for span, color in [(9, "#ffab40"), (21, "#80cbc4")]:
+    for span, color in [(9, "#ffab40"), (21, "#80cbc4"), (20, "#a3e635"), (50, "#c4b5fd")]:
         ema = df["close"].ewm(span=span, adjust=False).mean()
         fig.add_trace(go.Scatter(
             x=df.index, y=ema, name=f"EMA{span}",

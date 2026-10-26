@@ -340,14 +340,15 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
  * The same two POC columns on the Consolidated tape -- the PAST of the Live
  * state table. Requested 2026-10-26.
  *
- * Each tape row is measured against every shown timeframe's POC AS IT STOOD
- * when that row's bar closed. Asserted by invariant, not by fixed numbers:
- *   - rows that closed at the same moment share one average, so POC minus its
- *     printed difference is the same for all of them;
+ * Every tape row is measured against ONE common average -- the one the Live
+ * state table prints in its header, printed in the tape's header too
+ * (specified 2026-10-26). Asserted by invariant, not by fixed numbers:
+ *   - both headers carry the same average, and every row's POC minus its
+ *     printed difference equals it;
  *   - ▲ is always green and ▼ always red;
  *   - a level is the same colour on the tape as in the Live state table.
  */
-test("the Consolidated tape carries POC Match and POC vs Avg, measured at each row's moment", async ({ browser }) => {
+test("the Consolidated tape carries POC Match and POC vs Avg, against the Live table's common average", async ({ browser }) => {
   test.setTimeout(360_000)
   const page = await browser.newPage()
   await openApp(page)
@@ -366,7 +367,8 @@ test("the Consolidated tape carries POC Match and POC vs Avg, measured at each r
     const cols = { close: 0, poc: ix(/^POC$/i), match: ix(/^POC MATCH/i), avg: ix(/^POC VS AVG/i) }
     expect(cols.match, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
     expect(cols.avg, "no POC vs Avg column").toBeGreaterThan(-1)
-    return table.locator("tbody tr").evaluateAll((trs, c) => trs.map((tr) => {
+    const average = Number(/\(([\d.]+)\)/.exec(headers[cols.avg])?.[1])
+    const rows = await table.locator("tbody tr").evaluateAll((trs, c) => trs.map((tr) => {
       const td = tr.querySelectorAll("td")
       const cell = (i: number) => td[i] as HTMLElement
       return {
@@ -378,9 +380,13 @@ test("the Consolidated tape carries POC Match and POC vs Avg, measured at each r
         avgColor: getComputedStyle(cell(c.avg)).color,
       }
     }), cols)
+    return { average, rows }
   }
-  const live = await readTable(0)
-  const tape = (await readTable(1)).filter((r) => Number.isFinite(r.poc) && /[▲▼=]/.test(r.avgText))
+  const { average: liveAvg, rows: live } = await readTable(0)
+  const { average: tapeAvg, rows: tapeRows } = await readTable(1)
+  expect(Number.isFinite(liveAvg), "no average in the Live header").toBe(true)
+  expect(tapeAvg, "the tape header must print the Live table's common average").toBe(liveAvg)
+  const tape = tapeRows.filter((r) => Number.isFinite(r.poc) && /[▲▼=]/.test(r.avgText))
   expect(tape.length, "no tape rows carry the POC columns").toBeGreaterThan(5)
 
   const [green, red] = await page.evaluate(() => {
@@ -392,7 +398,6 @@ test("the Consolidated tape carries POC Match and POC vs Avg, measured at each r
 
   const liveColor = new Map(live.filter((r) => Number.isFinite(r.poc))
     .map((r) => [Math.trunc(r.poc), r.matchColor]))
-  const avgByMoment = new Map<string, number>()
   for (const r of tape) {
     // Match: the level, in the same colour the Live table gives that level.
     expect(r.matchText).toBe(`${Math.trunc(r.poc)}`)
@@ -403,18 +408,11 @@ test("the Consolidated tape carries POC Match and POC vs Avg, measured at each r
     if (r.avgText.startsWith("▲")) expect(r.avgColor).toBe(green)
     if (r.avgText.startsWith("▼")) expect(r.avgColor).toBe(red)
 
-    // The cell prints the difference and, in brackets, the average it was
-    // measured against: "▲ +16.48 (5806.95)". The two must agree with the POC.
-    const m = /^[▲▼=]\s*([+-]?[\d.]+)\s*\(([\d.]+)\)$/.exec(r.avgText)
-    expect(m, `POC vs Avg cell is not "diff (avg)": ${r.avgText}`).not.toBeNull()
-    const diff = Number(m![1]), avg = Number(m![2])
-    expect(Math.abs(r.poc - diff - avg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
-
-    // One average per moment: POC - diff is constant across that moment's rows.
-    const implied = r.poc - diff
-    const seen = avgByMoment.get(r.close)
-    if (seen === undefined) avgByMoment.set(r.close, implied)
-    else expect(Math.abs(seen - implied), `rows closing at ${r.close} disagree on the average`).toBeLessThan(0.02)
+    // The cell prints only the difference, measured from the common average.
+    const m = /^[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.avgText)
+    expect(m, `POC vs Avg cell is not a signed difference: ${r.avgText}`).not.toBeNull()
+    const diff = Number(m![1])
+    expect(Math.abs(r.poc - diff - liveAvg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
   }
   await page.close()
 })

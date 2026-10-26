@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { barsClosedBy, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -1312,47 +1312,14 @@ export function ReplayPage() {
 
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
   // ── POC Match / POC vs Avg on the Consolidated tape ────────────────
-  /**
-   * The tape is the PAST of the Live state table, so its rows get the same two
-   * columns -- measured as the Live table WOULD HAVE measured them at that
-   * row's moment.
-   *
-   * The moment is when the row's bar closed. At that moment every shown
-   * timeframe had a POC: the profile of the bars it had closed by then (a 15m
-   * bar still forming is not counted). Their average is the row's reference,
-   * so "POC vs Avg" on a tape row answers the question the Live table answered
-   * then, not the one it answers now.
-   *
-   * One average per distinct moment, cached for the render: rows from
-   * different timeframes that closed together share it.
+  /*
+   * The tape is the PAST of the Live state table and carries its two POC
+   * columns. POC vs Avg there is measured against the SAME common average
+   * the Live table prints in its header -- one number for every row, shown in
+   * the tape's header too. Specified 2026-10-26, replacing a per-row average
+   * taken at each row's own moment, which printed a different reference on
+   * every row.
    */
-  const tfOpensMs = useMemo(() => {
-    const out = new Map<string, number[]>()
-    for (const tf of shownTimeframes) {
-      out.set(tf, (panes[tf]?.bars ?? []).map((b) => Date.parse(b.t + "Z")))
-    }
-    return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panes, shownTfKey])
-
-  const tapeAvgCache = new Map<number, number | null>()
-  const tapePocAvgAt = (moment: number, ownTf: string, ownCount: number): number | null => {
-    const hit = tapeAvgCache.get(moment)
-    if (hit !== undefined) return hit
-    const pocs: number[] = []
-    for (const tf of shownTimeframes) {
-      // The row's own timeframe uses its own bar count, so its POC in the
-      // average is exactly the POC printed on the row.
-      const n = tf === ownTf ? ownCount
-        : barsClosedBy(tfOpensMs.get(tf) ?? [], TF_MINUTES[tf] ?? 1, moment)
-      const poc = n >= 2 ? profileAtCount(tf, n)?.poc : null
-      if (poc != null && Number.isFinite(poc)) pocs.push(poc)
-    }
-    const avg = pocs.length ? pocs.reduce((x, y) => x + y, 0) / pocs.length : null
-    tapeAvgCache.set(moment, avg)
-    return avg
-  }
-  const tapeRowMoment = (r: TapeRow) => Date.parse(r.t + "Z") + (TF_MINUTES[r.tf] ?? 1) * 60_000
 
   /**
    * ONE colour per level for both tables, so 5823 is the same colour in the
@@ -2846,8 +2813,13 @@ export function ReplayPage() {
                         )}
                         {showVp && (
                           <th className="text-right p-2 font-medium whitespace-nowrap"
-                              title="This POC against the average POC of the shown timeframes when this bar closed">
+                              title="Each row's POC against the common average POC -- the same average the Live state table prints">
                             POC vs Avg
+                            {pocCols.average != null && (
+                              <span className="ml-1 font-mono text-[10px] text-muted-foreground normal-case">
+                                ({pocCols.average.toFixed(2)})
+                              </span>
+                            )}
                           </th>
                         )}
                         {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
@@ -2930,8 +2902,7 @@ export function ReplayPage() {
                             })()}
                             {showVp && (() => {
                               const poc = vp?.poc
-                              const avg = poc != null && Number.isFinite(poc)
-                                ? tapePocAvgAt(tapeRowMoment(r), r.tf, r.barIndex) : null
+                              const avg = poc != null && Number.isFinite(poc) ? pocCols.average : null
                               if (poc == null || avg == null) {
                                 return <td className="p-2 text-right font-mono text-muted-foreground">{"\u2014"}</td>
                               }
@@ -2939,14 +2910,8 @@ export function ReplayPage() {
                               const color = v.side === "above" ? GOOD : v.side === "below" ? CRITICAL : NEUTRAL
                               return (
                                 <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
-                                    title={`POC ${poc.toFixed(2)} against the average ${avg.toFixed(2)} when this bar closed`}>
+                                    title={`POC ${poc.toFixed(2)} against the common average ${avg.toFixed(2)}`}>
                                   {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
-                                  {/* The average this row was measured against,
-                                      in brackets as the Live table prints it in
-                                      its header. Per ROW here, not one header
-                                      value: every tape row has its own moment,
-                                      so its own average. */}
-                                  <span className="ml-1 text-[10px] text-muted-foreground">({avg.toFixed(2)})</span>
                                 </td>
                               )
                             })()}

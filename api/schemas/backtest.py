@@ -99,6 +99,9 @@ class OHLCVRecord(BaseModel):
 class IndicatorSeries(BaseModel):
     ema9: list[Optional[float]]
     ema21: list[Optional[float]]
+    # Optional so a stored response from before they existed still validates.
+    ema20: list[Optional[float]] = []
+    ema50: list[Optional[float]] = []
     rsi2: list[Optional[float]]
     rsi13: list[Optional[float]]
     stochrsi_k: list[Optional[float]]

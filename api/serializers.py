@@ -164,6 +164,10 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
 
     ema9 = df["close"].ewm(span=9, adjust=False).mean()
     ema21 = df["close"].ewm(span=21, adjust=False).mean()
+    # EMA 20 and 50, added 2026-10-26 at sir's request beside 9 and 21. Same
+    # construction (span, adjust=False) so all four read alike.
+    ema20 = df["close"].ewm(span=20, adjust=False).mean()
+    ema50 = df["close"].ewm(span=50, adjust=False).mean()
     rsi2 = calc_rsi(df["close"], 2)
     rsi13 = calc_rsi(df["close"], 13)
     # StochRSI (RSI 14, K 3, D 3, Wilder's). The exported report calls the same
@@ -201,6 +205,8 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
     indicators = {
         "ema9": series_to_list(ema9),
         "ema21": series_to_list(ema21),
+        "ema20": series_to_list(ema20),
+        "ema50": series_to_list(ema50),
         "rsi2": series_to_list(rsi2),
         "rsi13": series_to_list(rsi13),
         "stochrsi_k": series_to_list(stochrsi_k),

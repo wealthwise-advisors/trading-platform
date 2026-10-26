@@ -8,7 +8,7 @@ import Plot from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
 import { ChartHeader } from "@/components/charts/ChartHeader"
 import { ChartLegendMenu, type LegendEntry } from "@/components/charts/ChartLegendMenu"
-import { ChartToolRail, type ToolSpec } from "@/components/charts/ChartToolRail"
+import { ChartToolRail, TOOLS, type ToolSpec } from "@/components/charts/ChartToolRail"
 import { ChartToolbar } from "@/components/charts/ChartToolbar"
 import { ChartRangeBar } from "@/components/charts/ChartRangeBar"
 import { loadAlerts } from "@/lib/priceAlerts"
@@ -25,7 +25,7 @@ import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
-import { ChevronDown, Maximize, Minimize, Save, Settings } from "lucide-react"
+import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
@@ -174,6 +174,25 @@ function StudyGear({ label, title, onClick }: {
                  text-muted-foreground transition-colors
                  hover:bg-[color:var(--raise-4)] hover:text-foreground"
     ><Settings className="h-3.5 w-3.5" aria-hidden /></button>
+  )
+}
+
+/** EMA 20 / 50 line colours -- the trace and the Legend read these, never a copy. */
+const EMA20_COLOR = "#a3e635"
+const EMA50_COLOR = "#c4b5fd"
+
+/** A header menu's title row, with the × that closes it. */
+function MenuHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <div className="flex items-center justify-between border-b border-[color:var(--hairline-soft)] px-3 pb-1 mb-1">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+      <button type="button" aria-label={`Close ${title} menu`} title="Close"
+              onClick={onClose}
+              className="grid h-5 w-5 place-items-center rounded text-muted-foreground
+                         hover:bg-[color:var(--raise-4)] hover:text-foreground">
+        <X className="h-3.5 w-3.5" aria-hidden />
+      </button>
+    </div>
   )
 }
 
@@ -365,6 +384,28 @@ export function CandlestickChart({
   const [vpSavedNote, setVpSavedNote] = useState("")
   const [indicatorMenu, setIndicatorMenu] = useState(false)
   const [saveMenu, setSaveMenu] = useState(false)
+  /** Wraps the Indicators and Save buttons with their menus, so a click
+   *  anywhere outside it closes whichever is open. */
+  const menusRef = useRef<HTMLSpanElement>(null)
+
+  /* The two header menus had no way out but the button that opened them --
+     no close button, no outside click, no Escape -- so an open Indicators
+     menu sat over the chart until the user found that button again. All
+     three now close it. */
+  useEffect(() => {
+    if (!indicatorMenu && !saveMenu) return
+    const close = () => { setIndicatorMenu(false); setSaveMenu(false) }
+    const onDown = (e: MouseEvent) => {
+      if (menusRef.current && !menusRef.current.contains(e.target as Node)) close()
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [indicatorMenu, saveMenu])
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Fullscreen is driven by the BROWSER, not by this state -- Escape and the
@@ -559,28 +600,10 @@ export function CandlestickChart({
       return
     }
     if (t.id === "erase") { undoDrawing(); return }
-    if (t.id === "hline") {
-      const last = bars.length ? bars[bars.length - 1].c : null
-      if (last == null) return          // nothing to anchor to; do nothing rather than draw at 0
-      setUserShapes((s) => [...s, {
-        type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: last, y1: last,
-        line: { color: "#38bdf8", width: 1, dash: "dot" },
-        editable: true,
-      } as Partial<Shape>])
-      lastDrawn.current = "shape"
-      return                            // an action, not a mode: the rail stays where it was
-    }
-    if (t.id === "text") {
-      const last = bars.length ? bars[bars.length - 1] : null
-      if (!last) return
-      setUserNotes((n) => [...n, {
-        x: toNaiveString(new Date(last.t).getTime()), y: last.c, xref: "x", yref: "y",
-        text: "Note", showarrow: true, arrowhead: 2, ax: 0, ay: -30,
-        font: { color: "#38bdf8", size: 11 },
-        bgcolor: "rgba(15,23,42,0.85)", bordercolor: "#38bdf8", borderwidth: 1,
-        captureevents: true,
-      } as Partial<Annotations>])
-      lastDrawn.current = "note"
+    if (t.place) {
+      // Armed, not placed: the next click on the chart puts it there.
+      setDrawTool(t.id)
+      setDragMode("pan")
       return
     }
     if (t.mode) {
@@ -588,6 +611,65 @@ export function CandlestickChart({
       setDragMode(t.mode as DragMode)
     }
   }
+
+  /* ── Click-to-place: horizontal line and note ──────────────────────────
+     A click (not a drag -- a drag still pans) on the price panel while one
+     of the two is armed puts it at that point, then hands the mouse back to
+     Pan. The pixel is turned into a price and a time by the price axes' own
+     p2d, so log scale and the rangebreaks are honoured exactly as drawn. */
+  const plotWrapRef = useRef<HTMLDivElement>(null)
+  const pointerDownAt = useRef<{ x: number; y: number } | null>(null)
+
+  const placeAt = (clientX: number, clientY: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gd = plotWrapRef.current?.querySelector(".js-plotly-plot") as any
+    const xa = gd?._fullLayout?.xaxis, ya = gd?._fullLayout?.yaxis
+    if (!xa || !ya) return
+    const rect = (gd as HTMLElement).getBoundingClientRect()
+    const px = clientX - rect.left - xa._offset
+    const py = clientY - rect.top - ya._offset
+    // Only on the price panel: a click on an oscillator row is not a price.
+    if (px < 0 || px > xa._length || py < 0 || py > ya._length) return
+    const price = Number(ya.p2d(py))
+    if (!Number.isFinite(price)) return
+    if (drawTool === "hline") {
+      setUserShapes((sh) => [...sh, {
+        type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: price, y1: price,
+        line: { color: "#38bdf8", width: 1.5, dash: "dot" },
+        label: { text: price.toFixed(2), textposition: "end", font: { color: "#38bdf8", size: 10 } },
+        editable: true,
+      } as Partial<Shape>])
+      lastDrawn.current = "shape"
+      setRedoStack([])
+    } else if (drawTool === "text") {
+      const text = window.prompt("Note text", "Note")
+      if (text == null || !text.trim()) return      // cancelled: stay armed
+      setUserNotes((n) => [...n, {
+        x: xa.p2d(px), y: price, xref: "x", yref: "y",
+        text: text.trim(), showarrow: true, arrowhead: 2, ax: 0, ay: -30,
+        font: { color: "#38bdf8", size: 11 },
+        bgcolor: "rgba(15,23,42,0.85)", bordercolor: "#38bdf8", borderwidth: 1,
+        captureevents: true,
+      } as Partial<Annotations>])
+      lastDrawn.current = "note"
+    } else {
+      return
+    }
+    setDrawTool("pan")
+    setDragMode("pan")
+  }
+
+  /* Escape puts the mouse back to Pan from any tool. */
+  useEffect(() => {
+    if (drawTool === "pan") return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setDrawTool("pan"); setDragMode("pan") }
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [drawTool])
+
+  const activeTool = TOOLS.find((t) => t.id === drawTool)
 
   const handleRelayout = (ev: PlotRelayoutEvent) => {
     const e = ev as unknown as Record<string, unknown>
@@ -741,6 +823,16 @@ export function CandlestickChart({
     { type: "scatter", mode: "lines", x: t, y: indicators.ema21, name: "EMA21",
       line: { color: "#80cbc4", width: 1.0 }, opacity: 0.85, xaxis: "x", yaxis: "y" } as unknown as Data,
   )
+  // EMA 20 and 50, added 2026-10-26 beside 9 and 21. Lime and lavender: clear
+  // of the orange/teal EMAs, the magenta VWAP, the yellow/sky ZigZags and the
+  // green/red candles. Skipped when an older response has no such series.
+  for (const [key, name, color] of [["ema20", "EMA20", EMA20_COLOR], ["ema50", "EMA50", EMA50_COLOR]] as const) {
+    const y = indicators[key]
+    if (y?.length) {
+      data.push({ type: "scatter", mode: "lines", x: t, y, name,
+        line: { color, width: 1.0 }, opacity: 0.85, xaxis: "x", yaxis: "y" } as unknown as Data)
+    }
+  }
 
   // ── Session VWAP ±2σ ──────────────────────────────────────────────────
   // Magenta: distinct from EMA9 orange, EMA21 teal, both ZigZags (yellow /
@@ -1720,7 +1812,12 @@ export function CandlestickChart({
       // with the rail, and the eraser must not treat them as a drawing.
       const own = [...shapes, ...alertShapes]
       builtInShapeCount.current = own.length
-      return [...own, ...userShapes] as Layout["shapes"]
+      // While a draw tool is active the user's earlier drawings are not
+      // editable: a drag that starts on one would otherwise grab and move it
+      // instead of drawing the new shape -- an ellipse started inside a
+      // rectangle drew nothing. Pan and the other modes can still move them.
+      const drawing = dragMode.startsWith("draw")
+      return [...own, ...userShapes.map((sh) => ({ ...sh, editable: !drawing }))] as Layout["shapes"]
     })(),
     annotations: ((): Layout["annotations"] => {
       builtInNoteCount.current = annotations.length
@@ -1748,6 +1845,14 @@ export function CandlestickChart({
     { label: "EMA 21", color: "#80cbc4", kind: "line",
       value: fmtPrice(lastReading(indicators.ema21)) },
   )
+  if (indicators.ema20?.length) {
+    legendEntries.push({ label: "EMA 20", color: EMA20_COLOR, kind: "line",
+                         value: fmtPrice(lastReading(indicators.ema20)) })
+  }
+  if (indicators.ema50?.length) {
+    legendEntries.push({ label: "EMA 50", color: EMA50_COLOR, kind: "line",
+                         value: fmtPrice(lastReading(indicators.ema50)) })
+  }
   if (vwapOn && vwapHasData) {
     legendEntries.push(
       { label: "VWAP", color: vwapStyle.vwap.color, kind: "line",
@@ -1804,6 +1909,7 @@ export function CandlestickChart({
                        onChart={legendOnChart}
                        onToggleOnChart={setLegendOnChart} />
 
+      <span ref={menusRef} className="contents">
       {/* "Indicators": every study in one menu. The checkboxes to the left
                 stay exactly as they are -- this is a second way to reach the same
                 state, for a narrow window where the row wraps, not a replacement. */}
@@ -1816,9 +1922,10 @@ export function CandlestickChart({
                 Indicators <ChevronDown className="h-3 w-3" aria-hidden />
               </button>
               {indicatorMenu && (
-                <div role="menu"
+                <div role="menu" aria-label="Indicators"
                      className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
                                 bg-[var(--surface-1)] py-1 shadow-xl">
+                  <MenuHeader title="Indicators" onClose={() => setIndicatorMenu(false)} />
                   <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
                   <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
                   <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
@@ -1846,9 +1953,10 @@ export function CandlestickChart({
                 <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
               </button>
               {saveMenu && (
-                <div role="menu"
+                <div role="menu" aria-label="Save"
                      className="absolute right-0 top-7 z-30 w-56 rounded-lg border border-[color:var(--hairline-mid)]
                                 bg-[var(--surface-1)] py-1 shadow-xl">
+                  <MenuHeader title="Save" onClose={() => setSaveMenu(false)} />
                   <button type="button" role="menuitem"
                           onClick={() => { setSaveMenu(false); saveVpDefaults() }}
                           className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
@@ -1862,6 +1970,7 @@ export function CandlestickChart({
                 </div>
               )}
             </span>
+      </span>
 
             {/* Fullscreen. The Fullscreen API on this container, so the chart
                 fills the screen with its own toolbar and oscillator rows rather
@@ -2332,8 +2441,36 @@ export function CandlestickChart({
           the candles at the left edge, which is exactly where a trend line
           usually starts. */}
       <div className="flex-1 min-h-0 flex">
-        <ChartToolRail active={drawTool} onPick={pickTool} />
-        <div className="flex-1 min-w-0">
+        <ChartToolRail active={drawTool} onPick={pickTool}
+                       hasDrawings={userShapes.length > 0 || userNotes.length > 0} />
+        <div ref={plotWrapRef} className={`relative flex-1 min-w-0 ${activeTool?.place ? "cursor-crosshair" : ""}`}
+             onPointerDownCapture={(e) => { pointerDownAt.current = { x: e.clientX, y: e.clientY } }}
+             // CLICK, not pointerup: during a press Plotly lays a "dragcover"
+             // div over the whole page and the pointerup lands on that, outside
+             // this wrapper, so a pointerup listener here never heard it.
+             onClickCapture={(e) => {
+               const d = pointerDownAt.current
+               pointerDownAt.current = null
+               if (!activeTool?.place || !d) return
+               if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) return   // a drag: it panned
+               placeAt(e.clientX, e.clientY)
+             }}>
+      {/* What the armed tool wants next. Without it a picked tool looked
+          like it did nothing: the rectangle needs a drag, the level a click,
+          and the rail said neither. */}
+      {activeTool?.howTo && drawTool !== "pan" && (
+        <div role="status"
+             className="absolute left-2 top-2 z-10 flex items-center gap-2 rounded-md border border-[color:var(--hairline-mid)]
+                        bg-[var(--surface-1)]/90 px-2 py-1 text-xs shadow">
+          <span><span className="font-semibold text-[#38bdf8]">{activeTool.label}</span> — {activeTool.howTo}</span>
+          <span className="text-muted-foreground">· Esc to stop</span>
+          <button type="button" aria-label="Stop drawing" title="Back to Pan"
+                  onClick={() => { setDrawTool("pan"); setDragMode("pan") }}
+                  className="grid h-4 w-4 place-items-center rounded text-muted-foreground hover:text-foreground">
+            <X className="h-3 w-3" aria-hidden />
+          </button>
+        </div>
+      )}
       {/* No overlay any more. The EMA / VWAP readout used to be painted over
           the plot's top-left corner permanently -- about 200x90px of the one
           region on the page where space is worth something, spent covering

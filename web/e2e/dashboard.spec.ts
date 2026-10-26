@@ -122,7 +122,7 @@ test("the Legend menu explains the chart and reads its live values", async () =>
   const menu = page.getByRole("menu").last()
   await expect(menu).toBeVisible()
 
-  for (const entry of ["EMA 9", "EMA 21", "VWAP", "ZigZag (3L)", "Swing High", "Swing Low"]) {
+  for (const entry of ["EMA 9", "EMA 21", "EMA 20", "EMA 50", "VWAP", "ZigZag (3L)", "Swing High", "Swing Low"]) {
     await expect(menu, `legend is missing ${entry}`).toContainText(entry)
   }
   // A reading, not just a name: the whole point of folding the old on-chart
@@ -344,4 +344,102 @@ test("a Volume Profile day-range row switches the chart to that interval", async
     .not.toBe(before)
   expect(await shown()).toBe("15")
   await own.close()
+})
+
+/**
+ * The drawing rail down the chart's left edge, used the way a person uses it.
+ * Reported 2026-10-26 as "none of these work": most did, silently -- the
+ * rectangle wanted a drag and said nothing, the level and the note dropped
+ * at the far right edge, and a drag starting on an earlier drawing grabbed
+ * it instead of drawing. Each step here checks what lands on the chart.
+ */
+test("every drawing tool on the rail puts something on the chart", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const p = await browser.newPage({ viewport: { width: 1700, height: 1000 } })
+  await openApp(p)
+  await runBacktest(p)
+  const plot = p.locator(".js-plotly-plot").first()
+  const box = (await plot.boundingBox())!
+  const rail = p.getByRole("toolbar", { name: "Chart drawing tools" })
+  const count = (key: "shapes" | "annotations") => p.evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (k) => ((document.querySelector(".js-plotly-plot") as any).layout[k] ?? []).length, key)
+  const at = (fx: number, fy: number) => ({ x: box.x + box.width * fx, y: box.y + box.height * fy })
+  const drag = async (fx: number, fy: number) => {
+    const s = at(fx, fy)
+    await p.mouse.move(s.x, s.y); await p.mouse.down()
+    await p.mouse.move(s.x + 90, s.y + 40, { steps: 8 }); await p.mouse.up()
+  }
+
+  await expect(rail.getByRole("button", { name: "Clear all" })).toBeDisabled()
+
+  // Every drag tool, each one STARTING INSIDE the drawing before it.
+  for (const name of ["Rectangle", "Ellipse", "Trend line", "Freehand"]) {
+    await rail.getByRole("button", { name }).click()
+    await expect(p.getByRole("status").filter({ hasText: name })).toBeVisible()
+    const before = await count("shapes")
+    await drag(0.4, 0.25)
+    await expect.poll(() => count("shapes"), `${name} drew nothing`).toBe(before + 1)
+  }
+
+  // Horizontal line: lands at the price that was clicked, then back to Pan.
+  await rail.getByRole("button", { name: "Horizontal line" }).click()
+  const before = await count("shapes")
+  const pt = at(0.55, 0.2)
+  await p.mouse.click(pt.x, pt.y)
+  await expect.poll(() => count("shapes")).toBe(before + 1)
+  const level = await p.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gd = document.querySelector(".js-plotly-plot") as any
+    const sh = gd.layout.shapes[gd.layout.shapes.length - 1]
+    const ya = gd._fullLayout.yaxis
+    return { y0: sh.y0, y1: sh.y1, px: ya._offset + ya.l2p(ya.d2l(sh.y0)) + gd.getBoundingClientRect().top }
+  })
+  expect(level.y0).toBe(level.y1)
+  expect(Math.abs(level.px - pt.y), "the level is not where it was clicked").toBeLessThan(3)
+  await expect(rail.getByRole("button", { name: "Pan" })).toHaveAttribute("aria-pressed", "true")
+
+  // Note: asks for its text, pins it where clicked.
+  p.once("dialog", (d) => d.accept("Test note"))
+  await rail.getByRole("button", { name: "Note" }).click()
+  const notes = await count("annotations")
+  const np = at(0.5, 0.3)
+  await p.mouse.click(np.x, np.y)
+  await expect.poll(() => count("annotations")).toBe(notes + 1)
+  await expect(plot).toContainText("Test note")
+
+  // Undo takes the note back; Clear all removes every drawing.
+  await rail.getByRole("button", { name: "Undo drawing" }).click()
+  await expect.poll(() => count("annotations")).toBe(notes)
+  await rail.getByRole("button", { name: "Clear all" }).click()
+  await expect.poll(() => count("shapes")).toBe(before - 4)
+
+  // Escape leaves a tool.
+  await rail.getByRole("button", { name: "Rectangle" }).click()
+  await p.keyboard.press("Escape")
+  await expect(rail.getByRole("button", { name: "Pan" })).toHaveAttribute("aria-pressed", "true")
+  await p.close()
+})
+
+test("the Indicators and Save menus close by their ×, by Escape and by clicking away", async ({ browser }) => {
+  test.setTimeout(180_000)
+  const p = await browser.newPage({ viewport: { width: 1700, height: 1000 } })
+  await openApp(p)
+  await runBacktest(p)
+  const open = async (name: string) => {
+    await p.locator('button[aria-haspopup="menu"]', { hasText: name }).first().click()
+    await expect(p.getByRole("menu", { name })).toBeVisible()
+  }
+  for (const name of ["Indicators", "Save"]) {
+    await open(name)
+    await p.getByRole("button", { name: `Close ${name} menu` }).click()
+    await expect(p.getByRole("menu", { name })).toHaveCount(0)
+    await open(name)
+    await p.keyboard.press("Escape")
+    await expect(p.getByRole("menu", { name })).toHaveCount(0)
+    await open(name)
+    await p.mouse.click(5, 5)
+    await expect(p.getByRole("menu", { name })).toHaveCount(0)
+  }
+  await p.close()
 })
