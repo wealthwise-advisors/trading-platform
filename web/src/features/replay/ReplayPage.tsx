@@ -35,6 +35,7 @@ import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/c
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { barsClosedBy, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
   loadPalettes, savePalettes, resetPalettes, type DeviationPalettes,
@@ -905,7 +906,11 @@ export function ReplayPage() {
    */
   const profileCache = useRef(new Map<string, ReturnType<typeof computeVolumeProfile> | null>())
 
-  /** The profile of one timeframe's first `n` bars, memoised. */
+  /**
+   * The profile of one timeframe as it stood at its `n`th bar, memoised --
+   * over that timeframe's OWN specified days ending there, not the whole
+   * shared range (see lib/profileWindow).
+   */
   const profileAtCount = (tf: string, n: number) => {
     if (!showVp) return null
     const pane = panes[tf]
@@ -913,10 +918,11 @@ export function ReplayPage() {
     // pane.bars starts at the session's first bar except when a mid-session
     // addition truncated its backfill, so clamp rather than slicing past the end.
     const upto = Math.min(n, pane.bars.length)
-    const key = `${tf}|${upto}|${vpBins}|${vpValueArea}`
+    const from = profileWindowStart(pane.bars, upto, tf)
+    const key = `${tf}|${from}|${upto}|${vpBins}|${vpValueArea}`
     const hit = profileCache.current.get(key)
     if (hit !== undefined) return hit
-    const slice = pane.bars.slice(0, upto)
+    const slice = pane.bars.slice(from, upto)
     const out = slice.length < 2
       ? null
       : computeVolumeProfile(
@@ -935,14 +941,8 @@ export function ReplayPage() {
   /** The profile as it stood at THIS tape row's bar. */
   const profileAtRow = (row: TapeRow) => profileAtCount(row.tf, row.barIndex)
 
-  /** POC / value-area for one pane, from the bars it has received so far. */
-  const profileFor = (pane: PaneState) => {
-    if (!showVp || pane.bars.length < 2) return null
-    return computeVolumeProfile(
-      pane.bars.map((b) => ({ h: b.h, l: b.l, v: b.v })),
-      vpBins, vpValueArea / 100,
-    )
-  }
+  /** POC / value-area for one timeframe, from the bars it has received so far. */
+  const profileFor = (tf: string) => profileAtCount(tf, panes[tf]?.bars.length ?? 0)
 
   const ready = status !== "idle" && status !== "loading"
 
@@ -1305,10 +1305,10 @@ export function ReplayPage() {
   const paneProfiles = useMemo(() => {
     const out = new Map<string, ReturnType<typeof profileFor>>()
     if (!showVp) return out
-    for (const tf of shownTimeframes) out.set(tf, profileFor(panes[tf] ?? emptyPane(initialCapital)))
+    for (const tf of shownTimeframes) out.set(tf, profileFor(tf))
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showVp, shownTfKey, panes, vpBins, vpValueArea, initialCapital])
+  }, [showVp, shownTfKey, panes, vpBins, vpValueArea])
 
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
   // ── POC Match / POC vs Avg on the Consolidated tape ────────────────
