@@ -24,7 +24,7 @@ from api.main import app
 
 client = TestClient(app)
 
-UI_TIMEFRAMES = ["1m", "2m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w"]
+UI_TIMEFRAMES = ["1m", "2m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w"]
 
 #: The six that used to fail.
 FORMERLY_BROKEN = ["2m", "10m", "20m", "25m", "35m", "45m"]

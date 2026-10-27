@@ -16,7 +16,6 @@ interface LegendItem {
 
 const ITEMS: LegendItem[] = [
   { label: "EMA9", color: "#ffab40", marker: "line" },
-  { label: "EMA21", color: "#80cbc4", marker: "line" },
   { label: "ZigZag (3L)", color: "#f0c040", dash: true, marker: "line" },
   { label: "ZigZag (10L)", color: "#2196f3", dash: true, marker: "line" },
   { label: "Swing High", color: RED, marker: "circle" },

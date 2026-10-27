@@ -15,7 +15,7 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import {
-  ALL_CHART_TIMEFRAMES, maxRangeDaysFor, startDateForTimeframe,
+  ALL_CHART_TIMEFRAMES, QUICK_INTERVALS, maxRangeDaysFor, startDateForTimeframe,
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import {
@@ -289,7 +289,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             popup, the Timeframe Selector above and the chart toolbar are one
             setting with one code path and cannot drift apart. */}
         <div role="group" aria-label="Common intervals" className="grid grid-cols-6 gap-1">
-          {["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"].map((tf) => (
+          {QUICK_INTERVALS.map((tf) => (
             <button
               key={tf}
               type="button"

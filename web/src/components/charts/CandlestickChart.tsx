@@ -816,12 +816,11 @@ export function CandlestickChart({
 
   // EMA lines kept thinner than the candles (1.0 vs 1.7) so candlesticks
   // stay the primary price representation, but clearly visible in their
-  // own right rather than faded out.
+  // own right rather than faded out. EMA 21 removed on request (2026-10-28);
+  // the API still sends it, nothing draws it.
   data.push(
     { type: "scatter", mode: "lines", x: t, y: indicators.ema9, name: "EMA9",
       line: { color: "#ffab40", width: 1.0 }, opacity: 0.85, xaxis: "x", yaxis: "y" } as unknown as Data,
-    { type: "scatter", mode: "lines", x: t, y: indicators.ema21, name: "EMA21",
-      line: { color: "#80cbc4", width: 1.0 }, opacity: 0.85, xaxis: "x", yaxis: "y" } as unknown as Data,
   )
   // EMA 20 and 50, added 2026-10-26 beside 9 and 21. Lime and lavender: clear
   // of the orange/teal EMAs, the magenta VWAP, the yellow/sky ZigZags and the
@@ -835,7 +834,7 @@ export function CandlestickChart({
   }
 
   // ── Session VWAP ±2σ ──────────────────────────────────────────────────
-  // Magenta: distinct from EMA9 orange, EMA21 teal, both ZigZags (yellow /
+  // Magenta: distinct from EMA9 orange, both ZigZags (yellow /
   // sky blue) and every SWING_COLORS entry.
   //
   // The bands are drawn first so the VWAP line sits on top of them, and the
@@ -1834,8 +1833,6 @@ export function CandlestickChart({
   legendEntries.push(
     { label: "EMA 9", color: "#ffab40", kind: "line",
       value: fmtPrice(lastReading(indicators.ema9)) },
-    { label: "EMA 21", color: "#80cbc4", kind: "line",
-      value: fmtPrice(lastReading(indicators.ema21)) },
   )
   if (indicators.ema20?.length) {
     legendEntries.push({ label: "EMA 20", color: EMA20_COLOR, kind: "line",

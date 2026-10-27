@@ -122,7 +122,9 @@ test("the Legend menu explains the chart and reads its live values", async () =>
   const menu = page.getByRole("menu").last()
   await expect(menu).toBeVisible()
 
-  for (const entry of ["EMA 9", "EMA 21", "EMA 20", "EMA 50", "VWAP", "ZigZag (3L)", "Swing High", "Swing Low"]) {
+  // EMA 21 removed on request (2026-10-28).
+  await expect(menu).not.toContainText("EMA 21")
+  for (const entry of ["EMA 9", "EMA 20", "EMA 50", "VWAP", "ZigZag (3L)", "Swing High", "Swing Low"]) {
     await expect(menu, `legend is missing ${entry}`).toContainText(entry)
   }
   // A reading, not just a name: the whole point of folding the old on-chart

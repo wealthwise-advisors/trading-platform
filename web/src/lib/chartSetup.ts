@@ -100,6 +100,13 @@ export const UNSPECIFIED: Record<string, number> = {
   "35m": 10,
 }
 
+/**
+ * The quick timeframe buttons -- Backtest's Interval Picker and the chart
+ * toolbar read this ONE list, so the two rows cannot drift apart. 3m and 10m
+ * added 2026-10-28 on request.
+ */
+export const QUICK_INTERVALS = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"] as const
+
 /** Every timeframe Backtest and Export Data offer, in bar-interval order. */
 export const ALL_CHART_TIMEFRAMES = [
   "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",

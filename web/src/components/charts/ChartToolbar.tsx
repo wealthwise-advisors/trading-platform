@@ -32,10 +32,11 @@ import {
 
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { useConfigStore } from "@/store/configStore"
+import { QUICK_INTERVALS } from "@/lib/chartSetup"
 import { loadAlerts, saveAlerts, newAlert } from "@/lib/priceAlerts"
 
-/** The intervals the reference puts on the strip, as quick buttons. */
-const QUICK = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"]
+/** The quick interval buttons -- the same list the Backtest Interval Picker uses. */
+const QUICK = QUICK_INTERVALS
 
 /**
  * ONE HEIGHT FOR EVERY CONTROL ON THIS ROW -- 22px, the same as the study

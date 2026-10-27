@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest"
 import {
+  QUICK_INTERVALS,
   ALL_CHART_TIMEFRAMES, INTRADAY_TIMEFRAMES, daysFor, daysForSet, isDailyOrLonger, isMaxHistory,
   isSpecified, maxRangeDaysFor, rangeLabel, TF_MINUTES, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
 } from "./chartSetup"
@@ -244,5 +245,11 @@ describe("TF_MINUTES covers every offered intraday timeframe", () => {
   it("orders the offered timeframes by length, as Market Grid sorts its rows", () => {
     const sorted = [...INTRADAY_TIMEFRAMES].sort((a, b) => TF_MINUTES[a] - TF_MINUTES[b])
     expect(sorted).toEqual([...INTRADAY_TIMEFRAMES])
+  })
+})
+
+describe("QUICK_INTERVALS", () => {
+  it("puts 3m and 10m on the Backtest and chart quick buttons, in bar-length order", () => {
+    expect(QUICK_INTERVALS).toEqual(["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"])
   })
 })
