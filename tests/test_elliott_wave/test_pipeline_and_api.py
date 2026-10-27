@@ -345,10 +345,4 @@ class TestExistingApiUnchanged:
         # and stores the introduction flag on it. Every remaining data route
         # still runs through require_user, which now resolves the workspace
         # account and refuses cross-origin state changes.
-        # +1 (2026-10-27): POST /api/poc-average -- the POC Average of Market
-        # Grid's timeframes at the Chart page's swing points, so a swing whose
-        # timeframe POC sits on the average can be flagged. Behind require_user
-        # like every data route; tests/test_poc_average_api.py holds its
-        # numbers to a real Market Grid session's.
-        assert "/api/poc-average" in paths
-        assert len(paths) == 36, sorted(paths)
+        assert len(paths) == 35, sorted(paths)

@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  POC_LEVEL_PALETTE, averageColumn, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor, onAverage,
+  POC_LEVEL_PALETTE, averageColumn, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor,
   sideVsAverage,
 } from "./pocColumns"
 
@@ -233,20 +233,5 @@ describe("averageColumn — VAH vs Avg and VAL vs Avg, the POC vs Avg method", (
     const avg = averageColumn(Object.entries(vals).map(([tf, value]) => ({ tf, value })))
     expect(avg.average).toBe(poc.average)
     for (const tf of Object.keys(vals)) expect(avg.side.get(tf)).toBe(poc.side.get(tf))
-  })
-})
-
-describe("onAverage — a POC sitting on the POC Average (flagged ⚑)", () => {
-  it("is true when POC and average share the whole number", () => {
-    expect(onAverage(7689.54, 7689.17)).toBe(true)
-    expect(onAverage(7689.01, 7689.99)).toBe(true)
-  })
-  it("is false across a whole-number boundary, however close", () => {
-    expect(onAverage(7688.99, 7689.01)).toBe(false)
-  })
-  it("is false without both numbers", () => {
-    expect(onAverage(null, 7689)).toBe(false)
-    expect(onAverage(7689, null)).toBe(false)
-    expect(onAverage(Number.NaN, 7689)).toBe(false)
   })
 })

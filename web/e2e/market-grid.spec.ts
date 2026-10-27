@@ -437,12 +437,10 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
     if (r.avgText.startsWith("▼")) expect(r.avgColor).toBe(red)
 
     // The cell prints only the difference, measured from the common average.
-    // An optional ⚑ first: the POC sits ON the average -- same whole number.
-    const m = /^(⚑\s*)?[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.avgText)
-    expect(m, `POC Average cell is not a signed difference: ${r.avgText}`).not.toBeNull()
-    const diff = Number(m![2])
+    const m = /^[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.avgText)
+    expect(m, `POC vs Avg cell is not a signed difference: ${r.avgText}`).not.toBeNull()
+    const diff = Number(m![1])
     expect(Math.abs(r.poc - diff - liveAvg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
-    expect(!!m![1], `⚑ on ${r.poc} vs average ${liveAvg}`).toBe(Math.trunc(r.poc) === Math.trunc(liveAvg))
   }
   await page.close()
 })
