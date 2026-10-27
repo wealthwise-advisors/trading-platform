@@ -287,9 +287,9 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
   const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
   const iPoc = headers.findIndex((h) => /^POC$/i.test(h))
   const iMatch = headers.findIndex((h) => /^POC MATCH/i.test(h))
-  const iAvg = headers.findIndex((h) => /^POC VS AVG/i.test(h))
+  const iAvg = headers.findIndex((h) => /^POC AVERAGE/i.test(h))
   expect(iMatch, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
-  expect(iAvg, "no POC vs Avg column").toBeGreaterThan(-1)
+  expect(iAvg, "no POC Average column").toBeGreaterThan(-1)
   const average = Number(/\(([\d.]+)\)/.exec(headers[iAvg])?.[1])
   expect(Number.isFinite(average), `no average in the header: ${headers[iAvg]}`).toBe(true)
 
@@ -334,6 +334,33 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
       else expect(b.matchColor).not.toBe(a.matchColor)
     }
   }
+
+  // VA High Average and VA Low Average (2026-10-27): the same rule as POC.
+  // The header's bracketed number is the mean of the column beside it, and
+  // each cell is that row's value minus it, green above and red below.
+  for (const [valueCol, avgCol] of [[/^VAHIGH$/i, /^VA HIGH AVERAGE/i], [/^VALOW$/i, /^VA LOW AVERAGE/i]] as const) {
+    const iVal = headers.findIndex((h) => valueCol.test(h))
+    const iVsAvg = headers.findIndex((h) => avgCol.test(h))
+    expect(iVsAvg, `no ${avgCol} column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
+    const headerAvg = Number(/\(([\d.]+)\)/.exec(headers[iVsAvg])?.[1])
+    const cells = (await table.locator("tbody tr").evaluateAll((trs, [a, b]) => trs.map((tr) => {
+      const td = tr.querySelectorAll("td")
+      return {
+        value: Number((td[a] as HTMLElement).innerText.trim()),
+        text: (td[b] as HTMLElement).innerText.trim(),
+        color: getComputedStyle(td[b]).color,
+      }
+    }), [iVal, iVsAvg])).filter((c) => Number.isFinite(c.value))
+    expect(cells.length).toBeGreaterThan(1)
+    const colMean = cells.reduce((s, c) => s + c.value, 0) / cells.length
+    expect(headerAvg, `${avgCol} header is not the mean of its column`).toBeCloseTo(colMean, 1)
+    for (const c of cells) {
+      const diff = Number(/^[▲▼=]\s*([+-]?[\d.]+)$/.exec(c.text)?.[1])
+      expect(diff, `${c.text} is not ${c.value} minus ${colMean}`).toBeCloseTo(c.value - colMean, 1)
+      if (c.value > colMean + 1e-6) expect(c.color).toBe(green)
+      if (c.value < colMean - 1e-6) expect(c.color).toBe(red)
+    }
+  }
   await page.close()
 })
 
@@ -365,9 +392,9 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
     const table = page.locator("table.grid-table").nth(idx)
     const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
     const ix = (re: RegExp) => headers.findIndex((h) => re.test(h))
-    const cols = { close: 0, poc: ix(/^POC$/i), match: ix(/^POC MATCH/i), avg: ix(/^POC VS AVG/i) }
+    const cols = { close: 0, poc: ix(/^POC$/i), match: ix(/^POC MATCH/i), avg: ix(/^POC AVERAGE/i) }
     expect(cols.match, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
-    expect(cols.avg, "no POC vs Avg column").toBeGreaterThan(-1)
+    expect(cols.avg, "no POC Average column").toBeGreaterThan(-1)
     const average = Number(/\(([\d.]+)\)/.exec(headers[cols.avg])?.[1])
     const rows = await table.locator("tbody tr").evaluateAll((trs, c) => trs.map((tr) => {
       const td = tr.querySelectorAll("td")
@@ -414,6 +441,76 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
     expect(m, `POC vs Avg cell is not a signed difference: ${r.avgText}`).not.toBeNull()
     const diff = Number(m![1])
     expect(Math.abs(r.poc - diff - liveAvg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
+  }
+  await page.close()
+})
+
+/**
+ * VA High Average and VA Low Average (2026-10-27): the POC Average method on
+ * the value-area bounds, in both tables. Asserted against the rule:
+ *   - the Live header's bracketed average IS the mean of the VAHigh (VALow)
+ *     column;
+ *   - every cell is value - average, ▲ green above, ▼ red below;
+ *   - the tape prints the same common average in its header and measures its
+ *     rows from it.
+ */
+test("VA High Average and VA Low Average work like POC Average, in both tables", async ({ browser }) => {
+  test.setTimeout(360_000)
+  const page = await browser.newPage()
+  await openApp(page)
+  await goToMarketGrid(page)
+  await widenRsiWindow(page)
+  for (const tf of ["10m", "15m", "20m", "30m"]) {
+    const pill = page.locator("button.tf-pill", { hasText: new RegExp(`^${tf}$`) }).first()
+    if (await pill.count() && !((await pill.getAttribute("class")) ?? "").includes("tf-pill-on")) await pill.click()
+  }
+  await loadAndPlay(page)
+
+  const [green, red] = await page.evaluate(() => {
+    const p = document.createElement("span"); document.body.appendChild(p)
+    p.style.color = "var(--gain)"; const g = getComputedStyle(p).color
+    p.style.color = "var(--loss)"; const r = getComputedStyle(p).color
+    p.remove(); return [g, r]
+  })
+
+  const read = async (idx: number, valueCol: RegExp, avgCol: RegExp) => {
+    const table = page.locator("table.grid-table").nth(idx)
+    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+    const iv = headers.findIndex((h) => valueCol.test(h))
+    const ia = headers.findIndex((h) => avgCol.test(h))
+    expect(iv, `no ${valueCol} in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
+    expect(ia, `no ${avgCol} in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
+    const average = Number(/\(([\d.]+)\)/.exec(headers[ia])?.[1])
+    const rows = await table.locator("tbody tr").evaluateAll((trs, [a, b]) => trs.map((tr) => {
+      const td = tr.querySelectorAll("td")
+      return {
+        value: Number((td[a] as HTMLElement).innerText.trim()),
+        text: (td[b] as HTMLElement).innerText.trim(),
+        color: getComputedStyle(td[b]).color,
+      }
+    }), [iv, ia])
+    return { average, rows: rows.filter((r) => Number.isFinite(r.value) && /[▲▼=]/.test(r.text)) }
+  }
+
+  for (const [valueCol, avgCol] of [[/^VAHIGH$/i, /^VA HIGH AVERAGE/i], [/^VALOW$/i, /^VA LOW AVERAGE/i]] as const) {
+    const live = await read(0, valueCol, avgCol)
+    expect(Number.isFinite(live.average), `${avgCol} prints no average`).toBe(true)
+    expect(live.rows.length).toBeGreaterThan(1)
+    // The header's average is the plain mean of the column on screen.
+    const mean = live.rows.reduce((s, r) => s + r.value, 0) / live.rows.length
+    expect(live.average).toBeCloseTo(mean, 1)
+
+    const tape = await read(1, valueCol, avgCol)
+    expect(tape.average, "the tape must print the Live table's common average").toBe(live.average)
+    expect(tape.rows.length).toBeGreaterThan(5)
+
+    for (const r of [...live.rows, ...tape.rows]) {
+      const m = /^[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.text)
+      expect(m, `not a signed difference: ${r.text}`).not.toBeNull()
+      expect(Math.abs(r.value - Number(m![1]) - live.average), `${r.text} does not add up for ${r.value}`).toBeLessThan(0.02)
+      if (r.text.startsWith("▲")) expect(r.color).toBe(green)
+      if (r.text.startsWith("▼")) expect(r.color).toBe(red)
+    }
   }
   await page.close()
 })

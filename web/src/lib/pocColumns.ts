@@ -127,6 +127,35 @@ function levelOrder(
   return [...head, ...whole(values).filter((w) => !seen.has(w))]
 }
 
+/**
+ * "X vs Avg" for any per-timeframe value -- POC, VA High, VA Low.
+ *
+ * average = sum of the values of every timeframe that has one / how many have
+ * one. A timeframe without a value is left out of BOTH, so it cannot drag the
+ * average towards zero. Each value is then measured against that average:
+ * diff = value - average, side above / below / equal.
+ *
+ * VAH vs Avg and VAL vs Avg were added 2026-10-27 "the same way as POC vs Avg";
+ * POC vs Avg now goes through this too, so the three cannot drift apart.
+ */
+export function averageColumn(
+  rows: ReadonlyArray<{ tf: string; value: number | null | undefined }>,
+): { average: number | null; side: Map<string, AvgSide>; diff: Map<string, number>; counted: number } {
+  const valid = rows.filter(
+    (r): r is { tf: string; value: number } => r.value != null && Number.isFinite(r.value),
+  )
+  const side = new Map<string, AvgSide>()
+  const diff = new Map<string, number>()
+  if (valid.length === 0) return { average: null, side, diff, counted: 0 }
+  const average = valid.reduce((s, r) => s + r.value, 0) / valid.length
+  for (const r of valid) {
+    const v = sideVsAverage(r.value, average)
+    side.set(r.tf, v.side)
+    diff.set(r.tf, v.diff)
+  }
+  return { average, side, diff, counted: valid.length }
+}
+
 /** Where one POC sits against a reference average. Raw value, not whole number. */
 export function sideVsAverage(poc: number, average: number): { side: AvgSide; diff: number } {
   const diff = poc - average
@@ -164,9 +193,9 @@ export function buildPocColumns(
     (r): r is { tf: string; poc: number } => r.poc != null && Number.isFinite(r.poc),
   )
   const level = new Map<string, PocLevel>()
-  const side = new Map<string, AvgSide>()
-  const diff = new Map<string, number>()
-  if (valid.length === 0) return { level, side, diff, average: null, counted: 0 }
+  if (valid.length === 0) {
+    return { level, side: new Map(), diff: new Map(), average: null, counted: 0 }
+  }
 
   // ── POC Match: group by whole number ──
   const counts = new Map<number, number>()
@@ -183,12 +212,7 @@ export function buildPocColumns(
   }
 
   // ── POC vs Avg: the mean of the selected timeframes' POCs ──
-  const average = valid.reduce((s, r) => s + r.poc, 0) / valid.length
-  for (const r of valid) {
-    const v = sideVsAverage(r.poc, average)
-    diff.set(r.tf, v.diff)
-    side.set(r.tf, v.side)
-  }
+  const { average, side, diff } = averageColumn(valid.map((r) => ({ tf: r.tf, value: r.poc })))
 
   return { level, side, diff, average, counted: valid.length }
 }

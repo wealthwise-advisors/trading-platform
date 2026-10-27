@@ -4,7 +4,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  POC_LEVEL_PALETTE, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor, sideVsAverage,
+  POC_LEVEL_PALETTE, averageColumn, barsClosedBy, buildLevelColorMap, buildPocColumns, levelColor,
+  sideVsAverage,
 } from "./pocColumns"
 
 const rows = (m: Record<string, number | null>) =>
@@ -194,5 +195,43 @@ describe("barsClosedBy -- each timeframe's state at a past moment", () => {
 
   it("an empty pane has nothing closed", () => {
     expect(barsClosedBy([], 5, 99 * min)).toBe(0)
+  })
+})
+
+describe("averageColumn — VAH vs Avg and VAL vs Avg, the POC vs Avg method", () => {
+  it("averages every timeframe's value and measures each against it", () => {
+    // VAH of three timeframes: (7700 + 7710 + 7720) / 3 = 7710.
+    const c = averageColumn([
+      { tf: "5m", value: 7700 }, { tf: "15m", value: 7710 }, { tf: "1h", value: 7720 },
+    ])
+    expect(c.average).toBe(7710)
+    expect(c.side.get("5m")).toBe("below")
+    expect(c.side.get("15m")).toBe("equal")
+    expect(c.side.get("1h")).toBe("above")
+    expect(c.diff.get("5m")).toBe(-10)
+    expect(c.diff.get("1h")).toBe(10)
+  })
+
+  it("leaves a timeframe with no value out of the sum AND the count", () => {
+    const c = averageColumn([
+      { tf: "5m", value: 100 }, { tf: "15m", value: null }, { tf: "1h", value: 200 },
+    ])
+    expect(c.average).toBe(150)
+    expect(c.counted).toBe(2)
+    expect(c.side.has("15m")).toBe(false)
+  })
+
+  it("has no average with no values", () => {
+    const c = averageColumn([{ tf: "5m", value: undefined }])
+    expect(c.average).toBeNull()
+    expect(c.side.size).toBe(0)
+  })
+
+  it("gives the same average and sides POC vs Avg gives for the same numbers", () => {
+    const vals = { a: 7842.5, b: 7801.25, c: 7860 }
+    const poc = buildPocColumns(Object.entries(vals).map(([tf, poc]) => ({ tf, poc })))
+    const avg = averageColumn(Object.entries(vals).map(([tf, value]) => ({ tf, value })))
+    expect(avg.average).toBe(poc.average)
+    for (const tf of Object.keys(vals)) expect(avg.side.get(tf)).toBe(poc.side.get(tf))
   })
 })

@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -1348,6 +1348,40 @@ export function ReplayPage() {
     shownTimeframes.map((tf) => ({ tf, poc: paneProfiles.get(tf)?.poc })),
     pocLevelColors,
   )
+  /**
+   * VAH vs Avg and VAL vs Avg (2026-10-27), the POC vs Avg method applied to
+   * the value-area bounds: the average of the selected timeframes' VA High
+   * (or Low), each one green above it and red below. The tape measures its
+   * rows against these same common averages, as it does for POC.
+   */
+  const vahCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.vah })))
+  const valCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.val })))
+
+  /** "X vs Avg" header: the name, and the average it measures from in brackets. */
+  const vsAvgHeader = (name: string, average: number | null, title: string) => (
+    <th className="text-right p-2 font-medium whitespace-nowrap" title={title}>
+      {name}
+      {average != null && (
+        <span className="ml-1 font-mono text-[10px] text-muted-foreground normal-case">
+          ({average.toFixed(2)})
+        </span>
+      )}
+    </th>
+  )
+  /** "X vs Avg" cell: ▲ +d green above the average, ▼ -d red below. */
+  const vsAvgCell = (what: string, value: number | null | undefined, average: number | null) => {
+    if (value == null || !Number.isFinite(value) || average == null) {
+      return <td className="p-2 text-right font-mono text-muted-foreground">{"—"}</td>
+    }
+    const v = sideVsAverage(value, average)
+    const color = v.side === "above" ? GOOD : v.side === "below" ? CRITICAL : NEUTRAL
+    return (
+      <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
+          title={`${what} ${value.toFixed(2)} is ${v.side === "equal" ? "at" : v.side} the average ${average.toFixed(2)}`}>
+        {`${v.side === "above" ? "▲" : v.side === "below" ? "▼" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
+      </td>
+    )
+  }
   // ── setup readiness ────────────────────────────────────────────────
   // Each step is "done" when it holds a value the session can actually be
   // built from -- which is what turns its badge from a number into a tick.
@@ -2568,7 +2602,7 @@ export function ReplayPage() {
                       {showVp && (
                         <th className="text-right p-2 font-medium whitespace-nowrap"
                             title="Each timeframe's POC against the average POC of the selected timeframes">
-                          POC vs Avg
+                          POC Average
                           {pocCols.average != null && (
                             <span className="ml-1 font-mono text-[10px] text-muted-foreground normal-case">
                               ({pocCols.average.toFixed(2)})
@@ -2577,7 +2611,11 @@ export function ReplayPage() {
                         </th>
                       )}
                       {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                      {showVp && vsAvgHeader("VA High Average", vahCols.average,
+                        "Each timeframe's VA High against the average VA High of the selected timeframes")}
                       {showVp && <th className="text-right p-2 font-medium">VALow</th>}
+                      {showVp && vsAvgHeader("VA Low Average", valCols.average,
+                        "Each timeframe's VA Low against the average VA Low of the selected timeframes")}
                       <th className="text-left p-2 font-medium">Last signal</th>
                     </tr>
                   </thead>
@@ -2676,7 +2714,9 @@ export function ReplayPage() {
                             )
                           })()}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
+                          {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
+                          {showVp && vsAvgCell("VA Low", vp?.val, valCols.average)}
                           <td className="p-2 text-xs">
                             {pane.lastSignal ? (
                               <span style={{ color: pane.lastSignal.type === "BUY" ? GOOD : pane.lastSignal.type === "SELL" ? CRITICAL : "#e3b341" }}>
@@ -2829,7 +2869,7 @@ export function ReplayPage() {
                         {showVp && (
                           <th className="text-right p-2 font-medium whitespace-nowrap"
                               title="Each row's POC against the common average POC -- the same average the Live state table prints">
-                            POC vs Avg
+                            POC Average
                             {pocCols.average != null && (
                               <span className="ml-1 font-mono text-[10px] text-muted-foreground normal-case">
                                 ({pocCols.average.toFixed(2)})
@@ -2838,7 +2878,11 @@ export function ReplayPage() {
                           </th>
                         )}
                         {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                        {showVp && vsAvgHeader("VA High Average", vahCols.average,
+                          "Each row's VA High against the common average VA High -- the same average the Live state table prints")}
                         {showVp && <th className="text-right p-2 font-medium">VALow</th>}
+                        {showVp && vsAvgHeader("VA Low Average", valCols.average,
+                          "Each row's VA Low against the common average VA Low -- the same average the Live state table prints")}
                       <th className="text-left p-2 font-medium tape-g">Position</th>
                       <th className="text-left p-2 font-medium tape-g">Signal</th>
                     </tr>
@@ -2935,11 +2979,13 @@ export function ReplayPage() {
                                 {tapeNum(vp?.vah)}
                               </td>
                             )}
+                            {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                             {showVp && (
                               <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>
                                 {tapeNum(vp?.val)}
                               </td>
                             )}
+                            {showVp && vsAvgCell("VA Low", vp?.val, valCols.average)}
                           <td className="p-2 font-mono text-xs tape-g"
                               style={{ color: r.position === 0 ? NEUTRAL : r.position > 0 ? GOOD : CRITICAL }}>
                             {r.position === 0 ? "FLAT" : r.position > 0 ? `+${r.position}` : String(r.position)}
