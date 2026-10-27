@@ -198,6 +198,15 @@ export const api = {
   dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string }) =>
     `${BASE}/data/export?symbol=${params.symbol}&timeframe=${params.timeframe}&start=${params.start}&end=${params.end}&data_source=${params.dataSource}&format=${params.format}`,
 
+  /** POC Average at swing moments, from Market Grid's bars -- see lib/swingFlags. */
+  pocAverage: (req: {
+    symbol: string; data_source: string; start_date: string; end_date: string
+    session_start: string | null; session_end: string | null; moments: string[]
+  }) =>
+    request<import("./swingFlags").PocAverageAnswer>("/poc-average", {
+      method: "POST", body: JSON.stringify(req), timeoutMs: LONG_TIMEOUT_MS,
+    }),
+
   createReplay: (req: ReplayCreateRequest) =>
     request<ReplayCreateResponse>("/replay", {
       method: "POST", body: JSON.stringify(req), timeoutMs: LONG_TIMEOUT_MS,

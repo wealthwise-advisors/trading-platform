@@ -34,7 +34,7 @@ import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
-import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { averageColumn, buildLevelColorMap, buildPocColumns, onAverage, sideVsAverage } from "@/lib/pocColumns"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -1356,6 +1356,17 @@ export function ReplayPage() {
    */
   const vahCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.vah })))
   const valCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.val })))
+
+  /**
+   * ⚑ beside a POC that sits ON the POC Average -- the same whole number
+   * (sir, 2026-10-27). Bright amber, bold: it has to stand out against the
+   * green / red of the difference beside it.
+   */
+  const avgFlag = (poc: number | null | undefined, average: number | null) =>
+    onAverage(poc, average)
+      ? <span className="mr-1 font-bold" style={{ color: "#fbbf24" }} data-testid="poc-on-average"
+              title={`POC ${poc!.toFixed(2)} is on the POC Average ${average!.toFixed(2)} -- same whole number`}>{"⚑"}</span>
+      : null
 
   /** "X vs Avg" header: the name, and the average it measures from in brackets. */
   const vsAvgHeader = (name: string, average: number | null, title: string) => (
@@ -2707,6 +2718,7 @@ export function ReplayPage() {
                                   title={sd && pocCols.average != null
                                     ? `POC ${vp?.poc?.toFixed(2)} is ${sd === "equal" ? "at" : sd} the average ${pocCols.average.toFixed(2)}`
                                     : undefined}>
+                                {avgFlag(vp?.poc, pocCols.average)}
                                 {sd && d != null
                                   ? `${sd === "above" ? "▲" : sd === "below" ? "▼" : "="} ${d > 0 ? "+" : ""}${d.toFixed(2)}`
                                   : "—"}
@@ -2970,6 +2982,7 @@ export function ReplayPage() {
                               return (
                                 <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
                                     title={`POC ${poc.toFixed(2)} against the common average ${avg.toFixed(2)}`}>
+                                  {avgFlag(poc, avg)}
                                   {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
                                 </td>
                               )

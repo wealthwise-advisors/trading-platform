@@ -156,6 +156,18 @@ export function averageColumn(
   return { average, side, diff, counted: valid.length }
 }
 
+/**
+ * Does this POC sit ON the POC Average -- the same whole number? Sir's rule
+ * (2026-10-27): such a timeframe is flagged ⚑ in the POC Average column, and
+ * the swing at that moment is flagged on the Chart page. Truncation, the rule
+ * POC Match uses (see wholePart). The Chart page's flags use the same rule,
+ * computed server-side in src/analysis/poc_average.py.
+ */
+export function onAverage(poc: number | null | undefined, average: number | null | undefined): boolean {
+  if (poc == null || average == null || !Number.isFinite(poc) || !Number.isFinite(average)) return false
+  return wholePart(poc) === wholePart(average)
+}
+
 /** Where one POC sits against a reference average. Raw value, not whole number. */
 export function sideVsAverage(poc: number, average: number): { side: AvgSide; diff: number } {
   const diff = poc - average

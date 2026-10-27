@@ -26,6 +26,7 @@ import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
+import { swingFlagText, type SwingFlag } from "@/lib/swingFlags"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
@@ -64,6 +65,9 @@ interface CandlestickChartProps {
   indicators: IndicatorSeries
   zigzag: ZigZagResponse
   trades: TradeRecord[]
+  /** Swings where some timeframe's POC sits on the POC Average, keyed by the
+   *  swing's bar time -- see lib/swingFlags. Drawn as ⚑ with an amber ring. */
+  swingFlags?: Map<string, SwingFlag>
   showZigzag?: boolean
   /** Initial state of the StochRSI panel's checkbox. */
   showStochRsi?: boolean
@@ -227,7 +231,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, bars, indicators, zigzag, trades, showZigzag = true,
+  symbol, bars, indicators, zigzag, trades, showZigzag = true, swingFlags,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -1225,6 +1229,32 @@ export function CandlestickChart({
         xaxis: `x${suffix}`, yaxis: `y${suffix}`,
       } as unknown as Data)
     }
+  }
+
+  // ── POC on the POC Average: flagged swings (sir, 2026-10-27) ──────────
+  // A swing where any of Market Grid's timeframes had its POC on the POC
+  // Average -- the same whole number -- at that swing's bar close. Both 10-leg
+  // and 3-leg swings. An amber ring around the swing's circle and a ⚑ beyond
+  // it (above a high, below a low), and the hover popup names the average and
+  // every timeframe on it. Amber: apart from the red/green swing circles and
+  // every line on the price panel.
+  const flagged = swingFlags && swingFlags.size
+    ? [...zz10, ...zz3].filter((p, i, all) =>
+        swingFlags.has(p.t) && all.findIndex((q) => q.t === p.t) === i)
+    : []
+  if (flagged.length) {
+    data.push({
+      type: "scatter", mode: "text+markers", name: "POC on average", showlegend: false,
+      x: flagged.map((p) => p.t), y: flagged.map((p) => p.price),
+      marker: { symbol: "circle-open", size: 30, color: "#fbbf24", line: { color: "#fbbf24", width: 3 } },
+      text: flagged.map(() => "⚑"),
+      textposition: flagged.map((p) => (p.type === "H" ? "top center" : "bottom center")),
+      textfont: { size: 16, color: "#fbbf24", family: "Arial" },
+      customdata: flagged.map((p) => `${p.label}: ${swingFlagText(swingFlags!.get(p.t)!)}`),
+      hovertemplate: "<b>%{customdata}</b><extra></extra>",
+      cliponaxis: false,
+      xaxis: "x", yaxis: "y",
+    } as unknown as Data)
   }
 
   // ── Trade entry / exit markers ─────────────────────────────────────────

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { lazy, Suspense, useState } from "react"
 import { api } from "@/lib/api"
+import { TF_MINUTES } from "@/lib/chartSetup"
+import { flaggedSwings, swingMoment } from "@/lib/swingFlags"
 import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
 } from "@/store/configStore"
@@ -127,6 +129,26 @@ export function ResultsPage() {
     queryFn: () => api.getZigZag(backtestId!, ZIGZAG_DEV_3_DEFAULT / 100, ZIGZAG_DEV_10_DEFAULT / 100),
     enabled: !!backtestId,
   })
+  /* Swing flags (sir, 2026-10-27): at every 10-leg and 3-leg swing point, the
+     POC Average of Market Grid's eleven timeframes, from the same bars Market
+     Grid would load for this run's symbol, dates and session. Intraday only:
+     Market Grid has no daily or weekly panes. */
+  const runSummary = summaryQ.data
+  const barMinutes = runSummary ? TF_MINUTES[runSummary.timeframe] : undefined
+  const swingPoints = zigzagQ.data ? [...zigzagQ.data.zigzag_10, ...zigzagQ.data.zigzag_3] : []
+  const pocAvgQ = useQuery({
+    queryKey: ["backtest", backtestId, "poc-average", swingPoints.length],
+    queryFn: () => api.pocAverage({
+      symbol: runSummary!.symbol, data_source: runSummary!.data_source,
+      start_date: runSummary!.start_date, end_date: runSummary!.end_date,
+      session_start: runSummary!.session_start, session_end: runSummary!.session_end,
+      moments: [...new Set(swingPoints.map((p) => swingMoment(p.t, barMinutes!)))],
+    }),
+    enabled: !!runSummary && barMinutes != null && swingPoints.length > 0,
+    staleTime: Infinity,
+  })
+  const swingFlags = barMinutes != null ? flaggedSwings(swingPoints, barMinutes, pocAvgQ.data) : undefined
+
   // Elliott Wave: its own top-level tab with its own chart -- never an overlay
   // on Price & Trades. Params are omitted so the server's own D-13 defaults
   // apply and client/server cannot drift (SRS FR-1e.4).
@@ -187,6 +209,7 @@ export function ResultsPage() {
   }
 
   const s = summaryQ.data
+
   const isLoading = summaryQ.isLoading || tradesQ.isLoading || priceDataQ.isLoading
   const anyError = summaryQ.error || tradesQ.error || priceDataQ.error || equityQ.error || zigzagQ.error
 
@@ -373,6 +396,7 @@ export function ResultsPage() {
                         indicators={priceDataQ.data.indicators}
                         zigzag={zigzagQ.data}
                         trades={tradesQ.data ?? []}
+                        swingFlags={swingFlags}
                       />
                     </Suspense>
                   </div>

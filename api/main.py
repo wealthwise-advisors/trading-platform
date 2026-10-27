@@ -28,7 +28,8 @@ from importlib.metadata import version as _pkg_version, PackageNotFoundError as 
 
 from api.auth import PROTECTED
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, account, quotes, live)
+                         schwab, optimize, data_export, account, quotes, live,
+                         poc_average)
 
 try:
     _version = _pkg_version("autotrader")
@@ -149,6 +150,7 @@ app.include_router(meta.router, prefix="/api")
 # added to any of these files later gets the same treatment by default.
 app.include_router(backtests.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(replay.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(poc_average.router, prefix="/api", dependencies=[PROTECTED])
 # Not PROTECTED: a websocket handshake cannot resolve an HTTP dependency.
 # replay_ws resolves the workspace account and checks Origin itself.
 app.include_router(replay.ws_router, prefix="/api")
