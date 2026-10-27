@@ -41,6 +41,11 @@ class FrameState:
     vwap: Optional[float] = None
     vwap_upper: Optional[float] = None
     vwap_lower: Optional[float] = None
+    #: The most recent signal this engine has fired, on this bar or any
+    #: earlier one. `signal` alone is lost whenever the client does not see
+    #: every bar -- a seek sends only the final frame -- which blanked Market
+    #: Grid's "Last signal" after a session was rebuilt (2026-10-27).
+    last_signal: Optional[Signal] = None
 
 
 class ReplayEngine:
@@ -99,6 +104,7 @@ class ReplayEngine:
 
     def load(self, df: pd.DataFrame):
         self._df = df.copy()
+        self._last_signal = None
         self._bars = DataProvider.df_to_bars(df, self.symbol, self.timeframe)
 
         # VWAP is CUMULATIVE within a session, so the value at bar i depends
@@ -127,6 +133,7 @@ class ReplayEngine:
 
     def reset(self):
         self._cursor = 0
+        self._last_signal = None
         self._equity = []
         self._completed_trades = []
         self._open_trade = None
@@ -175,6 +182,7 @@ class ReplayEngine:
         signal = self.strategy.on_bar(bars_so_far, bar, pos)
         if signal:
             self._handle_signal(signal, pos)
+            self._last_signal = signal
 
         self._cursor += 1
 
@@ -190,6 +198,7 @@ class ReplayEngine:
             bars_processed=self._cursor,
             total_bars=len(self._bars),
             **self._vwap_at(self._cursor - 1),
+            last_signal=self._last_signal,
         )
 
     def vwap_at(self, i: int) -> dict:

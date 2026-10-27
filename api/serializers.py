@@ -413,6 +413,12 @@ def frame_to_dict(frame: FrameState) -> dict:
             "type": frame.signal.signal_type.value,
             "reason": frame.signal.reason,
         } if frame.signal else None,
+        # The pane's most recent signal on ANY bar so far -- what "Last
+        # signal" shows. Survives a seek, which sends only the final frame.
+        "last_signal": {
+            "type": frame.last_signal.signal_type.value,
+            "reason": frame.last_signal.reason,
+        } if frame.last_signal else None,
         "position": frame.position,
         "portfolio_value": _safe(frame.portfolio_value) or 0.0,
         "equity_point": {"t": last_equity[0].isoformat(), "equity": _safe(last_equity[1]) or 0.0}

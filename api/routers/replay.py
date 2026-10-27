@@ -36,7 +36,7 @@ from src.backtesting.multi_replay import (
 
 from api.deps import get_contract_spec, BASE_PRICES
 from api.strategy_registry import build_strategy
-from api.routers.backtests import _build_provider
+from api.routers.backtests import _build_provider, synthetic_start
 from api import auth, replay_store, serializers
 from api.schemas.replay import ReplayCreateRequest, ReplayCreateResponse
 
@@ -89,6 +89,20 @@ def _source_timeframe(timeframes: list[str]) -> str:
     return "1m"
 
 
+def _backfill_to_dict(bf: dict) -> dict:
+    """One pane's history on the wire: its closed bars plus its current state.
+
+    One frame settles every scalar -- FrameState carries position, portfolio
+    value and the completed trades cumulatively -- so only the bars are a list.
+    """
+    return {
+        "bars": bf["bars"],
+        "bars_closed": bf["bars_closed"],
+        "truncated": bf["truncated"],
+        "state": serializers.frame_to_dict(bf["frame"]) if bf["frame"] is not None else None,
+    }
+
+
 def _is_overnight(session_start, session_end) -> bool:
     """A session whose end clock-time precedes its start spans midnight."""
     return (session_start is not None and session_end is not None
@@ -128,7 +142,7 @@ def _load_bars(req: ReplayCreateRequest, source_tf: str, spec: dict):
         bars = max(int(total_minutes / tf_min), 200)
         return generate_sample_data(
             symbol=req.symbol,
-            start=datetime.combine(req.start_date, datetime.min.time()).replace(hour=9, minute=30),
+            start=synthetic_start(req.start_date),
             bars=bars,
             timeframe_minutes=tf_min,
             base_price=BASE_PRICES.get(req.symbol, 4500.0),
@@ -437,8 +451,13 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                     target = int(msg.get("ticks") or 0)
                     running = False
                     stepped = {}
+                    # Each pane's LAST frame, whichever tick it closed on: the
+                    # final tick only carries the panes that closed on it, and
+                    # the restore below needs every pane's current state.
+                    last_frames = {}
                     while session.progress()[0] < target and not session.is_done:
                         stepped = session.tick()
+                        last_frames.update(stepped)
                     processed, total = session.progress()
                     await websocket.send_json({
                         "type": "frames",
@@ -449,6 +468,20 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                         "frames": {
                             tf: serializers.frame_to_dict(frame)
                             for tf, frame in stepped.items()
+                        },
+                    })
+                    # THE WHOLE HISTORY, per pane (2026-10-27). The client
+                    # cleared every pane before seeking, so the one frame above
+                    # left each holding only the bars after the seek: 1m and 3m
+                    # profiled a fraction of the day (VA High 4711 where the day
+                    # gives 4873) and "Last signal" went blank. No 500-bar cap
+                    # here -- a 1m profile over its two days needs them all.
+                    await websocket.send_json({
+                        "type": "restored",
+                        "backfill": {
+                            tf: _backfill_to_dict(session.backfill_of(
+                                tf, last_frames.get(tf), max_bars=None))
+                            for tf in session.timeframes
                         },
                     })
                     await websocket.send_json({
@@ -499,15 +532,7 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                         "added": result["added"],
                         "rejected": result["rejected"],
                         "backfill": {
-                            tf: {
-                                "bars": bf["bars"],
-                                "bars_closed": bf["bars_closed"],
-                                "truncated": bf["truncated"],
-                                # One frame settles every scalar -- FrameState
-                                # carries position/portfolio/trades cumulatively.
-                                "state": serializers.frame_to_dict(bf["frame"])
-                                if bf["frame"] is not None else None,
-                            }
+                            tf: _backfill_to_dict(bf)
                             for tf, bf in result["backfill"].items()
                         },
                     })

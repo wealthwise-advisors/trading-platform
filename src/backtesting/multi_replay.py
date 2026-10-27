@@ -600,7 +600,7 @@ class MultiReplaySession:
             return None
         return self._source_df.index[-1]
 
-    def backfill_of(self, tf: str, frame=None, max_bars: int = 500) -> dict:
+    def backfill_of(self, tf: str, frame=None, max_bars: int | None = None) -> dict:
         """
         The history a just-added pane needs to render as if it had always been
         there: its closed bars, plus the one frame that is its current state.
@@ -616,6 +616,12 @@ class MultiReplaySession:
         column on its historical rows would be blank, which is most of the
         reason to jump to it. The engine already precomputed the whole series
         at load, so this is an index, not a recomputation.
+
+        NO CAP by default (2026-10-27). It was the last 500 bars, which left a
+        pane added mid-session -- or a whole rebuilt session -- profiling only
+        part of its data: VA High and POC came out wrong, and the tape rows sat
+        at the wrong bar positions. `max_bars` remains for a caller that wants
+        a bound, and `truncated` still reports when one applied.
 
         `frame` is handed back raw (a FrameState, or None if the pane has not
         closed a bar yet) rather than serialized -- the API layer owns the wire

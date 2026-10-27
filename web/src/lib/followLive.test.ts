@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll, followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind, lagNote, canReceiveNewBars, type FollowState, isLostSession } from "./followLive"
+import { FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll, followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind, lagNote, canReceiveNewBars, type FollowState, isLostSession, waitForServer } from "./followLive"
 
 const reply = (over: Partial<Parameters<typeof applyExtendReply>[1]> = {}) => ({
   added: 0, reason: null, is_done: true, data_time: null, ...over,
@@ -398,5 +398,40 @@ describe("isLostSession", () => {
     // would tell people something broke at the exact moment it succeeded.
     expect(isLostSession({ ...base, status: "done" })).toBe(false)
     expect(isLostSession({ ...base, status: "idle" })).toBe(false)
+  })
+})
+
+describe("waitForServer — rebuild only once the server answers again", () => {
+  /** A fake clock: sleep advances time instantly. */
+  const clock = () => {
+    let now = 0
+    return { now: () => now, sleep: async (ms: number) => { now += ms } }
+  }
+
+  it("returns true as soon as the server answers, after it was down", async () => {
+    const c = clock()
+    let calls = 0
+    const ok = await waitForServer(async () => { calls++; return calls >= 4 }, { ...c, intervalMs: 2000, timeoutMs: 90_000 })
+    expect(ok).toBe(true)
+    expect(calls).toBe(4)
+    expect(c.now()).toBe(6000)
+  })
+
+  it("treats a failed check (throws) as not up yet", async () => {
+    const c = clock()
+    let calls = 0
+    const ok = await waitForServer(async () => {
+      calls++
+      if (calls < 3) throw new Error("502 Bad Gateway")
+      return true
+    }, { ...c, intervalMs: 1000, timeoutMs: 10_000 })
+    expect(ok).toBe(true)
+  })
+
+  it("gives up after the timeout when the server never comes back", async () => {
+    const c = clock()
+    const ok = await waitForServer(async () => false, { ...c, intervalMs: 2000, timeoutMs: 10_000 })
+    expect(ok).toBe(false)
+    expect(c.now()).toBeGreaterThanOrEqual(10_000)
   })
 })

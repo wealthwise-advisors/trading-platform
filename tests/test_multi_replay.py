@@ -370,6 +370,21 @@ class TestAddTimeframeMidSession:
         assert len(bf["frame"].completed_trades) == len(pane.engine._completed_trades)
         assert bf["bars"][-1]["t"] == pane.stamps[pane.cursor - 1].isoformat()
 
+    def test_an_added_pane_gets_its_whole_history_not_the_last_500(self):
+        """A 500-bar cap left a pane added mid-session profiling part of its
+        data -- the same wrong VA High a rebuilt session showed -- and put its
+        tape rows at the wrong bar positions (2026-10-27). No cap by default."""
+        # 1-minute source, 5m clock: 150 ticks is 750 minutes, so the 1m pane
+        # added afterwards has 750 closed bars to send back.
+        session = _session_src(["5m"], "1m", bars=1200)
+        for _ in range(150):
+            session.tick()
+        result = session.add_timeframes(["1m"])
+        bf = result["backfill"]["1m"]
+        assert bf["bars_closed"] > 500
+        assert len(bf["bars"]) == bf["bars_closed"]
+        assert bf["truncated"] is False
+
     def test_backfill_bar_cap_is_reported(self):
         session = _session(["1m"])
         for _ in range(300):

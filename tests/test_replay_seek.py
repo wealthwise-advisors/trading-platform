@@ -31,6 +31,8 @@ def test_seek_lands_exactly_on_the_requested_tick():
         frame = ws.receive_json()
         assert frame["type"] == "frames"
         assert frame["ticks_processed"] == 25
+        # Then every pane's whole history (see test_replay_restore.py).
+        assert ws.receive_json()["type"] == "restored"
         assert ws.receive_json() == {"type": "seeked", "ticks_processed": 25}
 
 
@@ -40,10 +42,12 @@ def test_seek_does_not_start_playback():
     with client.websocket_connect(f"/api/replay/ws/{rid}") as ws:
         ws.send_json({"action": "seek", "ticks": 10})
         ws.receive_json()
+        assert ws.receive_json()["type"] == "restored"
         assert ws.receive_json()["ticks_processed"] == 10
         # Ask again for the same tick: already there, so nothing advances.
         ws.send_json({"action": "seek", "ticks": 10})
         ws.receive_json()
+        assert ws.receive_json()["type"] == "restored"
         assert ws.receive_json()["ticks_processed"] == 10
 
 
@@ -53,6 +57,7 @@ def test_seek_past_the_end_stops_at_the_end():
     with client.websocket_connect(f"/api/replay/ws/{rid}") as ws:
         ws.send_json({"action": "seek", "ticks": 10_000_000})
         frame = ws.receive_json()
+        assert ws.receive_json()["type"] == "restored"
         done = ws.receive_json()
         assert done["type"] == "seeked"
         assert done["ticks_processed"] == frame["total_ticks"]
@@ -63,4 +68,5 @@ def test_seek_to_zero_is_a_no_op():
     with client.websocket_connect(f"/api/replay/ws/{rid}") as ws:
         ws.send_json({"action": "seek", "ticks": 0})
         ws.receive_json()
+        assert ws.receive_json()["type"] == "restored"
         assert ws.receive_json()["ticks_processed"] == 0

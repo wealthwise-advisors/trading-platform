@@ -378,6 +378,9 @@ export interface ReplayFrameMessage {
   type: "frame"
   bar: ReplayBar
   signal: ReplaySignal | null
+  /** The pane's most recent signal on any bar so far -- survives a seek,
+   *  which sends only the final frame. Optional for older servers. */
+  last_signal?: ReplaySignal | null
   position: number
   portfolio_value: number
   equity_point: { t: string; equity: number } | null
@@ -471,6 +474,9 @@ export type ReplayWsMessage =
   // Acknowledges a fast-forward after a session was rebuilt; see the seek
   // action in api/routers/replay.py.
   | { type: "seeked"; ticks_processed: number }
+  // Sent between the fast-forward's frame and "seeked": every pane's WHOLE
+  // history, so a rebuilt session shows what it showed before (2026-10-27).
+  | { type: "restored"; backfill: Record<string, ReplayBackfill> }
   | { type: "error"; message: string }
 
 export interface SchwabStatus {

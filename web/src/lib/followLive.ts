@@ -286,3 +286,40 @@ export function isLostSession(args: {
   if (!args.current) return false
   return args.status !== "idle" && args.status !== "done"
 }
+
+/**
+ * Wait until the server answers again, before rebuilding a lost session.
+ *
+ * The rebuild used to fire the moment the socket closed. A restarting server
+ * -- a deploy, a crash, a local restart -- is still coming up at that point,
+ * so the re-create got "502 Bad Gateway" and the app gave up for good, leaving
+ * an empty grid (2026-10-27). Now it checks every `intervalMs` until `check`
+ * resolves true, up to `timeoutMs`; a check that throws counts as "not yet".
+ * `now` and `sleep` are injectable so the waiting can be tested without time.
+ */
+export async function waitForServer(
+  check: () => Promise<boolean>,
+  opts: {
+    intervalMs?: number
+    timeoutMs?: number
+    now?: () => number
+    sleep?: (ms: number) => Promise<void>
+  } = {},
+): Promise<boolean> {
+  const {
+    intervalMs = 2000,
+    timeoutMs = 90_000,
+    now = () => Date.now(),
+    sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+  } = opts
+  const start = now()
+  for (;;) {
+    try {
+      if (await check()) return true
+    } catch {
+      // Not up yet -- a refused connection or a proxy's 502.
+    }
+    if (now() - start >= timeoutMs) return false
+    await sleep(intervalMs)
+  }
+}

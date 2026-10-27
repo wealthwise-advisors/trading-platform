@@ -78,6 +78,7 @@ import {
   shouldResumeAfterExtend,
   type FollowState,
   isLostSession,
+  waitForServer,
 } from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
 
@@ -217,6 +218,38 @@ function emptyPane(initialCapital: number): PaneState {
  *  server sends, because a frame carries position, portfolio value and the
  *  whole completed-trade list cumulatively -- which is also why applyFrame()
  *  below *replaces* completedTrades rather than appending to it. */
+/**
+ * Tape rows for bars the client did not watch arrive -- a timeframe added
+ * part-way through, or a whole rebuilt session. Each bar carries its own VWAP
+ * triple; position and signal per bar are not part of a backfill.
+ */
+function backfillTapeRows(backfill: Record<string, ReplayBackfill>): TapeRow[] {
+  const rows: TapeRow[] = []
+  for (const [tf, bf] of Object.entries(backfill)) {
+    bf.bars.forEach((b, i) => {
+      const vwap = b.vwap ?? null
+      rows.push({
+        seq: 0, tf, t: b.t,
+        o: b.o, h: b.h, l: b.l, c: b.c, v: b.v,
+        position: 0, signalType: null, signalReason: null, pnl: 0,
+        vwap,
+        sigma: (vwap != null && b.vwap_upper != null) ? (b.vwap_upper - vwap) / 2 : null,
+        barIndex: i + 1,
+        backfilled: true,
+      })
+    })
+  }
+  return rows
+}
+
+/** Newest-first by the bar's CLOSE -- the column the tape shows -- capped. */
+function newestFirst(rows: TapeRow[]): TapeRow[] {
+  const closeOf = (r: TapeRow) => barCloseLabel(r.t, TF_MINUTES[r.tf])
+  return rows
+    .sort((a, b) => (closeOf(a) < closeOf(b) ? 1 : closeOf(a) > closeOf(b) ? -1 : 0))
+    .slice(0, TAPE_LIMIT)
+}
+
 function seedPane(bf: ReplayBackfill, capital: number): PaneState {
   const s = bf.state
   return {
@@ -226,7 +259,7 @@ function seedPane(bf: ReplayBackfill, capital: number): PaneState {
     equityPoints: s?.equity_point ? [s.equity_point] : [],
     position: s?.position ?? 0,
     portfolioValue: s?.portfolio_value ?? capital,
-    lastSignal: s?.signal ?? null,
+    lastSignal: s?.last_signal ?? s?.signal ?? null,
     barsProcessed: s?.bars_processed ?? 0,
     totalBars: s?.total_bars ?? bf.bars_closed,
     vwap: s?.vwap ?? null,
@@ -242,7 +275,9 @@ function applyFrame(pane: PaneState, msg: ReplayFrameMessage): PaneState {
     openTrade: msg.open_trade,
     position: msg.position,
     portfolioValue: msg.portfolio_value,
-    lastSignal: msg.signal ?? pane.lastSignal,
+    // last_signal first: after a seek this frame is the only one the client
+    // sees, and its own `signal` is usually null (2026-10-27).
+    lastSignal: msg.last_signal ?? msg.signal ?? pane.lastSignal,
     barsProcessed: msg.bars_processed,
     totalBars: msg.total_bars,
     equityPoints: msg.equity_point ? [...pane.equityPoints, msg.equity_point] : pane.equityPoints,
@@ -568,7 +603,21 @@ export function ReplayPage() {
    * not the user's place in the tape.
    */
   async function recoverSession(seekTo: number, thenPlay: boolean) {
+    // Wait for the server first. Rebuilding the instant the socket closed hit
+    // a server still starting up -- "502 Bad Gateway" -- and gave up for good,
+    // leaving an empty grid (2026-10-27).
+    setTfNotice("Connection to the server was lost — reconnecting and restoring the session…")
+    const up = await waitForServer(() => api.health().then(() => true))
+    if (!up) {
+      recoveringRef.current = false
+      setTfNotice(null)
+      setError("The replay session was lost and could not be restored — the " +
+               "server looks unavailable. Press Load Data once it is back.")
+      setStatus("idle")
+      return
+    }
     await handleLoad(undefined, { seekTo, thenPlay })
+    setTfNotice(null)
   }
 
   async function handleLoad(
@@ -667,29 +716,8 @@ export function ReplayPage() {
           // answered "no bar yet" -- which is exactly what someone adding it in
           // order to look at an earlier moment is trying to do.
           setTape((prev) => {
-            const extra: TapeRow[] = []
-            for (const [tf, bf] of Object.entries(msg.backfill)) {
-              bf.bars.forEach((b, i) => {
-                const vwap = b.vwap ?? null
-                extra.push({
-                  seq: 0, tf, t: b.t,
-                  o: b.o, h: b.h, l: b.l, c: b.c, v: b.v,
-                  position: 0, signalType: null, signalReason: null, pnl: 0,
-                  vwap,
-                  sigma: (vwap != null && b.vwap_upper != null)
-                    ? (b.vwap_upper - vwap) / 2 : null,
-                  barIndex: i + 1,
-                  backfilled: true,
-                })
-              })
-            }
-            if (extra.length === 0) return prev
-            // Newest-first by the bar's CLOSE, which is the column the table
-            // shows and the order the live tape is already in.
-            const closeOf = (r: TapeRow) => barCloseLabel(r.t, TF_MINUTES[r.tf])
-            return [...extra, ...prev]
-              .sort((a, b) => (closeOf(a) < closeOf(b) ? 1 : closeOf(a) > closeOf(b) ? -1 : 0))
-              .slice(0, TAPE_LIMIT)
+            const extra = backfillTapeRows(msg.backfill)
+            return extra.length === 0 ? prev : newestFirst([...extra, ...prev])
           })
           if (msg.rejected.length > 0) {
             // Belt and braces: the button already reloads for finer timeframes,
@@ -730,6 +758,16 @@ export function ReplayPage() {
           if (shouldAutoFollow(endDateRef.current, nowEasternLabel(), dataSourceRef.current)) {
             setFollow((f) => (f.enabled ? f : { ...f, enabled: true }))
           }
+        } else if (msg.type === "restored") {
+          // A rebuilt session: every pane's whole history, so the grid, the
+          // profiles and the tape show what they showed before the server went
+          // away -- not just the bars after the fast-forward (2026-10-27).
+          setPanes((prev) => {
+            const next = { ...prev }
+            for (const [tf, bf] of Object.entries(msg.backfill)) next[tf] = seedPane(bf, initialCapital)
+            return next
+          })
+          setTape(newestFirst(backfillTapeRows(msg.backfill)))
         } else if (msg.type === "seeked") {
           // Position restored. Resume only if the tape was running when the
           // session died -- a paused tape must come back paused.
@@ -793,9 +831,13 @@ export function ReplayPage() {
       wsRef.current = ws
       setStatus("ready")
       if (recover && recover.seekTo > 0) {
-        // The socket is open but the server has not been asked for anything
-        // yet, so this cannot race a frame.
-        ws.send(JSON.stringify({ action: "seek", ticks: recover.seekTo }))
+        // On OPEN, not now. The socket was constructed a moment ago and is
+        // still CONNECTING; sending then threw "Still in CONNECTING state" and
+        // killed the rebuild (2026-10-27). The server has not been asked for
+        // anything yet, so seeking on open cannot race a frame.
+        const seek = JSON.stringify({ action: "seek", ticks: recover.seekTo })
+        if (ws.readyState === WebSocket.OPEN) ws.send(seek)
+        else ws.addEventListener("open", () => ws.send(seek), { once: true })
       } else if (recover) {
         recoveringRef.current = false
       }
@@ -810,6 +852,12 @@ export function ReplayPage() {
     // after the server went away replaced a frozen tape with an unhandled
     // exception. Check the state and say something useful instead.
     const ws = wsRef.current
+    // Still opening -- Play pressed straight after Load Data. Queue it for the
+    // open rather than calling a session that is about to work dead.
+    if (ws && ws.readyState === WebSocket.CONNECTING) {
+      ws.addEventListener("open", () => ws.send(JSON.stringify({ action, ...extra })), { once: true })
+      return
+    }
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       setError(
         "That session is no longer running — press Load Data to start a new one.",

@@ -52,6 +52,22 @@ except ImportError:
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
 
+def synthetic_start(start_date) -> datetime:
+    """Where demo data opens: 09:30 on the first WEEKDAY of the range.
+
+    The generator skips weekend days but keeps its clock running, so a range
+    starting on a Saturday or Sunday used to open at Monday 00:00 -- the bar
+    count assumes 6.5 hours a day, so a one-day 1m range ran 00:00-06:29 and a
+    09:30-16:00 session kept none of it. The Chart page's 1m button moves the
+    range to two days back, which on a Monday lands on Sunday, so the run
+    failed and the chart never changed (2026-10-27).
+    """
+    start = datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30)
+    while start.weekday() >= 5:
+        start += timedelta(days=1)
+    return start
+
+
 def _build_provider(data_source: str, symbol: str, timeframe: str,
                     start_date, end_date, spec: dict, session_start=None):
     """
@@ -91,7 +107,7 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
         raise HTTPException(
             400, f"Unsupported timeframe {timeframe!r}. "
                  f"Supported: {', '.join(ALL_TIMEFRAMES)}.")
-    start = datetime.combine(start_date, datetime.min.time()).replace(hour=9, minute=30)
+    start = synthetic_start(start_date)
     if is_daily_or_longer(timeframe):
         # One bar per weekday, or per week. The intraday count below assumes 6.5
         # trading hours a day, which for daily bars would fill a fraction of the
