@@ -513,7 +513,11 @@ test("hovering any one row shows every row's values and one line through them al
   await own.mouse.move(1, 1)
   const again = (await own.locator(".draglayer .xy .nsewdrag").first().boundingBox())!
   await own.mouse.move(again.x + again.width * 0.6, again.y + again.height * 0.5)
-  await expect.poll(async () => ((await own.getByTestId("chart-readout-y").innerText()).match(/POC/g) ?? []).length).toBe(1)
+  const priceBox = own.getByTestId("chart-readout-y")
+  await expect.poll(async () => ((await priceBox.innerText()).match(/POC/g) ?? []).length).toBe(1)
+  for (const study of ["VWAP (-0.5, 0.5, DAY)", "VolumeProfile", "VWAP (-1.0, 1.0, DAY)", "VWAP (-1.5, 1.5, DAY)"]) {
+    await expect(priceBox).toContainText(study)
+  }
 
   const line = (await own.getByTestId("chart-crosshair-line").boundingBox())!
   const rows = await Promise.all([".xy", ".x6y6"].map((r) => own.locator(`.draglayer ${r} .nsewdrag`).first().boundingBox()))

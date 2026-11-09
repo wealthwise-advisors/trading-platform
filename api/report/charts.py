@@ -212,9 +212,9 @@ def candlestick_with_trades(
             hovertemplate="<b>Volume Profile</b><br>%{y:.2f}: %{x:,.0f}<extra></extra>",
         ), row=1, col=1)
         for _lbl, _val, _col, _dash in (
-            ("POC", _vp["poc"], "#38bdf8", "solid"),
-            ("VAHigh", _vp["vah"], "#7dd3fc", "dash"),
-            ("VALow", _vp["val"], "#7dd3fc", "dash"),
+            ("POC", _vp["poc"], "#ffffff", "solid"),
+            ("VAHigh", _vp["vah"], "#ff3b30", "dash"),
+            ("VALow", _vp["val"], "#2f80ff", "dash"),
         ):
             if _val is None:
                 continue

@@ -64,9 +64,9 @@ export function buildSessionProfileShapes(
 
     // Per-profile levels, each spanning only its own session.
     const levels: [keyof ProfileLevelToggles, number | null, string, string][] = [
-      ["poc", p.poc, "#38bdf8", "solid"],
-      ["vah", p.vah, "#7dd3fc", "dash"],
-      ["val", p.val, "#7dd3fc", "dash"],
+      ["poc", p.poc, "#ffffff", "solid"],
+      ["vah", p.vah, "#ff3b30", "dash"],
+      ["val", p.val, "#2f80ff", "dash"],
       ["profileHigh", p.prices.length ? p.prices[p.prices.length - 1] + half : null, "#94a3b8", "dot"],
       ["profileLow", p.prices.length ? p.prices[0] - half : null, "#94a3b8", "dot"],
     ]

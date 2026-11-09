@@ -49,7 +49,7 @@ describe("Volume Profile plot tabs", () => {
     expect((screen.getByLabelText("Draw as") as HTMLSelectElement).value).toBe("line")
     expect((screen.getByLabelText("Style") as HTMLSelectElement).value).toBe("solid")
     expect((screen.getByLabelText("Width") as HTMLSelectElement).value).toBe("1")
-    expect((screen.getByLabelText("Colour") as HTMLInputElement).value).toBe("#38bdf8")
+    expect((screen.getByLabelText("Colour") as HTMLInputElement).value).toBe("#ffffff")
     expect((screen.getByLabelText("Show plot") as HTMLInputElement).checked).toBe(true)
     expect((screen.getByLabelText("Show bubble") as HTMLInputElement).checked).toBe(true)
     expect((screen.getByLabelText("Show title") as HTMLInputElement).checked).toBe(true)

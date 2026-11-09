@@ -196,7 +196,7 @@ def test_show_value_area_off_removes_both_edges_everywhere(base_df):
 
 def test_plot_names_follow_the_switch(base_df):
     named = [a for a in _vp_annotations(_fig(df=base_df)) if a.text in ("POC", "VAHigh", "VALow")]
-    assert {a.text: a.font.color for a in named} == {"POC": "#38bdf8", "VAHigh": "#7dd3fc", "VALow": "#7dd3fc"}
+    assert {a.text: a.font.color for a in named} == {"POC": "#ffffff", "VAHigh": "#ff3b30", "VALow": "#2f80ff"}
     assert len(named) == 3
     off = _fig(_vp(showPlotNames=False), base_df)
     assert not [a for a in _vp_annotations(off) if a.text in ("POC", "VAHigh", "VALow")]
@@ -226,7 +226,7 @@ def test_bubbles_per_plot_and_on_the_price_axis_side(base_df):
 def test_a_bubble_prints_its_level_to_the_cent_as_the_chart_does(base_df):
     fig = _fig(df=base_df)
     [poc] = _traces(fig, "POC")
-    [bubble] = [b for b in _bubbles(fig) if b.bgcolor == "#38bdf8"]
+    [bubble] = [b for b in _bubbles(fig) if b.bgcolor == "#ffffff"]
     assert bubble.y == poc.y[0]
     assert bubble.text == js_to_fixed(poc.y[0], 2)
 

@@ -61,11 +61,11 @@ def _plot(show: bool, style: str, color: str) -> PlotStyle:
 class PlotStyles(BaseModel):
     model_config = _CONFIG
 
-    poc: PlotStyle = Field(default_factory=lambda: _plot(True, "solid", "#38bdf8"))
+    poc: PlotStyle = Field(default_factory=lambda: _plot(True, "solid", "#ffffff"))
     profile_high: PlotStyle = Field(default_factory=lambda: _plot(False, "dot", "#94a3b8"))
     profile_low: PlotStyle = Field(default_factory=lambda: _plot(False, "dot", "#94a3b8"))
-    vah: PlotStyle = Field(default_factory=lambda: _plot(True, "dash", "#7dd3fc"))
-    val: PlotStyle = Field(default_factory=lambda: _plot(True, "dash", "#7dd3fc"))
+    vah: PlotStyle = Field(default_factory=lambda: _plot(True, "dash", "#ff3b30"))
+    val: PlotStyle = Field(default_factory=lambda: _plot(True, "dash", "#2f80ff"))
 
     @model_validator(mode="after")
     def _value_area_is_one_thing(self) -> "PlotStyles":

@@ -15,8 +15,8 @@ describe("defaults", () => {
   const d = defaultPlotStyles()
 
   it("POC solid sky, value area dashed light sky, profile edges dotted slate", () => {
-    expect([d.poc.style, d.poc.color]).toEqual(["solid", "#38bdf8"])
-    expect([d.vah.style, d.vah.color, d.val.style, d.val.color]).toEqual(["dash", "#7dd3fc", "dash", "#7dd3fc"])
+    expect([d.poc.style, d.poc.color]).toEqual(["solid", "#ffffff"])
+    expect([d.vah.style, d.vah.color, d.val.style, d.val.color]).toEqual(["dash", "#ff3b30", "dash", "#2f80ff"])
     expect([d.profileHigh.style, d.profileHigh.color, d.profileLow.style, d.profileLow.color])
       .toEqual(["dot", "#94a3b8", "dot", "#94a3b8"])
   })
@@ -46,7 +46,7 @@ describe("defaults", () => {
   it("hands out copies, so a caller cannot change the defaults", () => {
     const a = defaultPlotStyles()
     a.poc.color = "#000000"
-    expect(defaultPlotStyles().poc.color).toBe("#38bdf8")
+    expect(defaultPlotStyles().poc.color).toBe("#ffffff")
   })
 })
 
@@ -78,7 +78,7 @@ describe("normalizePlotStyles", () => {
 
   it("rejects colours that are not six-digit hex", () => {
     for (const color of ["red", "#fff", "rgb(1,2,3)", "#12345g"]) {
-      expect(normalizePlotStyles({ poc: { color } }).poc.color).toBe("#38bdf8")
+      expect(normalizePlotStyles({ poc: { color } }).poc.color).toBe("#ffffff")
     }
   })
 
@@ -106,7 +106,7 @@ describe("the value area is one thing in two halves", () => {
   it("other fields still change only their own plot", () => {
     const s = applyPlotPatch(defaultPlotStyles(), "vah", { color: "#ff8800" })
     expect(s.vah.color).toBe("#ff8800")
-    expect(s.val.color).toBe("#7dd3fc")
+    expect(s.val.color).toBe("#2f80ff")
   })
 
   it("a saved default where only one edge was shown comes back with both on", () => {

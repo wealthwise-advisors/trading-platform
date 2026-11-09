@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   formatReadoutDate, formatReadoutNumber, nearestBarIndex, priceLines, readoutLines, seriesByAxis,
-  volumeSplitLines, type ReadoutRow,
+  volumeSplitLines, vwapBlock, type ReadoutRow,
 } from "./chartReadout"
 import type { OHLCVRecord } from "./types"
 
@@ -102,5 +102,39 @@ describe("readoutLines", () => {
     const row: ReadoutRow = { axis: "y6", title: "VolumeAvg (20)", series: [], fixed: [] }
     expect(readoutLines(row, bar, 0, "y6").map((l) => l.label)).toEqual(["Buyers", "Sellers"])
     expect(readoutLines(row, bar, 0, "y5")).toEqual([])
+  })
+})
+
+describe("the VWAP studies -- sir's 11:34 box", () => {
+  const C = { head: "#a", upper: "#b", lower: "#c" }
+  // His 2-sigma distance, from the +/-1 line: 7553.92 - 7501.3 = 52.62.
+  const mid = 7501.3, upper2 = 7501.3 + 2 * 52.62
+
+  it.each([[0.5, "7,527.61", "7,474.99"], [1, "7,553.92", "7,448.68"], [1.5, "7,580.23", "7,422.37"]])(
+    "+/-%s", (dev, up, down) => {
+      const lines = vwapBlock(dev, mid, upper2, C)
+      expect(lines[0].label).toBe(`VWAP (-${dev.toFixed(1)}, ${dev.toFixed(1)}, DAY)`)
+      expect(value(lines, "VWAP")).toBe("7,501.30")
+      expect(value(lines, "UpperBand")).toBe(up)
+      expect(value(lines, "LowerBand")).toBe(down)
+    },
+  )
+
+  it("no VWAP reads N/A", () => {
+    expect(value(vwapBlock(1, null, null, C), "UpperBand")).toBe("N/A")
+  })
+
+  it("the box runs in thinkorswim's order", () => {
+    const row: ReadoutRow = {
+      axis: "y", title: "ES", series: [], fixed: [], vwap: { mid: [mid], upper2: [upper2] },
+      profile: [{ label: "POC", value: "N/A" }, { label: "VAHigh", value: "N/A" }, { label: "VALow", value: "N/A" }],
+    }
+    expect(readoutLines(row, bar, 0).map((l) => l.label)).toEqual([
+      "Date", "Open", "High", "Low", "Close", "Range",
+      "VWAP (-0.5, 0.5, DAY)", "VWAP", "UpperBand", "LowerBand",
+      "VolumeProfile", "POC", "VAHigh", "VALow",
+      "VWAP (-1.0, 1.0, DAY)", "VWAP", "UpperBand", "LowerBand",
+      "VWAP (-1.5, 1.5, DAY)", "VWAP", "UpperBand", "LowerBand",
+    ])
   })
 })

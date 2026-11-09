@@ -2744,7 +2744,7 @@ export function ReplayPage() {
                                   style={c ? { color: c } : undefined}>{num(b)}</td>
                             )
                           })}
-                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#38bdf8" }}>{num(vp?.poc)}</td>}
+                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#ffffff" }}>{num(vp?.poc)}</td>}
                           {showVp && (() => {
                             const lv = pocCols.level.get(tf)
                             return (
@@ -2774,9 +2774,9 @@ export function ReplayPage() {
                               </td>
                             )
                           })()}
-                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.vah)}</td>}
+                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>{num(vp?.vah)}</td>}
                           {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
-                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>{num(vp?.val)}</td>}
+                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#2f80ff" }}>{num(vp?.val)}</td>}
                           {showVp && vsAvgCell("VA Low", vp?.val, valCols.average)}
                           <td className="p-2 text-xs">
                             {pane.lastSignal ? (
@@ -3011,7 +3011,7 @@ export function ReplayPage() {
                               ]
                             })}
                             {showVp && (
-                              <td className="p-2 text-right font-mono tape-g" style={{ color: "#38bdf8" }}>
+                              <td className="p-2 text-right font-mono tape-g" style={{ color: "#ffffff" }}>
                                 {tapeNum(vp?.poc)}
                               </td>
                             )}
@@ -3042,13 +3042,13 @@ export function ReplayPage() {
                               )
                             })()}
                             {showVp && (
-                              <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>
+                              <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>
                                 {tapeNum(vp?.vah)}
                               </td>
                             )}
                             {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                             {showVp && (
-                              <td className="p-2 text-right font-mono" style={{ color: "#7dd3fc" }}>
+                              <td className="p-2 text-right font-mono" style={{ color: "#2f80ff" }}>
                                 {tapeNum(vp?.val)}
                               </td>
                             )}

@@ -49,7 +49,7 @@ import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
-import { seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
+import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
   VOLUME_AVG_COLOR, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
   volumeAxisMax, volumeBarColors, type VolumeContext,
@@ -185,6 +185,9 @@ function StudyGear({ label, title, onClick }: {
     ><Settings className="h-3.5 w-3.5" aria-hidden /></button>
   )
 }
+
+/** Price-row traces the hover box prints in its VWAP and VolumeProfile blocks. */
+const BOX_BLOCK_LABELS = new Set(["VWAP", "UpperBand", "LowerBand", "POC", "VAHigh", "VALow"])
 
 /** Indicator colours, read off sir's thinkorswim (2026-11-10). */
 const OSC_LINE = "#ffffff"
@@ -2063,9 +2066,15 @@ export function CandlestickChart({
   }
   const drawnSeries = seriesByAxis(data as unknown as Parameters<typeof seriesByAxis>[0], t)
   const readoutRows: ReadoutRow[] = [
-    { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`, series: drawnSeries.get("y") ?? [],
-      // POC, VAHigh and VALow are traces too, so they are already in the series.
-      fixed: [] },
+    { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`,
+      // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
+      series: (drawnSeries.get("y") ?? []).filter((s) => !BOX_BLOCK_LABELS.has(s.label)),
+      fixed: [],
+      vwap: vwapOn && vwapHasData ? { mid: indicators.vwap ?? [], upper2: indicators.vwap_upper ?? [] } : undefined,
+      profile: (["poc", "vah", "val"] as const).map((key) => ({
+        label: PLOT_LABEL[key], color: vpPlots[key].color,
+        value: vpVisible ? formatReadoutNumber(vpValues[key]) : "N/A",
+      })) },
     ...indicatorRows.map((name): ReadoutRow => {
       const axis = `y${suffixOf(name)}`
       const levels = name === "vol" ? null : OSC_STUDIES[name].levels

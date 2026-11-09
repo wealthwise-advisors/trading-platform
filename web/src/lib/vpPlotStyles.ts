@@ -7,7 +7,7 @@
  * DEFAULTS
  * --------
  * Colours, styles, widths and visibility are the levels as they were always
- * drawn: POC solid #38bdf8, VAHigh and VALow dashed #7dd3fc, ProfileHigh and
+ * drawn: POC solid white, VAHigh dashed red, VALow dashed blue, ProfileHigh and
  * ProfileLow dotted #94a3b8 and hidden, all at 1.2px.
  *
  * Show bubble and Show title default to ON for every plot, as confirmed against
@@ -71,11 +71,11 @@ export interface PlotStyle {
 export type PlotStyles = Record<PlotKey, PlotStyle>
 
 const DEFAULTS: PlotStyles = {
-  poc:         { show: true,  values: "numerical", drawAs: "line", style: "solid", width: 1, color: "#38bdf8", bubble: true, title: true },
+  poc:         { show: true,  values: "numerical", drawAs: "line", style: "solid", width: 1, color: "#ffffff", bubble: true, title: true },
   profileHigh: { show: false, values: "numerical", drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
   profileLow:  { show: false, values: "numerical", drawAs: "line", style: "dot",   width: 1, color: "#94a3b8", bubble: true, title: true },
-  vah:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
-  val:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#7dd3fc", bubble: true, title: true },
+  vah:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#ff3b30", bubble: true, title: true },
+  val:         { show: true,  values: "numerical", drawAs: "line", style: "dash",  width: 1, color: "#2f80ff", bubble: true, title: true },
 }
 
 /** A fresh copy every call, so no caller can mutate the defaults. */

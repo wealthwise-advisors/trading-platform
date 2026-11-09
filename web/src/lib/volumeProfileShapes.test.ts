@@ -129,9 +129,9 @@ describe("per-plot styles on session profiles", () => {
   it("without styles, every level keeps its original colour, dash and 1.1px", () => {
     const got = lines(buildSessionProfileShapes(one(), 50, ALL_ON)).map((l) => l.line)
     expect(got).toEqual([
-      { color: "#38bdf8", width: 1.1, dash: "solid" },
-      { color: "#7dd3fc", width: 1.1, dash: "dash" },
-      { color: "#7dd3fc", width: 1.1, dash: "dash" },
+      { color: "#ffffff", width: 1.1, dash: "solid" },
+      { color: "#ff3b30", width: 1.1, dash: "dash" },
+      { color: "#2f80ff", width: 1.1, dash: "dash" },
       { color: "#94a3b8", width: 1.1, dash: "dot" },
       { color: "#94a3b8", width: 1.1, dash: "dot" },
     ])

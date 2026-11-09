@@ -33,6 +33,33 @@ export interface ReadoutRow {
   series: ReadoutSeries[]
   /** Lines that do not change bar to bar: overbought, POC... */
   fixed: ReadoutLine[]
+  /** Price row only: session VWAP and its shipped +2 sigma band. */
+  vwap?: { mid: ReadonlyArray<number | null>; upper2: ReadonlyArray<number | null> }
+  /** Price row only: POC, VAHigh and VALow, for thinkorswim's VolumeProfile block. */
+  profile?: ReadoutLine[]
+}
+
+/** The three VWAP studies on sir's chart, in his box's order and colours. */
+const VWAP_BLOCKS = [
+  { dev: 0.5, head: "#8a8af0", upper: "#d8c9a0", lower: "#e0a800" },
+  { dev: 1, head: "#e040fb", upper: "#22d3ee", lower: "#22d3ee" },
+  { dev: 1.5, head: "#e040fb", upper: "#d8c9a0", lower: "#d8c9a0" },
+]
+const PROFILE_HEAD = "#ff5252"
+
+/** One VWAP study: a heading, then VWAP and its bands at +/- dev sigma. */
+export function vwapBlock(
+  dev: number, mid: number | null | undefined, upper2: number | null | undefined,
+  colors: { head: string; upper: string; lower: string },
+): ReadoutLine[] {
+  const sigma = mid != null && upper2 != null ? (upper2 - mid) / 2 : null
+  const band = (sign: number) => (sigma == null ? null : mid! + sign * dev * sigma)
+  return [
+    { label: `VWAP (${(-dev).toFixed(1)}, ${dev.toFixed(1)}, DAY)`, value: "", color: colors.head },
+    { label: "VWAP", value: formatReadoutNumber(mid), color: colors.head },
+    { label: "UpperBand", value: formatReadoutNumber(band(1)), color: colors.upper },
+    { label: "LowerBand", value: formatReadoutNumber(band(-1)), color: colors.lower },
+  ]
 }
 
 interface TraceLike {
@@ -112,8 +139,18 @@ export function volumeSplitLines(bar: OHLCVRecord): ReadoutLine[] {
 /** One row's box at bar `i`. The price and volume rows add their bar lines. */
 export function readoutLines(row: ReadoutRow, bar: OHLCVRecord, i: number, volumeAxis?: string): ReadoutLine[] {
   const series = row.series.map((s) => ({ label: s.label, color: s.color, value: formatReadoutNumber(s.values[i], s.digits) }))
+  const block = (n: number) => row.vwap
+    ? vwapBlock(VWAP_BLOCKS[n].dev, row.vwap.mid[i], row.vwap.upper2[i], VWAP_BLOCKS[n])
+    : []
+  const profile = row.profile
+    ? [{ label: "VolumeProfile", value: "", color: PROFILE_HEAD }, ...row.profile]
+    : []
   return [
     ...(row.axis === "y" ? priceLines(bar) : []),
+    ...block(0),
+    ...profile,
+    ...block(1),
+    ...block(2),
     ...series,
     ...(row.axis === volumeAxis ? volumeSplitLines(bar) : []),
     ...row.fixed,
