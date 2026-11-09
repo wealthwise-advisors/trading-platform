@@ -139,7 +139,7 @@ def test_the_value_area_edges_are_reconciled_as_on_the_web():
 
 def test_no_settings_draws_what_the_chart_shows_untouched(base_df):
     fig = _fig(df=base_df)
-    assert _row_titles(fig) == ["Price", "RSI(2)", "StochRSI", "RSI(13)"]
+    assert _row_titles(fig) == ["Price", "RSI(2)", "StochRSI", "RSI(13)", "VolumeAvg (20)"]
     assert not _traces(fig, "MoneyFlowIndex")
 
 
@@ -147,7 +147,7 @@ def test_no_settings_draws_what_the_chart_shows_untouched(base_df):
                          ids=lambda c: "+".join(k for k, on in zip(OSC_KEYS, c) if on) or "none")
 def test_the_report_draws_exactly_the_oscillators_switched_on(combo, base_df):
     on = [k for k, v in zip(OSC_KEYS, combo) if v]
-    fig = _fig({"oscillators": dict(zip(OSC_KEYS, combo))}, base_df)
+    fig = _fig({"oscillators": dict(zip(OSC_KEYS, combo)), "volumeAvg": {"on": False, "length": 20}}, base_df)
 
     assert _row_titles(fig) == ["Price"] + [OSC_TITLES[k] for k in on]
     for key in OSC_KEYS:
@@ -166,7 +166,7 @@ def test_the_report_draws_exactly_the_oscillators_switched_on(combo, base_df):
 def test_row_heights_match_the_chart():
     assert oscillator_row_heights(0) == [1.0]
     assert oscillator_row_heights(2) == pytest.approx([0.68, 0.16, 0.16])
-    fig = _fig({"oscillators": dict.fromkeys(OSC_KEYS, False)})
+    fig = _fig({"oscillators": dict.fromkeys(OSC_KEYS, False), "volumeAvg": {"on": False, "length": 20}})
     assert list(fig.layout.yaxis.domain) == [0, 1]
 
 

@@ -102,8 +102,17 @@ class VolumeProfileSettings(BaseModel):
     left_axis: bool = False
 
 
+class VolumeAvgSettings(BaseModel):
+    """The VolumeAvg row: web/src/lib/volumeAverage.ts's bounds."""
+    model_config = _CONFIG
+
+    on: bool = True
+    length: int = Field(20, ge=1, le=500)
+
+
 class ChartSettings(BaseModel):
     model_config = _CONFIG
 
     oscillators: OscillatorToggles = Field(default_factory=OscillatorToggles)
+    volume_avg: VolumeAvgSettings = Field(default_factory=VolumeAvgSettings)
     volume_profile: VolumeProfileSettings = Field(default_factory=VolumeProfileSettings)

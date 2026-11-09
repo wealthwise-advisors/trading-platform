@@ -192,6 +192,8 @@ export interface PriceDataResponse {
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
   volume_profile?: VolumeProfile
+  /** Volumes outside the drawn bars, for VolumeAvg. Absent from older servers. */
+  volume_context?: { t: string[]; v: (number | null)[] }
 }
 
 export interface EquityPoint {

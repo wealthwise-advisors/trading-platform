@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
-  DEFAULT_VOLUME_AVG_LENGTH, buyerSellerSplit, clampVolumeAvgLength, volumeAverage,
+  DEFAULT_VOLUME_AVG_LENGTH, VOLUME_AVG_STORE_KEY, buyerSellerSplit, clampVolumeAvgLength,
+  loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverage, volumeAverageAt, volumeAverageWithContext,
   volumeAxisMax, volumeBarColors, VOLUME_UP, VOLUME_DOWN, VOLUME_FLAT,
 } from "./volumeAverage"
 import type { OHLCVRecord } from "./types"
@@ -107,5 +108,83 @@ describe("volumeAxisMax", () => {
   it("never returns an empty range", () => {
     expect(volumeAxisMax([], [], 0, 1)).toBe(1)
     expect(volumeAxisMax([at(1, null)], [null], ms(0), ms(2))).toBe(1)
+  })
+})
+
+describe("volumeAverageWithContext", () => {
+  const b = (m: number, v: number | null) => ({ t: `2026-11-09T09:${String(m).padStart(2, "0")}:00`, v })
+
+  it("gives the first bars an average from the bars before the run", () => {
+    const ctx = { t: [b(28, 0).t, b(29, 0).t], v: [10, 20] }
+    expect(volumeAverageWithContext([b(30, 30), b(31, 40)], ctx, 3)).toEqual([20, 30])
+  })
+
+  it("runs through bars the session filter removed, in time order", () => {
+    const ctx = { t: [b(31, 0).t], v: [100] }
+    expect(volumeAverageWithContext([b(30, 10), b(32, 20)], ctx, 2)).toEqual([null, 60])
+  })
+
+  it("without context it is the plain average", () => {
+    expect(volumeAverageWithContext([b(30, 1), b(31, 3)], undefined, 2)).toEqual([null, 2])
+    expect(volumeAverageWithContext([b(30, 1), b(31, 3)], { t: [], v: [] }, 2)).toEqual([null, 2])
+  })
+})
+
+describe("volumeAverageAt", () => {
+  const rows = [1, 2, 3, 4].map((v) => ({ v }))
+
+  it("is the average as of that many bars", () => {
+    expect(volumeAverageAt(rows, 3, 2)).toBe(2.5)
+    expect(volumeAverageAt(rows, 4, 2)).toBe(3.5)
+  })
+
+  it("agrees with the chart's series", () => {
+    const series = volumeAverage(rows.map((r) => r.v), 3)
+    rows.forEach((_, i) => expect(volumeAverageAt(rows, i + 1, 3)).toBe(series[i]))
+  })
+
+  it("has nothing before a full window, or across a missing volume", () => {
+    expect(volumeAverageAt(rows, 1, 2)).toBeNull()
+    expect(volumeAverageAt([{ v: 1 }, { v: null }], 2, 2)).toBeNull()
+  })
+
+  it("a count past the end stops at the end", () => expect(volumeAverageAt(rows, 99, 2)).toBe(3.5))
+})
+
+describe("saved settings", () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const store = (values: Record<string, string>) => vi.stubGlobal("localStorage", {
+    getItem: (k: string) => values[k] ?? null,
+    setItem: (k: string, v: string) => { values[k] = v },
+  })
+  const FACTORY = { on: true, length: 20 }
+
+  it("round-trips", () => {
+    store({})
+    saveVolumeAvgSettings({ on: false, length: 50 })
+    expect(loadVolumeAvgSettings()).toEqual({ on: false, length: 50 })
+  })
+
+  it("nothing saved is on, 20", () => {
+    store({})
+    expect(loadVolumeAvgSettings()).toEqual(FACTORY)
+  })
+
+  it.each(["not json", "null", "[]", '{"on":"yes","length":"x"}'])("corrupt value %s is the factory setting", (raw) => {
+    store({ [VOLUME_AVG_STORE_KEY]: raw })
+    expect(loadVolumeAvgSettings()).toEqual(FACTORY)
+  })
+
+  it("an out-of-range length is pulled back in bounds", () => {
+    store({ [VOLUME_AVG_STORE_KEY]: '{"on":true,"length":99999}' })
+    expect(loadVolumeAvgSettings().length).toBe(500)
+  })
+
+  it("storage that throws is survivable", () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => { throw new Error("denied") }, setItem: () => { throw new Error("full") },
+    })
+    expect(loadVolumeAvgSettings()).toEqual(FACTORY)
+    expect(() => saveVolumeAvgSettings(FACTORY)).not.toThrow()
   })
 })

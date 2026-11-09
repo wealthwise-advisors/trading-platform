@@ -49,7 +49,8 @@ import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import {
-  DEFAULT_VOLUME_AVG_LENGTH, VOLUME_AVG_COLOR, buyerSellerSplit, volumeAverage, volumeAxisMax, volumeBarColors,
+  VOLUME_AVG_COLOR, buyerSellerSplit, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
+  volumeAxisMax, volumeBarColors, type VolumeContext,
 } from "@/lib/volumeAverage"
 
 const GREEN = "#2dd4bf"
@@ -66,6 +67,8 @@ interface CandlestickChartProps {
   strategyName: string
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
+  /** Volumes outside `bars` that VolumeAvg still averages. */
+  volumeContext?: VolumeContext
   zigzag: ZigZagResponse
   trades: TradeRecord[]
   showZigzag?: boolean
@@ -231,7 +234,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, bars, indicators, zigzag, trades, showZigzag = true,
+  symbol, bars, indicators, volumeContext, zigzag, trades, showZigzag = true,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -371,8 +374,9 @@ export function CandlestickChart({
   const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: true })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   // VolumeAvg (20), on by default as sir asked (2026-11-09). The bottom row.
-  const [volOn, setVolOn] = useState(true)
-  const [volLength, setVolLength] = useState(DEFAULT_VOLUME_AVG_LENGTH)
+  const [volOn, setVolOn] = useState(() => loadVolumeAvgSettings().on)
+  const [volLength, setVolLength] = useState(() => loadVolumeAvgSettings().length)
+  useEffect(() => { saveVolumeAvgSettings({ on: volOn, length: volLength }) }, [volOn, volLength])
   const [volPanel, setVolPanel] = useState(false)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)
@@ -503,8 +507,8 @@ export function CandlestickChart({
       maxProfiles: vpMaxProfiles, onExpansion: vpOnExpansion, plots: vpPlots,
       showStudy: vpShowStudy, showPlotNames: vpShowPlotNames,
       showInputNames: vpShowInputNames, leftAxis: vpLeftAxis,
-    }))
-  }, [publishChartSettings, osc, vpOn, vpBins, vpValueArea, vpOpacity, vpRowMode, vpRowHeight,
+    }, { on: volOn, length: volLength }))
+  }, [publishChartSettings, osc, vpOn, volOn, volLength, vpBins, vpValueArea, vpOpacity, vpRowMode, vpRowHeight,
       vpTimePer, vpMultiplier, vpMaxProfiles, vpOnExpansion, vpPlots, vpShowStudy,
       vpShowPlotNames, vpShowInputNames, vpLeftAxis])
 
@@ -1323,7 +1327,7 @@ export function CandlestickChart({
   // VolumeAvg, per source bar like the oscillators above -- never the widened
   // display candles, or the 20 would change meaning every time the chart zooms.
   const volumes = bars.map((b) => b.v)
-  const volAvg = volumeAverage(volumes, volLength)
+  const volAvg = useMemo(() => volumeAverageWithContext(bars, volumeContext, volLength), [bars, volumeContext, volLength])
   if (volRow) {
     const volSuffix = suffixOf("vol")
     const axes = { xaxis: `x${volSuffix}`, yaxis: `y${volSuffix}` }

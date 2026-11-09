@@ -371,6 +371,7 @@ export function ResultsPage() {
                         interval={s.timeframe}
                         bars={priceDataQ.data.bars}
                         indicators={priceDataQ.data.indicators}
+                        volumeContext={priceDataQ.data.volume_context}
                         zigzag={zigzagQ.data}
                         trades={tradesQ.data ?? []}
                       />

@@ -514,3 +514,25 @@ test("VA High Average and VA Low Average work like POC Average, in both tables",
   }
   await page.close()
 })
+
+test("Volume average, buyers and sellers are in both tables and add up", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const page = await browser.newPage()
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+
+  const n = (s: string) => Number(s.replace(/,/g, ""))
+  for (const idx of [0, 1]) {
+    const table = page.locator("table.grid-table").nth(idx)
+    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+    expect(headers).toContain("VOL AVG (20)")
+    const [iv, ib, is] = ["VOLUME", "BUYERS", "SELLERS"].map((h) => headers.indexOf(h))
+    expect(ib).toBe(headers.indexOf("VOL AVG (20)") + 1)
+    await expect.poll(async () => {
+      const cells = await table.locator("tbody tr").first().locator("td").allInnerTexts()
+      return n(cells[ib]) + n(cells[is]) === n(cells[iv])
+    }, { timeout: 60_000 }).toBe(true)
+  }
+  await page.close()
+})

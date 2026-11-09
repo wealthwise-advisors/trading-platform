@@ -21,6 +21,7 @@ import type { OHLCVRecord } from "./types"
 export const DEFAULT_VOLUME_AVG_LENGTH = 20
 const MIN_LENGTH = 1
 const MAX_LENGTH = 500
+export const VOLUME_AVG_STORE_KEY = "autotrader.volumeAvg"
 
 /** Bar colours as thinkorswim paints them: unchanged closes are its cyan. */
 export const VOLUME_UP = "#26a69a"
@@ -61,6 +62,80 @@ export function volumeAverage(volumes: ReadonlyArray<number | null>, length: num
     }
     return i >= length - 1 && missing === 0 ? sum / length : null
   })
+}
+
+/** Volumes the chart does not draw but the average runs through. */
+export interface VolumeContext {
+  t: string[]
+  v: (number | null)[]
+}
+
+/**
+ * The average for each of `bars`, run through `context` as well, so the first
+ * bars of a run have one and a 09:30 bar averages this morning's pre-market,
+ * as thinkorswim's does, rather than yesterday's close.
+ */
+export function volumeAverageWithContext(
+  bars: ReadonlyArray<Pick<OHLCVRecord, "t" | "v">>,
+  context: VolumeContext | undefined,
+  length: number,
+): (number | null)[] {
+  if (!context?.t.length) return volumeAverage(bars.map((b) => b.v), length)
+  const merged = [
+    ...context.t.map((t, i) => ({ ms: Date.parse(t), v: context.v[i], bar: -1 })),
+    ...bars.map((b, i) => ({ ms: Date.parse(b.t), v: b.v, bar: i })),
+  ].sort((a, b) => a.ms - b.ms)
+  const avg = volumeAverage(merged.map((p) => p.v), length)
+  const out: (number | null)[] = new Array(bars.length).fill(null)
+  merged.forEach((p, i) => { if (p.bar >= 0) out[p.bar] = avg[i] })
+  return out
+}
+
+/** The average as of the first `count` bars -- for a table row, O(length). */
+export function volumeAverageAt(
+  bars: ReadonlyArray<Pick<OHLCVRecord, "v">>,
+  count: number,
+  length: number,
+): number | null {
+  const upto = Math.min(count, bars.length)
+  if (upto < length) return null
+  let sum = 0
+  for (let i = upto - length; i < upto; i++) {
+    const v = bars[i].v
+    if (v == null) return null
+    sum += v
+  }
+  return sum / length
+}
+
+export interface VolumeAvgSettings {
+  on: boolean
+  length: number
+}
+
+/** Never throws: storage can be disabled, full, or hold anything at all. */
+export function loadVolumeAvgSettings(): VolumeAvgSettings {
+  const factory = { on: true, length: DEFAULT_VOLUME_AVG_LENGTH }
+  try {
+    const raw = localStorage.getItem(VOLUME_AVG_STORE_KEY)
+    if (!raw) return factory
+    const saved = JSON.parse(raw) as Partial<VolumeAvgSettings> | null
+    if (Array.isArray(saved)) return factory
+    return {
+      on: typeof saved?.on === "boolean" ? saved.on : factory.on,
+      length: typeof saved?.length === "number" ? clampVolumeAvgLength(saved.length) : factory.length,
+    }
+  } catch {
+    return factory
+  }
+}
+
+export function saveVolumeAvgSettings(s: VolumeAvgSettings): void {
+  try {
+    localStorage.setItem(VOLUME_AVG_STORE_KEY, JSON.stringify(s))
+  } catch {
+    // Remembering the choice is a convenience; the chart works without it.
+  }
 }
 
 export function clampVolumeAvgLength(n: number): number {

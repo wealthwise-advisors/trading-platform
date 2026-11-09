@@ -473,5 +473,27 @@ test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in th
 
   await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().uncheck()
   await expect.poll(traces).toEqual([])
+
+  // The choice outlives a refresh.
+  await own.reload()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  await expect(own.getByRole("checkbox", { name: "Show VolumeAvg" }).first()).not.toBeChecked()
+  await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().check()
+  await own.close()
+})
+
+test("full screen fits every row, VolumeAvg included, on a laptop screen", async ({ browser }) => {
+  const own = await browser.newPage({ viewport: { width: 1366, height: 768 } })
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  await own.getByTitle("Full screen").first().click()
+  await expect.poll(() => own.evaluate(() => !!document.fullscreenElement)).toBe(true)
+  await expect.poll(async () => {
+    const box = await own.locator(".draglayer .x6y6 .nsewdrag").first().boundingBox()
+    return !!box && box.height > 20 && box.y + box.height <= 768
+  }, { message: "the VolumeAvg row is not on screen" }).toBe(true)
   await own.close()
 })

@@ -59,6 +59,26 @@ def calc_stochrsi(close: pd.Series, rsi_length: int = 14, stoch_length: int = 14
     return k, d
 
 
+def calc_volume_avg(volume: pd.Series, length: int = 20, context: pd.Series | None = None) -> pd.Series:
+    """Simple average of volume over `length` bars -- web/src/lib/volumeAverage.ts.
+
+    `context` is BacktestResults.volume_context: bars the chart does not draw
+    but the average still runs through.
+    """
+    full = volume if context is None or context.empty else pd.concat([context, volume]).sort_index()
+    return full.rolling(length, min_periods=length).mean().reindex(volume.index)
+
+
+def calc_volume_split(high: pd.Series, low: pd.Series, close: pd.Series,
+                      volume: pd.Series) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """(buyer %, buyers, sellers) by sir's formula, from each bar's own volume."""
+    rng = high - low
+    pct = ((close - low) / rng.where(rng > 0)).fillna(0.5).clip(0, 1)
+    # floor(x + .5), Math.round's rule. Python's round() sends ties to even.
+    buyers = np.floor(volume * pct + 0.5)
+    return pct, buyers, volume - buyers
+
+
 def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
              volume: pd.Series | None, length: int = 20) -> pd.Series:
     """

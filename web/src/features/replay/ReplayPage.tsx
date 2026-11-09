@@ -35,6 +35,7 @@ import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/c
 import { SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAt } from "@/lib/volumeAverage"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -295,6 +296,10 @@ function applyFrame(pane: PaneState, msg: ReplayFrameMessage): PaneState {
  *  does not carry indicator series, and inventing one here would mean either
  *  recomputing it in the browser off partial data or changing the backend,
  *  which this change explicitly leaves alone. */
+function volumeNumber(n: number | null | undefined, digits = 0): string {
+  return n == null ? "\u2014" : n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+}
+
 interface TapeRow {
   seq: number
   tf: string
@@ -460,6 +465,8 @@ export function ReplayPage() {
   const [marketTime, setMarketTime] = useState<string | null>(null)
   // Consolidated, newest-first log of every bar every pane has emitted.
   const [tape, setTape] = useState<TapeRow[]>([])
+  // The same setting the Chart's VolumeAvg gear writes.
+  const [volLength] = useState(() => loadVolumeAvgSettings().length)
 
   // ---- indicator settings (mirror the Backtest page's gear panels) --------
   // VWAP bands arrive at 2 sigma; sigma is recovered as (upper - vwap) / 2 and
@@ -2620,6 +2627,9 @@ export function ReplayPage() {
                       <th className="text-right p-2 font-medium">Close</th>
                       <th className="text-right p-2 font-medium">Change</th>
                       <th className="text-right p-2 font-medium">Volume</th>
+                      <th className="text-right p-2 font-medium">Vol Avg ({volLength})</th>
+                      <th className="text-right p-2 font-medium">Buyers</th>
+                      <th className="text-right p-2 font-medium">Sellers</th>
                       <th className="text-right p-2 font-medium">Bars</th>
                       <th className="text-left p-2 font-medium">Position</th>
                       <th className="text-right p-2 font-medium">P&amp;L</th>
@@ -2701,6 +2711,9 @@ export function ReplayPage() {
                           <td className="p-2 text-right font-mono text-muted-foreground">
                             {last?.v != null ? last.v.toLocaleString() : "\u2014"}
                           </td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAt(pane.bars, pane.bars.length, volLength), 2)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber((last ? buyerSellerSplit(last) : null)?.buyers)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber((last ? buyerSellerSplit(last) : null)?.sellers)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">
                             {pane.bars.length.toLocaleString()}
                           </td>
@@ -2895,6 +2908,9 @@ export function ReplayPage() {
                       <th className="text-right p-2 font-medium">Close</th>
                       <th className="text-right p-2 font-medium">Change</th>
                       <th className="text-right p-2 font-medium tape-g">Volume</th>
+                      <th className="text-right p-2 font-medium">Vol Avg ({volLength})</th>
+                      <th className="text-right p-2 font-medium">Buyers</th>
+                      <th className="text-right p-2 font-medium">Sellers</th>
                       {showVwap && <th className="text-right p-2 font-medium tape-g">VWAP</th>}
                         {/* Same columns and labels as Live state above. These were
                             previously visible only for the newest tick, so reading a
@@ -2962,6 +2978,9 @@ export function ReplayPage() {
                           <td className="p-2 text-right font-mono text-muted-foreground tape-g">
                             {r.v != null ? r.v.toLocaleString() : "\u2014"}
                           </td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAt(panes[r.tf]?.bars ?? [], r.barIndex, volLength), 2)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.buyers)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.sellers)}</td>
                           {showVwap && (
                             <td className="p-2 text-right font-mono tape-g" style={{ color: "#c79ae0" }}>
                               {price(r.vwap)}

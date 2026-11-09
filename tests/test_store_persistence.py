@@ -242,7 +242,7 @@ def test_schema_covers_every_field_on_the_dataclass(tmp_store):
     finally:
         conn.close()
 
-    frame_fields = {"equity_curve", "price_data", "trades"}
+    frame_fields = {"equity_curve", "price_data", "trades", "volume_context"}
     want = {f.name for f in fields(BacktestResults)} - frame_fields
     missing = want - have
     assert not missing, (

@@ -13,6 +13,7 @@
  * to one and not the other fails a test instead of a download.
  */
 import { OSC_ORDER, type OscToggles } from "./oscillatorStudies"
+import { DEFAULT_VOLUME_AVG_LENGTH, loadVolumeAvgSettings, type VolumeAvgSettings } from "./volumeAverage"
 import type { RowHeightMode, TimePerProfile } from "./volumeProfile"
 import { defaultPlotStyles, normalizePlotStyles, type PlotStyles } from "./vpPlotStyles"
 
@@ -38,6 +39,7 @@ export interface ChartExportSettings {
   oscillators: OscToggles
   /** The dialog plus the Volume Profile checkbox itself, which is not saved. */
   volumeProfile: VpDialogSettings & { on: boolean }
+  volumeAvg: VolumeAvgSettings
 }
 
 export const VP_STORE_KEY = "autotrader.volumeProfile.defaults"
@@ -84,14 +86,18 @@ export function loadSavedVpSettings(): VpDialogSettings | null {
   }
 }
 
-export function buildChartSettings(oscillators: OscToggles, vpOn: boolean, vp: VpDialogSettings): ChartExportSettings {
+export function buildChartSettings(
+  oscillators: OscToggles, vpOn: boolean, vp: VpDialogSettings,
+  volumeAvg: VolumeAvgSettings = { on: true, length: DEFAULT_VOLUME_AVG_LENGTH },
+): ChartExportSettings {
   return {
     oscillators: Object.fromEntries(OSC_ORDER.map((k) => [k, oscillators[k]])) as OscToggles,
     volumeProfile: { on: vpOn, ...pickVpSettings(vp) },
+    volumeAvg,
   }
 }
 
 /** What a report exported before the chart has mounted should be drawn with. */
 export function initialChartSettings(): ChartExportSettings {
-  return buildChartSettings(DEFAULT_OSCILLATORS, true, loadSavedVpSettings() ?? vpFactorySettings())
+  return buildChartSettings(DEFAULT_OSCILLATORS, true, loadSavedVpSettings() ?? vpFactorySettings(), loadVolumeAvgSettings())
 }

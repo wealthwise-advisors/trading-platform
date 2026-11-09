@@ -15,6 +15,17 @@ describe("VolumeAvgPanel", () => {
     expect(onLength).toHaveBeenCalledWith(50)
   })
 
+  it("an emptied box stays empty while typing, and refills if left empty", () => {
+    const onLength = vi.fn()
+    render(<VolumeAvgPanel length={20} onLength={onLength} onClose={() => {}} />)
+    const input = screen.getByLabelText("VolumeAvg length") as HTMLInputElement
+    fireEvent.change(input, { target: { value: "" } })
+    expect(input.value).toBe("")
+    expect(onLength).not.toHaveBeenCalled()
+    fireEvent.blur(input)
+    expect(input.value).toBe("20")
+  })
+
   it("closes on Escape", () => {
     const onClose = vi.fn()
     render(<VolumeAvgPanel length={20} onLength={() => {}} onClose={onClose} />)

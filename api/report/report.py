@@ -24,7 +24,7 @@ from api.report.charts import (
 )
 from datetime import time as time_type
 from src.analysis.indicators import (
-    calc_vwap_bands, calc_mfi, compute_rangebreaks,
+    calc_vwap_bands, calc_mfi, calc_volume_avg, calc_volume_split, compute_rangebreaks,
 )
 from api.schemas.chart_settings import ChartSettings
 from src.data.resample import bars_are_daily_or_longer
@@ -121,6 +121,9 @@ def _layout(title: str = "", height: int = 500, dragmode: str = "pan",
     )
 
 
+# web/src/lib/volumeAverage.ts's colours.
+VOLUME_UP, VOLUME_DOWN, VOLUME_FLAT, VOLUME_AVG_COLOR = "#26a69a", "#ef5350", "#22d3ee", "#e040fb"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Chart builders
 # ─────────────────────────────────────────────────────────────────────────────
@@ -144,9 +147,15 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     # same backtest -- which is exactly what happened on the first pass.
     osc_rows = active_oscillator_rows(chart_settings)
     row_of = {key: i + 2 for i, key in enumerate(osc_rows)}
-    row_heights = oscillator_row_heights(len(osc_rows))
+    # VolumeAvg is the bottom row, as on the chart, and has nothing to draw
+    # without volume.
+    vol_settings = chart_settings.volume_avg
+    has_volume = "volume" in df and bool((df["volume"].fillna(0) > 0).any())
+    if vol_settings.on and has_volume:
+        row_of["vol"] = 2 + len(osc_rows)
+    row_heights = oscillator_row_heights(len(row_of))
     fig = make_subplots(
-        rows=1 + len(osc_rows), cols=1, shared_xaxes=True,
+        rows=1 + len(row_of), cols=1, shared_xaxes=True,
         row_heights=row_heights,
         vertical_spacing=ROW_SPACING,
     )
@@ -315,6 +324,26 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 name="MoneyFlowIndex", showlegend=True,
             ), row=row_of["mfi"], col=1)
 
+    # VolumeAvg: bars by close against the previous close, the average, and
+    # buyers/sellers in the hover -- CandlestickChart.tsx's row.
+    if "vol" in row_of:
+        volume = df["volume"]
+        change = df["close"].diff().fillna(0)
+        colours = [VOLUME_UP if c > 0 else VOLUME_DOWN if c < 0 else VOLUME_FLAT for c in change]
+        pct, buyers, sellers = calc_volume_split(df["high"], df["low"], df["close"], volume)
+        fig.add_trace(go.Bar(
+            x=df.index, y=volume, marker=dict(color=colours), name="Vol", showlegend=False,
+            customdata=list(zip(buyers, pct * 100, sellers, (1 - pct) * 100)),
+            hovertemplate="Vol: %{y:,.0f}<br>Buyers: %{customdata[0]:,.0f} (%{customdata[1]:.2f}%)"
+                          "<br>Sellers: %{customdata[2]:,.0f} (%{customdata[3]:.2f}%)<extra></extra>",
+        ), row=row_of["vol"], col=1)
+        fig.add_trace(go.Scatter(
+            x=df.index,
+            y=calc_volume_avg(volume, vol_settings.length, getattr(results, "volume_context", None)),
+            line=dict(color=VOLUME_AVG_COLOR, width=1.2), name="VolAvg", showlegend=False,
+            hovertemplate="VolAvg: %{y:,.2f}<extra></extra>",
+        ), row=row_of["vol"], col=1)
+
     # Overbought / oversold lines for the rows drawn. RSI(2) 94/2 and RSI(13)
     # 70/30 are confirmed final -- see OSC_LEVELS.
     for key in osc_rows:
@@ -455,7 +484,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     # paper-sized offset through the row's share keeps "same strip as the
     # modebar" true at any row split. t drops with it: the buttons now sit on
     # the toolbar's row instead of occupying a band of their own.
-    _PRICE_ROW_FRACTION = row_heights[0] / sum(row_heights) * (1 - len(osc_rows) * ROW_SPACING)
+    _PRICE_ROW_FRACTION = row_heights[0] / sum(row_heights) * (1 - len(row_of) * ROW_SPACING)
     _rangebreaks = compute_rangebreaks(df.index)
     _t = 120 if has_headers else 55
     _rs_y = (1 + 0.115 / _PRICE_ROW_FRACTION) if has_headers else 1.02
@@ -499,6 +528,13 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
             )
         },
     )
+    if "vol" in row_of:
+        n = row_of["vol"]
+        fig.update_layout(**{
+            f"xaxis{n}": dict(gridcolor=_GRID, rangebreaks=_rangebreaks, **_SPIKE),
+            f"yaxis{n}": dict(gridcolor=_GRID, fixedrange=True, tickformat=",.0f", rangemode="tozero",
+                              title=dict(text=f"VolumeAvg ({vol_settings.length})", **_ylabel)),
+        })
     # Reversed overlay axis for the whole-chart profile, when it is drawn.
     if _vp_drawing.overlay_axis is not None:
         fig.update_layout(xaxis9=_vp_drawing.overlay_axis)

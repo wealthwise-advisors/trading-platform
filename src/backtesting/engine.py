@@ -9,7 +9,7 @@ Flow per bar:
   5. Track equity curve
 """
 
-from datetime import datetime, time as time_type
+from datetime import datetime, time as time_type, timedelta
 from typing import Optional
 import pandas as pd
 from loguru import logger
@@ -20,6 +20,9 @@ from ..broker.base_broker import Order, OrderSide, OrderType
 from ..strategies.base_strategy import BaseStrategy, Signal, SignalType
 from .results import BacktestResults, Trade
 from .metrics import compute_metrics
+
+#: web/src/lib/volumeAverage.ts's MAX_LENGTH.
+VOLUME_AVG_MAX_LENGTH = 500
 
 
 class BacktestEngine:
@@ -74,6 +77,7 @@ class BacktestEngine:
         )
 
         df = self.data_provider.load(self.symbol, start, end, self.timeframe)
+        loaded = df
 
         # Filter to trading session window (applied per day across the full range).
         # An overnight session (session_end < session_start, e.g. 16:00-15:00 for a
@@ -189,6 +193,7 @@ class BacktestEngine:
             trades=self._completed_trades,
             equity_curve=equity_series,
             price_data=df,
+            volume_context=self._volume_context(loaded, df, start),
         )
         compute_metrics(results)
         logger.info(
@@ -202,6 +207,30 @@ class BacktestEngine:
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    def _volume_context(self, loaded: pd.DataFrame, kept: pd.DataFrame, start: datetime) -> pd.Series:
+        """Volumes VolumeAvg needs that the chart does not draw.
+
+        thinkorswim's average runs over every bar on its chart. Here the first
+        bars of a run would have no average, and a 09:30 bar would average
+        yesterday's 15:50 instead of this morning's 09:20, so the study is
+        handed the bars before the run and the bars the session filter removed.
+        """
+        if "volume" not in loaded or len(loaded) < 2:
+            return pd.Series(dtype=float)
+        outside = loaded.loc[~loaded.index.isin(kept.index), "volume"]
+        step = pd.Series(loaded.index).diff().median()
+        # Three times the longest length: nights and weekends hold no bars.
+        lookback = max(timedelta(days=5), step * VOLUME_AVG_MAX_LENGTH * 3)
+        try:
+            earlier = self.data_provider.load(self.symbol, start - lookback, start - timedelta(minutes=1), self.timeframe)
+            earlier = earlier.loc[earlier.index < loaded.index.min(), "volume"].tail(VOLUME_AVG_MAX_LENGTH)
+        except Exception as exc:
+            # History before the run is a nicety; the run itself has succeeded.
+            logger.debug(f"No volume history before {start}: {exc}")
+            earlier = pd.Series(dtype=float)
+        parts = [s for s in (earlier, outside) if not s.empty]
+        return pd.concat(parts).sort_index() if parts else pd.Series(dtype=float)
 
     def _on_bar(self, bar: Bar, full_df: pd.DataFrame):
         self._bars.append(bar)

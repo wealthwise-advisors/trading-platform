@@ -35,12 +35,13 @@ BLOB_DIR = DB_PATH.parent / "backtests"
 
 EQUITY = "equity.parquet"
 PRICES = "prices.parquet"
+VOLUME_CONTEXT = "volume_context.parquet"
 
 # Metric/identity columns, taken from the dataclass rather than typed out. The
 # guard test compares this list against the table's columns, so adding a field
 # to BacktestResults without a migration fails the build instead of dropping a
 # number on the floor.
-_FRAME_FIELDS = {"equity_curve", "price_data", "trades"}
+_FRAME_FIELDS = {"equity_curve", "price_data", "trades", "volume_context"}
 RESULT_COLUMNS = [f.name for f in fields(BacktestResults) if f.name not in _FRAME_FIELDS]
 TRADE_COLUMNS = [f.name for f in fields(Trade)]
 
@@ -73,6 +74,8 @@ def insert(backtest_id: str, results: BacktestResults, data_source: str,
     if results.price_data is not None and not results.price_data.empty:
         results.price_data.to_parquet(d / PRICES)
         price_rows = len(results.price_data)
+    if results.volume_context is not None and len(results.volume_context):
+        results.volume_context.to_frame(name="volume").to_parquet(d / VOLUME_CONTEXT)
 
     row = {n: _iso(getattr(results, n)) for n in RESULT_COLUMNS}
 
@@ -201,6 +204,10 @@ def fetch(backtest_id: str, user_id: int, db: Path | None = None):
     prices = pd.DataFrame()
     if (bd / PRICES).is_file():
         prices = pd.read_parquet(bd / PRICES)
+    # Absent on runs saved before VolumeAvg; the average then starts at bar 20.
+    volume_context = pd.Series(dtype="float64")
+    if (bd / VOLUME_CONTEXT).is_file():
+        volume_context = pd.read_parquet(bd / VOLUME_CONTEXT)["volume"]
 
     # The row counts are recorded so a truncated sidecar is noticed rather than
     # served as a shorter chart with no explanation.
@@ -212,7 +219,7 @@ def fetch(backtest_id: str, user_id: int, db: Path | None = None):
                     backtest_id, len(prices), row["price_rows"])
 
     results = BacktestResults(**scalars, trades=trades,
-                              equity_curve=equity, price_data=prices)
+                              equity_curve=equity, price_data=prices, volume_context=volume_context)
     return (results, row["data_source"],
             time_type.fromisoformat(row["session_start"]),
             time_type.fromisoformat(row["session_end"]))

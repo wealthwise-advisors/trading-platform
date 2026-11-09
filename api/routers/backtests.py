@@ -260,7 +260,8 @@ def get_trades(backtest_id: str, user=PROTECTED):
 @router.get("/{backtest_id}/price-data")
 def get_price_data(backtest_id: str, user=PROTECTED):
     stored = _get_or_404(backtest_id, user)
-    return serializers.price_data_to_response(stored.results.price_data, stored.session_start)
+    return serializers.price_data_to_response(stored.results.price_data, stored.session_start,
+                                              stored.results.volume_context)
 
 
 @router.get("/{backtest_id}/equity-curve")

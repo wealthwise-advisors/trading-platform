@@ -151,7 +151,8 @@ def trades_to_records(results: BacktestResults, quality_by_index: dict | None = 
     return out
 
 
-def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = None) -> dict:
+def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = None,
+                           volume_context: pd.Series | None = None) -> dict:
     bars = [
         {
             "t": ts.isoformat(),
@@ -224,7 +225,13 @@ def price_data_to_response(df: pd.DataFrame, session_start: time_type | None = N
     volume_profile = calc_volume_profile(
         df["high"], df["low"], df["close"], df["volume"] if "volume" in df else None,
     )
-    return {"bars": bars, "indicators": indicators, "volume_profile": volume_profile}
+    context = volume_context if volume_context is not None else pd.Series(dtype=float)
+    return {
+        "bars": bars, "indicators": indicators, "volume_profile": volume_profile,
+        # Beside the bars, not in them: the chart must not draw these.
+        "volume_context": {"t": [ts.isoformat() for ts in context.index],
+                           "v": [_safe(float(v)) if pd.notna(v) else None for v in context]},
+    }
 
 
 def equity_curve_to_records(results: BacktestResults) -> list[dict]:

@@ -42,6 +42,9 @@ class BacktestResults:
     trades: list[Trade] = field(default_factory=list)
     equity_curve: pd.Series = field(default_factory=pd.Series)  # timestamp -> portfolio value
     price_data: pd.DataFrame = field(default_factory=pd.DataFrame)  # full OHLCV
+    # Volumes of bars NOT in price_data -- before the run's first bar, and
+    # outside its session hours. Only VolumeAvg reads it.
+    volume_context: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
 
     # Computed metrics (filled by compute_metrics)
     total_pnl: float = 0.0
