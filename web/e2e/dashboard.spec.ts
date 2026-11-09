@@ -445,3 +445,33 @@ test("the Indicators and Save menus close by their ×, by Escape and by clicking
   }
   await p.close()
 })
+
+test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in the hover", async ({ browser }) => {
+  // ITS OWN PAGE: it switches a study off, which changes the shared chart.
+  const own = await browser.newPage({ viewport: { width: 1600, height: 1300 } })
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+
+  const traces = () => own.evaluate(() => {
+    const plot = document.querySelector(".js-plotly-plot") as unknown as { data: { name?: string; yaxis?: string }[] }
+    return plot.data.filter((d) => ["Vol", "VolAvg"].includes(d.name ?? "")).map((d) => d.yaxis)
+  })
+  await expect.poll(traces).toEqual(["y6", "y6"])
+  await expect(own.getByText("VolumeAvg (20)").first()).toBeVisible()
+
+  const row = own.locator(".draglayer .x6y6 .nsewdrag").first()
+  await row.scrollIntoViewIfNeeded()
+  const box = (await row.boundingBox())!
+  await own.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
+  const hover = own.locator(".hoverlayer").first()
+  await expect(hover).toContainText("Vol:")
+  await expect(hover).toContainText("VolAvg:")
+  await expect(hover).toContainText("Buyers:")
+  await expect(hover).toContainText("Sellers:")
+  if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
+
+  await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().uncheck()
+  await expect.poll(traces).toEqual([])
+  await own.close()
+})

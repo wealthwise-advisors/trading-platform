@@ -43,10 +43,14 @@ import {
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import {
   OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
-  type OscKey, type OscToggles,
+  type OscKey, type OscRowKey, type OscToggles,
 } from "@/lib/oscillatorStudies"
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
+import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import {
+  DEFAULT_VOLUME_AVG_LENGTH, VOLUME_AVG_COLOR, buyerSellerSplit, volumeAverage, volumeAxisMax, volumeBarColors,
+} from "@/lib/volumeAverage"
 
 const GREEN = "#2dd4bf"
 const RED = "#f0576b"
@@ -366,6 +370,10 @@ export function CandlestickChart({
   // to be the one that hides.
   const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: true })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
+  // VolumeAvg (20), on by default as sir asked (2026-11-09). The bottom row.
+  const [volOn, setVolOn] = useState(true)
+  const [volLength, setVolLength] = useState(DEFAULT_VOLUME_AVG_LENGTH)
+  const [volPanel, setVolPanel] = useState(false)
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)
   const [vpTimePer, setVpTimePer] = useState<TimePerProfile>("CHART")
@@ -748,9 +756,12 @@ export function CandlestickChart({
   // oscillator switched on, in the order RSI(2) / StochRSI / RSI(13) / MFI. Axis
   // suffixes are assigned by position, so a row below one that is switched off
   // moves up a slot. See lib/oscillatorStudies.ts.
-  const indicatorRows = activeOscillatorRows(osc)
+  const oscillatorRows = activeOscillatorRows(osc)
+  // A dataset with no volume gets no row: there would be nothing to draw in it.
+  const volRow = volOn && bars.some((b) => (b.v ?? 0) > 0)
+  const indicatorRows: (OscRowKey | "vol")[] = volRow ? [...oscillatorRows, "vol"] : oscillatorRows
   const totalRows = 1 + indicatorRows.length
-  const axisSuffix = ["", "2", "3", "4", "5"].slice(0, totalRows)
+  const axisSuffix = ["", "2", "3", "4", "5", "6"].slice(0, totalRows)
   const rowIndexOf = (name: (typeof indicatorRows)[number]) => 1 + indicatorRows.indexOf(name)
   const suffixOf = (name: (typeof indicatorRows)[number]) => axisSuffix[rowIndexOf(name)]
 
@@ -1206,11 +1217,11 @@ export function CandlestickChart({
     const byTime = new Map(t.map((ts, i) => [ts, i]))
     const nearestIdx = (ts: string) => byTime.get(ts) ?? 0
     const borderColors = zz10.map((p) => (p.type === "H" ? RED : GREEN))
-    const panelValues: Record<(typeof indicatorRows)[number], (number | null)[]> = {
+    const panelValues: Record<OscRowKey, (number | null)[]> = {
       rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
       mfi: indicators.mfi ?? [],
     }
-    for (const name of indicatorRows) {
+    for (const name of oscillatorRows) {
       const suffix = suffixOf(name)
       const vals = panelValues[name]
       data.push({
@@ -1309,16 +1320,52 @@ export function CandlestickChart({
     } as unknown as Data)
   }
 
+  // VolumeAvg, per source bar like the oscillators above -- never the widened
+  // display candles, or the 20 would change meaning every time the chart zooms.
+  const volumes = bars.map((b) => b.v)
+  const volAvg = volumeAverage(volumes, volLength)
+  if (volRow) {
+    const volSuffix = suffixOf("vol")
+    const axes = { xaxis: `x${volSuffix}`, yaxis: `y${volSuffix}` }
+    const contracts = (n: number) => n.toLocaleString("en-US")
+    data.push(
+      { type: "bar", x: t, y: volumes, name: "Vol", showlegend: false,
+        marker: { color: volumeBarColors(bars.map((b) => b.c)) },
+        hovertemplate: "Vol: %{y:,.0f}<extra></extra>", ...axes } as unknown as Data,
+      { type: "scatter", mode: "lines", x: t, y: volAvg, name: "VolAvg", showlegend: false,
+        line: { color: VOLUME_AVG_COLOR, width: 1.2 },
+        hovertemplate: "VolAvg: %{y:,.2f}<extra></extra>", ...axes } as unknown as Data,
+      // Invisible: it exists to put Buyers and Sellers after VolAvg in the
+      // hover, and to keep them there before the average has 20 bars.
+      { type: "scatter", mode: "lines", x: t, y: volumes, name: "Split", showlegend: false,
+        line: { width: 0 },
+        customdata: bars.map((b) => {
+          const s = buyerSellerSplit(b)
+          return s ? [contracts(s.buyers), (s.buyerPct * 100).toFixed(2), contracts(s.sellers), (s.sellerPct * 100).toFixed(2)]
+                   : ["-", "-", "-", "-"]
+        }),
+        hovertemplate: "Buyers: %{customdata[0]} (%{customdata[1]}%)<br>Sellers: %{customdata[2]} (%{customdata[3]}%)<extra></extra>",
+        ...axes } as unknown as Data,
+    )
+  }
+
   // Overbought/oversold reference lines, for the rows being drawn. The values
   // live in lib/oscillatorStudies.ts, which the settings panels read too, so
   // what a panel says and what the chart draws cannot disagree.
-  for (const { row, value, kind } of levelLines(indicatorRows)) {
+  for (const { row, value, kind } of levelLines(oscillatorRows)) {
     shapes.push({
       type: "line", xref: "paper", yref: `y${suffixOf(row)}` as Shape["yref"],
       x0: 0, x1: 1, y0: value, y1: value,
       line: { color: kind === "overbought" ? RED : GREEN, dash: "dash", width: 0.8 },
     })
   }
+
+  const volAxisTop = (() => {
+    if (!bars.length) return 1
+    const lastMs = new Date(bars[bars.length - 1].t).getTime()
+    return volumeAxisMax(bars, volAvg, visibleRange ? visibleRange.start : lastMs - defaultWindow,
+                         visibleRange ? visibleRange.end : lastMs)
+  })()
 
   const hasSwingHeaders = showZigzag && zz10.length > 0
   // maxHeaderLevel (set above by placeHeaderLevel() while building swing
@@ -1480,7 +1527,7 @@ export function CandlestickChart({
   const rowTitles: Record<string, string> = {
     // Only the price row keeps a right-hand axis title; the oscillator rows'
     // vertical "RSI(2)" / "MFI" titles repeated the label on the left.
-    price: "Price", rsi2: "", stochrsi: "", rsi13: "", mfi: "",
+    price: "Price", rsi2: "", stochrsi: "", rsi13: "", mfi: "", vol: "",
   }
   /** Each oscillator row's label, and the colour of the line it names. */
   const rowLabel: Record<string, { text: string; color: string }> = {
@@ -1488,6 +1535,7 @@ export function CandlestickChart({
     stochrsi: { text: "StochRSI", color: "#4fc3f7" },
     rsi13: { text: "RSI (13)", color: "#ffcc80" },
     mfi: { text: "MFI", color: "#facc15" },
+    vol: { text: `VolumeAvg (${volLength})`, color: VOLUME_AVG_COLOR },
   }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
@@ -1603,6 +1651,7 @@ export function CandlestickChart({
       title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
+      ...(name === "vol" ? { tickformat: ",.0f", nticks: 3 } : {}),
       // Log applies to the PRICE row only: an oscillator is already bounded
       // 0-100 and a log scale on it would be meaningless.
       ...(isPrice && logScale ? { type: "log" as const } : {}),
@@ -1612,7 +1661,7 @@ export function CandlestickChart({
         ? (logScale && priceYRange
             ? [Math.log10(Math.max(1e-9, priceYRange[0])), Math.log10(Math.max(1e-9, priceYRange[1]))]
             : priceYRange)
-        : [0, 100],
+        : name === "vol" ? [0, volAxisTop] : [0, 100],
     }
 
     // THE ROW'S CURRENT READING, as the reference draws it: horizontal, at the
@@ -1926,6 +1975,7 @@ export function CandlestickChart({
                                 hint={OSC_STUDIES[key].available ? undefined : OSC_STUDIES[key].pending}
                                 onChange={(v) => setOsc((o) => ({ ...o, [key]: v }))} />
                   ))}
+                  <MenuToggle label={`VolumeAvg (${volLength})`} checked={volOn} onChange={setVolOn} />
                 </div>
               )}
             </span>
@@ -2084,12 +2134,23 @@ export function CandlestickChart({
                   title={info.available ? `${info.label} settings` : info.pending}
                   onClick={() => {
                     if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
+                    setVolPanel(false)
                     setOscPanel(key)
                   }}
                 />
               </div>
             )
           })}
+
+          <div className={STUDY_CHIP}>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={volOn} aria-label="Show VolumeAvg"
+                     onChange={(e) => setVolOn(e.target.checked)} />
+              <span>VolumeAvg</span>
+            </label>
+            <StudyGear label="VolumeAvg settings" title="VolumeAvg settings"
+                       onClick={() => { setVolOn(true); setOscPanel(null); setVolPanel(true) }} />
+          </div>
 
         </>}
       />
@@ -2423,6 +2484,10 @@ export function CandlestickChart({
         {oscPanel && (
           <OscillatorStudyPanel study={oscPanel} onClose={() => setOscPanel(null)}
                                 className="absolute right-0 top-7 z-20" />
+        )}
+        {volPanel && (
+          <VolumeAvgPanel length={volLength} onLength={setVolLength} onClose={() => setVolPanel(false)}
+                          className="absolute right-0 top-7 z-20" />
         )}
       </div>
 
