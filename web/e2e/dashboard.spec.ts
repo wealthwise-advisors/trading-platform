@@ -159,29 +159,26 @@ test("the on-chart legend is off by default and the menu toggles it", async () =
   await page.keyboard.press("Escape")
 })
 
-test("VWAP offers +/-1 to +/-5, and a preset writes both multipliers", async () => {
+test("VWAP starts with +/-1 and +/-2 drawn, and other levels are optional", async () => {
+  const bands = () => page.evaluate(() => {
+    const plot = document.querySelector(".js-plotly-plot") as unknown as { data: { name?: string }[] }
+    return plot.data.filter((d) => d.name === "UpperBand" || d.name === "LowerBand").length
+  })
+  const level = (d: number) => page.locator(`button[aria-label='deviation bands plus and minus ${d} sigma']`)
+
   await page.locator("button[aria-label='VWAP settings']").first().click()
+  for (const d of [0.5, 1, 1.5, 2, 2.5, 3, 4, 5]) await expect(level(d), `level +/-${d} is missing`).toHaveCount(1)
+  await expect(level(1)).toHaveAttribute("aria-pressed", "true")
+  await expect(level(2)).toHaveAttribute("aria-pressed", "true")
+  await expect(level(0.5)).toHaveAttribute("aria-pressed", "false")
+  await expect.poll(bands).toBe(4)
 
-  for (const d of [1, 2, 3, 4, 5]) {
-    await expect(
-      page.locator(`button[aria-label='deviation bands plus and minus ${d} sigma']`),
-      `VWAP preset +/-${d} is missing`,
-    ).toHaveCount(1)
-  }
-
-  await page.locator("button[aria-label='deviation bands plus and minus 3 sigma']").click()
-  const fields = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("label"))
-      .filter((l) => /num dev/.test(l.textContent ?? ""))
-      .map((l) => [l.textContent!.trim(), l.querySelector("input")!.value]),
-  )
-  expect(fields, "the preset did not write the underlying pair").toEqual([
-    ["num dev dn", "-3"],
-    ["num dev up", "3"],
-  ])
+  await level(0.5).click()
+  await expect.poll(bands).toBe(6)
 
   // Put it back, so later tests see the shipped default.
-  await page.locator("button[aria-label='deviation bands plus and minus 2 sigma']").click()
+  await level(0.5).click()
+  await expect.poll(bands).toBe(4)
   await page.locator("button[aria-label='VWAP settings']").first().click()
 })
 
@@ -515,9 +512,10 @@ test("hovering any one row shows every row's values and one line through them al
   await own.mouse.move(again.x + again.width * 0.6, again.y + again.height * 0.5)
   const priceBox = own.getByTestId("chart-readout-y")
   await expect.poll(async () => ((await priceBox.innerText()).match(/POC/g) ?? []).length).toBe(1)
-  for (const study of ["VWAP (-0.5, 0.5, DAY)", "VolumeProfile", "VWAP (-1.0, 1.0, DAY)", "VWAP (-1.5, 1.5, DAY)"]) {
+  for (const study of ["VolumeProfile", "VWAP (-1.0, 1.0, DAY)", "VWAP (-2.0, 2.0, DAY)"]) {
     await expect(priceBox).toContainText(study)
   }
+  await expect(priceBox).not.toContainText("VWAP (-0.5, 0.5, DAY)")
 
   const line = (await own.getByTestId("chart-crosshair-line").boundingBox())!
   const rows = await Promise.all([".xy", ".x6y6"].map((r) => own.locator(`.draglayer ${r} .nsewdrag`).first().boundingBox()))

@@ -19,8 +19,8 @@ interface PlotAxis {
 }
 type PlotLayout = Record<string, PlotAxis | undefined>
 
-const BOX_WIDTH = 214
-const LINE_HEIGHT = 15
+const BOX_WIDTH = 190
+const LINE_HEIGHT = 13
 const BOX_CHROME = 8
 const TIME_LABELS = 22
 
@@ -28,8 +28,7 @@ interface Reading {
   x: number
   top: number
   height: number
-  flip: boolean
-  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[] }[]
+  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean }[]
 }
 
 function layoutKey(axis: string) {
@@ -79,7 +78,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
       const i = nearestBarIndex(times.current.ms, xa.p2c(px - xa._offset))
       const bar = bars[i]
       const x = xa.c2p(times.current.ms[i]) + xa._offset
-      const flip = x - xa._offset < BOX_WIDTH * 2 + 12
+      const flip = x - xa._offset < BOX_WIDTH + 12
 
       const boxes = rows.map((row, r) => {
         const lines = readoutLines(row, bar, i, volumeAxis)
@@ -88,16 +87,18 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
           lines.splice(1, 0, { label: "Y", value: first.p2d(py - first._offset).toFixed(2) })
         }
         const axis = axes[r]!
-        // The price box is long enough to need two columns, or it would run
-        // down over the indicator rows' boxes.
-        const columns = row.axis === "y" ? 2 : 1
-        const h = (Math.ceil(lines.length / columns) + 1) * LINE_HEIGHT + BOX_CHROME
+        const h = (lines.length + 1) * LINE_HEIGHT + BOX_CHROME
         // Kept inside the chart: a row can be shorter than its box. The bottom
         // row may cover the time labels, so that it does not cover the row above.
         const boxTop = Math.max(top, Math.min(axis._offset + 1, bottom + TIME_LABELS - h))
-        return { axis: row.axis, title: row.title, top: boxTop, lines }
+        // A price box taller than its row goes on the other side of the line,
+        // so that it does not cover the indicator rows' boxes.
+        const fits = h <= axis._length
+        const roomOnOtherSide = flip ? x - xa._offset > BOX_WIDTH + 12 : xa._offset + xa._length - x > BOX_WIDTH + 12
+        const onRight = r === 0 && !fits && roomOnOtherSide ? !flip : flip
+        return { axis: row.axis, title: row.title, top: boxTop, lines, onRight }
       })
-      setReading({ x, top, height: bottom - top, flip, boxes })
+      setReading({ x, top, height: bottom - top, boxes })
     }
 
     host.addEventListener("mousemove", move)
@@ -117,20 +118,18 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
         <div key={box.axis} data-testid={`chart-readout-${box.axis}`}
              className="absolute rounded-sm font-mono"
              style={{
-               top: box.top, width: box.axis === "y" ? BOX_WIDTH * 2 : BOX_WIDTH,
-               left: reading.flip ? reading.x + 8 : reading.x - (box.axis === "y" ? BOX_WIDTH * 2 : BOX_WIDTH) - 8,
-               padding: BOX_CHROME / 2, fontSize: 12, lineHeight: `${LINE_HEIGHT}px`,
+               top: box.top, width: BOX_WIDTH,
+               left: box.onRight ? reading.x + 8 : reading.x - BOX_WIDTH - 8,
+               padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
           <div className="font-semibold whitespace-nowrap overflow-hidden">{box.title}</div>
-          <div style={{ columnCount: box.axis === "y" ? 2 : 1, columnGap: 12 }}>
-            {box.lines.map((l, n) => (
-              <div key={n} className="flex justify-between gap-2 whitespace-nowrap" style={{ color: l.color, breakInside: "avoid" }}>
-                <span className="overflow-hidden">{l.label}</span>
-                <span>{l.value}</span>
-              </div>
-            ))}
-          </div>
+          {box.lines.map((l, n) => (
+            <div key={n} className="flex justify-between gap-2 whitespace-nowrap" style={{ color: l.color }}>
+              <span className="overflow-hidden">{l.label}</span>
+              <span>{l.value}</span>
+            </div>
+          ))}
         </div>
       ))}
     </div>

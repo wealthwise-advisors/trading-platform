@@ -12,6 +12,7 @@
 
 import type { OHLCVRecord } from "./types"
 import { buyerSellerSplit } from "./volumeAverage"
+import { vwapLevelColors } from "./vwapLevels"
 
 export interface ReadoutLine {
   label: string
@@ -34,17 +35,11 @@ export interface ReadoutRow {
   /** Lines that do not change bar to bar: overbought, POC... */
   fixed: ReadoutLine[]
   /** Price row only: session VWAP and its shipped +2 sigma band. */
-  vwap?: { mid: ReadonlyArray<number | null>; upper2: ReadonlyArray<number | null> }
+  vwap?: { mid: ReadonlyArray<number | null>; upper2: ReadonlyArray<number | null>; levels: readonly number[] }
   /** Price row only: POC, VAHigh and VALow, for thinkorswim's VolumeProfile block. */
   profile?: ReadoutLine[]
 }
 
-/** The three VWAP studies on sir's chart, in his box's order and colours. */
-const VWAP_BLOCKS = [
-  { dev: 0.5, head: "#8a8af0", upper: "#d8c9a0", lower: "#e0a800" },
-  { dev: 1, head: "#e040fb", upper: "#22d3ee", lower: "#22d3ee" },
-  { dev: 1.5, head: "#e040fb", upper: "#d8c9a0", lower: "#d8c9a0" },
-]
 const PROFILE_HEAD = "#ff5252"
 
 /** One VWAP study: a heading, then VWAP and its bands at +/- dev sigma. */
@@ -139,18 +134,17 @@ export function volumeSplitLines(bar: OHLCVRecord): ReadoutLine[] {
 /** One row's box at bar `i`. The price and volume rows add their bar lines. */
 export function readoutLines(row: ReadoutRow, bar: OHLCVRecord, i: number, volumeAxis?: string): ReadoutLine[] {
   const series = row.series.map((s) => ({ label: s.label, color: s.color, value: formatReadoutNumber(s.values[i], s.digits) }))
-  const block = (n: number) => row.vwap
-    ? vwapBlock(VWAP_BLOCKS[n].dev, row.vwap.mid[i], row.vwap.upper2[i], VWAP_BLOCKS[n])
-    : []
+  const blocks = (row.vwap?.levels ?? []).map((dev) =>
+    vwapBlock(dev, row.vwap!.mid[i], row.vwap!.upper2[i], vwapLevelColors(dev)))
   const profile = row.profile
     ? [{ label: "VolumeProfile", value: "", color: PROFILE_HEAD }, ...row.profile]
     : []
   return [
     ...(row.axis === "y" ? priceLines(bar) : []),
-    ...block(0),
+    // The profile sits after the first VWAP study, where thinkorswim lists it.
+    ...(blocks[0] ?? []),
     ...profile,
-    ...block(1),
-    ...block(2),
+    ...blocks.slice(1).flat(),
     ...series,
     ...(row.axis === volumeAxis ? volumeSplitLines(bar) : []),
     ...row.fixed,

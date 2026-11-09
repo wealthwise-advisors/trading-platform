@@ -48,6 +48,7 @@ import {
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
@@ -344,8 +345,8 @@ export function CandlestickChart({
    *  matches rather than leaving a button claiming a range that is not shown. */
   const [activeRange, setActiveRange] = useState<string | null>(null)
   const [logScale, setLogScale] = useState(false)
-  const [devUp, setDevUp] = useState(2)
-  const [devDn, setDevDn] = useState(-2)
+  const [vwapLevels, setVwapLevels] = useState<number[]>(loadVwapLevels)
+  useEffect(() => { saveVwapLevels(vwapLevels) }, [vwapLevels])
   // "DAY" is the only timeframe the engine implements -- VWAP resets on the
   // calendar date. It is surfaced as a labelled control anyway so the reset
   // behaviour is visible rather than an unstated assumption.
@@ -881,8 +882,7 @@ export function CandlestickChart({
   // The last reading of each band, captured from the arrays the traces are
   // actually built from. The Legend menu prints these; recomputing them there
   // would be a second copy of the sigma maths, free to drift from this one.
-  let bandUpperNow: number | null = null
-  let bandLowerNow: number | null = null
+  const bandsNow: { level: number; upper: number | null; lower: number | null; colors: { upper: string; lower: string } }[] = []
   if (vwapOn && vwapHasData) {
     // Rebuild each band at the user's multiplier. devDn is stored negative,
     // matching the reference dialog's "num dev dn = -2.0" convention, so it is
@@ -896,22 +896,27 @@ export function CandlestickChart({
         return v + mult * ((u - v) / 2)
       })
 
-    const upper = atDev(devUp)
-    const lower = atDev(devDn)
-    bandUpperNow = lastReading(upper)
-    bandLowerNow = lastReading(lower)
     const hover = (label: string) => `<b>${label}</b>: %{y:.2f}<extra></extra>`
+    // One pair per selected level. +/-2 keeps the colours the settings panel edits.
+    for (const level of vwapLevels) {
+      const upper = atDev(level)
+      const lower = atDev(-level)
+      const colors = level === 2
+        ? { upper: vwapStyle.upper.color, lower: vwapStyle.lower.color }
+        : vwapLevelColors(level)
+      bandsNow.push({ level, upper: lastReading(upper), lower: lastReading(lower), colors })
+      data.push(
+        { type: "scatter", mode: "lines", x: t, y: upper, name: "UpperBand",
+          line: { color: colors.upper, width: vwapStyle.upper.width, dash: vwapStyle.upper.dash },
+          hovertemplate: hover("UpperBand"),
+          legendgroup: "vwap", xaxis: "x", yaxis: "y" } as unknown as Data,
+        { type: "scatter", mode: "lines", x: t, y: lower, name: "LowerBand",
+          line: { color: colors.lower, width: vwapStyle.lower.width, dash: vwapStyle.lower.dash },
+          hovertemplate: hover("LowerBand"),
+          legendgroup: "vwap", xaxis: "x", yaxis: "y" } as unknown as Data,
+      )
+    }
     data.push(
-      { type: "scatter", mode: "lines", x: t, y: upper, name: "UpperBand",
-        line: { color: vwapStyle.upper.color, width: vwapStyle.upper.width,
-                dash: vwapStyle.upper.dash },
-        hovertemplate: hover("UpperBand"),
-        legendgroup: "vwap", xaxis: "x", yaxis: "y" } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: lower, name: "LowerBand",
-        line: { color: vwapStyle.lower.color, width: vwapStyle.lower.width,
-                dash: vwapStyle.lower.dash },
-        hovertemplate: hover("LowerBand"),
-        legendgroup: "vwap", xaxis: "x", yaxis: "y" } as unknown as Data,
       { type: "scatter", mode: "lines", x: t, y: indicators.vwap, name: "VWAP",
         line: { color: vwapStyle.vwap.color, width: vwapStyle.vwap.width,
                 dash: vwapStyle.vwap.dash },
@@ -1499,8 +1504,7 @@ export function CandlestickChart({
             shippedU[i] != null ? (shippedU[i] - v) / 2 : 0)
           const all = [
             ...baseV,
-            ...baseV.map((v, i) => v + devUp * sigma[i]),
-            ...baseV.map((v, i) => v + devDn * sigma[i]),
+            ...vwapLevels.flatMap((l) => baseV.flatMap((v, i) => [v + l * sigma[i], v - l * sigma[i]])),
           ]
           if (all.length) {
             lo = Math.min(lo, ...all)
@@ -1925,10 +1929,12 @@ export function CandlestickChart({
       { label: "VWAP", color: vwapStyle.vwap.color, kind: "line",
         note: `session anchored, resets ${vwapTimeframe.toLowerCase()}`,
         value: fmtPrice(lastReading(indicators.vwap)) },
-      { label: `VWAP Upper +${devUp.toFixed(1)}σ`, color: vwapStyle.upper.color,
-        kind: "band", value: fmtPrice(bandUpperNow) },
-      { label: `VWAP Lower ${devDn.toFixed(1)}σ`, color: vwapStyle.lower.color,
-        kind: "band", value: fmtPrice(bandLowerNow) },
+      ...bandsNow.flatMap((b) => [
+        { label: `VWAP Upper +${b.level.toFixed(1)}σ`, color: b.colors.upper,
+          kind: "band" as const, value: fmtPrice(b.upper) },
+        { label: `VWAP Lower -${b.level.toFixed(1)}σ`, color: b.colors.lower,
+          kind: "band" as const, value: fmtPrice(b.lower) },
+      ]),
     )
   }
   if (bbOn) {
@@ -2070,7 +2076,9 @@ export function CandlestickChart({
       // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
       series: (drawnSeries.get("y") ?? []).filter((s) => !BOX_BLOCK_LABELS.has(s.label)),
       fixed: [],
-      vwap: vwapOn && vwapHasData ? { mid: indicators.vwap ?? [], upper2: indicators.vwap_upper ?? [] } : undefined,
+      vwap: vwapOn && vwapHasData
+        ? { mid: indicators.vwap ?? [], upper2: indicators.vwap_upper ?? [], levels: vwapLevels }
+        : undefined,
       profile: (["poc", "vah", "val"] as const).map((key) => ({
         label: PLOT_LABEL[key], color: vpPlots[key].color,
         value: vpVisible ? formatReadoutNumber(vpValues[key]) : "N/A",
@@ -2142,7 +2150,7 @@ export function CandlestickChart({
             </label>
             <StudyGear
               label="VWAP settings"
-              title={vwapOn ? `VWAP settings — deviation ${devDn.toFixed(1)} / +${devUp.toFixed(1)}`
+              title={vwapOn ? `VWAP settings — deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`
                             : "Turn VWAP on and open its settings"}
               onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
             />
@@ -2424,53 +2432,28 @@ export function CandlestickChart({
                       onClick={() => setVwapPanelOpen(false)} aria-label="Close">✕</button>
             </div>
 
-            {/* PRESET BANDS. The maths already took any multiplier -- sigma is
-                recovered from the shipped 2-sigma payload as (upper - vwap)/2
-                and the bands are rebuilt from it, so 1 through 5 were all
-                reachable before this control existed. What was missing was any
-                way to KNOW that: two bare number fields labelled "num dev dn"
-                and "num dev up" do not tell you the range they accept, and
-                nothing on the chart said the bands were at 2.
-
-                These are symmetric, which is what a sigma band is -- one
-                distance, both sides. The two fields below still take an
-                asymmetric pair for anyone who wants one, and the preset simply
-                writes both at once. */}
+            {/* Any number of bands at once, the same levels Market Grid offers.
+                +/-1 and +/-2 start selected; see lib/vwapLevels.ts. Sigma is
+                recovered from the shipped 2-sigma payload, so every level is
+                the same calculation. */}
             <div className="space-y-1">
               <span className="text-muted-foreground">deviation bands (&plusmn;&sigma;)</span>
               <div className="flex flex-wrap gap-1.5">
-                {[1, 2, 3, 4, 5].map((d) => {
-                  const on = devUp === d && devDn === -d
+                {ALL_VWAP_LEVELS.map((d) => {
+                  const on = vwapLevels.includes(d)
                   return (
                     <button key={d} type="button"
                             aria-pressed={on}
                             aria-label={`deviation bands plus and minus ${d} sigma`}
-                            onClick={() => { setDevUp(d); setDevDn(-d) }}
+                            onClick={() => setVwapLevels((l) => toggleVwapLevel(l, d))}
                             className={`rounded border px-2 py-0.5 ${on
                               ? "border-[color:var(--primary)] bg-[color:var(--primary)]/15 text-foreground"
                               : "border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] hover:bg-[color:var(--raise-4)]"}`}>
-                      {on ? "✓ " : ""}&plusmn;{d}
+                      {on ? "✓ " : ""}&plusmn;{d.toFixed(1)}
                     </button>
                   )
                 })}
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <label className="space-y-1">
-                <span className="text-muted-foreground">num dev dn</span>
-                <input type="number" step="0.5" value={devDn}
-                       onChange={(e) => setDevDn(Number(e.target.value))}
-                       className="w-full rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
-                                  text-foreground" />
-              </label>
-              <label className="space-y-1">
-                <span className="text-muted-foreground">num dev up</span>
-                <input type="number" step="0.5" value={devUp}
-                       onChange={(e) => setDevUp(Number(e.target.value))}
-                       className="w-full rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
-                                  text-foreground" />
-              </label>
             </div>
 
             <label className="flex items-center gap-2">

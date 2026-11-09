@@ -120,21 +120,26 @@ describe("the VWAP studies -- sir's 11:34 box", () => {
     },
   )
 
+  it("+/-2 is the shipped band itself", () => {
+    const lines = vwapBlock(2, mid, upper2, C)
+    expect(value(lines, "UpperBand")).toBe("7,606.54")
+    expect(value(lines, "LowerBand")).toBe("7,396.06")
+  })
+
   it("no VWAP reads N/A", () => {
     expect(value(vwapBlock(1, null, null, C), "UpperBand")).toBe("N/A")
   })
 
   it("the box runs in thinkorswim's order", () => {
     const row: ReadoutRow = {
-      axis: "y", title: "ES", series: [], fixed: [], vwap: { mid: [mid], upper2: [upper2] },
+      axis: "y", title: "ES", series: [], fixed: [], vwap: { mid: [mid], upper2: [upper2], levels: [1, 2] },
       profile: [{ label: "POC", value: "N/A" }, { label: "VAHigh", value: "N/A" }, { label: "VALow", value: "N/A" }],
     }
     expect(readoutLines(row, bar, 0).map((l) => l.label)).toEqual([
       "Date", "Open", "High", "Low", "Close", "Range",
-      "VWAP (-0.5, 0.5, DAY)", "VWAP", "UpperBand", "LowerBand",
-      "VolumeProfile", "POC", "VAHigh", "VALow",
       "VWAP (-1.0, 1.0, DAY)", "VWAP", "UpperBand", "LowerBand",
-      "VWAP (-1.5, 1.5, DAY)", "VWAP", "UpperBand", "LowerBand",
+      "VolumeProfile", "POC", "VAHigh", "VALow",
+      "VWAP (-2.0, 2.0, DAY)", "VWAP", "UpperBand", "LowerBand",
     ])
   })
 })
