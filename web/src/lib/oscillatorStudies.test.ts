@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
+  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, fittedRange, levelLines, oscillatorRowHeights, zoneOverlays,
 } from "./oscillatorStudies"
 
 const ALL_ON = { rsi2: true, stochrsi: true, rsi13: true, mfi: true }
@@ -64,4 +64,27 @@ describe("levelLines", () => {
     ])
     expect(levelLines([])).toEqual([])
   })
+})
+
+describe("zoneOverlays", () => {
+  it("keeps the points in a zone and the one leading into it", () => {
+    const { above, below } = zoneOverlays([50, 95, 96, 50, 1, 50], 94, 2)
+    expect(above).toEqual([50, 95, 96, null, null, null])
+    expect(below).toEqual([null, null, null, 50, 1, null])
+  })
+
+  it("gaps stay gaps", () => {
+    expect(zoneOverlays([null, 99], 94, 2).above).toEqual([null, 99])
+  })
+})
+
+describe("fittedRange", () => {
+  const t = [0, 1, 2]
+
+  it("fits the bars on screen with padding, inside 0-100", () => {
+    expect(fittedRange([10, 50, 60], t, 1, 2)).toEqual([48, 62])
+  })
+
+  it("never leaves 0-100", () => expect(fittedRange([1, 99], [0, 1], 0, 1)).toEqual([0, 100]))
+  it("nothing on screen is the full scale", () => expect(fittedRange([null], [0], 0, 1)).toEqual([0, 100]))
 })

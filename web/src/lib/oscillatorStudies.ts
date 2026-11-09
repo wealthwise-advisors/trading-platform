@@ -76,6 +76,41 @@ export function oscillatorRowHeights(rows: number, priceWeight = 0.68): number[]
   return [priceWeight, ...Array.from({ length: rows }, () => (1 - priceWeight) / rows)]
 }
 
+/**
+ * The parts of an oscillator line beyond its levels, for drawing over it in red
+ * and green the way thinkorswim paints them. Each point starts the segment that
+ * leads into the zone as well, so the coloured piece joins the line.
+ */
+export function zoneOverlays(
+  values: ReadonlyArray<number | null>,
+  overbought: number,
+  oversold: number,
+): { above: (number | null)[]; below: (number | null)[] } {
+  const pick = (inZone: (v: number) => boolean) => values.map((v, i) => {
+    const next = values[i + 1]
+    return v != null && (inZone(v) || (next != null && inZone(next))) ? v : null
+  })
+  return { above: pick((v) => v >= overbought), below: pick((v) => v <= oversold) }
+}
+
+/** A y-range fitted to the bars on screen, as thinkorswim's RSI(13) panel has. */
+export function fittedRange(
+  values: ReadonlyArray<number | null>,
+  timesMs: ReadonlyArray<number>,
+  startMs: number,
+  endMs: number,
+): [number, number] {
+  let lo = Infinity, hi = -Infinity
+  values.forEach((v, i) => {
+    if (v == null || timesMs[i] < startMs || timesMs[i] > endMs) return
+    lo = Math.min(lo, v)
+    hi = Math.max(hi, v)
+  })
+  if (lo === Infinity) return [0, 100]
+  const pad = Math.max(2, (hi - lo) * 0.08)
+  return [Math.max(0, lo - pad), Math.min(100, hi + pad)]
+}
+
 /** Overbought / oversold reference lines for the rows being drawn. */
 export function levelLines(rows: OscRowKey[]): { row: OscRowKey; value: number; kind: "overbought" | "oversold" }[] {
   return rows.flatMap((row) => {

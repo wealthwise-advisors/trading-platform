@@ -19,8 +19,8 @@ interface PlotAxis {
 }
 type PlotLayout = Record<string, PlotAxis | undefined>
 
-const BOX_WIDTH = 176
-const LINE_HEIGHT = 13
+const BOX_WIDTH = 214
+const LINE_HEIGHT = 15
 const BOX_CHROME = 8
 const TIME_LABELS = 22
 
@@ -116,8 +116,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
              style={{
                top: box.top, width: BOX_WIDTH,
                left: reading.flip ? reading.x + 8 : reading.x - BOX_WIDTH - 8,
-               padding: BOX_CHROME / 2, fontSize: 10, lineHeight: `${LINE_HEIGHT}px`,
-               background: "rgba(16,16,24,0.92)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
+               padding: BOX_CHROME / 2, fontSize: 12, lineHeight: `${LINE_HEIGHT}px`,
+               background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
           <div className="font-semibold whitespace-nowrap overflow-hidden">{box.title}</div>
           {box.lines.map((l) => (

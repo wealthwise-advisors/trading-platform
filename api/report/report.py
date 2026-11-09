@@ -122,7 +122,7 @@ def _layout(title: str = "", height: int = 500, dragmode: str = "pan",
 
 
 # web/src/lib/volumeAverage.ts's colours.
-VOLUME_UP, VOLUME_DOWN, VOLUME_FLAT, VOLUME_AVG_COLOR = "#26a69a", "#ef5350", "#22d3ee", "#e040fb"
+VOLUME_UP, VOLUME_DOWN, VOLUME_FLAT, VOLUME_AVG_COLOR = "#00c853", "#ff6b6b", "#22d3ee", "#e040fb"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Chart builders

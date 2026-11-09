@@ -2,9 +2,12 @@
 
 import importlib.util
 from datetime import datetime, time as time_type, timedelta
+from zoneinfo import ZoneInfo
 
+import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
+from loguru import logger
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
@@ -247,6 +250,46 @@ def get_backtest(backtest_id: str, user=PROTECTED):
     stored = _get_or_404(backtest_id, user)
     return serializers.results_to_summary(backtest_id, stored.results, stored.data_source,
                                           stored.session_start, stored.session_end)
+
+
+@router.post("/{backtest_id}/live-refresh")
+def live_refresh(backtest_id: str, user=PROTECTED):
+    """Pull the bars printed since the last poll into a run that is still live.
+
+    Only the chart moves: the strategy's trades are the result of the backtest
+    that was run and are not re-decided on every new bar. Lives in memory; a
+    fresh run is what writes to the database.
+    """
+    stored = _get_or_404(backtest_id, user)
+    r = stored.results
+
+    def respond(live: bool) -> dict:
+        return {**serializers.price_data_to_response(r.price_data, stored.session_start, r.volume_context),
+                "live": live}
+
+    from api.routers.replay import _apply_session  # replay imports this module
+
+    now = datetime.now(ZoneInfo("America/New_York")).replace(tzinfo=None)
+    if stored.data_source != "schwab" or r.price_data.empty or now > r.end_date:
+        return respond(False)
+
+    last = r.price_data.index.max().to_pydatetime()
+    try:
+        provider = _build_provider(stored.data_source, r.symbol, r.timeframe, last.date(), now.date(),
+                                   get_contract_spec(r.symbol), session_start=stored.session_start)
+        fresh = _apply_session(provider.load(r.symbol, last, now, r.timeframe),
+                               stored.session_start, stored.session_end)
+    except Exception as exc:
+        # An expired token or a dropped connection: keep showing what we have.
+        logger.warning(f"live refresh failed for {backtest_id}: {exc}")
+        return respond(True)
+    if fresh is not None and not fresh.empty:
+        fresh = fresh[fresh.index >= last]
+    if fresh is not None and not fresh.empty:
+        # >= so the newest bar, still forming at the last poll, is replaced.
+        kept = r.price_data[r.price_data.index < fresh.index.min()]
+        r.price_data = pd.concat([kept, fresh[r.price_data.columns]])
+    return respond(True)
 
 
 @router.get("/{backtest_id}/trades")

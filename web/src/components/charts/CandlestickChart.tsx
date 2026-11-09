@@ -42,14 +42,14 @@ import {
 } from "@/lib/chartExportSettings"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import {
-  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, levelLines, oscillatorRowHeights,
+  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, fittedRange, levelLines, oscillatorRowHeights, zoneOverlays,
   type OscKey, type OscRowKey, type OscToggles,
 } from "@/lib/oscillatorStudies"
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
-import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
+import { seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
   VOLUME_AVG_COLOR, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
   volumeAxisMax, volumeBarColors, type VolumeContext,
@@ -185,6 +185,16 @@ function StudyGear({ label, title, onClick }: {
     ><Settings className="h-3.5 w-3.5" aria-hidden /></button>
   )
 }
+
+/** Indicator colours, read off sir's thinkorswim (2026-11-10). */
+const OSC_LINE = "#ffffff"
+const ZONE_ABOVE = "#ff5252"
+const ZONE_BELOW = "#00c853"
+const STOCH_K = "#ff6b6b"
+const STOCH_D = "#e040fb"
+const MFI_LINE = "#e0a800"
+const LEVEL_LINE = "#d8c9a0"
+const LEVEL_STOCH = "#22d3ee"
 
 /** EMA 20 / 50 line colours -- the trace and the Legend read these, never a copy. */
 const EMA20_COLOR = "#a3e635"
@@ -797,7 +807,9 @@ export function CandlestickChart({
   // Total height is deliberately NOT increased -- see the minHeight note on
   // the wrapper div; forcing this taller than the parent Card clips the
   // bottom rows off entirely rather than shrinking them.
-  const PRICE_WEIGHT = 0.68
+  // 0.52 on 2026-11-10, against sir's thinkorswim layout: the 0.68 left each
+  // indicator too short to read, which is the "too small" reported then.
+  const PRICE_WEIGHT = 0.52
   const ROW_SPACING = 0.028
   // With every oscillator off, price takes the whole chart instead of dividing
   // the indicator share by zero rows.
@@ -1283,6 +1295,18 @@ export function CandlestickChart({
     } as unknown as Data)
   }
 
+  // Over the white RSI lines: red past overbought, green past oversold. Their
+  // own x array, so the hover boxes do not read them as more studies.
+  const pushZones = (values: (number | null)[], row: "rsi2" | "rsi13", suffix: string) => {
+    const lv = OSC_STUDIES[row].levels
+    if (!lv) return
+    const { above, below } = zoneOverlays(values, lv.overbought, lv.oversold)
+    for (const [y, color] of [[above, ZONE_ABOVE], [below, ZONE_BELOW]] as const) {
+      data.push({ type: "scatter", mode: "lines", x: [...t], y, showlegend: false, hoverinfo: "skip",
+                  line: { color, width: 2 }, xaxis: `x${suffix}`, yaxis: `y${suffix}` } as unknown as Data)
+    }
+  }
+
   // ── RSI(2) / StochRSI / RSI(13) / MFI -- a trace only for a row that exists ──
   // suffixOf() on a row that is not drawn resolves to the PRICE axis, which
   // would lay an oscillator line across the candles. So every trace is guarded
@@ -1291,19 +1315,20 @@ export function CandlestickChart({
     const rsi2Suffix = suffixOf("rsi2")
     data.push({
       type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)", showlegend: false,
-      line: { color: "#ce93d8", width: 1.1 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
+      line: { color: OSC_LINE, width: 1.8 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
       xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
     } as unknown as Data)
+    pushZones(indicators.rsi2, "rsi2", rsi2Suffix)
   }
   if (indicatorRows.includes("stochrsi")) {
     // StochRSI's two plots, named as the reference platform names them.
     const stochRsiSuffix = suffixOf("stochrsi")
     data.push(
       { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_k, name: "FullK", showlegend: false,
-        line: { color: "#4fc3f7", width: 1.1 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
+        line: { color: STOCH_K, width: 1.5 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
       { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_d, name: "FullD", showlegend: false,
-        line: { color: "#f48fb1", width: 1.0, dash: "dot" }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
+        line: { color: STOCH_D, width: 1.5 }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
     )
   }
@@ -1311,9 +1336,10 @@ export function CandlestickChart({
     const rsi13Suffix = suffixOf("rsi13")
     data.push({
       type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)", showlegend: false,
-      line: { color: "#ffcc80", width: 1.1 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
+      line: { color: OSC_LINE, width: 1.8 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
       xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
     } as unknown as Data)
+    pushZones(indicators.rsi13, "rsi13", rsi13Suffix)
   }
   // Money Flow Index needs volume. Without it the series is all empty and, like
   // VWAP, no line is drawn -- the row keeps its 80/20 lines and nothing else.
@@ -1322,7 +1348,7 @@ export function CandlestickChart({
     const mfiSuffix = suffixOf("mfi")
     data.push({
       type: "scatter", mode: "lines", x: t, y: indicators.mfi, name: "MoneyFlowIndex",
-      line: { color: "#facc15", width: 1.1 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
+      line: { color: MFI_LINE, width: 1.6 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
       xaxis: `x${mfiSuffix}`, yaxis: `y${mfiSuffix}`,
     } as unknown as Data)
   }
@@ -1336,7 +1362,9 @@ export function CandlestickChart({
     const axes = { xaxis: `x${volSuffix}`, yaxis: `y${volSuffix}` }
     data.push(
       { type: "bar", x: t, y: volumes, name: "Vol", showlegend: false,
-        marker: { color: volumeBarColors(bars.map((b) => b.c)) },
+        marker: { color: volumeBarColors(bars.map((b) => b.c)), line: { width: 0 } },
+        // Thin with a gap between, as thinkorswim's are; the width follows the timeframe.
+        width: barStepMs(t) * 0.55 || undefined,
         ...axes } as unknown as Data,
       { type: "scatter", mode: "lines", x: t, y: volAvg, name: "VolAvg", showlegend: false,
         line: { color: VOLUME_AVG_COLOR, width: 1.2 },
@@ -1347,20 +1375,18 @@ export function CandlestickChart({
   // Overbought/oversold reference lines, for the rows being drawn. The values
   // live in lib/oscillatorStudies.ts, which the settings panels read too, so
   // what a panel says and what the chart draws cannot disagree.
-  for (const { row, value, kind } of levelLines(oscillatorRows)) {
+  for (const { row, value } of levelLines(oscillatorRows)) {
     shapes.push({
       type: "line", xref: "paper", yref: `y${suffixOf(row)}` as Shape["yref"],
       x0: 0, x1: 1, y0: value, y1: value,
-      line: { color: kind === "overbought" ? RED : GREEN, dash: "dash", width: 0.8 },
+      line: { color: row === "stochrsi" ? LEVEL_STOCH : LEVEL_LINE, width: 1 },
     })
   }
 
-  const volAxisTop = (() => {
-    if (!bars.length) return 1
-    const lastMs = new Date(bars[bars.length - 1].t).getTime()
-    return volumeAxisMax(bars, volAvg, visibleRange ? visibleRange.start : lastMs - defaultWindow,
-                         visibleRange ? visibleRange.end : lastMs)
-  })()
+  const axisEndMs = visibleRange ? visibleRange.end : (bars.length ? new Date(bars[bars.length - 1].t).getTime() : 0)
+  const axisStartMs = visibleRange ? visibleRange.start : axisEndMs - defaultWindow
+  const volAxisTop = bars.length ? volumeAxisMax(bars, volAvg, axisStartMs, axisEndMs) : 1
+  const rsi13Range = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
 
   const hasSwingHeaders = showZigzag && zz10.length > 0
   // maxHeaderLevel (set above by placeHeaderLevel() while building swing
@@ -1526,10 +1552,10 @@ export function CandlestickChart({
   }
   /** Each oscillator row's label, and the colour of the line it names. */
   const rowLabel: Record<string, { text: string; color: string }> = {
-    rsi2: { text: "RSI (2)", color: "#ce93d8" },
-    stochrsi: { text: "StochRSI", color: "#4fc3f7" },
-    rsi13: { text: "RSI (13)", color: "#ffcc80" },
-    mfi: { text: "MFI", color: "#facc15" },
+    rsi2: { text: "RSI (2)", color: OSC_LINE },
+    stochrsi: { text: "StochRSI", color: STOCH_K },
+    rsi13: { text: "RSI (13)", color: OSC_LINE },
+    mfi: { text: "MFI", color: MFI_LINE },
     vol: { text: `VolumeAvg (${volLength})`, color: VOLUME_AVG_COLOR },
   }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
@@ -1639,7 +1665,7 @@ export function CandlestickChart({
       ...spikeAxis,
     }
     dynamicAxes[`yaxis${suffix}`] = {
-      gridcolor: GRID, showgrid: true,
+      gridcolor: GRID, showgrid: isPrice,
       // "Left axis" from the reference dialog. Left is Plotly's default, so
       // unticking it moves the price scale to the right-hand side.
       side: (vpLeftAxis ? "left" : "right") as "left" | "right",
@@ -1656,7 +1682,7 @@ export function CandlestickChart({
         ? (logScale && priceYRange
             ? [Math.log10(Math.max(1e-9, priceYRange[0])), Math.log10(Math.max(1e-9, priceYRange[1]))]
             : priceYRange)
-        : name === "vol" ? [0, volAxisTop] : [0, 100],
+        : name === "vol" ? [0, volAxisTop] : name === "rsi13" ? rsi13Range : [0, 100],
     }
 
     // THE ROW'S CURRENT READING, as the reference draws it: horizontal, at the
@@ -1714,7 +1740,7 @@ export function CandlestickChart({
   // labels without them colliding. Below the floor the container stops
   // shrinking and the page scrolls instead, which is the honest trade: a row
   // you have to scroll to is readable, a row crushed to 25px is not.
-  const OSC_ROW_MIN = 58
+  const OSC_ROW_MIN = 84
   const PRICE_MIN = 240
   const chartMinHeight = PRICE_MIN + indicatorRows.length * OSC_ROW_MIN + marginTop + 30
 
@@ -2033,7 +2059,8 @@ export function CandlestickChart({
   const drawnSeries = seriesByAxis(data as unknown as Parameters<typeof seriesByAxis>[0], t)
   const readoutRows: ReadoutRow[] = [
     { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`, series: drawnSeries.get("y") ?? [],
-      fixed: vpLevels.map((lv) => ({ label: lv.label, value: formatReadoutNumber(lv.value), color: lv.style.color })) },
+      // POC, VAHigh and VALow are traces too, so they are already in the series.
+      fixed: [] },
     ...indicatorRows.map((name): ReadoutRow => {
       const axis = `y${suffixOf(name)}`
       const levels = name === "vol" ? null : OSC_STUDIES[name].levels

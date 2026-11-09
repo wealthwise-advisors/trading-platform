@@ -24,8 +24,8 @@ const MAX_LENGTH = 500
 export const VOLUME_AVG_STORE_KEY = "autotrader.volumeAvg"
 
 /** Bar colours as thinkorswim paints them: unchanged closes are its cyan. */
-export const VOLUME_UP = "#26a69a"
-export const VOLUME_DOWN = "#ef5350"
+export const VOLUME_UP = "#00c853"
+export const VOLUME_DOWN = "#ff6b6b"
 export const VOLUME_FLAT = "#22d3ee"
 export const VOLUME_AVG_COLOR = "#e040fb"
 

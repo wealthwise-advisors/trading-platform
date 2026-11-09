@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query"
-import { lazy, Suspense, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { lazy, Suspense, useEffect, useState } from "react"
+import { FOLLOW_POLL_MS } from "@/lib/followLive"
 import { api } from "@/lib/api"
 import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
@@ -117,6 +118,33 @@ export function ResultsPage() {
     queryFn: () => api.getPriceData(backtestId!),
     enabled: !!backtestId,
   })
+  // A run on live data whose date range includes today keeps moving: the same
+  // poll, at the same pace, as Market Grid's follow-live. The server answers
+  // live:false once there is nothing more to fetch, and polling stops.
+  const queryClient = useQueryClient()
+  const followLive = summaryQ.data?.data_source === "schwab"
+  useEffect(() => {
+    if (!backtestId || !followLive) return
+    let busy = false
+    const tick = async () => {
+      if (busy || document.hidden) return
+      busy = true
+      try {
+        const fresh = await api.refreshPriceData(backtestId)
+        queryClient.setQueryData(["backtest", backtestId, "price-data"], fresh)
+        if (fresh.live) void queryClient.invalidateQueries({ queryKey: ["backtest", backtestId, "zigzag"] })
+        else clearInterval(timer)
+      } catch {
+        // The next tick tries again.
+      } finally {
+        busy = false
+      }
+    }
+    const timer = setInterval(() => void tick(), FOLLOW_POLL_MS)
+    void tick()
+    return () => clearInterval(timer)
+  }, [backtestId, followLive, queryClient])
+
   const equityQ = useQuery({
     queryKey: ["backtest", backtestId, "equity-curve"],
     queryFn: () => api.getEquityCurve(backtestId!),

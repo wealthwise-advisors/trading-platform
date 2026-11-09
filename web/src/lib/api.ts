@@ -170,6 +170,9 @@ export const api = {
   getBacktest: (id: string) => request<BacktestSummary>(`/backtests/${id}`),
   getTrades: (id: string) => request<TradeRecord[]>(`/backtests/${id}/trades`),
   getPriceData: (id: string) => request<PriceDataResponse>(`/backtests/${id}/price-data`),
+  /** New bars since the last poll, for a run still inside its date range. */
+  refreshPriceData: (id: string) =>
+    request<PriceDataResponse & { live: boolean }>(`/backtests/${id}/live-refresh`, { method: "POST" }),
   getEquityCurve: (id: string) => request<EquityPoint[]>(`/backtests/${id}/equity-curve`),
   getZigZag: (id: string, dev3: number, dev10: number) =>
     request<ZigZagResponse>(`/backtests/${id}/zigzag?dev_3=${dev3}&dev_10=${dev10}`),
