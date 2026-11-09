@@ -48,8 +48,10 @@ import {
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
+import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
-  VOLUME_AVG_COLOR, buyerSellerSplit, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
+  VOLUME_AVG_COLOR, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
   volumeAxisMax, volumeBarColors, type VolumeContext,
 } from "@/lib/volumeAverage"
 
@@ -513,6 +515,7 @@ export function CandlestickChart({
       vpShowPlotNames, vpShowInputNames, vpLeftAxis])
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const plotHostRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -1331,24 +1334,12 @@ export function CandlestickChart({
   if (volRow) {
     const volSuffix = suffixOf("vol")
     const axes = { xaxis: `x${volSuffix}`, yaxis: `y${volSuffix}` }
-    const contracts = (n: number) => n.toLocaleString("en-US")
     data.push(
       { type: "bar", x: t, y: volumes, name: "Vol", showlegend: false,
         marker: { color: volumeBarColors(bars.map((b) => b.c)) },
-        hovertemplate: "Vol: %{y:,.0f}<extra></extra>", ...axes } as unknown as Data,
+        ...axes } as unknown as Data,
       { type: "scatter", mode: "lines", x: t, y: volAvg, name: "VolAvg", showlegend: false,
         line: { color: VOLUME_AVG_COLOR, width: 1.2 },
-        hovertemplate: "VolAvg: %{y:,.2f}<extra></extra>", ...axes } as unknown as Data,
-      // Invisible: it exists to put Buyers and Sellers after VolAvg in the
-      // hover, and to keep them there before the average has 20 bars.
-      { type: "scatter", mode: "lines", x: t, y: volumes, name: "Split", showlegend: false,
-        line: { width: 0 },
-        customdata: bars.map((b) => {
-          const s = buyerSellerSplit(b)
-          return s ? [contracts(s.buyers), (s.buyerPct * 100).toFixed(2), contracts(s.sellers), (s.sellerPct * 100).toFixed(2)]
-                   : ["-", "-", "-", "-"]
-        }),
-        hovertemplate: "Buyers: %{customdata[0]} (%{customdata[1]}%)<br>Sellers: %{customdata[2]} (%{customdata[3]}%)<extra></extra>",
         ...axes } as unknown as Data,
     )
   }
@@ -1516,7 +1507,7 @@ export function CandlestickChart({
   })()
 
   const spikeAxis = {
-    showspikes: true, spikemode: "across" as const, spikesnap: "cursor" as const,
+    showspikes: false, spikemode: "across" as const, spikesnap: "cursor" as const,
     spikethickness: 1, spikedash: "dot" as const, spikecolor: "#6b6b8a",
   }
 
@@ -1757,7 +1748,7 @@ export function CandlestickChart({
     font: { color: INK },
     // Driven by the drawing rail. "pan" until a tool is picked, which is the
     // behaviour the chart had before the rail existed.
-    dragmode: dragMode, hovermode: "x unified",
+    dragmode: dragMode, hovermode: "closest",
     // Style for shapes drawn from here on, so a user's trend line reads as
     // theirs rather than as one of the chart's own study lines.
     //
@@ -2030,6 +2021,29 @@ export function CandlestickChart({
             </button>
     </>
   )
+
+  // Every row's box comes from ChartCrosshair; Plotly keeps only the hovers
+  // that are about a single mark (a swing, an entry, the profile).
+  for (const d of data as unknown as { type?: string; x?: unknown; hoverinfo?: string; hovertemplate?: string }[]) {
+    if (d.type === "candlestick" || d.x === t) {
+      d.hoverinfo = "skip"
+      delete d.hovertemplate
+    }
+  }
+  const drawnSeries = seriesByAxis(data as unknown as Parameters<typeof seriesByAxis>[0], t)
+  const readoutRows: ReadoutRow[] = [
+    { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`, series: drawnSeries.get("y") ?? [],
+      fixed: vpLevels.map((lv) => ({ label: lv.label, value: formatReadoutNumber(lv.value), color: lv.style.color })) },
+    ...indicatorRows.map((name): ReadoutRow => {
+      const axis = `y${suffixOf(name)}`
+      const levels = name === "vol" ? null : OSC_STUDIES[name].levels
+      return {
+        axis, title: rowLabel[name].text, series: drawnSeries.get(axis) ?? [],
+        // One line: on two, a short row's box runs into the next row's.
+        fixed: levels ? [{ label: "OverSold / OverBought", value: `${levels.oversold} / ${levels.overbought}` }] : [],
+      }
+    }),
+  ]
 
   return (
     // Real height comes from ResultsPage's flex-1 min-h-0 chain (hero row ->
@@ -2534,6 +2548,7 @@ export function CandlestickChart({
           region on the page where space is worth something, spent covering
           the candles it described. The same numbers are in the Legend menu on
           the header row, beside the key that says what each line is. */}
+        <div ref={plotHostRef} className="relative" style={{ width: "100%", height: "100%" }}>
         <Plot
           data={data}
           layout={layout}
@@ -2563,6 +2578,9 @@ export function CandlestickChart({
           useResizeHandler
           onRelayout={handleRelayout}
         />
+        <ChartCrosshair hostRef={plotHostRef} bars={bars} rows={readoutRows} interval={interval}
+                        volumeAxis={volRow ? `y${suffixOf("vol")}` : undefined} />
+        </div>
         </div>
       </div>
 

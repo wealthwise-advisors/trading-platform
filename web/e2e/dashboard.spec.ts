@@ -464,12 +464,11 @@ test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in th
   await row.scrollIntoViewIfNeeded()
   const box = (await row.boundingBox())!
   await own.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
-  const hover = own.locator(".hoverlayer").first()
-  await expect(hover).toContainText("Vol:")
-  await expect(hover).toContainText("VolAvg:")
-  await expect(hover).toContainText("Buyers:")
-  await expect(hover).toContainText("Sellers:")
-  if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
+  const hover = own.getByTestId("chart-readout-y6")
+  await expect(hover).toContainText("Vol")
+  await expect(hover).toContainText("VolAvg")
+  await expect(hover).toContainText("Buyers")
+  await expect(hover).toContainText("Sellers")
 
   await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().uncheck()
   await expect.poll(traces).toEqual([])
@@ -481,6 +480,41 @@ test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in th
   await waitForChartSettled(own)
   await expect(own.getByRole("checkbox", { name: "Show VolumeAvg" }).first()).not.toBeChecked()
   await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().check()
+  await own.close()
+})
+
+test("hovering any one row shows every row's values and one line through them all", async ({ browser }) => {
+  const own = await browser.newPage({ viewport: { width: 1600, height: 1300 } })
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+
+  const readouts = own.locator("[data-testid^='chart-readout-']")
+  // The StochRSI row, then price: the row under the mouse must not matter.
+  for (const row of [".x3y3", ".xy"]) {
+    const area = own.locator(`.draglayer ${row} .nsewdrag`).first()
+    await area.scrollIntoViewIfNeeded()
+    const box = (await area.boundingBox())!
+    await own.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
+    await expect(readouts).toHaveCount(6)
+  }
+  await expect(own.getByTestId("chart-readout-y")).toContainText("Open")
+  await expect(own.getByTestId("chart-readout-y")).toContainText("Close")
+  await expect(own.getByTestId("chart-readout-y2")).toContainText("OverBought")
+  await expect(own.getByTestId("chart-readout-y3")).toContainText("FullK")
+  await expect(own.getByTestId("chart-readout-y3")).toContainText("FullD")
+  await expect(own.getByTestId("chart-readout-y4")).toContainText("RSI(13)")
+  await expect(own.getByTestId("chart-readout-y5")).toContainText("MoneyFlowIndex")
+  await expect(own.getByTestId("chart-readout-y6")).toContainText("Buyers")
+
+  const line = (await own.getByTestId("chart-crosshair-line").boundingBox())!
+  const rows = await Promise.all([".xy", ".x6y6"].map((r) => own.locator(`.draglayer ${r} .nsewdrag`).first().boundingBox()))
+  expect(line.y).toBeLessThanOrEqual(rows[0]!.y + 1)
+  expect(line.y + line.height).toBeGreaterThanOrEqual(rows[1]!.y + rows[1]!.height - 1)
+  if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
+
+  await own.mouse.move(2, 2)
+  await expect(readouts).toHaveCount(0)
   await own.close()
 })
 
