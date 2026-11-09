@@ -1386,7 +1386,12 @@ export function CandlestickChart({
   const axisEndMs = visibleRange ? visibleRange.end : (bars.length ? new Date(bars[bars.length - 1].t).getTime() : 0)
   const axisStartMs = visibleRange ? visibleRange.start : axisEndMs - defaultWindow
   const volAxisTop = bars.length ? volumeAxisMax(bars, volAvg, axisStartMs, axisEndMs) : 1
-  const rsi13Range = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
+  // The fit always includes both level lines, as thinkorswim's does.
+  const rsi13Fit = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
+  const rsi13Levels = OSC_STUDIES.rsi13.levels!
+  const rsi13Range: [number, number] = [
+    Math.min(rsi13Fit[0], rsi13Levels.oversold - 3), Math.max(rsi13Fit[1], rsi13Levels.overbought + 3),
+  ]
 
   const hasSwingHeaders = showZigzag && zz10.length > 0
   // maxHeaderLevel (set above by placeHeaderLevel() while building swing

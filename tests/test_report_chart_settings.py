@@ -35,7 +35,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "chart_settings_factory.json"
 OSC_KEYS = ["rsi2", "stochrsi", "rsi13", "mfi"]
 OSC_TITLES = {"rsi2": "RSI(2)", "stochrsi": "StochRSI", "rsi13": "RSI(13)", "mfi": "MFI"}
 OSC_TRACES = {"rsi2": ["RSI(2)"], "stochrsi": ["FullK", "FullD"], "rsi13": ["RSI(13)"], "mfi": ["MoneyFlowIndex"]}
-OSC_LEVELS = {"rsi2": [2, 94], "stochrsi": [20, 80], "rsi13": [30, 70], "mfi": [20, 80]}
+OSC_LEVELS = {"rsi2": [5, 94], "stochrsi": [20, 80], "rsi13": [45, 55], "mfi": [20, 80]}
 VP_NAMES = {"Volume Profile", "POC", "VAHigh", "VALow", "ProfileHigh", "ProfileLow"}
 
 

@@ -1086,7 +1086,7 @@ existing shared implementation already used for the platform's RSI(13) chart pan
 
 - **No tolerance/threshold.** "Lower"/"higher" is a strict directional comparison. No epsilon, no
   minimum divergence magnitude, no RSI overbought/oversold levels are involved. (The platform's
-  RSI(13) chart bands are 70/30, but they play **no part** in this rule.)
+  RSI(13) chart bands are 55/45, but they play **no part** in this rule.)
 - **No other Open Question is resolved by this one.** In particular **OQ-05 and OQ-20
   remain open.**
 - **On its own it did not unblock the impulse detector** — IMP-04 and IMP-05 were still
@@ -1499,7 +1499,7 @@ reachable case on real data — not a floating-point curiosity that can be waved
 | FR-3.1a.2 | **EN** | Divergence SHALL be evaluated with **RSI(13)** via `calc_rsi(close, 13)` (FR-1.7). |
 | FR-3.1a.3 | **EN** | **Up-trending impulse:** divergence holds iff wave 5's extreme is **above** wave 3's extreme **and** RSI(13) at wave 5's extreme is **strictly LOWER** than RSI(13) at wave 3's extreme. |
 | FR-3.1a.4 | **EN** | **Down-trending impulse:** divergence holds iff wave 5's extreme is **below** wave 3's extreme **and** RSI(13) at wave 5's extreme is **strictly HIGHER** than RSI(13) at wave 3's extreme. |
-| FR-3.1a.5 | **EN** | The RSI comparison SHALL be **strictly directional**. No tolerance band, no epsilon, no minimum divergence magnitude, and no overbought/oversold levels SHALL be introduced. *(The platform's RSI(13) chart bands are 70/30; they play no part in this rule.)* |
+| FR-3.1a.5 | **EN** | The RSI comparison SHALL be **strictly directional**. No tolerance band, no epsilon, no minimum divergence magnitude, and no overbought/oversold levels SHALL be introduced. *(The platform's RSI(13) chart bands are 55/45; they play no part in this rule.)* |
 | FR-3.1a.6 | **EN** | If RSI(13) is unavailable (`NaN`) at either comparison bar, IMP-06 SHALL evaluate to **UNDECIDABLE** (FR-1.8, FR-5.3) — never pass, never fail. |
 | FR-3.1a.7 | **EN** | "Extreme" means the **pivot price** at the wave's terminal pivot (the bar high for a high pivot, the bar low for a low pivot), and RSI(13) is read at **that same bar**. Both sides of each comparison use the same convention. **Confirmed 2026-08-09 (D-02b closed)** — the pivot-price reading stands. See §14a. |
 | FR-3.1a.8 | **EN** | If wave 5's extreme does **not** exceed wave 3's extreme, the price precondition fails and IMP-06 is **not satisfied** (a failed gate, not UNDECIDABLE). |

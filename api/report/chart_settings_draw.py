@@ -61,8 +61,8 @@ ROW_SPACING = 0.028
 OSC_TITLE = {"rsi2": "RSI(2)", "stochrsi": "StochRSI", "rsi13": "RSI(13)", "mfi": "MFI"}
 
 #: (overbought, oversold) -- oscillatorStudies.ts's OSC_STUDIES levels. RSI(2)
-#: at 94/2 and RSI(13) at 70/30 are confirmed final; do not change them here.
-OSC_LEVELS = {"rsi2": (94, 2), "stochrsi": (80, 20), "rsi13": (70, 30), "mfi": (80, 20)}
+#: at 94/5 and RSI(13) at 55/45 match sir's thinkorswim (changed 2026-11-10).
+OSC_LEVELS = {"rsi2": (94, 5), "stochrsi": (80, 20), "rsi13": (55, 45), "mfi": (80, 20)}
 
 
 def active_oscillator_rows(settings: ChartSettings) -> list[str]:

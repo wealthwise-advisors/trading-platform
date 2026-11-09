@@ -23,7 +23,7 @@ describe("Oscillator study panel", () => {
     expect(r.violations.map((v) => v.id)).toEqual([])
   })
 
-  it.each([["rsi2", "94", "2"], ["stochrsi", "80", "20"], ["rsi13", "70", "30"], ["mfi", "80", "20"]])(
+  it.each([["rsi2", "94", "5"], ["stochrsi", "80", "20"], ["rsi13", "55", "45"], ["mfi", "80", "20"]])(
     "%s shows the levels actually drawn (%s / %s), read-only",
     (study, ob, os) => {
       render(<OscillatorStudyPanel study={study as OscKey} onClose={() => {}} />)

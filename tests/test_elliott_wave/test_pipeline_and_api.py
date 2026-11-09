@@ -345,4 +345,6 @@ class TestExistingApiUnchanged:
         # and stores the introduction flag on it. Every remaining data route
         # still runs through require_user, which now resolves the workspace
         # account and refuses cross-origin state changes.
-        assert len(paths) == 35, sorted(paths)
+        # +1 for /api/backtests/{id}/live-refresh, the Chart's live polling
+        # (2026-11-10), a separate declared change.
+        assert len(paths) == 36, sorted(paths)

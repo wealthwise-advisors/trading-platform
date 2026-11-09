@@ -4,9 +4,9 @@
  * Volume Profile already work.
  *
  * Every number below is what the chart draws: the calculations in
- * src/analysis/indicators.py and the level lines. RSI(2) at 94/2 and RSI(13) at
- * 70/30 are confirmed final and deliberately differ from the reference
- * platform's 5 and 55/45. StochRSI (RSI 14, K 3, D 3, Wilder's, 80/20) replaced
+ * src/analysis/indicators.py and the level lines. RSI(2) at 94/5 and RSI(13) at
+ * 55/45 match the reference platform (changed on request 2026-11-10; they were
+ * 94/2 and 70/30). StochRSI (RSI 14, K 3, D 3, Wilder's, 80/20) replaced
  * the price Stochastic, and MoneyFlowIndex (length 20, 80/20) was added, both on
  * 2026-09-15.
  */
@@ -32,7 +32,7 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
   rsi2: {
     label: "RSI(2)", available: true,
     inputs: [["length", "2"], ["price", "CLOSE"], ["average", "Wilder's"]],
-    levels: { overbought: 94, oversold: 2 },
+    levels: { overbought: 94, oversold: 5 },
   },
   stochrsi: {
     label: "StochRSI", available: true,
@@ -45,7 +45,7 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
   rsi13: {
     label: "RSI(13)", available: true,
     inputs: [["length", "13"], ["price", "CLOSE"], ["average", "Wilder's"]],
-    levels: { overbought: 70, oversold: 30 },
+    levels: { overbought: 55, oversold: 45 },
   },
   mfi: {
     label: "MFI", available: true,

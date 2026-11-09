@@ -344,8 +344,8 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
             hovertemplate="VolAvg: %{y:,.2f}<extra></extra>",
         ), row=row_of["vol"], col=1)
 
-    # Overbought / oversold lines for the rows drawn. RSI(2) 94/2 and RSI(13)
-    # 70/30 are confirmed final -- see OSC_LEVELS.
+    # Overbought / oversold lines for the rows drawn. RSI(2) 94/5 and RSI(13)
+    # 55/45 match thinkorswim -- see OSC_LEVELS.
     for key in osc_rows:
         overbought, oversold = OSC_LEVELS[key]
         fig.add_hline(y=overbought, line=dict(color=_R, width=0.8, dash="dash"), row=row_of[key], col=1)

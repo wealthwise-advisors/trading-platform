@@ -22,7 +22,7 @@ Definition (SRS FR-3.1a.2 .. FR-3.1a.8):
 
 Strictly directional. No tolerance band, no epsilon, no minimum divergence
 magnitude, and no overbought/oversold levels (FR-3.1a.5). The platform's
-RSI(13) chart bands are 70/30; they play no part here.
+RSI(13) chart bands are 55/45; they play no part here.
 
 This module is the ONLY place in the package permitted to import shared
 analysis code (ARCHITECTURE A-2 / FR-1f.3). Keeping that dependency in one

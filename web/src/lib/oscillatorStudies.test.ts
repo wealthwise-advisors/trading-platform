@@ -6,9 +6,9 @@ import {
 const ALL_ON = { rsi2: true, stochrsi: true, rsi13: true, mfi: true }
 
 describe("confirmed settings", () => {
-  it("RSI levels stay 94/2 and 70/30, not the reference platform's 5 and 55/45", () => {
-    expect(OSC_STUDIES.rsi2.levels).toEqual({ overbought: 94, oversold: 2 })
-    expect(OSC_STUDIES.rsi13.levels).toEqual({ overbought: 70, oversold: 30 })
+  it("RSI levels are thinkorswim's: 94/5 and 55/45", () => {
+    expect(OSC_STUDIES.rsi2.levels).toEqual({ overbought: 94, oversold: 5 })
+    expect(OSC_STUDIES.rsi13.levels).toEqual({ overbought: 55, oversold: 45 })
   })
 
   it("the third panel is StochRSI: RSI 14, K 3, D 3, Wilder's, 80/20", () => {
