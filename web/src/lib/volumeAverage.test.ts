@@ -105,6 +105,18 @@ describe("volumeAxisMax", () => {
     expect(volumeAxisMax([at(1, 100)], [300], ms(0), ms(2))).toBeCloseTo(330)
   })
 
+  it("one outsized bar does not squash the rest", () => {
+    // 2026-11-09: a 73,659 close among bars of a few thousand.
+    const bars = [...Array.from({ length: 39 }, (_, i) => at(i % 60, 2000 + (i % 5) * 1000)), at(59, 73659)]
+    const top = volumeAxisMax(bars, bars.map(() => null), ms(0), ms(59))
+    expect(top).toBeCloseTo(6000 * 1.6 * 1.1)
+  })
+
+  it("a window of similar bars still fits its tallest", () => {
+    const bars = [at(1, 900), at(2, 1000), at(3, 1100)]
+    expect(volumeAxisMax(bars, [null, null, null], ms(0), ms(5))).toBeCloseTo(1210)
+  })
+
   it("never returns an empty range", () => {
     expect(volumeAxisMax([], [], 0, 1)).toBe(1)
     expect(volumeAxisMax([at(1, null)], [null], ms(0), ms(2))).toBe(1)

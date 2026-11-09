@@ -151,18 +151,33 @@ export function volumeBarColors(closes: ReadonlyArray<number>): string[] {
   })
 }
 
-/** Top of the volume axis for the bars on screen, with 10% headroom. */
+/**
+ * Top of the volume axis for the bars on screen, with 10% headroom.
+ *
+ * One outsized bar does not set the scale. The 16:00 bar of 2026-11-09 traded
+ * 73,659 against 300-10,000 for the rest, so with it on screen every other bar
+ * was a sliver, and panning it in and out made the panel jump (reported as a
+ * glitch). The scale follows the 95th-percentile bar, up to 1.6 times it, and
+ * never cuts the average line; a taller bar runs to the top, and the hover
+ * still gives its real volume.
+ */
 export function volumeAxisMax(
   bars: ReadonlyArray<OHLCVRecord>,
   average: ReadonlyArray<number | null>,
   startMs: number,
   endMs: number,
 ): number {
-  let max = 0
+  const vols: number[] = []
+  let avgMax = 0
   bars.forEach((b, i) => {
     const ms = Date.parse(b.t)
     if (ms < startMs || ms > endMs) return
-    max = Math.max(max, b.v ?? 0, average[i] ?? 0)
+    vols.push(b.v ?? 0)
+    avgMax = Math.max(avgMax, average[i] ?? 0)
   })
-  return max > 0 ? max * 1.1 : 1
+  vols.sort((a, b) => a - b)
+  const highest = Math.max(vols[vols.length - 1] ?? 0, avgMax)
+  const typical = vols.length ? vols[Math.ceil(vols.length * 0.95) - 1] : 0
+  const top = Math.min(highest, Math.max(typical * 1.6, avgMax))
+  return top > 0 ? top * 1.1 : 1
 }

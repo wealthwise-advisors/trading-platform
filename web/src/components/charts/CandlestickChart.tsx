@@ -30,7 +30,7 @@ import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
-import { DEFAULT_WINDOW_MS, barStepMs, defaultAggregationSpanMs, defaultWindowMs } from "@/lib/chartWindow"
+import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs } from "@/lib/chartWindow"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
@@ -550,7 +550,11 @@ export function CandlestickChart({
   // outside that band only as blank space: their x/y data was correct, they
   // were just plotted above/below the fixed, now-stale y-axis bounds.
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null)
-  useEffect(() => setVisibleRange(null), [bars])
+  // A new run resets the view; a live update must not. Live polling hands over
+  // a new `bars` array every 15 seconds, and keying on that array snapped the
+  // chart back to its default window under anyone who had panned or zoomed.
+  const runKey = chartRunKey(bars, interval)
+  useEffect(() => setVisibleRange(null), [runKey])
 
   /**
    * A rail button was pressed.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  DEFAULT_WINDOW_BARS, DEFAULT_WINDOW_MS, barStepMs, defaultAggregationSpanMs, defaultWindowMs,
+  DEFAULT_WINDOW_BARS, DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs,
 } from "./chartWindow"
 
 const pad = (n: number) => String(n).padStart(2, "0")
@@ -77,4 +77,19 @@ describe("defaultAggregationSpanMs", () => {
   it("counts only the bars there are when there are fewer than forty", () => {
     expect(defaultAggregationSpanMs(sessionBars(240, 2, 5))).toBe(10 * 240 * 60_000)
   })
+})
+
+describe("chartRunKey", () => {
+  const a = { t: "2026-11-09T09:30:00" }, b = { t: "2026-11-09T09:31:00" }
+
+  it("is unchanged when live bars are added", () => {
+    expect(chartRunKey([a, b], "1m")).toBe(chartRunKey([a], "1m"))
+  })
+
+  it("changes with the timeframe or the start of the data", () => {
+    expect(chartRunKey([a], "1m")).not.toBe(chartRunKey([a], "5m"))
+    expect(chartRunKey([a], "1m")).not.toBe(chartRunKey([b], "1m"))
+  })
+
+  it("copes with no bars", () => expect(chartRunKey([], "1m")).toBe("1m|"))
 })

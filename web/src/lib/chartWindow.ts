@@ -48,3 +48,8 @@ export function defaultAggregationSpanMs(t: readonly string[]): number {
   if (t.length < 2 || step < DEFAULT_WINDOW_MS) return DEFAULT_WINDOW_MS
   return Math.min(t.length, DEFAULT_WINDOW_BARS) * step
 }
+
+/** Same for the same run however many bars have since been added to it. */
+export function chartRunKey(bars: ReadonlyArray<{ t: string }>, interval?: string): string {
+  return `${interval ?? ""}|${bars[0]?.t ?? ""}`
+}
