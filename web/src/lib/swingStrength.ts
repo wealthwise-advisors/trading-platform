@@ -1,12 +1,12 @@
 /**
- * Who pushed harder inside a swing: buyers or sellers.
+ * Who won a swing, by sir's running total (confirmed 2026-11-10).
  *
- * Asked for by sir on 2026-11-10 for every swing, on its 10 Leg Dev stretch
- * (A to B) and its 3 Leg Dev stretch (a to e), shown in the hover. The measure
- * is his buyer/seller split (lib/volumeAverage.ts): each candle's volume is
- * divided by where it closed in its range, and the side with more volume over
- * the stretch is the stronger one. Volume rather than a candle count, because
- * three heavy red candles outweigh ten light green ones.
+ * Each candle's volume is split into buyers (green) and sellers (red) with his
+ * formula (lib/volumeAverage.ts). Candle by candle, the HIGHER of the two
+ * counts: added when green is higher, subtracted when red is higher. The total
+ * left at the end of the swing says who won -- positive green, negative red.
+ * Nothing is averaged. The same for the 10 Leg Dev stretch (A to B) and the
+ * 3 Leg Dev stretch (a to e).
  *
  * A stretch runs from the bar AFTER its first pivot through the bar of its last
  * pivot: the first pivot's bar is where the previous move ended.
@@ -16,61 +16,58 @@ import type { OHLCVRecord } from "./types"
 import type { ReadoutLine } from "./chartReadout"
 import { buyerSellerSplit } from "./volumeAverage"
 
-export interface SideStats {
-  volume: number
-  /** Share of the stretch's volume, 0-100. */
-  pct: number
-  /** Volume per candle in the stretch. */
-  avgPerCandle: number
-}
-
 export interface SwingStrength {
   candles: number
-  green: number
-  red: number
-  buyers: SideStats
-  sellers: SideStats
-  stronger: "buyers" | "sellers" | "even"
+  /** Candles where buyers were higher, and the buyer volume they added. */
+  greenLed: number
+  added: number
+  /** Candles where sellers were higher, and the seller volume they took off. */
+  redLed: number
+  subtracted: number
+  /** added - subtracted: the value left at the end of the swing. */
+  net: number
+  stronger: "green" | "red" | "even"
+  /** False when no candle in the stretch carried volume. */
+  hasVolume: boolean
 }
 
 export function swingStrength(bars: ReadonlyArray<OHLCVRecord>, from: string, to: string): SwingStrength | null {
   const inside = bars.filter((b) => b.t > from && b.t <= to)
   if (!inside.length) return null
-  let buy = 0, sell = 0, green = 0, red = 0
+  let added = 0, subtracted = 0, greenLed = 0, redLed = 0, hasVolume = false
   for (const b of inside) {
-    if (b.c > b.o) green++
-    else if (b.c < b.o) red++
     const s = buyerSellerSplit(b)
-    if (s) { buy += s.buyers; sell += s.sellers }
+    if (!s) continue
+    hasVolume = true
+    if (s.buyers > s.sellers) { added += s.buyers; greenLed++ }
+    else if (s.sellers > s.buyers) { subtracted += s.sellers; redLed++ }
   }
-  const total = buy + sell
-  const n = inside.length
-  const side = (v: number): SideStats => ({ volume: v, pct: total ? (v / total) * 100 : 0, avgPerCandle: v / n })
-  // With no volume at all the candles are the only evidence left.
-  const stronger = total
-    ? (buy > sell ? "buyers" : sell > buy ? "sellers" : "even")
-    : (green > red ? "buyers" : red > green ? "sellers" : "even")
-  return { candles: n, green, red, buyers: side(buy), sellers: side(sell), stronger }
+  const net = added - subtracted
+  return {
+    candles: inside.length, greenLed, added, redLed, subtracted, net, hasVolume,
+    stronger: net > 0 ? "green" : net < 0 ? "red" : "even",
+  }
 }
 
-const BUY = "#00c853"
-const SELL = "#ff6b6b"
+const GREEN = "#00c853"
+const RED = "#ff6b6b"
 const whole = (n: number) => Math.round(n).toLocaleString("en-US")
+const signed = (n: number) => (n > 0 ? "+" : n < 0 ? "-" : "") + whole(Math.abs(n))
 
 /** One stretch's lines for the hover box. */
 export function strengthLines(heading: string, s: SwingStrength | null, headColor: string): ReadoutLine[] {
   const head = { label: heading, value: "", color: headColor }
   if (!s) return [head, { label: "No bars in this stretch", value: "" }]
+  if (!s.hasVolume) return [head, { label: "No volume data", value: "" }]
   return [
     head,
-    { label: "Buyers", value: `${whole(s.buyers.volume)} (${s.buyers.pct.toFixed(0)}%)`, color: BUY },
-    { label: "Sellers", value: `${whole(s.sellers.volume)} (${s.sellers.pct.toFixed(0)}%)`, color: SELL },
-    { label: "Avg / candle", value: `${whole(s.buyers.avgPerCandle)} / ${whole(s.sellers.avgPerCandle)}` },
-    { label: "Green / red candles", value: `${s.green} / ${s.red}` },
+    { label: `Green higher (${s.greenLed})`, value: `+${whole(s.added)}`, color: GREEN },
+    { label: `Red higher (${s.redLed})`, value: `-${whole(s.subtracted)}`, color: RED },
+    { label: "Net at swing end", value: signed(s.net), color: s.net > 0 ? GREEN : s.net < 0 ? RED : undefined },
     s.stronger === "even"
       ? { label: "Stronger", value: "EVEN" }
-      : { label: "Stronger", value: s.stronger === "buyers" ? "BUYERS (green)" : "SELLERS (red)",
-          color: s.stronger === "buyers" ? BUY : SELL },
+      : { label: "Stronger", value: s.stronger === "green" ? "GREEN (buyers)" : "RED (sellers)",
+          color: s.stronger === "green" ? GREEN : RED },
   ]
 }
 

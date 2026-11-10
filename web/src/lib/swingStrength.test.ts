@@ -6,44 +6,46 @@ const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
 const bar = (m: number, o: number, h: number, l: number, c: number, v: number | null): OHLCVRecord =>
   ({ t: T(m), o, h, l, c, v })
 
-describe("swingStrength", () => {
+describe("swingStrength -- sir's running total", () => {
   // Minute 0 is the first pivot's bar and belongs to the move before.
   const bars = [
-    bar(0, 10, 20, 0, 0, 9999),     // excluded: pivot A's own bar
-    bar(1, 10, 20, 10, 20, 1000),   // green, closes on the high: 1000 buyers
-    bar(2, 20, 20, 10, 15, 400),    // red, mid-range: 200 / 200
-    bar(3, 15, 15, 5, 5, 600),      // red, closes on the low: 600 sellers
-    bar(4, 5, 9, 5, 9, 1),          // after B: excluded
+    bar(0, 10, 20, 0, 0, 9999),                       // excluded: pivot A's own bar
+    bar(1, 10, 20, 10, 20, 1000),                     // buyers 1,000 / sellers 0     -> +1,000
+    bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959),    // buyers 280 / sellers 1,679   -> -1,679
+    bar(3, 7572, 7575.75, 7572, 7575.5, 2606),        // buyers 2,432 / sellers 174   -> +2,432
+    bar(4, 5, 9, 5, 9, 1),                            // after B: excluded
   ]
 
-  it("splits each candle's volume by sir's formula and adds it up", () => {
+  it("adds the higher side when green, subtracts it when red, and keeps the total", () => {
     const s = swingStrength(bars, T(0), T(3))!
-    expect(s.candles).toBe(3)
-    expect(s.buyers.volume).toBe(1200)
-    expect(s.sellers.volume).toBe(800)
-    expect(s.buyers.pct).toBeCloseTo(60)
-    expect(s.stronger).toBe("buyers")
+    expect(s.added).toBe(3432)
+    expect(s.subtracted).toBe(1679)
+    expect(s.net).toBe(1753)
+    expect(s.stronger).toBe("green")
+    expect([s.greenLed, s.redLed, s.candles]).toEqual([2, 1, 3])
   })
 
-  it("counts green and red candles, and averages volume per candle", () => {
-    const s = swingStrength(bars, T(0), T(3))!
-    expect([s.green, s.red]).toEqual([1, 2])
-    expect(s.buyers.avgPerCandle).toBeCloseTo(400)
-    expect(s.sellers.avgPerCandle).toBeCloseTo(266.67, 1)
+  it("a negative total is red", () => {
+    const s = swingStrength(bars, T(1), T(2))!
+    expect(s.net).toBe(-1679)
+    expect(s.stronger).toBe("red")
   })
 
-  it("volume decides, not the number of candles", () => {
-    // More red candles, but the green one carries more volume.
-    expect(swingStrength(bars, T(0), T(3))!.stronger).toBe("buyers")
+  it("an even candle adds nothing", () => {
+    const s = swingStrength([bar(1, 5, 10, 0, 5, 100)], T(0), T(1))!
+    expect([s.net, s.greenLed, s.redLed, s.stronger]).toEqual([0, 0, 0, "even"])
   })
 
-  it("sellers win when they carry more volume", () => {
-    expect(swingStrength(bars, T(1), T(3))!.stronger).toBe("sellers")
+  it("nothing is averaged: the total grows with the candles", () => {
+    const one = swingStrength([bar(1, 1, 2, 1, 2, 100)], T(0), T(1))!
+    const two = swingStrength([bar(1, 1, 2, 1, 2, 100), bar(2, 1, 2, 1, 2, 100)], T(0), T(2))!
+    expect([one.net, two.net]).toEqual([100, 200])
   })
 
-  it("without volume, the candle count decides", () => {
-    const noVol = bars.map((b) => ({ ...b, v: null }))
-    expect(swingStrength(noVol, T(0), T(3))!.stronger).toBe("sellers")
+  it("no volume is said plainly, not called even", () => {
+    const s = swingStrength(bars.map((b) => ({ ...b, v: null })), T(0), T(3))!
+    expect(s.hasVolume).toBe(false)
+    expect(strengthLines("x", s, "#fff")[1].label).toBe("No volume data")
   })
 
   it("an empty stretch has nothing to say", () => {
@@ -52,12 +54,15 @@ describe("swingStrength", () => {
 })
 
 describe("strengthLines", () => {
-  it("names the stronger side in its colour", () => {
+  it("shows added, subtracted, the net and the winner", () => {
     const lines = strengthLines("10 Leg Dev (A to B)", swingStrength(
-      [bar(1, 1, 2, 1, 2, 100)], T(0), T(1)), "#fff")
+      [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)), "#fff")
+    const v = (start: string) => lines.find((l) => l.label.startsWith(start))?.value
     expect(lines[0].label).toBe("10 Leg Dev (A to B)")
-    expect(lines.find((l) => l.label === "Stronger")?.value).toBe("BUYERS (green)")
-    expect(lines.find((l) => l.label === "Buyers")?.value).toBe("100 (100%)")
+    expect(v("Green higher (1)")).toBe("+1,000")
+    expect(v("Red higher (1)")).toBe("-1,679")
+    expect(v("Net at swing end")).toBe("-679")
+    expect(v("Stronger")).toBe("RED (sellers)")
   })
 
   it("says so when the stretch is empty", () => {
