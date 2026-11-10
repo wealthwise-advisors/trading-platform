@@ -52,6 +52,7 @@ import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapL
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
 import { dominanceTag, swingStrength, type SwingSpan } from "@/lib/swingStrength"
+import { titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
 import {
   MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
@@ -547,6 +548,10 @@ export function CandlestickChart({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const plotHostRef = useRef<HTMLDivElement>(null)
+  // The plot's width in pixels, for laying swing titles out by their real
+  // width. Read from the element as the chart renders, not kept in state: a
+  // resize-driven re-render landing mid-drag dropped the shape being drawn.
+  const plotWidthPx = plotHostRef.current?.clientWidth || 1000
 
   useEffect(() => {
     const el = containerRef.current
@@ -1154,13 +1159,16 @@ export function CandlestickChart({
   // Hoisted out of the `if` block below so the layout/margin/title code
   // further down (which needs to reserve enough vertical room for however
   // many swing-header rows collision avoidance actually produced) can read
-  // the final value. HEADER_LEVEL_HEIGHT is hoisted alongside it so the
+  // the final value. HEADER_ROW_PX is hoisted alongside it so the
   // title/range-selector's own upward scaling grows at the EXACT same rate
   // as the header rows themselves -- two independent literals here drifting
   // apart is exactly what caused the title-collides-with-tallest-header bug
   // this was fixed for (2026-08-02).
   let maxHeaderLevel = 0
-  const HEADER_LEVEL_HEIGHT = 0.036
+  // A second row of swing titles sits this many pixels above the first: three
+  // lines of 10px text plus a gap. Pixels, not a share of the plot, so rows
+  // never overlap however tall the chart is.
+  const HEADER_ROW_PX = 44
 
   if (zz10.length) {
     data.push({
@@ -1208,49 +1216,17 @@ export function CandlestickChart({
     // "(9.0 to 9.1) | 3 Leg Dev (A to H)" -- about a seventh of the plot
     // width at this font size, so headers closer than that genuinely need
     // separating and anything further apart can share row 0.
-    const MIN_HEADER_SPACING_FRACTION = 0.14
-    const placedHeaderXs: { xMs: number; level: number }[] = []
-    function placeHeaderLevel(xMs: number): number {
-      const thresholdMs = visibleSpanMs * MIN_HEADER_SPACING_FRACTION
-      const colliders = placedHeaderXs.filter((p) => Math.abs(p.xMs - xMs) < thresholdMs)
-      // Take the LOWEST row this header can occupy without hitting a
-      // neighbour -- not one above the highest collider.
-      //
-      // `max(collider levels) + 1` made a run of evenly-spaced swings climb
-      // monotonically: swing 5 at row 0, 6 at row 1, 7 at row 2, and so on,
-      // because each new header collided with the one before it and stepped
-      // above it. Visually that reads as swing labels drifting further and
-      // further from the chart as the number goes up -- reported as
-      // inconsistent label spacing, and the reason swing 5 looked "right"
-      // while 6 through 9 did not.
-      //
-      // A header only actually needs to clear the rows its OWN colliders sit
-      // on. Once a header is far enough from row 0's occupant, row 0 is free
-      // again, so a dense run settles into 0,1,0,1 instead of 0,1,2,3.
-      // ...but never more than two rows deep. An unbounded search still
-      // produced a staircase wherever three or more headers fell inside one
-      // threshold width (swings 5, 6 and 7 landed on rows 2, 3 and 4), which
-      // is the drift being reported. Two alternating rows read as a regular
-      // pattern; a five-step climb reads as a bug. When every row is already
-      // occupied by a collider, take the one whose nearest neighbour is
-      // furthest away -- the least-bad slot rather than a brand new row.
-      const MAX_HEADER_LEVELS = 2
-      const taken = new Set(colliders.map((p) => p.level))
-      let level = 0
-      while (level < MAX_HEADER_LEVELS && taken.has(level)) level++
-      if (level >= MAX_HEADER_LEVELS) {
-        let bestLevel = 0
-        let bestGap = -1
-        for (let l = 0; l < MAX_HEADER_LEVELS; l++) {
-          const onRow = colliders.filter((p) => p.level === l)
-          const gap = onRow.length
-            ? Math.min(...onRow.map((p) => Math.abs(p.xMs - xMs)))
-            : Number.POSITIVE_INFINITY
-          if (gap > bestGap) { bestGap = gap; bestLevel = l }
-        }
-        level = bestLevel
-      }
-      placedHeaderXs.push({ xMs, level })
+    // A title moves up only when it would really overlap a neighbour,
+    // judged by its estimated width in pixels (lib/swingHeaders.ts). Pixels
+    // per millisecond come from the visible window across the plot's width,
+    // less the axis margins.
+    const pxPerMs = Math.max(200, plotWidthPx - 90) / Math.max(1, visibleSpanMs)
+    const placedTitles: PlacedTitle[] = []
+    function placeHeaderLevel(xMs: number, html: string): number {
+      const xPx = xMs * pxPerMs
+      const widthPx = titleWidthPx(html)
+      const level = titleLevel(placedTitles, xPx, widthPx)
+      placedTitles.push({ xPx, widthPx, level })
       maxHeaderLevel = Math.max(maxHeaderLevel, level)
       return level
     }
@@ -1287,8 +1263,10 @@ export function CandlestickChart({
       // now handled ENTIRELY by row placement instead: text format is never
       // the variable, so every header is always identical to swing 1's.
       const letters = regionLetters[i]
+      // 3 Leg Dev on its own line: a title half as wide fits beside its
+      // neighbour instead of being lifted above it (2026-11-10).
       const legPart = letters.length
-        ? ` | 3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
+        ? `<br>3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
         : ""
       // "10 Leg Dev" named before (A to B), as the 3-leg part already is (2026-11-10).
       // Who dominated the swing's 10 Leg stretch, as a coloured tag beside its
@@ -1307,9 +1285,9 @@ export function CandlestickChart({
               fromPrice: minor[0].price, toPrice: minor[minor.length - 1].price }
           : null,
       })
-      const headerLevel = placeHeaderLevel(new Date(xMid).getTime())
+      const headerLevel = placeHeaderLevel(new Date(xMid).getTime(), headerText)
       annotations.push({
-        x: xMid, y: 1.015 + headerLevel * HEADER_LEVEL_HEIGHT, xref: "x", yref: "paper", yanchor: "bottom",
+        x: xMid, y: 1.015, yshift: headerLevel * HEADER_ROW_PX, xref: "x", yref: "paper", yanchor: "bottom",
         text: headerText,
         showarrow: false, font: { color, size: 10 }, align: "center",
       })
@@ -1517,7 +1495,7 @@ export function CandlestickChart({
   // The range-selector's y is measured against the PRICE ROW's own domain,
   // while everything else up here (title, swing headers) is measured against
   // the whole paper. Those are different units, so the old code adding a
-  // paper-sized `extraHeaderRows * HEADER_LEVEL_HEIGHT` straight onto a
+  // paper-sized `extraHeaderRows * <row height>` straight onto a
   // price-row y was mixing them -- the buttons drifted by the wrong amount
   // whenever headers stacked. Converting through the price row's share of
   // the paper makes one paper unit mean one paper unit for both.
@@ -1836,7 +1814,8 @@ export function CandlestickChart({
   // The Plotly top margin, in pixels. It holds the range selector and the
   // ZigZag swing headers, and the indicator readout overlay is positioned
   // from it so it starts below both rather than on top of them.
-  const marginTop = hasSwingHeaders ? 62 + extraHeaderRows * 21 : 38
+  // 76: three lines of title (Swing + tag, 10 Leg Dev, 3 Leg Dev) above the plot.
+  const marginTop = hasSwingHeaders ? 76 + extraHeaderRows * HEADER_ROW_PX : 38
 
   // THE FLOOR GROWS WITH THE STUDIES. It was a flat 420px, which is fine for
   // the price panel and three oscillators and hopeless for four: switching MFI

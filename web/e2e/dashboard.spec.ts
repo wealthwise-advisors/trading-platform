@@ -541,7 +541,9 @@ test("every study shows its latest value on its own scale", async () => {
 })
 
 test("the Fibonacci tool turns one drag into the retracement levels, undone as one", async ({ browser }) => {
-  const own = await browser.newPage()
+  // A screen tall enough that the whole price panel is on it: on the default
+  // 1280x720 page the drag could start below the visible area.
+  const own = await browser.newPage({ viewport: { width: 1600, height: 1300 } })
   await openApp(own)
   await runBacktest(own)
   await waitForChartSettled(own)
@@ -551,6 +553,7 @@ test("the Fibonacci tool turns one drag into the retracement levels, undone as o
   })
   await own.getByRole("button", { name: /Fibonacci/ }).first().click()
   const area = own.locator(".draglayer .xy .nsewdrag").first()
+  await area.scrollIntoViewIfNeeded()
   const box = (await area.boundingBox())!
   await own.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.8)
   await own.mouse.down()
