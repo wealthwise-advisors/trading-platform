@@ -54,20 +54,20 @@ const RED = "#ff6b6b"
 const whole = (n: number) => Math.round(n).toLocaleString("en-US")
 const signed = (n: number) => (n > 0 ? "+" : n < 0 ? "-" : "") + whole(Math.abs(n))
 
-/** One stretch's lines for the hover box. */
-export function strengthLines(heading: string, s: SwingStrength | null, headColor: string): ReadoutLine[] {
-  const head = { label: heading, value: "", color: headColor }
-  if (!s) return [head, { label: "No bars in this stretch", value: "" }]
-  if (!s.hasVolume) return [head, { label: "No volume data", value: "" }]
+/**
+ * One stretch's lines for the hover box: a heading and one bullet, the net at
+ * the swing's end and who it favours -- "Net +1,230 → GREEN" (layout chosen
+ * 2026-11-10). Only that result carries green or red; the label stays plain.
+ */
+export function strengthLines(heading: string, s: SwingStrength | null): ReadoutLine[] {
+  const head: ReadoutLine = { label: heading, value: "", kind: "heading" }
+  if (!s) return [head, { label: "No bars in this stretch", value: "", bullet: true }]
+  if (!s.hasVolume) return [head, { label: "No volume data", value: "", bullet: true }]
+  const side = s.stronger === "even" ? "EVEN" : s.stronger.toUpperCase()
   return [
     head,
-    { label: `Green higher (${s.greenLed})`, value: `+${whole(s.added)}`, color: GREEN },
-    { label: `Red higher (${s.redLed})`, value: `-${whole(s.subtracted)}`, color: RED },
-    { label: "Net at swing end", value: signed(s.net), color: s.net > 0 ? GREEN : s.net < 0 ? RED : undefined },
-    s.stronger === "even"
-      ? { label: "Stronger", value: "EVEN" }
-      : { label: "Stronger", value: s.stronger === "green" ? "GREEN (buyers)" : "RED (sellers)",
-          color: s.stronger === "green" ? GREEN : RED },
+    { label: "Net", value: `${signed(s.net)} → ${side}`, bullet: true,
+      valueColor: s.net > 0 ? GREEN : s.net < 0 ? RED : undefined },
   ]
 }
 

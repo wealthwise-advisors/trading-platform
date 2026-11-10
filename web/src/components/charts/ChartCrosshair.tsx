@@ -21,6 +21,8 @@ interface PlotAxis {
 type PlotLayout = Record<string, PlotAxis | undefined>
 
 const BOX_WIDTH = 190
+/** Section headings in the swing box. */
+const HEADING_PURPLE = "#c4b5fd"
 const LINE_HEIGHT = 13
 const BOX_CHROME = 8
 const TIME_LABELS = 22
@@ -29,7 +31,7 @@ interface Reading {
   x: number
   top: number
   height: number
-  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean }[]
+  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean; titleColor?: string }[]
 }
 
 function layoutKey(axis: string) {
@@ -85,7 +87,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
       const x = xa.c2p(times.current.ms[i]) + xa._offset
       const flip = x - xa._offset < BOX_WIDTH + 12
 
-      const boxes = rows.map((row, r) => {
+      const boxes: Reading["boxes"] = rows.map((row, r) => {
         const lines = readoutLines(row, bar, i, volumeAxis)
         // Under the cursor's height on price, as the reference has it.
         if (r === 0 && py <= first._offset + first._length) {
@@ -112,16 +114,19 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}`
         let lines = swingCache.current.byKey.get(key)
         if (!lines) {
+          // 10 Leg, a dotted rule, then 3 Leg.
           lines = [
-            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to), sw.color),
+            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to)),
             ...(sw.threeLeg
-              ? strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to), sw.color)
+              ? [{ label: "", value: "", kind: "divider" as const },
+                 ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to))]
               : []),
           ]
           swingCache.current.byKey.set(key, lines)
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
-        boxes.push({ axis: "swing", title: `Swing ${sw.swing}`, top: first._offset + 1, lines, onRight: !priceOnRight })
+        boxes.push({ axis: "swing", title: `Swing ${sw.swing}`, top: first._offset + 1, lines, onRight: !priceOnRight,
+                     titleColor: sw.color })
       }
       setReading({ x, top, height: bottom - top, boxes })
     }
@@ -148,13 +153,24 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
                padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
-          <div className="font-semibold truncate" title={box.title}>{box.title}</div>
-          {box.lines.map((l, n) => (
-            <div key={n} className="flex justify-between gap-2 whitespace-nowrap" style={{ color: l.color }}>
-              <span className="overflow-hidden">{l.label}</span>
-              <span>{l.value}</span>
-            </div>
-          ))}
+          {/* A titled box with sections (the swing box) gets a solid rule
+              under its title; the study boxes keep their compact form. */}
+          <div className="font-semibold truncate" title={box.title}
+               style={box.titleColor ? { color: box.titleColor, borderBottom: "2px solid rgba(163,163,194,0.55)",
+                                         paddingBottom: 3, marginBottom: 4 } : undefined}>
+            {box.title}
+          </div>
+          {box.lines.map((l, n) =>
+            l.kind === "divider" ? (
+              <div key={n} style={{ borderTop: "1px dotted rgba(163,163,194,0.6)", margin: "5px 0" }} />
+            ) : l.kind === "heading" ? (
+              <div key={n} className="font-semibold whitespace-nowrap" style={{ color: HEADING_PURPLE }}>{l.label}</div>
+            ) : (
+              <div key={n} className="flex justify-between gap-2 whitespace-nowrap" style={{ color: l.color }}>
+                <span className="overflow-hidden">{l.bullet ? <span style={{ color: "#9ca3af" }}>• </span> : null}{l.label}</span>
+                <span style={l.valueColor ? { color: l.valueColor, fontWeight: 600 } : undefined}>{l.value}</span>
+              </div>
+            ))}
         </div>
       ))}
     </div>

@@ -45,7 +45,7 @@ describe("swingStrength -- sir's running total", () => {
   it("no volume is said plainly, not called even", () => {
     const s = swingStrength(bars.map((b) => ({ ...b, v: null })), T(0), T(3))!
     expect(s.hasVolume).toBe(false)
-    expect(strengthLines("x", s, "#fff")[1].label).toBe("No volume data")
+    expect(strengthLines("x", s)[1].label).toBe("No volume data")
   })
 
   it("an empty stretch has nothing to say", () => {
@@ -54,19 +54,25 @@ describe("swingStrength -- sir's running total", () => {
 })
 
 describe("strengthLines", () => {
-  it("shows added, subtracted, the net and the winner", () => {
-    const lines = strengthLines("10 Leg Dev (A to B)", swingStrength(
-      [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)), "#fff")
-    const v = (start: string) => lines.find((l) => l.label.startsWith(start))?.value
-    expect(lines[0].label).toBe("10 Leg Dev (A to B)")
-    expect(v("Green higher (1)")).toBe("+1,000")
-    expect(v("Red higher (1)")).toBe("-1,679")
-    expect(v("Net at swing end")).toBe("-679")
-    expect(v("Stronger")).toBe("RED (sellers)")
+  const lines = strengthLines("10 Leg Dev (A to B)", swingStrength(
+    [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)))
+  const line = (start: string) => lines.find((l) => l.label.startsWith(start))
+
+  it("a heading, then one bullet: the net and who it favours", () => {
+    expect(lines[0]).toMatchObject({ label: "10 Leg Dev (A to B)", kind: "heading" })
+    expect(lines).toHaveLength(2)
+    expect(line("Net")).toMatchObject({ value: "-679 → RED", bullet: true })
+  })
+
+  it("only the result carries the colour, never the label", () => {
+    expect(lines.every((l) => l.color === undefined)).toBe(true)
+    expect(line("Net")?.valueColor).toBe("#ff6b6b")
+    const up = strengthLines("x", swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1)))
+    expect(up[1]).toMatchObject({ value: "+1,000 → GREEN", valueColor: "#00c853" })
   })
 
   it("says so when the stretch is empty", () => {
-    expect(strengthLines("x", null, "#fff")[1].label).toBe("No bars in this stretch")
+    expect(strengthLines("x", null)[1].label).toBe("No bars in this stretch")
   })
 })
 

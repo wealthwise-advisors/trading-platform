@@ -682,8 +682,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   }
   await expect(swingBox).toBeVisible()
   await expect(swingBox).toContainText("10 Leg Dev (")
-  await expect(swingBox).toContainText("Net at swing end")
-  await expect(swingBox).toContainText("Stronger")
+  await expect(swingBox).toContainText("Net")
+  await expect(swingBox).toContainText(/→ (GREEN|RED|EVEN)/)
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

@@ -17,7 +17,14 @@ import { vwapLevelColors } from "./vwapLevels"
 export interface ReadoutLine {
   label: string
   value: string
+  /** Colours the whole line. */
   color?: string
+  /** Colours only the number, leaving the label plain. */
+  valueColor?: string
+  /** A section heading, or a dotted rule between sections. */
+  kind?: "heading" | "divider"
+  /** Drawn as a bullet point under a heading. */
+  bullet?: boolean
 }
 
 export interface ReadoutSeries {
