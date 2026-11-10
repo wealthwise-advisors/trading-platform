@@ -54,21 +54,40 @@ const RED = "#ff6b6b"
 const whole = (n: number) => Math.round(n).toLocaleString("en-US")
 const signed = (n: number) => (n > 0 ? "+" : n < 0 ? "-" : "") + whole(Math.abs(n))
 
+const plural = (n: number, word: string) => `${n} ${word} candle${n === 1 ? "" : "s"}`
+const pct = (part: number, whole_: number) => (whole_ ? Math.round((part / whole_) * 100) : 0)
+
 /**
- * One stretch's lines for the hover box: a heading and one bullet, the net at
- * the swing's end and who it favours -- "Net +1,230 → GREEN" (layout chosen
- * 2026-11-10). Only that result carries green or red; the label stays plain.
+ * One stretch's lines for the hover box: a heading, what green candles added
+ * and red candles took off (with their share), the net and who it favours,
+ * then the price move over the stretch. Only the numbers carry green or red;
+ * labels stay plain.
  */
-export function strengthLines(heading: string, s: SwingStrength | null): ReadoutLine[] {
+export function strengthLines(heading: string, s: SwingStrength | null,
+                              move?: { from: number; to: number }): ReadoutLine[] {
   const head: ReadoutLine = { label: heading, value: "", kind: "heading" }
   if (!s) return [head, { label: "No bars in this stretch", value: "", bullet: true }]
   if (!s.hasVolume) return [head, { label: "No volume data", value: "", bullet: true }]
   const side = s.stronger === "even" ? "EVEN" : s.stronger.toUpperCase()
-  return [
+  const both = s.added + s.subtracted
+  const lines: ReadoutLine[] = [
     head,
+    { label: plural(s.greenLed, "green"), value: `+${whole(s.added)} (${pct(s.added, both)}%)`,
+      valueColor: GREEN, bullet: true },
+    { label: plural(s.redLed, "red"), value: `-${whole(s.subtracted)} (${pct(s.subtracted, both)}%)`,
+      valueColor: RED, bullet: true },
     { label: "Net", value: `${signed(s.net)} → ${side}`, bullet: true,
       valueColor: s.net > 0 ? GREEN : s.net < 0 ? RED : undefined },
   ]
+  if (move) {
+    const pts = move.to - move.from
+    lines.push({
+      label: `Move (${s.candles} candles)`, bullet: true,
+      value: `${pts > 0 ? "+" : pts < 0 ? "-" : ""}${Math.abs(pts).toFixed(2)} pts`,
+      valueColor: pts > 0 ? GREEN : pts < 0 ? RED : undefined,
+    })
+  }
+  return lines
 }
 
 export interface SwingSpan {
@@ -77,8 +96,9 @@ export interface SwingSpan {
   /** The swing's own region on the chart, for finding the swing under the cursor. */
   start: string
   end: string
-  tenLeg: { from: string; to: string; label: string }
-  threeLeg: { from: string; to: string; label: string } | null
+  /** Times and prices of the stretch's first and last pivots. */
+  tenLeg: { from: string; to: string; label: string; fromPrice: number; toPrice: number }
+  threeLeg: { from: string; to: string; label: string; fromPrice: number; toPrice: number } | null
 }
 
 /** The swing whose region holds bar time `t`, or null. */

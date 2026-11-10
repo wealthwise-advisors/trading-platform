@@ -21,6 +21,8 @@ interface PlotAxis {
 type PlotLayout = Record<string, PlotAxis | undefined>
 
 const BOX_WIDTH = 190
+/** Wide enough for "13 green candles  +8,087 (51%)" on one line. */
+const SWING_BOX_WIDTH = 268
 /** Section headings in the swing box. */
 const HEADING_PURPLE = "#c4b5fd"
 const LINE_HEIGHT = 13
@@ -31,7 +33,8 @@ interface Reading {
   x: number
   top: number
   height: number
-  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean; titleColor?: string }[]
+  boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean; titleColor?: string;
+           width?: number }[]
 }
 
 function layoutKey(axis: string) {
@@ -116,17 +119,19 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         if (!lines) {
           // 10 Leg, a dotted rule, then 3 Leg.
           lines = [
-            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to)),
+            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to),
+                             { from: sw.tenLeg.fromPrice, to: sw.tenLeg.toPrice }),
             ...(sw.threeLeg
               ? [{ label: "", value: "", kind: "divider" as const },
-                 ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to))]
+                 ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to),
+                                  { from: sw.threeLeg.fromPrice, to: sw.threeLeg.toPrice })]
               : []),
           ]
           swingCache.current.byKey.set(key, lines)
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
         boxes.push({ axis: "swing", title: `Swing ${sw.swing}`, top: first._offset + 1, lines, onRight: !priceOnRight,
-                     titleColor: sw.color })
+                     titleColor: sw.color, width: SWING_BOX_WIDTH })
       }
       setReading({ x, top, height: bottom - top, boxes })
     }
@@ -148,8 +153,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         <div key={box.axis} data-testid={`chart-readout-${box.axis}`}
              className="absolute rounded-sm font-mono"
              style={{
-               top: box.top, width: BOX_WIDTH,
-               left: box.onRight ? reading.x + 8 : reading.x - BOX_WIDTH - 8,
+               top: box.top, width: box.width ?? BOX_WIDTH,
+               left: box.onRight ? reading.x + 8 : reading.x - (box.width ?? BOX_WIDTH) - 8,
                padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>

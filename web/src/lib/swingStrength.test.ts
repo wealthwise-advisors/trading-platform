@@ -58,17 +58,28 @@ describe("strengthLines", () => {
     [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)))
   const line = (start: string) => lines.find((l) => l.label.startsWith(start))
 
-  it("a heading, then one bullet: the net and who it favours", () => {
+  it("a heading, then green and red candles with their share, and the net with who it favours", () => {
     expect(lines[0]).toMatchObject({ label: "10 Leg Dev (A to B)", kind: "heading" })
-    expect(lines).toHaveLength(2)
-    expect(line("Net")).toMatchObject({ value: "-679 → RED", bullet: true })
+    expect(lines.slice(1).map((l) => l.label)).toEqual(["1 green candle", "1 red candle", "Net"])
+    expect(lines.slice(1).every((l) => l.bullet)).toBe(true)
+    expect(line("1 green")?.value).toBe("+1,000 (37%)")
+    expect(line("1 red")?.value).toBe("-1,679 (63%)")
+    expect(line("Net")?.value).toBe("-679 → RED")
+  })
+
+  it("plural candles, and the price move with the candle count when given", () => {
+    const s = swingStrength([bar(1, 1, 2, 1, 2, 100), bar(2, 1, 2, 1, 2, 100)], T(0), T(2))
+    const withMove = strengthLines("x", s, { from: 7500, to: 7512.5 })
+    expect(withMove[1].label).toBe("2 green candles")
+    expect(withMove.at(-1)).toMatchObject({ label: "Move (2 candles)", value: "+12.50 pts", valueColor: "#00c853" })
+    expect(strengthLines("x", s, { from: 10, to: 7.75 }).at(-1)?.value).toBe("-2.25 pts")
   })
 
   it("only the result carries the colour, never the label", () => {
     expect(lines.every((l) => l.color === undefined)).toBe(true)
     expect(line("Net")?.valueColor).toBe("#ff6b6b")
     const up = strengthLines("x", swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1)))
-    expect(up[1]).toMatchObject({ value: "+1,000 → GREEN", valueColor: "#00c853" })
+    expect(up.find((l) => l.label === "Net")).toMatchObject({ value: "+1,000 → GREEN", valueColor: "#00c853" })
   })
 
   it("says so when the stretch is empty", () => {
@@ -78,7 +89,8 @@ describe("strengthLines", () => {
 
 describe("swingAt", () => {
   const span = (swing: number, a: number, b: number): SwingSpan => ({
-    swing, color: "#fff", start: T(a), end: T(b), tenLeg: { from: T(a), to: T(b), label: "A to B" }, threeLeg: null,
+    swing, color: "#fff", start: T(a), end: T(b),
+    tenLeg: { from: T(a), to: T(b), label: "A to B", fromPrice: 0, toPrice: 0 }, threeLeg: null,
   })
   const spans = [span(1, 0, 10), span(2, 10, 20)]
 

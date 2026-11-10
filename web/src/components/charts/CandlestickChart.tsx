@@ -1295,10 +1295,12 @@ export function CandlestickChart({
       const minor = regionPointsBySwing.get(swingNum) ?? []
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,
-        tenLeg: { from: grp[0].t, to: grp[grp.length - 1].t, label: `${firstLabel} to ${lastLabel}` },
+        tenLeg: { from: grp[0].t, to: grp[grp.length - 1].t, label: `${firstLabel} to ${lastLabel}`,
+                  fromPrice: grp[0].price, toPrice: grp[grp.length - 1].price },
         threeLeg: minor.length >= 2
           ? { from: minor[0].t, to: minor[minor.length - 1].t,
-              label: `${minor[0].label} to ${minor[minor.length - 1].label}` }
+              label: `${minor[0].label} to ${minor[minor.length - 1].label}`,
+              fromPrice: minor[0].price, toPrice: minor[minor.length - 1].price }
           : null,
       })
       const headerLevel = placeHeaderLevel(new Date(xMid).getTime())
