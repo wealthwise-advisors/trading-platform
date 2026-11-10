@@ -498,6 +498,7 @@ test("hovering any one row shows every row's values and one line through them al
   await expect(own.getByTestId("chart-readout-y")).toContainText("Open")
   await expect(own.getByTestId("chart-readout-y")).toContainText("Close")
   await expect(own.getByTestId("chart-readout-y2")).toContainText("OverBought")
+  await expect(own.getByTestId("chart-readout-y2")).toContainText("RSI (2, 94, 5")
   await expect(own.getByTestId("chart-readout-y3")).toContainText("FullK")
   await expect(own.getByTestId("chart-readout-y3")).toContainText("FullD")
   await expect(own.getByTestId("chart-readout-y4")).toContainText("RSI(13)")
@@ -525,6 +526,38 @@ test("hovering any one row shows every row's values and one line through them al
 
   await own.mouse.move(2, 2)
   await expect(readouts).toHaveCount(0)
+  await own.close()
+})
+
+test("every study shows its latest value on its own scale", async () => {
+  const tags = await page.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as {
+      layout: { annotations?: { yref?: string; xref?: string; x?: number; text?: string }[] }
+    }
+    return (gd.layout.annotations ?? []).filter((a) => a.xref === "paper" && a.x === 1).map((a) => a.yref)
+  })
+  for (const axis of ["y", "y2", "y3", "y4", "y5", "y6"]) expect(tags, `no value tag on ${axis}`).toContain(axis)
+})
+
+test("the Fibonacci tool turns one drag into the retracement levels, undone as one", async ({ browser }) => {
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const shapes = () => own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { shapes?: { name?: string }[] } }
+    return (gd.layout.shapes ?? []).filter((s) => String(s.name ?? "").startsWith("fib-")).length
+  })
+  await own.getByRole("button", { name: /Fibonacci/ }).first().click()
+  const area = own.locator(".draglayer .xy .nsewdrag").first()
+  const box = (await area.boundingBox())!
+  await own.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.8)
+  await own.mouse.down()
+  await own.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.2, { steps: 10 })
+  await own.mouse.up()
+  await expect.poll(shapes).toBe(7)
+  await own.getByRole("button", { name: /Undo drawing/ }).first().click()
+  await expect.poll(shapes).toBe(0)
   await own.close()
 })
 

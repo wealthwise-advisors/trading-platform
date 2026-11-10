@@ -88,3 +88,19 @@ describe("fittedRange", () => {
   it("never leaves 0-100", () => expect(fittedRange([1, 99], [0, 1], 0, 1)).toEqual([0, 100]))
   it("nothing on screen is the full scale", () => expect(fittedRange([null], [0], 0, 1)).toEqual([0, 100]))
 })
+
+describe("value box titles", () => {
+  it("name the study with its inputs, as thinkorswim's do", () => {
+    expect(OSC_STUDIES.rsi2.tosTitle).toBe("RSI (2, 94, 5, CLOSE, WILDERS)")
+    expect(OSC_STUDIES.stochrsi.tosTitle).toBe("StochRSI (14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE)")
+    expect(OSC_STUDIES.rsi13.tosTitle).toBe("RSI (13, 55, 45, CLOSE, WILDERS)")
+    expect(OSC_STUDIES.mfi.tosTitle).toBe("MoneyFlowIndex (20, 80, 9, 1)")
+  })
+
+  it("carry the levels actually drawn", () => {
+    for (const key of ["rsi2", "rsi13"] as const) {
+      const { overbought, oversold } = OSC_STUDIES[key].levels!
+      expect(OSC_STUDIES[key].tosTitle).toContain(`${overbought}, ${oversold}`)
+    }
+  })
+})

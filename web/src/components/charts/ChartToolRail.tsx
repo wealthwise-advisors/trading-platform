@@ -21,7 +21,7 @@
  * clears every shape the user has drawn.
  */
 import {
-  MousePointer2, Minus, TrendingUp, Square, Circle, PenLine,
+  MousePointer2, Minus, TrendingUp, Square, Circle, PenLine, AlignVerticalSpaceAround,
   Type, Eraser, ZoomIn, Hand, Trash2,
 } from "lucide-react"
 
@@ -31,7 +31,7 @@ export type DrawMode =
   | "drawline" | "drawrect" | "drawcircle" | "drawopenpath"
 
 export interface ToolSpec {
-  id: DrawMode | "hline" | "text" | "erase" | "clear"
+  id: DrawMode | "fib" | "hline" | "text" | "erase" | "clear"
   label: string
   icon: React.ReactNode
   /** What `dragmode` becomes. Absent for the placement tools and actions. */
@@ -57,6 +57,10 @@ export const TOOLS: ToolSpec[] = [
   { id: "drawline", label: "Trend line", icon: <TrendingUp className={I} aria-hidden />,
     mode: "drawline", hint: "Trend line — drag from one point to another",
     howTo: "Drag from one point to another to draw a trend line" },
+  // Drawn as a line drag; CandlestickChart turns the line into the levels.
+  { id: "fib", label: "Fibonacci", icon: <AlignVerticalSpaceAround className={I} aria-hidden />,
+    mode: "drawline", hint: "Fibonacci retracement — drag from the swing's start to its end",
+    howTo: "Drag from the start of the swing to its end — the levels are drawn between them" },
   { id: "hline", label: "Horizontal line", icon: <Minus className={I} aria-hidden />,
     place: true, hint: "Horizontal line — click the chart at the price you want",
     howTo: "Click the chart at the price for the level" },

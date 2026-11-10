@@ -123,7 +123,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
                padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
-          <div className="font-semibold whitespace-nowrap overflow-hidden">{box.title}</div>
+          <div className="font-semibold truncate" title={box.title}>{box.title}</div>
           {box.lines.map((l, n) => (
             <div key={n} className="flex justify-between gap-2 whitespace-nowrap" style={{ color: l.color }}>
               <span className="overflow-hidden">{l.label}</span>

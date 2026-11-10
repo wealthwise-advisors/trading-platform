@@ -50,6 +50,7 @@ import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
+import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
 import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
   VOLUME_AVG_COLOR, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
@@ -587,8 +588,10 @@ export function CandlestickChart({
       return
     }
     if (userShapes.length) {
-      setRedoStack((r) => [...r, userShapes[userShapes.length - 1]])
-      setUserShapes((s) => s.slice(0, -1))
+      // A Fibonacci drawing is several lines and goes as one.
+      const n = lastDrawingSize(userShapes)
+      setRedoStack((r) => [...r, ...userShapes.slice(-n)])
+      setUserShapes((s) => s.slice(0, -n))
       return
     }
     if (userNotes.length) setUserNotes((n) => n.slice(0, -1))
@@ -596,8 +599,9 @@ export function CandlestickChart({
 
   const redoDrawing = () => {
     if (!redoStack.length) return
-    setUserShapes((s) => [...s, redoStack[redoStack.length - 1]])
-    setRedoStack((r) => r.slice(0, -1))
+    const n = lastDrawingSize(redoStack)
+    setUserShapes((s) => [...s, ...redoStack.slice(-n)])
+    setRedoStack((r) => r.slice(0, -n))
     lastDrawn.current = "shape"
   }
 
@@ -726,9 +730,15 @@ export function CandlestickChart({
       // so a drawing can be dragged and reshaped afterwards while the chart's
       // own study shapes stay fixed -- see the config block for why that
       // distinction matters to panning.
-      const next = (e.shapes as Partial<Shape>[])
+      let next = (e.shapes as Partial<Shape>[])
         .slice(builtInShapeCount.current)
         .map((sh) => ({ ...sh, editable: true }) as Partial<Shape>)
+      // The Fibonacci tool draws a plain line; it becomes the levels here.
+      const drawn = next[next.length - 1]
+      if (drawTool === "fib" && next.length === userShapes.length + 1 && drawn?.type === "line" && !drawn.name) {
+        const fib = fibShapes(drawn, Date.now(), bars[bars.length - 1]?.t)
+        next = [...next.slice(0, -1), ...((fib ?? []) as Partial<Shape>[])]
+      }
       if (JSON.stringify(next) !== JSON.stringify(userShapes)) setUserShapes(next)
     }
     /* A note was moved or its text edited. Same slice, same guard. */
@@ -1760,6 +1770,34 @@ export function CandlestickChart({
   const PRICE_MIN = 240
   const chartMinHeight = PRICE_MIN + indicatorRows.length * OSC_ROW_MIN + marginTop + 30
 
+  // thinkorswim's value tags: each study's latest reading on its own row's
+  // scale, in the line's colour. Pinned inside the row's range so a tag can
+  // never float into the row above; the text keeps the true value.
+  const drawnSeries = seriesByAxis(data as unknown as Parameters<typeof seriesByAxis>[0], t)
+  const tagSide = vpLeftAxis ? "left" : "right"
+  const pushTag = (value: number | null | undefined, color: string, yref: string, digits: number,
+                   range?: readonly [number, number]) => {
+    if (value == null || !Number.isFinite(value)) return
+    const y = range ? Math.min(Math.max(value, range[0]), range[1]) : value
+    annotations.push({
+      x: tagSide === "left" ? 0 : 1, xref: "paper", xanchor: tagSide === "left" ? "right" : "left",
+      y, yref: yref as Annotations["yref"], yanchor: "middle", showarrow: false,
+      text: formatReadoutNumber(value, digits), font: { size: 10, color: "#0b0c10" },
+      bgcolor: color, borderpad: 2,
+    } as Partial<Annotations>)
+  }
+  const lastBar = bars[bars.length - 1]
+  if (lastBar) pushTag(lastBar.c, lastBar.c >= lastBar.o ? GREEN : RED, "y", 2, priceYRange)
+  for (const name of indicatorRows) {
+    const axis = `y${suffixOf(name)}`
+    const range: readonly [number, number] =
+      name === "vol" ? [0, volAxisTop] : name === "rsi13" ? rsi13Range : [0, 100]
+    for (const s of drawnSeries.get(axis) ?? []) {
+      const color = s.color ?? (name === "vol" ? volumeBarColors(bars.map((b) => b.c)).at(-1)! : "#e5e7eb")
+      pushTag(lastReading(s.values as (number | null)[]), color, axis, s.digits, range)
+    }
+  }
+
   const layout: Partial<Layout> = {
     // Plotly's title defaults to yref:"container" (positioned against the
     // WHOLE figure, margins included) while the range-selector buttons
@@ -2074,7 +2112,6 @@ export function CandlestickChart({
       delete d.hovertemplate
     }
   }
-  const drawnSeries = seriesByAxis(data as unknown as Parameters<typeof seriesByAxis>[0], t)
   const readoutRows: ReadoutRow[] = [
     { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`,
       // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
@@ -2091,7 +2128,8 @@ export function CandlestickChart({
       const axis = `y${suffixOf(name)}`
       const levels = name === "vol" ? null : OSC_STUDIES[name].levels
       return {
-        axis, title: rowLabel[name].text, series: drawnSeries.get(axis) ?? [],
+        axis, title: name === "vol" ? rowLabel.vol.text : OSC_STUDIES[name].tosTitle,
+        series: drawnSeries.get(axis) ?? [],
         // One line: on two, a short row's box runs into the next row's.
         fixed: levels ? [{ label: "OverSold / OverBought", value: `${levels.oversold} / ${levels.overbought}` }] : [],
       }

@@ -27,6 +27,8 @@ export interface StudyInfo {
   levels: { overbought: number; oversold: number } | null
   /** Why an unavailable study cannot be switched on. */
   pending?: string
+  /** The study with its inputs, as thinkorswim titles its value box. */
+  tosTitle: string
 }
 
 export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
@@ -34,6 +36,7 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
     label: "RSI(2)", available: true,
     inputs: [["length", "2"], ["price", "CLOSE"], ["average", "Wilder's"]],
     levels: { overbought: 94, oversold: 5 },
+    tosTitle: "RSI (2, 94, 5, CLOSE, WILDERS)",
   },
   stochrsi: {
     label: "StochRSI", available: true,
@@ -42,16 +45,19 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
       ["RSI average", "Wilder's"], ["K/D average", "Simple"],
     ],
     levels: { overbought: 80, oversold: 20 },
+    tosTitle: "StochRSI (14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE)",
   },
   rsi13: {
     label: "RSI(13)", available: true,
     inputs: [["length", "13"], ["price", "CLOSE"], ["average", "Wilder's"]],
     levels: { overbought: 55, oversold: 45 },
+    tosTitle: "RSI (13, 55, 45, CLOSE, WILDERS)",
   },
   mfi: {
     label: "MFI", available: true,
     inputs: [["length", "9"], ["price", "(H+L+C)/3"], ["needs volume", "yes -- empty without it"]],
     levels: { overbought: 80, oversold: 20 },
+    tosTitle: "MoneyFlowIndex (20, 80, 9, 1)",
   },
 }
 
