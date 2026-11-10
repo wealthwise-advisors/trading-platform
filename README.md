@@ -28,9 +28,10 @@ tape while it does. Built at **WealthWise Advisors**.
 
 ## 👀 Quick Look
 
-The analysis engine on real ES data — price with swing structure and EMAs, then
-RSI(2), StochRSI and RSI(13) beneath it, all on one shared time axis. Entries,
-exits and every labelled swing are drawn by the same code the backtest scored.
+The analysis engine on real ES data — price with swing structure, EMAs, VWAP bands
+and Volume Profile, then RSI(2), StochRSI, RSI(13), MFI and VolumeAvg (20) beneath
+it, all on one shared time axis and matched to thinkorswim to four decimals.
+Entries, exits and every labelled swing are drawn by the same code the backtest scored.
 
 <div align="center">
 <img src="docs/assets/analysis-engine.png" alt="The AutoTrader price chart: ES candles with labelled ZigZag swings, EMA9 and EMA21, VWAP bands, the Volume Profile with its POC and value area, long and short entry markers, above RSI(2), StochRSI and RSI(13) panels sharing one time axis" width="100%">
@@ -42,7 +43,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **2,709** | **83.2%** | **3.12** | **5** |
+| **2,912** | **83.2%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -78,6 +79,7 @@ exits and every labelled swing are drawn by the same code the backtest scored.
 - [Backtesting & Execution](#-backtesting--execution)
 - [Database](#-database)
 - [Dashboard](#-dashboard)
+- [Charting](#-charting)
 - [Access](#-access)
 - [API Reference](#-api-reference)
 
@@ -576,7 +578,7 @@ How a change actually travels from an idea to the live URL.
 - ➜ [`swing_identification`](src/analysis/swing_identification.py) · [`zigzag`](src/analysis/zigzag.py) — the skeleton of a trend
 - ➜ [`chart_patterns`](src/analysis/chart_patterns.py) — triangles, wedges, head-and-shoulders
 - ➜ [`candlestick_patterns`](src/analysis/candlestick_patterns.py) — single and multi-bar formations
-- ➜ [`indicators`](src/analysis/indicators.py) — RSI, StochRSI, moving averages, VWAP
+- ➜ [`indicators`](src/analysis/indicators.py) — RSI, StochRSI, MFI, EMA, VWAP bands, Bollinger, Volume Profile, VolumeAvg
 - ➜ [`regime`](src/analysis/regime.py) — trending, ranging or volatile
 
 </td></tr>
@@ -726,13 +728,39 @@ A React 19 single-page application over the FastAPI backend.
 
 | Page | What it does |
 |---|---|
+| 📈 [**Chart**](web/src/components/charts) | Live candles, studies, drawing tools, all-panel hover readout — see [Charting](#-charting) |
+| 🔲 [**Multi-chart**](web/src/features/backtest/MultiChartGrid.tsx) | Four timeframes side by side, each live |
 | ⚡ [**Live Replay**](web/src/features/replay) | Multi-timeframe grid, consolidated tape, playback controls, live following |
 | 📉 [**Backtest**](web/src/features/backtest) | Configure, run and read a scored result |
 | 📤 [**Export Data**](web/src/features/export) | Pull bars out for use elsewhere |
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused
-- ➜ **Logic lives in [`lib`](web/src/lib)** — 427 of the web suite's 492 tests run without a DOM
+- ➜ **Logic lives in [`lib`](web/src/lib)** — most of the web suite's 700 tests run without a DOM
+
+<br>
+
+---
+
+## 📈 Charting
+
+**A thinkorswim-style chart, verified against thinkorswim's own values.**
+
+| | |
+|---|---|
+| **Chart types** | Candles · Heikin Ashi · OHLC bars · Line · Renko |
+| **Timeframes** | 1m to 1M; quick buttons 1m 3m 5m 10m 15m 30m 1h 4h 1D 1W 1M |
+| **Studies** | EMA 9/20/50 · VWAP ±1/±2σ by default (±0.5 to ±5 selectable) · Bollinger (20, 2) · Volume Profile |
+| **Panels** | RSI(2) 94/5 · StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE) · RSI(13) 55/45 · MoneyFlowIndex length 9 · VolumeAvg (20) |
+| **Parity** | RSI, StochRSI, MFI, Vol and VolAvg equal thinkorswim to four decimals ([test](tests/test_tos_oscillator_parity.py)) |
+| **Hover readout** | One line through every panel, a value box in each, titled with the study's inputs |
+| **Buyers / sellers** | Each candle's volume split by `(Close − Low) ÷ (High − Low)` |
+| **Swing box** | Per swing, 10 Leg Dev (A to B) and 3 Leg Dev (a to e): green-higher volume added, red-higher subtracted, net at swing end decides the stronger side |
+| **Value tags** | Every study's latest value on its own scale |
+| **Drawing** | Trend line · Fibonacci · Price channel · Measure · Arrow · Horizontal line · Rectangle · Ellipse · Freehand · Note |
+| **Style menu** | Candle colours · maroon background · extended-hours shading · space after last bar · Compare another symbol |
+| **Live** | New bars every 15 s on Schwab data; pan and zoom are kept |
+| **Saved** | Style, VWAP levels and VolumeAvg length are remembered per browser |
 
 <br>
 
@@ -1083,9 +1111,9 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-2%2C719-22c55e?style=flat-square)
-![python](https://img.shields.io/badge/python-2%2C227-3776AB?style=flat-square&logo=python&logoColor=white)
-![web](https://img.shields.io/badge/web-492-61DAFB?style=flat-square&logo=react&logoColor=white)
+![tests](https://img.shields.io/badge/tests-2%2C922-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-2%2C222-3776AB?style=flat-square&logo=python&logoColor=white)
+![web](https://img.shields.io/badge/web-700-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![coverage](https://img.shields.io/badge/coverage-83.2%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 
