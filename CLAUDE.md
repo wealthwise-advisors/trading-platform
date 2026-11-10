@@ -492,15 +492,19 @@ The live candlestick chart is `web/src/components/charts/CandlestickChart.tsx` (
 react-plotly.js) -- it's a full-fidelity port of the old `candlestick_with_trades()`.
 The exported report is built by `api/report/report.py` (what the "Export Report"
 button returns). `api/report/charts.py` holds the older fixed five-row layout and
-is on no export path. With every oscillator on, the chart and the report render 5 rows:
+is on no export path. With every study on, the chart and the report render 6 rows.
+The chart gives price 52% and splits the rest equally; the report still uses 68%.
+The oscillators follow sir's thinkorswim and are held to his values to four
+decimals by tests/test_tos_oscillator_parity.py:
 
 | Row | Content |
 |-----|---------|
-| 1 (68%) | Candlestick + EMA(9) + EMA(21) + ZigZag overlay + trade markers |
-| 2 (8%) | RSI(2) — purple, lines at 94 (red) and 2 (green) |
-| 3 (8%) | StochRSI FullK/FullD (RSI 14, K 3, D 3, Wilder's) — lines at 80/20 |
-| 4 (8%) | RSI(13) — amber, lines at 70/30 |
-| 5 (8%) | MoneyFlowIndex (length 20) — lines at 80/20; empty without volume |
+| 1 | Candlestick + EMA 9/20/50 + VWAP with ±1/±2 bands by default + ZigZag overlay + trade markers |
+| 2 | RSI(2) — white, red above 94 and green below 5 |
+| 3 | StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE) — FullK = raw, FullD = 3-bar simple average; lines at 80/20 |
+| 4 | RSI(13) — white, red above 55 and green below 45 |
+| 5 | MoneyFlowIndex length 9 — positive money flow over ALL money flow; lines at 80/20; empty without volume |
+| 6 | VolumeAvg (20) — bars coloured by close against the previous close, the 20-bar average, buyers/sellers in the hover |
 
 On the live chart each of the four oscillator rows has its own checkbox and
 settings gear in the chart strip, so a row only takes space when it is on;

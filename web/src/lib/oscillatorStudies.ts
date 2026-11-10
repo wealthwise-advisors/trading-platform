@@ -6,9 +6,10 @@
  * Every number below is what the chart draws: the calculations in
  * src/analysis/indicators.py and the level lines. RSI(2) at 94/5 and RSI(13) at
  * 55/45 match the reference platform (changed on request 2026-11-10; they were
- * 94/2 and 70/30). StochRSI (RSI 14, K 3, D 3, Wilder's, 80/20) replaced
- * the price Stochastic, and MoneyFlowIndex (length 20, 80/20) was added, both on
- * 2026-09-15.
+ * 94/2 and 70/30). StochRSI replaced the price Stochastic and MoneyFlowIndex
+ * was added on 2026-09-15; both were brought to thinkorswim's formulas on
+ * 2026-11-10 -- StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE) and
+ * MoneyFlowIndex length 9.
  */
 
 export type OscKey = "rsi2" | "stochrsi" | "rsi13" | "mfi"
@@ -37,8 +38,8 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
   stochrsi: {
     label: "StochRSI", available: true,
     inputs: [
-      ["RSI length", "14"], ["stochastic length", "14"], ["K period", "3"], ["D period", "3"],
-      ["RSI average", "Wilder's"], ["K/D average", "Wilder's"],
+      ["RSI length", "14"], ["K period", "14"], ["D period", "3"], ["slowing period", "1"],
+      ["RSI average", "Wilder's"], ["K/D average", "Simple"],
     ],
     levels: { overbought: 80, oversold: 20 },
   },
@@ -49,7 +50,7 @@ export const OSC_STUDIES: Record<OscKey, StudyInfo> = {
   },
   mfi: {
     label: "MFI", available: true,
-    inputs: [["length", "20"], ["price", "(H+L+C)/3"], ["needs volume", "yes -- empty without it"]],
+    inputs: [["length", "9"], ["price", "(H+L+C)/3"], ["needs volume", "yes -- empty without it"]],
     levels: { overbought: 80, oversold: 20 },
   },
 }

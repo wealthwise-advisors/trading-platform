@@ -806,8 +806,9 @@ def _wilder_longhand(values, period):
 @pytest.mark.parametrize("tf", TIMEFRAMES)
 def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
     """
-    StochRSI as confirmed: RSI(14, Wilder's) -> stochastic over 14 RSI values ->
-    FullK = Wilder's(raw, 3), FullD = Wilder's(FullK, 3). Every step is recomputed
+    StochRSI as thinkorswim draws it: RSI(14, Wilder's) -> stochastic over 14 RSI
+    values -> FullK = raw (slowing 1), FullD = simple average of FullK over 3.
+    tests/test_tos_oscillator_parity.py checks it against sir's own values. Every step is recomputed
     here in plain Python -- nothing below calls the app's RSI, rolling window or
     smoothing -- and the warm-up (which bars are empty) must agree too, not only
     the values.
@@ -815,7 +816,7 @@ def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
     from src.analysis.indicators import calc_stochrsi
 
     anchor = time(18, 0)
-    rsi_len, stoch_len, k_p, d_p = 14, 14, 3, 3
+    rsi_len, stoch_len, k_p, d_p = 14, 14, 1, 3
     # Forty-eight hours, or forty-eight bars' worth where that is more: 48 hours
     # is 24 bars at 2h and 12 at 4h, too few for RSI(14), a 14-bar stochastic and
     # two 3-bar smoothings to produce a value, which skipped this test. Every
@@ -836,8 +837,11 @@ def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
             continue
         hh, ll = max(window), min(window)
         raw.append(nan if hh == ll else 100.0 * (rsi[i] - ll) / (hh - ll))
-    mine_k = _wilder_longhand(raw, k_p)
-    mine_d = _wilder_longhand(mine_k, d_p)
+    def sma(xs, n):
+        return [nan if i + 1 < n or any(math.isnan(x) for x in xs[i + 1 - n: i + 1])
+                else sum(xs[i + 1 - n: i + 1]) / n for i in range(len(xs))]
+    mine_k = sma(raw, k_p)
+    mine_d = sma(mine_k, d_p)
 
     compared = 0
     for i in range(len(df)):
@@ -857,15 +861,15 @@ def test_stochrsi_full_k_and_d_match_a_longhand_recompute(tf, offset):
 @pytest.mark.parametrize("tf", TIMEFRAMES)
 def test_money_flow_index_matches_a_longhand_recompute(tf, offset):
     """
-    MFI(20): typical price (H+L+C)/3, money flow = typical price * volume,
-    positive where typical price rose from the previous bar, negative where it
-    fell, MFI = 100 * positive / (positive + negative) over 20 bars. Recomputed
-    here in plain Python; the warm-up must agree as well as the values.
+    MFI(9) as thinkorswim computes it: typical price (H+L+C)/3, money flow =
+    typical price * volume, positive where typical price rose from the previous
+    bar, MFI = 100 * positive / ALL money flow over 9 bars. Recomputed here in
+    plain Python; the warm-up must agree as well as the values.
     """
     from src.analysis.indicators import calc_mfi
 
     anchor = time(18, 0)
-    length = 20
+    length = 9
     # Forty-eight hours, or forty-eight bars' worth where that is more: 48 hours
     # is twelve 4h bars, fewer than MFI(20) needs to produce a value, which
     # skipped this test. Every interval up to 1h keeps the data it always had.
@@ -877,11 +881,11 @@ def test_money_flow_index_matches_a_longhand_recompute(tf, offset):
 
     hi, lo, cl, vo = (df[c].tolist() for c in ("high", "low", "close", "volume"))
     tp = [(h + low + c) / 3.0 for h, low, c in zip(hi, lo, cl)]
-    pos, neg = [None], [None]            # the first bar has nothing to compare with
+    pos, tot = [None], [None]            # the first bar has nothing to compare with
     for i in range(1, len(tp)):
         flow = tp[i] * vo[i]
         pos.append(flow if tp[i] > tp[i - 1] else 0.0)
-        neg.append(flow if tp[i] < tp[i - 1] else 0.0)
+        tot.append(flow)
 
     nan = float("nan")
     compared = 0
@@ -890,8 +894,8 @@ def test_money_flow_index_matches_a_longhand_recompute(tf, offset):
             mine = nan
         else:
             p = sum(pos[i + 1 - length: i + 1])
-            q = sum(neg[i + 1 - length: i + 1])
-            mine = nan if p + q == 0 else 100.0 * p / (p + q)
+            q = sum(tot[i + 1 - length: i + 1])
+            mine = nan if q == 0 else 100.0 * p / q
         assert pd.isna(got.iloc[i]) == math.isnan(mine), f"{tf} +{offset} MFI bar {i}: empty on one side only"
         if math.isnan(mine):
             continue
@@ -919,8 +923,8 @@ def test_money_flow_index_is_100_when_there_is_only_buying():
     idx = pd.date_range("2026-08-11 18:00", periods=60, freq="5min")
     close = pd.Series([5000.0 + i for i in range(60)], index=idx)
     mfi = calc_mfi(close + 1, close - 1, close, pd.Series(100.0, index=idx))
-    assert mfi.iloc[:20].isna().all()
-    assert (mfi.iloc[20:] == 100.0).all()
+    assert mfi.iloc[:9].isna().all()
+    assert (mfi.iloc[9:] == 100.0).all()
 
 
 # ---------------------------------------------------------------------------

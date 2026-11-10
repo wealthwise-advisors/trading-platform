@@ -33,18 +33,20 @@ def _wilder(series: pd.Series, period: int) -> pd.Series:
 
 
 def calc_stochrsi(close: pd.Series, rsi_length: int = 14, stoch_length: int = 14,
-                  k_period: int = 3, d_period: int = 3):
+                  k_period: int = 1, d_period: int = 3):
     """
     Stochastic RSI: the stochastic formula applied to RSI values, not to price.
 
         RSI    = calc_rsi(close, rsi_length)                            Wilder's
         raw    = 100 * (RSI - min RSI) / (max RSI - min RSI)   over stoch_length
-        FullK  = Wilder's(raw, k_period)
-        FullD  = Wilder's(FullK, d_period)
+        FullK  = simple average of raw over k_period   (1: raw itself)
+        FullD  = simple average of FullK over d_period
 
-    Settings confirmed 2026-09-15: RSI length 14, K period 3, D period 3,
-    Wilder's averaging for the RSI and for K/D, levels 80/20. The stochastic
-    lookback was not given; it is the standard default, equal to the RSI length.
+    thinkorswim's StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE), as on
+    sir's chart (2026-11-10): K period 14, D period 3, slowing 1, simple
+    averages. tests/test_tos_oscillator_parity.py holds it to his values to four
+    decimals. The 2026-09-15 version smoothed K and D with Wilder's, which ran
+    up to 36 points from his FullD.
 
     A window where RSI did not move has no range, so raw is NaN there rather than
     an invented midpoint -- the rule the price Stochastic this replaced used too.
@@ -54,8 +56,8 @@ def calc_stochrsi(close: pd.Series, rsi_length: int = 14, stoch_length: int = 14
     highest = rsi.rolling(stoch_length).max()
     rng = (highest - lowest).replace(0, np.nan)
     raw = 100.0 * (rsi - lowest) / rng
-    k = _wilder(raw, k_period)
-    d = _wilder(k, d_period)
+    k = raw.rolling(k_period).mean()
+    d = k.rolling(d_period).mean()
     return k, d
 
 
@@ -80,23 +82,22 @@ def calc_volume_split(high: pd.Series, low: pd.Series, close: pd.Series,
 
 
 def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
-             volume: pd.Series | None, length: int = 20) -> pd.Series:
+             volume: pd.Series | None, length: int = 9) -> pd.Series:
     """
-    Money Flow Index, length 20 by default (confirmed 2026-09-15; levels 80/20).
+    Money Flow Index as thinkorswim computes it: MoneyFlowIndex(20, 80, 9, 1) on
+    sir's chart -- oversold 20, overbought 80, length 9, no extra averaging.
 
         typical price  tp   = (high + low + close) / 3
         money flow     flow = tp * volume
         positive flow       = flow on bars where tp rose from the previous bar
-        negative flow       = flow on bars where tp fell   (unchanged: neither)
-        MFI                 = 100 * sum(positive) / (sum(positive) + sum(negative))
+        MFI                 = 100 * sum(positive) / sum(flow)
                               over the last `length` bars
 
-    Written as a share of total directional flow rather than the textbook
-    100 - 100 / (1 + positive / negative). The two are identical whenever there
-    is any negative flow; the share form gives 100 when there is only buying,
-    and leaves a window with no directional flow at all as NaN instead of
-    dividing by zero. The first bar has no previous typical price, so it is not
-    classified, and the first value appears once `length` bars have been.
+    The denominator is ALL money flow, bars whose typical price did not change
+    included -- not the textbook positive + negative. That and the length are
+    what reproduce his values to four decimals (tests/test_tos_oscillator_parity
+    .py); the 2026-09-15 version, length 20 and directional flow only, was up to
+    17 points off. The first bar has no previous typical price and is left out.
 
     Volume is handled exactly as calc_vwap_bands handles it: no volume column
     returns all-NaN, and a window whose volume is zero is NaN. MFI is undefined
@@ -111,10 +112,8 @@ def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
     flow = tp * vol
     change = tp.diff()
     positive = flow.where(change > 0, 0.0).where(change.notna())
-    negative = flow.where(change < 0, 0.0).where(change.notna())
     pos_sum = positive.rolling(length).sum()
-    neg_sum = negative.rolling(length).sum()
-    total = (pos_sum + neg_sum).replace(0, np.nan)
+    total = flow.where(change.notna()).rolling(length).sum().replace(0, np.nan)
     return 100.0 * pos_sum / total
 
 

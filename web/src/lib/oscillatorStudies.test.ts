@@ -11,19 +11,19 @@ describe("confirmed settings", () => {
     expect(OSC_STUDIES.rsi13.levels).toEqual({ overbought: 55, oversold: 45 })
   })
 
-  it("the third panel is StochRSI: RSI 14, K 3, D 3, Wilder's, 80/20", () => {
+  it("the third panel is thinkorswim's StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE)", () => {
     const s = OSC_STUDIES.stochrsi
     expect(s.label).toBe("StochRSI")
     expect(Object.fromEntries(s.inputs)).toMatchObject({
-      "RSI length": "14", "K period": "3", "D period": "3",
-      "RSI average": "Wilder's", "K/D average": "Wilder's",
+      "RSI length": "14", "K period": "14", "D period": "3", "slowing period": "1",
+      "RSI average": "Wilder's", "K/D average": "Simple",
     })
     expect(s.levels).toEqual({ overbought: 80, oversold: 20 })
   })
 
-  it("MFI is built: length 20, 80/20", () => {
+  it("MFI is thinkorswim's: length 9, 80/20", () => {
     expect(OSC_STUDIES.mfi.available).toBe(true)
-    expect(Object.fromEntries(OSC_STUDIES.mfi.inputs).length).toBe("20")
+    expect(Object.fromEntries(OSC_STUDIES.mfi.inputs).length).toBe("9")
     expect(OSC_STUDIES.mfi.levels).toEqual({ overbought: 80, oversold: 20 })
   })
 })
