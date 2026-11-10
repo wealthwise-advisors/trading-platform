@@ -746,21 +746,10 @@ A React 19 single-page application over the FastAPI backend.
 
 **A thinkorswim-style chart, verified against thinkorswim's own values.**
 
-| | |
-|---|---|
-| **Chart types** | Candles · Heikin Ashi · OHLC bars · Line · Renko |
-| **Timeframes** | 1m to 1M; quick buttons 1m 3m 5m 10m 15m 30m 1h 4h 1D 1W 1M |
-| **Studies** | EMA 9/20/50 · VWAP ±1/±2σ by default (±0.5 to ±5 selectable) · Bollinger (20, 2) · Volume Profile |
-| **Panels** | RSI(2) 94/5 · StochRSI(14, 80, 20, WILDERS, CLOSE, 14, 3, 1, SIMPLE) · RSI(13) 55/45 · MoneyFlowIndex length 9 · VolumeAvg (20) |
-| **Parity** | RSI, StochRSI, MFI, Vol and VolAvg equal thinkorswim to four decimals ([test](tests/test_tos_oscillator_parity.py)) |
-| **Hover readout** | One line through every panel, a value box in each, titled with the study's inputs |
-| **Buyers / sellers** | Each candle's volume split by `(Close − Low) ÷ (High − Low)` |
-| **Swing box** | Per swing, 10 Leg Dev (A to B) and 3 Leg Dev (a to e): green-higher volume added, red-higher subtracted, net at swing end decides the stronger side |
-| **Value tags** | Every study's latest value on its own scale |
-| **Drawing** | Trend line · Fibonacci · Price channel · Measure · Arrow · Horizontal line · Rectangle · Ellipse · Freehand · Note |
-| **Style menu** | Candle colours · maroon background · extended-hours shading · space after last bar · Compare another symbol |
-| **Live** | New bars every 15 s on Schwab data; pan and zoom are kept |
-| **Saved** | Style, VWAP levels and VolumeAvg length are remembered per browser |
+- ➜ **Studies** — EMA, VWAP bands, Volume Profile, RSI, StochRSI, MFI, VolumeAvg
+- ➜ **Hover readout** — every panel's values at once, plus buyers vs sellers per swing
+- ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout
+- ➜ **Live** — updates every 15 s on Schwab data
 
 <br>
 
