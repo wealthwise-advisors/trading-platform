@@ -51,6 +51,7 @@ import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
+import type { SwingSpan } from "@/lib/swingStrength"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
 import {
   MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
@@ -1120,6 +1121,13 @@ export function CandlestickChart({
     regionLettersBySwing.get(p.swing)!.push(p.label)
   }
   const regionLetters: string[][] = swingGroups.map(([swingNum]) => regionLettersBySwing.get(swingNum) ?? [])
+  // Each swing's stretches, for the hover's buyers-vs-sellers box.
+  const regionPointsBySwing = new Map<number, ZigZagPoint[]>()
+  for (const p of zz3Labelable) {
+    if (!regionPointsBySwing.has(p.swing)) regionPointsBySwing.set(p.swing, [])
+    regionPointsBySwing.get(p.swing)!.push(p)
+  }
+  const swingSpans: SwingSpan[] = []
 
   if (zz3.length) {
     data.push({
@@ -1282,7 +1290,17 @@ export function CandlestickChart({
       const legPart = letters.length
         ? ` | 3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
         : ""
-      const headerText = `<b>Swing ${swingNum}</b><br>(${firstLabel} to ${lastLabel})${legPart}`
+      // "10 Leg Dev" named before (A to B), as the 3-leg part already is (2026-11-10).
+      const headerText = `<b>Swing ${swingNum}</b><br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
+      const minor = regionPointsBySwing.get(swingNum) ?? []
+      swingSpans.push({
+        swing: swingNum, color, start: x0, end: x1,
+        tenLeg: { from: grp[0].t, to: grp[grp.length - 1].t, label: `${firstLabel} to ${lastLabel}` },
+        threeLeg: minor.length >= 2
+          ? { from: minor[0].t, to: minor[minor.length - 1].t,
+              label: `${minor[0].label} to ${minor[minor.length - 1].label}` }
+          : null,
+      })
       const headerLevel = placeHeaderLevel(new Date(xMid).getTime())
       annotations.push({
         x: xMid, y: 1.015 + headerLevel * HEADER_LEVEL_HEIGHT, xref: "x", yref: "paper", yanchor: "bottom",
@@ -2737,7 +2755,7 @@ export function CandlestickChart({
           useResizeHandler
           onRelayout={handleRelayout}
         />
-        <ChartCrosshair hostRef={plotHostRef} bars={bars} rows={readoutRows} interval={interval}
+        <ChartCrosshair hostRef={plotHostRef} bars={bars} rows={readoutRows} interval={interval} swingSpans={swingSpans}
                         volumeAxis={volRow ? `y${suffixOf("vol")}` : undefined} />
         </div>
         </div>

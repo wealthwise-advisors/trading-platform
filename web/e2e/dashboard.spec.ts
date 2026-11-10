@@ -486,7 +486,8 @@ test("hovering any one row shows every row's values and one line through them al
   await runBacktest(own)
   await waitForChartSettled(own)
 
-  const readouts = own.locator("[data-testid^='chart-readout-']")
+  // The six row boxes; the swing box (chart-readout-swing) comes and goes with the swings.
+  const readouts = own.locator("[data-testid^='chart-readout-y']")
   // The StochRSI row, then price: the row under the mouse must not matter.
   for (const row of [".x3y3", ".xy"]) {
     const area = own.locator(`.draglayer ${row} .nsewdrag`).first()
@@ -654,6 +655,36 @@ test("Multi-chart loads four timeframes side by side", async ({ browser }) => {
   for (const tf of ["1m", "5m", "15m", "1h"]) {
     await expect(own.getByTestId(`grid-cell-${tf}`).locator(".js-plotly-plot")).toBeVisible({ timeout: 120_000 })
   }
+  if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
+  await own.close()
+})
+
+test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder", async ({ browser }) => {
+  const own = await browser.newPage({ viewport: { width: 1600, height: 1300 } })
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const headers = await own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
+    return (gd.layout.annotations ?? []).map((a) => a.text ?? "").filter((t) => t.includes("Swing"))
+  })
+  expect(headers.length).toBeGreaterThan(0)
+  for (const h of headers) expect(h).toMatch(/10 Leg Dev \(/)
+
+  const area = own.locator(".draglayer .xy .nsewdrag").first()
+  await area.scrollIntoViewIfNeeded()
+  const box = (await area.boundingBox())!
+  // Somewhere inside the swings: try a few points until one lands in a swing.
+  const swingBox = own.getByTestId("chart-readout-swing")
+  for (const f of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+    await own.mouse.move(box.x + box.width * f, box.y + box.height * 0.5)
+    if (await swingBox.count()) break
+  }
+  await expect(swingBox).toBeVisible()
+  await expect(swingBox).toContainText("10 Leg Dev (")
+  await expect(swingBox).toContainText("Buyers")
+  await expect(swingBox).toContainText("Sellers")
+  await expect(swingBox).toContainText("Stronger")
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

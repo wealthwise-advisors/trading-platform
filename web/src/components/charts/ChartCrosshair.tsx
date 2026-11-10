@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { nearestBarIndex, readoutLines, type ReadoutLine, type ReadoutRow } from "@/lib/chartReadout"
+import { strengthLines, swingAt, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import type { OHLCVRecord } from "@/lib/types"
 
 interface PlotAxis {
@@ -35,17 +36,21 @@ function layoutKey(axis: string) {
   return axis === "y" ? "yaxis" : `yaxis${axis.slice(1)}`
 }
 
-export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
+export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swingSpans = [] }: {
   hostRef: RefObject<HTMLDivElement | null>
   bars: OHLCVRecord[]
   rows: ReadoutRow[]
   volumeAxis?: string
   interval?: string
+  /** The swings on the chart; the one under the cursor gets a buyers-vs-sellers box. */
+  swingSpans?: SwingSpan[]
 }) {
   const [reading, setReading] = useState<Reading | null>(null)
   // The latest props without re-binding the mouse listeners on each render.
-  const latest = useRef({ bars, rows, volumeAxis })
-  useEffect(() => { latest.current = { bars, rows, volumeAxis } })
+  const latest = useRef({ bars, rows, volumeAxis, swingSpans })
+  useEffect(() => { latest.current = { bars, rows, volumeAxis, swingSpans } })
+  // A swing's box lines, worked out once per swing per dataset, not per pixel.
+  const swingCache = useRef<{ bars: OHLCVRecord[] | null; byKey: Map<string, ReadoutLine[]> }>({ bars: null, byKey: new Map() })
   // Bar times in the axis's own units, worked out once per dataset.
   const times = useRef<{ bars: OHLCVRecord[] | null; ms: number[] }>({ bars: null, ms: [] })
 
@@ -60,7 +65,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
       const gd = host.querySelector(".js-plotly-plot") as unknown as { _fullLayout?: PlotLayout } | null
       const full = gd?._fullLayout
       const xa = full?.xaxis
-      const { bars, rows, volumeAxis } = latest.current
+      const { bars, rows, volumeAxis, swingSpans } = latest.current
       if (!full || !xa || !bars.length || !rows.length) return clear()
 
       const rect = host.getBoundingClientRect()
@@ -98,6 +103,26 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval }: {
         const onRight = r === 0 && !fits && roomOnOtherSide ? !flip : flip
         return { axis: row.axis, title: row.title, top: boxTop, lines, onRight }
       })
+      // The swing under the cursor: who pushed harder over its 10 Leg Dev and
+      // 3 Leg Dev stretches. Top of the price row, on the side the price box
+      // is not on, so the two never cover each other.
+      const sw = swingAt(swingSpans, bar.t)
+      if (sw) {
+        if (swingCache.current.bars !== bars) swingCache.current = { bars, byKey: new Map() }
+        const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}`
+        let lines = swingCache.current.byKey.get(key)
+        if (!lines) {
+          lines = [
+            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to), sw.color),
+            ...(sw.threeLeg
+              ? strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to), sw.color)
+              : []),
+          ]
+          swingCache.current.byKey.set(key, lines)
+        }
+        const priceOnRight = boxes[0]?.onRight ?? flip
+        boxes.push({ axis: "swing", title: `Swing ${sw.swing}`, top: first._offset + 1, lines, onRight: !priceOnRight })
+      }
       setReading({ x, top, height: bottom - top, boxes })
     }
 
