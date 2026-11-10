@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { lazy, Suspense, useEffect, useState } from "react"
-import { FOLLOW_POLL_MS } from "@/lib/followLive"
+import { useQuery } from "@tanstack/react-query"
+import { lazy, Suspense, useState } from "react"
 import { api } from "@/lib/api"
 import {
   useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
@@ -33,8 +32,10 @@ import {
   // The reference's trading dock.
   Wallet, Inbox, History, Landmark, NotebookPen,
   // The collapsible right rail.
-  ChevronsLeft, ChevronsRight, Star, Bell, Activity,
+  ChevronsLeft, ChevronsRight, Star, Bell, Activity, LayoutGrid,
 } from "lucide-react"
+import { MultiChartGrid } from "@/features/backtest/MultiChartGrid"
+import { useFollowLive } from "@/features/backtest/useFollowLive"
 
 /**
  * The four Plotly charts are split out of the main bundle.
@@ -118,32 +119,8 @@ export function ResultsPage() {
     queryFn: () => api.getPriceData(backtestId!),
     enabled: !!backtestId,
   })
-  // A run on live data whose date range includes today keeps moving: the same
-  // poll, at the same pace, as Market Grid's follow-live. The server answers
-  // live:false once there is nothing more to fetch, and polling stops.
-  const queryClient = useQueryClient()
-  const followLive = summaryQ.data?.data_source === "schwab"
-  useEffect(() => {
-    if (!backtestId || !followLive) return
-    let busy = false
-    const tick = async () => {
-      if (busy || document.hidden) return
-      busy = true
-      try {
-        const fresh = await api.refreshPriceData(backtestId)
-        queryClient.setQueryData(["backtest", backtestId, "price-data"], fresh)
-        if (fresh.live) void queryClient.invalidateQueries({ queryKey: ["backtest", backtestId, "zigzag"] })
-        else clearInterval(timer)
-      } catch {
-        // The next tick tries again.
-      } finally {
-        busy = false
-      }
-    }
-    const timer = setInterval(() => void tick(), FOLLOW_POLL_MS)
-    void tick()
-    return () => clearInterval(timer)
-  }, [backtestId, followLive, queryClient])
+  // A run on live data whose date range includes today keeps moving.
+  useFollowLive(backtestId, summaryQ.data?.data_source)
 
   const equityQ = useQuery({
     queryKey: ["backtest", backtestId, "equity-curve"],
@@ -400,6 +377,7 @@ export function ResultsPage() {
                         bars={priceDataQ.data.bars}
                         indicators={priceDataQ.data.indicators}
                         volumeContext={priceDataQ.data.volume_context}
+                        fetchCompare={(sym) => api.compareSymbol(backtestId!, sym)}
                         zigzag={zigzagQ.data}
                         trades={tradesQ.data ?? []}
                       />
@@ -477,6 +455,9 @@ export function ResultsPage() {
                 <OptimizerPanel />
               </Card>
             </TabsContent>
+            <TabsContent value="multichart" className="mt-0">
+              <MultiChartGrid />
+            </TabsContent>
             <TabsContent value="elliottwave" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && (
@@ -544,6 +525,7 @@ export function ResultsPage() {
               { value: "chartpatterns", label: "Chart Patterns", icon: <Shapes className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "elliottwave", label: "Elliott Wave", icon: <Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "multichart", label: "Multi-chart", icon: <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
             ].map((t) => ({ ...t, content: <>{t.icon} {t.label}</> }))} />
           </div>
           </div>

@@ -51,6 +51,12 @@ import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
+import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
+import {
+  MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
+} from "@/lib/chartStyle"
+import { ChartStylePanel } from "@/components/charts/ChartStylePanel"
+import { useQuery } from "@tanstack/react-query"
 import { formatReadoutNumber, seriesByAxis, type ReadoutRow } from "@/lib/chartReadout"
 import {
   VOLUME_AVG_COLOR, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageWithContext,
@@ -73,6 +79,8 @@ interface CandlestickChartProps {
   indicators: IndicatorSeries
   /** Volumes outside `bars` that VolumeAvg still averages. */
   volumeContext?: VolumeContext
+  /** Another symbol's closes over this run, for the Compare overlay. */
+  fetchCompare?: (symbol: string) => Promise<{ symbol: string; t: string[]; c: number[] }>
   zigzag: ZigZagResponse
   trades: TradeRecord[]
   showZigzag?: boolean
@@ -191,6 +199,10 @@ function StudyGear({ label, title, onClick }: {
 /** Price-row traces the hover box prints in its VWAP and VolumeProfile blocks. */
 const BOX_BLOCK_LABELS = new Set(["VWAP", "UpperBand", "LowerBand", "POC", "VAHigh", "VALow"])
 
+const COMPARE_COLOR = "#f59e0b"
+/** Symbols the Style menu's Compare can offer. */
+const COMPARE_SYMBOLS = ["ES", "NQ", "YM", "RTY", "MES", "MNQ", "CL", "GC"]
+
 /** Indicator colours, read off sir's thinkorswim (2026-11-10). */
 const OSC_LINE = "#ffffff"
 const ZONE_ABOVE = "#ff5252"
@@ -251,7 +263,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, bars, indicators, volumeContext, zigzag, trades, showZigzag = true,
+  symbol, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -412,6 +424,9 @@ export function CandlestickChart({
   const [vpLeftAxis, setVpLeftAxis] = useState(false)
   const [vpSavedNote, setVpSavedNote] = useState("")
   const [indicatorMenu, setIndicatorMenu] = useState(false)
+  const [chartStyle, setChartStyle] = useState(loadChartStyle)
+  useEffect(() => { saveChartStyle(chartStyle) }, [chartStyle])
+  const [stylePanel, setStylePanel] = useState(false)
   const [saveMenu, setSaveMenu] = useState(false)
   /** Wraps the Indicators and Save buttons with their menus, so a click
    *  anywhere outside it closes whichever is open. */
@@ -556,6 +571,13 @@ export function CandlestickChart({
   // chart back to its default window under anyone who had panned or zoomed.
   const runKey = chartRunKey(bars, interval)
   useEffect(() => setVisibleRange(null), [runKey])
+  const compareQ = useQuery({
+    queryKey: ["compare", chartStyle.compare, runKey],
+    queryFn: () => fetchCompare!(chartStyle.compare!),
+    enabled: !!fetchCompare && !!chartStyle.compare,
+    refetchInterval: 60_000,
+    retry: false,
+  })
 
   /**
    * A rail button was pressed.
@@ -733,11 +755,28 @@ export function CandlestickChart({
       let next = (e.shapes as Partial<Shape>[])
         .slice(builtInShapeCount.current)
         .map((sh) => ({ ...sh, editable: true }) as Partial<Shape>)
-      // The Fibonacci tool draws a plain line; it becomes the levels here.
+      // Fibonacci, channel, measure and arrow all draw a plain line; it
+      // becomes the real drawing here, once, as the drag ends.
       const drawn = next[next.length - 1]
-      if (drawTool === "fib" && next.length === userShapes.length + 1 && drawn?.type === "line" && !drawn.name) {
-        const fib = fibShapes(drawn, Date.now(), bars[bars.length - 1]?.t)
-        next = [...next.slice(0, -1), ...((fib ?? []) as Partial<Shape>[])]
+      if (["fib", "channel", "measure", "arrow"].includes(drawTool)
+          && next.length === userShapes.length + 1 && drawn?.type === "line" && !drawn.name) {
+        const rest = next.slice(0, -1)
+        const id = Date.now()
+        if (drawTool === "fib") {
+          next = [...rest, ...((fibShapes(drawn, id, bars[bars.length - 1]?.t) ?? []) as Partial<Shape>[])]
+        } else if (drawTool === "channel") {
+          next = [...rest, ...((channelShapes(drawn, bars, id) ?? []) as Partial<Shape>[])]
+        } else if (drawTool === "measure") {
+          const m = measureShape(drawn, bars.map((b) => b.t))
+          next = m ? [...rest, m as Partial<Shape>] : rest
+        } else {
+          const arrow = arrowNote(drawn)
+          next = rest
+          if (arrow) {
+            setUserNotes((n) => [...n, arrow as Partial<Annotations>])
+            lastDrawn.current = "note"
+          }
+        }
       }
       if (JSON.stringify(next) !== JSON.stringify(userShapes)) setUserShapes(next)
     }
@@ -838,6 +877,13 @@ export function CandlestickChart({
 
   const data: Data[] = []
   const shapes: Partial<Shape>[] = []
+  // Extended hours tinted, as thinkorswim does; across every row.
+  if (chartStyle.shadeExtended) {
+    for (const [a, b] of extendedHoursSpans(t, barStepMs(t))) {
+      shapes.push({ type: "rect", xref: "x", yref: "paper", x0: a, x1: b, y0: 0, y1: 1,
+                    fillcolor: "rgba(148,163,184,0.07)", line: { width: 0 }, layer: "below" } as Partial<Shape>)
+    }
+  }
 
   /* Price alerts for THIS instrument, drawn as dashed levels across the plot.
      Filtered by symbol so an ES alert does not appear on an NQ chart. Amber
@@ -853,14 +899,26 @@ export function CandlestickChart({
   const annotations: Partial<Annotations>[] = []
 
   // ── Row 1: Candlestick (9-min display bars) + EMA9/21 (still per-minute) ──
-  data.push({
-    type: "candlestick",
-    x: candleBars.map((b) => b.t), open: candleBars.map((b) => b.o), high: candleBars.map((b) => b.h),
-    low: candleBars.map((b) => b.l), close: candleBars.map((b) => b.c),
-    name: "Price", showlegend: false,
-    increasing: { line: { color: GREEN, width: 1.3 } }, decreasing: { line: { color: RED, width: 1.3 } },
-    xaxis: "x", yaxis: "y",
-  } as unknown as Data)
+  // The Style menu's chart type. Only the drawing changes: every study and
+  // the hover box keep reading the real bars.
+  const priceBars = chartStyle.type === "heikin" ? heikinAshi(candleBars)
+    : chartStyle.type === "renko" ? renkoBricks(bars, chartStyle.renkoBrick ?? autoRenkoBrick(bars))
+    : candleBars
+  if (chartStyle.type === "line") {
+    data.push({ type: "scatter", mode: "lines", x: candleBars.map((b) => b.t), y: candleBars.map((b) => b.c),
+                name: "Price", showlegend: false, line: { color: chartStyle.up, width: 1.6 },
+                xaxis: "x", yaxis: "y" } as unknown as Data)
+  } else {
+    data.push({
+      type: chartStyle.type === "bars" ? "ohlc" : "candlestick",
+      x: priceBars.map((b) => b.t), open: priceBars.map((b) => b.o), high: priceBars.map((b) => b.h),
+      low: priceBars.map((b) => b.l), close: priceBars.map((b) => b.c),
+      name: "Price", showlegend: false,
+      increasing: { line: { color: chartStyle.up, width: 1.3 } },
+      decreasing: { line: { color: chartStyle.down, width: 1.3 } },
+      xaxis: "x", yaxis: "y",
+    } as unknown as Data)
+  }
 
   // EMA lines kept thinner than the candles (1.0 vs 1.7) so candlesticks
   // stay the primary price representation, but clearly visible in their
@@ -1546,7 +1604,7 @@ export function CandlestickChart({
     const first = new Date(t[0]).getTime()
     const last = new Date(t[t.length - 1]).getTime()
     const barMs = (last - first) / (t.length - 1)
-    const pad = barMs * 3
+    const pad = barMs * chartStyle.rightSpace
     // Mirrors priceYRange's fallback: default 2-hour window until the user
     // zooms/pans, then follow that same visibleRange so x and y never
     // disagree about which window is showing (a later re-render -- new
@@ -1798,6 +1856,26 @@ export function CandlestickChart({
     }
   }
 
+  // Compare: the other symbol's closes on their own scale over the price row,
+  // fitted to the bars on screen as the price scale is.
+  let compareAxis: Record<string, unknown> | null = null
+  if (compareQ.data && chartStyle.compare) {
+    const cmp = compareQ.data
+    data.push({ type: "scatter", mode: "lines", x: cmp.t, y: cmp.c, name: cmp.symbol, showlegend: false,
+                hoverinfo: "skip", line: { color: COMPARE_COLOR, width: 1.3 }, xaxis: "x", yaxis: "y10" } as unknown as Data)
+    const shown = cmp.c.filter((_, i) => {
+      const ms = new Date(cmp.t[i]).getTime()
+      return ms >= axisStartMs && ms <= axisEndMs
+    })
+    const lo = shown.length ? Math.min(...shown) : undefined
+    const hi = shown.length ? Math.max(...shown) : undefined
+    compareAxis = {
+      overlaying: "y", side: vpLeftAxis ? "right" : "left", showgrid: false, automargin: true, fixedrange: true,
+      tickfont: { size: 10, color: COMPARE_COLOR }, title: { text: cmp.symbol, font: { size: 10, color: COMPARE_COLOR } },
+      ...(lo != null && hi != null ? { range: [lo - (hi - lo) * 0.03 - 0.01, hi + (hi - lo) * 0.03 + 0.01] } : {}),
+    }
+  }
+
   const layout: Partial<Layout> = {
     // Plotly's title defaults to yref:"container" (positioned against the
     // WHOLE figure, margins included) while the range-selector buttons
@@ -1824,7 +1902,7 @@ export function CandlestickChart({
     // height. The Volume Profile input string went with it: it is editable in
     // that study's own settings panel, which is where it belongs.
     title: { text: "" },
-    paper_bgcolor: BG, plot_bgcolor: BG,
+    paper_bgcolor: chartStyle.maroon ? MAROON_BG : BG, plot_bgcolor: chartStyle.maroon ? MAROON_BG : BG,
     font: { color: INK },
     // Driven by the drawing rail. "pan" until a tool is picked, which is the
     // behaviour the chart had before the rail existed.
@@ -1919,6 +1997,7 @@ export function CandlestickChart({
     // column), and autosize + the Plot's own height:100% style pick that up.
     autosize: true,
     ...(dynamicAxes as Partial<Layout>),
+    ...(compareAxis ? { yaxis10: compareAxis } as Partial<Layout> : {}),
     // The chart's own shapes first, the user's drawings on top, so a trend
     // line is never hidden behind a value-area band. The counts are recorded
     // here, at the one place that knows the split, for handleRelayout's slice.
@@ -2024,6 +2103,14 @@ export function CandlestickChart({
                        onChart={legendOnChart}
                        onToggleOnChart={setLegendOnChart} />
 
+      {/* "Style": chart type, colours, background, extended hours, Compare. */}
+      <button type="button" aria-haspopup="dialog" aria-expanded={stylePanel}
+              onClick={() => { setStylePanel((v) => !v); setIndicatorMenu(false); setSaveMenu(false) }}
+              className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
+                         bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
+        Style <ChevronDown className="h-3 w-3" aria-hidden />
+      </button>
+
       <span ref={menusRef} className="contents">
       {/* "Indicators": every study in one menu. The checkboxes to the left
                 stay exactly as they are -- this is a second way to reach the same
@@ -2107,7 +2194,7 @@ export function CandlestickChart({
   // Every row's box comes from ChartCrosshair; Plotly keeps only the hovers
   // that are about a single mark (a swing, an entry, the profile).
   for (const d of data as unknown as { type?: string; x?: unknown; hoverinfo?: string; hovertemplate?: string }[]) {
-    if (d.type === "candlestick" || d.x === t) {
+    if (d.type === "candlestick" || d.type === "ohlc" || d.x === t || (d as { name?: string }).name === "Price") {
       d.hoverinfo = "skip"
       delete d.hovertemplate
     }
@@ -2131,7 +2218,8 @@ export function CandlestickChart({
         axis, title: name === "vol" ? rowLabel.vol.text : OSC_STUDIES[name].tosTitle,
         series: drawnSeries.get(axis) ?? [],
         // One line: on two, a short row's box runs into the next row's.
-        fixed: levels ? [{ label: "OverSold / OverBought", value: `${levels.oversold} / ${levels.overbought}` }] : [],
+        fixed: levels ? [{ label: "OverSold", value: String(levels.oversold) },
+                         { label: "OverBought", value: String(levels.overbought) }] : [],
       }
     }),
   ]
@@ -2568,6 +2656,11 @@ export function CandlestickChart({
         {oscPanel && (
           <OscillatorStudyPanel study={oscPanel} onClose={() => setOscPanel(null)}
                                 className="absolute right-0 top-7 z-20" />
+        )}
+        {stylePanel && (
+          <ChartStylePanel style={chartStyle} onChange={setChartStyle} onClose={() => setStylePanel(false)}
+                           symbols={COMPARE_SYMBOLS} currentSymbol={symbol.toUpperCase().replace(/^\//, "")}
+                           className="absolute right-0 top-7 z-20" />
         )}
         {volPanel && (
           <VolumeAvgPanel length={volLength} onLength={setVolLength} onClose={() => setVolPanel(false)}

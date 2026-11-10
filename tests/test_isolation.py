@@ -105,9 +105,12 @@ def test_every_backtest_route_serves_the_workspaces_own_result(client, workspace
     the store's owner scoping is applied with the RIGHT owner: a route that
     looked results up under the wrong account would 404 its own runs here.
     """
+    # Routes with a required query parameter get a valid one, or the sweep
+    # would read a 422 for "missing parameter" as "cannot read its own result".
+    required = {"/api/backtests/{backtest_id}/compare": "?symbol=NQ"}
     broken = []
     for method, path in _owned_routes():
-        url = path.replace("{backtest_id}", workspace_backtest)
+        url = path.replace("{backtest_id}", workspace_backtest) + required.get(path, "")
         r = client.request(method, url)
         if r.status_code != 200:
             broken.append(f"{method} {path} -> {r.status_code}")

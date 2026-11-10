@@ -574,3 +574,86 @@ test("full screen fits every row, VolumeAvg included, on a laptop screen", async
   }, { message: "the VolumeAvg row is not on screen" }).toBe(true)
   await own.close()
 })
+
+test("Style: chart type, background and Compare change the chart, and stay changed", async ({ browser }) => {
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const plot = () => own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as {
+      data: { name?: string; type?: string; yaxis?: string }[]; layout: { plot_bgcolor?: string }
+    }
+    return { price: gd.data.find((d) => d.name === "Price")?.type, bg: gd.layout.plot_bgcolor,
+             compare: gd.data.some((d) => d.yaxis === "y10") }
+  })
+  await own.getByRole("button", { name: /^Style/ }).first().click()
+  const panel = own.getByRole("dialog", { name: "Chart style" })
+  for (const [type, want] of [["bars", "ohlc"], ["line", "scatter"], ["heikin", "candlestick"], ["renko", "candlestick"]] as const) {
+    await panel.getByLabel("Chart type").selectOption(type)
+    await expect.poll(async () => (await plot()).price).toBe(want)
+  }
+  await panel.getByLabel("Maroon background").check()
+  await expect.poll(async () => (await plot()).bg).toBe("#1a0508")
+  await panel.getByLabel("Compare with").selectOption("NQ")
+  await expect.poll(async () => (await plot()).compare, { timeout: 30_000 }).toBe(true)
+
+  await own.reload()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  await expect.poll(async () => (await plot()).bg).toBe("#1a0508")
+  await own.getByRole("button", { name: /^Style/ }).first().click()
+  await own.getByRole("dialog", { name: "Chart style" }).getByRole("button", { name: "Reset to default" }).click()
+  await expect.poll(async () => (await plot()).price).toBe("candlestick")
+  await own.close()
+})
+
+test("measure, channel and arrow each turn one drag into their drawing", async ({ browser }) => {
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const drawings = () => own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as {
+      layout: { shapes?: { name?: string; label?: { text?: string } }[]; annotations?: { showarrow?: boolean; axref?: string }[] }
+    }
+    const shapes = gd.layout.shapes ?? []
+    return {
+      measure: shapes.filter((s) => /bars?$/.test(s.label?.text ?? "")).length,
+      channel: shapes.filter((s) => String(s.name ?? "").startsWith("channel-")).length,
+      arrow: (gd.layout.annotations ?? []).filter((a) => a.showarrow && a.axref === "x").length,
+    }
+  })
+  const drag = async (tool: RegExp) => {
+    await own.getByRole("button", { name: tool }).first().click()
+    const box = (await own.locator(".draglayer .xy .nsewdrag").first().boundingBox())!
+    await own.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.7)
+    await own.mouse.down()
+    await own.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.4, { steps: 10 })
+    await own.mouse.up()
+  }
+  await drag(/^Measure/)
+  await expect.poll(async () => (await drawings()).measure).toBe(1)
+  await drag(/^Price channel/)
+  await expect.poll(async () => (await drawings()).channel).toBeGreaterThanOrEqual(1)
+  await drag(/^Arrow/)
+  await expect.poll(async () => (await drawings()).arrow).toBe(1)
+  await own.close()
+})
+
+test("Multi-chart loads four timeframes side by side", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const own = await browser.newPage({ viewport: { width: 1700, height: 1300 } })
+  await openApp(own)
+  await runBacktest(own)
+  // The tab is folded behind "More analyses" when the strip is full.
+  await own.getByRole("button", { name: "More analyses" }).click()
+  await own.getByRole("menuitem", { name: /Multi-chart/ }).click()
+  await own.getByRole("button", { name: "Load charts" }).click()
+  for (const tf of ["1m", "5m", "15m", "1h"]) {
+    await expect(own.getByTestId(`grid-cell-${tf}`).locator(".js-plotly-plot")).toBeVisible({ timeout: 120_000 })
+  }
+  if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
+  await own.close()
+})

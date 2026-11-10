@@ -292,6 +292,31 @@ def live_refresh(backtest_id: str, user=PROTECTED):
     return respond(True)
 
 
+@router.get("/{backtest_id}/compare")
+def compare_symbol(backtest_id: str, symbol: str = Query(..., min_length=1, max_length=8), user=PROTECTED):
+    """Another symbol's closes over this run's dates, timeframe and session.
+
+    For the chart's Compare overlay. The same provider and session filter as the
+    run, so the two lines cover the same bars.
+    """
+    stored = _get_or_404(backtest_id, user)
+    r = stored.results
+    sym = symbol.upper().lstrip("/")
+    start, end = r.start_date, r.end_date
+    try:
+        provider = _build_provider(stored.data_source, sym, r.timeframe, start.date(), end.date(),
+                                   get_contract_spec(sym), session_start=stored.session_start)
+        from api.routers.replay import _apply_session  # replay imports this module
+        df = _apply_session(provider.load(sym, start, end, r.timeframe), stored.session_start, stored.session_end)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"No {sym} data to compare: {exc}")
+    if df is None or df.empty:
+        raise HTTPException(400, f"No {sym} data to compare over this run's dates.")
+    return {"symbol": sym, "t": [ts.isoformat() for ts in df.index], "c": [float(v) for v in df["close"]]}
+
+
 @router.get("/{backtest_id}/trades")
 def get_trades(backtest_id: str, user=PROTECTED):
     stored = _get_or_404(backtest_id, user)

@@ -17,6 +17,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
+import type { BacktestRequest } from "@/lib/types"
 import { useConfigStore } from "@/store/configStore"
 
 /** Fields a caller may change as part of starting the run, so it does not
@@ -24,6 +25,27 @@ import { useConfigStore } from "@/store/configStore"
 export interface RunOverrides {
   timeframe?: string
   startDate?: string
+}
+
+/** The one definition of a run request, from the config panel's state. */
+export function buildRunRequest(s: ReturnType<typeof useConfigStore.getState>, o: RunOverrides = {}): BacktestRequest {
+  return {
+    data_source: s.dataSource,
+    symbol: s.symbol,
+    timeframe: o.timeframe ?? s.timeframe,
+    strategy_id: s.strategyId,
+    params: s.params,
+    initial_capital: s.initialCapital,
+    contracts_per_trade: s.contractsPerTrade,
+    commission_per_contract: s.commission,
+    start_date: o.startDate ?? s.startDate,
+    end_date: s.endDate,
+    // null on both edges tells the engine to skip session filtering.
+    session_start: s.session24h ? null : s.sessionStart,
+    session_end: s.session24h ? null : s.sessionEnd,
+    zigzag_dev_3: s.zigzagDev3 / 100,
+    zigzag_dev_10: s.zigzagDev10 / 100,
+  }
 }
 
 export function useRunBacktest() {
@@ -36,25 +58,7 @@ export function useRunBacktest() {
     // what the interval buttons do -- sends the new value rather than the one
     // captured at render time.
     mutationFn: (overrides: RunOverrides | void) => {
-      const o = (overrides ?? {}) as RunOverrides
-      const s = useConfigStore.getState()
-      return api.runBacktest({
-        data_source: s.dataSource,
-        symbol: s.symbol,
-        timeframe: o.timeframe ?? s.timeframe,
-        strategy_id: s.strategyId,
-        params: s.params,
-        initial_capital: s.initialCapital,
-        contracts_per_trade: s.contractsPerTrade,
-        commission_per_contract: s.commission,
-        start_date: o.startDate ?? s.startDate,
-        end_date: s.endDate,
-        // null on both edges tells the engine to skip session filtering.
-        session_start: s.session24h ? null : s.sessionStart,
-        session_end: s.session24h ? null : s.sessionEnd,
-        zigzag_dev_3: s.zigzagDev3 / 100,
-        zigzag_dev_10: s.zigzagDev10 / 100,
-      })
+      return api.runBacktest(buildRunRequest(useConfigStore.getState(), (overrides ?? {}) as RunOverrides))
     },
     onSuccess: (summary) => {
       cfg.setBacktestId(summary.backtest_id)

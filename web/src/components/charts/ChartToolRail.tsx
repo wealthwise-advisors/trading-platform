@@ -21,7 +21,7 @@
  * clears every shape the user has drawn.
  */
 import {
-  MousePointer2, Minus, TrendingUp, Square, Circle, PenLine, AlignVerticalSpaceAround,
+  MousePointer2, Minus, TrendingUp, Square, Circle, PenLine, AlignVerticalSpaceAround, Ruler, MoveUpRight, Equal,
   Type, Eraser, ZoomIn, Hand, Trash2,
 } from "lucide-react"
 
@@ -31,7 +31,7 @@ export type DrawMode =
   | "drawline" | "drawrect" | "drawcircle" | "drawopenpath"
 
 export interface ToolSpec {
-  id: DrawMode | "fib" | "hline" | "text" | "erase" | "clear"
+  id: DrawMode | "fib" | "measure" | "channel" | "arrow" | "hline" | "text" | "erase" | "clear"
   label: string
   icon: React.ReactNode
   /** What `dragmode` becomes. Absent for the placement tools and actions. */
@@ -61,6 +61,16 @@ export const TOOLS: ToolSpec[] = [
   { id: "fib", label: "Fibonacci", icon: <AlignVerticalSpaceAround className={I} aria-hidden />,
     mode: "drawline", hint: "Fibonacci retracement — drag from the swing's start to its end",
     howTo: "Drag from the start of the swing to its end — the levels are drawn between them" },
+  // These three are line drags too, turned into their drawing on release.
+  { id: "channel", label: "Price channel", icon: <Equal className={I} aria-hidden />,
+    mode: "drawline", hint: "Price channel — drag along the highs or the lows",
+    howTo: "Drag along the lows or the highs — the parallel line is drawn through the furthest bar" },
+  { id: "measure", label: "Measure", icon: <Ruler className={I} aria-hidden />,
+    mode: "drawline", hint: "Measure — points, percent and bars between two places",
+    howTo: "Drag from one point to another to measure the move" },
+  { id: "arrow", label: "Arrow", icon: <MoveUpRight className={I} aria-hidden />,
+    mode: "drawline", hint: "Arrow — point at something on the chart",
+    howTo: "Drag from the tail to where the arrow should point" },
   { id: "hline", label: "Horizontal line", icon: <Minus className={I} aria-hidden />,
     place: true, hint: "Horizontal line — click the chart at the price you want",
     howTo: "Click the chart at the price for the level" },

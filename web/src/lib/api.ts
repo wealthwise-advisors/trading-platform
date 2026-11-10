@@ -170,6 +170,9 @@ export const api = {
   getBacktest: (id: string) => request<BacktestSummary>(`/backtests/${id}`),
   getTrades: (id: string) => request<TradeRecord[]>(`/backtests/${id}/trades`),
   getPriceData: (id: string) => request<PriceDataResponse>(`/backtests/${id}/price-data`),
+  /** Another symbol's closes over a run's dates, timeframe and session. */
+  compareSymbol: (id: string, symbol: string) =>
+    request<{ symbol: string; t: string[]; c: number[] }>(`/backtests/${id}/compare?symbol=${encodeURIComponent(symbol)}`),
   /** New bars since the last poll, for a run still inside its date range. */
   refreshPriceData: (id: string) =>
     request<PriceDataResponse & { live: boolean }>(`/backtests/${id}/live-refresh`, { method: "POST" }),
