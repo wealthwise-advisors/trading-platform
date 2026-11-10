@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { strengthLines, swingAt, swingStrength, type SwingSpan } from "./swingStrength"
+import { dominance, dominanceTag, strengthLines, swingAt, swingStrength, type SwingSpan } from "./swingStrength"
 import type { OHLCVRecord } from "./types"
 
 const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
@@ -55,35 +55,65 @@ describe("swingStrength -- sir's running total", () => {
 
 describe("strengthLines", () => {
   const lines = strengthLines("10 Leg Dev (A to B)", swingStrength(
-    [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)))
-  const line = (start: string) => lines.find((l) => l.label.startsWith(start))
+    [bar(1, 10, 20, 10, 20, 1000), bar(2, 7568.25, 7568.75, 7567, 7567.25, 1959)], T(0), T(2)),
+    { from: 7500, to: 7476.5 })
+  const line = (label: string) => lines.find((l) => l.label === label)
 
-  it("a heading, then green and red candles with their share, and the net with who it favours", () => {
+  it("five bullets under a heading: buyers, sellers, net, dominant, price change", () => {
     expect(lines[0]).toMatchObject({ label: "10 Leg Dev (A to B)", kind: "heading" })
-    expect(lines.slice(1).map((l) => l.label)).toEqual(["1 green candle", "1 red candle", "Net"])
+    expect(lines.slice(1).map((l) => l.label)).toEqual(["Buyers", "Sellers", "Net", "Dominant", "Price change"])
     expect(lines.slice(1).every((l) => l.bullet)).toBe(true)
-    expect(line("1 green")?.value).toBe("+1,000 (37%)")
-    expect(line("1 red")?.value).toBe("-1,679 (63%)")
-    expect(line("Net")?.value).toBe("-679 → RED")
+    expect(line("Buyers")?.value).toBe("+1,000 (37%)")
+    expect(line("Sellers")?.value).toBe("-1,679 (63%)")
+    expect(line("Net")?.value).toBe("-679")
+    expect(line("Dominant")?.value).toBe("SELLERS · Moderate")
+    expect(line("Price change")?.value).toBe("▼ -23.50 pts")
   })
 
-  it("plural candles, and the price move with the candle count when given", () => {
-    const s = swingStrength([bar(1, 1, 2, 1, 2, 100), bar(2, 1, 2, 1, 2, 100)], T(0), T(2))
-    const withMove = strengthLines("x", s, { from: 7500, to: 7512.5 })
-    expect(withMove[1].label).toBe("2 green candles")
-    expect(withMove.at(-1)).toMatchObject({ label: "Move (2 candles)", value: "+12.50 pts", valueColor: "#00c853" })
-    expect(strengthLines("x", s, { from: 10, to: 7.75 }).at(-1)?.value).toBe("-2.25 pts")
-  })
-
-  it("only the result carries the colour, never the label", () => {
+  it("only the numbers and the verdict carry colour", () => {
     expect(lines.every((l) => l.color === undefined)).toBe(true)
-    expect(line("Net")?.valueColor).toBe("#ff6b6b")
-    const up = strengthLines("x", swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1)))
-    expect(up.find((l) => l.label === "Net")).toMatchObject({ value: "+1,000 → GREEN", valueColor: "#00c853" })
+    expect(line("Buyers")?.valueColor).toBe("#00c853")
+    expect(line("Dominant")?.valueColor).toBe("#ff6b6b")
+  })
+
+  it("no price change line without the pivots' prices", () => {
+    const s = swingStrength([bar(1, 1, 2, 1, 2, 100)], T(0), T(1))
+    expect(strengthLines("x", s).map((l) => l.label)).not.toContain("Price change")
+    expect(strengthLines("x", s, { from: 1, to: 3.25 }).at(-1)?.value).toBe("▲ +2.25 pts")
   })
 
   it("says so when the stretch is empty", () => {
     expect(strengthLines("x", null)[1].label).toBe("No bars in this stretch")
+  })
+})
+
+describe("dominance", () => {
+  const of = (added: number, subtracted: number) => dominance({
+    candles: 1, greenLed: 1, redLed: 1, added, subtracted, net: added - subtracted, hasVolume: true,
+    stronger: added > subtracted ? "green" : added < subtracted ? "red" : "even",
+  })
+
+  it.each([[90, 10, "buyers", "Strong"], [65, 35, "buyers", "Strong"], [60, 40, "buyers", "Moderate"],
+           [52, 48, "buyers", "Slight"], [30, 70, "sellers", "Strong"]] as const)(
+    "%s / %s -> %s, %s", (a, b, side, strength) => {
+      expect(of(a, b)).toMatchObject({ side, strength })
+    },
+  )
+
+  it("an even split has no strength", () => expect(of(50, 50)).toMatchObject({ side: "even", strength: null }))
+})
+
+describe("dominanceTag", () => {
+  it("an arrow and the winning side, STRONG when it is", () => {
+    const strong = swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1))
+    expect(dominanceTag(strong)).toEqual({ text: "▲ BUYERS · STRONG", color: "#00c853" })
+    // +60 (buyers 60 / 40) then -55 (sellers 55 / 45): buyers win with 52%.
+    const slight = swingStrength([bar(1, 10, 20, 10, 16, 100), bar(2, 10, 20, 10, 14.5, 100)], T(0), T(2))
+    expect(dominanceTag(slight)?.text).toBe("▲ BUYERS")
+  })
+
+  it("nothing to tag without volume", () => {
+    expect(dominanceTag(swingStrength([bar(1, 1, 2, 1, 2, null)], T(0), T(1)))).toBeNull()
   })
 })
 

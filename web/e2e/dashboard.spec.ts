@@ -670,6 +670,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   })
   expect(headers.length).toBeGreaterThan(0)
   for (const h of headers) expect(h).toMatch(/10 Leg Dev \(/)
+  // The dominance tag beside each title, where the swing has volume.
+  expect(headers.some((h) => /[▲▼◆] (BUYERS|SELLERS|EVEN)/.test(h))).toBe(true)
 
   const area = own.locator(".draglayer .xy .nsewdrag").first()
   await area.scrollIntoViewIfNeeded()
@@ -683,7 +685,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   await expect(swingBox).toBeVisible()
   await expect(swingBox).toContainText("10 Leg Dev (")
   await expect(swingBox).toContainText("Net")
-  await expect(swingBox).toContainText(/→ (GREEN|RED|EVEN)/)
+  await expect(swingBox).toContainText("Dominant")
+  await expect(swingBox).toContainText("Price change")
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

@@ -51,7 +51,7 @@ import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
-import type { SwingSpan } from "@/lib/swingStrength"
+import { dominanceTag, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
 import {
   MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
@@ -1291,7 +1291,11 @@ export function CandlestickChart({
         ? ` | 3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
         : ""
       // "10 Leg Dev" named before (A to B), as the 3-leg part already is (2026-11-10).
-      const headerText = `<b>Swing ${swingNum}</b><br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
+      // Who dominated the swing's 10 Leg stretch, as a coloured tag beside its
+      // title, so it reads without hovering.
+      const tag = dominanceTag(swingStrength(bars, grp[0].t, grp[grp.length - 1].t))
+      const tagHtml = tag ? `  <span style="color:${tag.color}">${tag.text}</span>` : ""
+      const headerText = `<b>Swing ${swingNum}</b>${tagHtml}<br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
       const minor = regionPointsBySwing.get(swingNum) ?? []
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,

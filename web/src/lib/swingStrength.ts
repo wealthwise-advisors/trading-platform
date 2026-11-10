@@ -54,40 +54,71 @@ const RED = "#ff6b6b"
 const whole = (n: number) => Math.round(n).toLocaleString("en-US")
 const signed = (n: number) => (n > 0 ? "+" : n < 0 ? "-" : "") + whole(Math.abs(n))
 
-const plural = (n: number, word: string) => `${n} ${word} candle${n === 1 ? "" : "s"}`
-const pct = (part: number, whole_: number) => (whole_ ? Math.round((part / whole_) * 100) : 0)
+export interface Dominance {
+  side: "buyers" | "sellers" | "even"
+  /** How clearly: the winner's share of all the volume counted. */
+  strength: "Strong" | "Moderate" | "Slight" | null
+  share: number
+}
 
 /**
- * One stretch's lines for the hover box: a heading, what green candles added
- * and red candles took off (with their share), the net and who it favours,
- * then the price move over the stretch. Only the numbers carry green or red;
- * labels stay plain.
+ * Who dominated a stretch, and how clearly: the winning side's share of the
+ * volume that was counted. 65% or more is Strong, 55% or more Moderate, under
+ * that Slight -- so 51/49 does not read like 90/10.
+ */
+export function dominance(s: SwingStrength): Dominance {
+  const both = s.added + s.subtracted
+  if (!both || s.stronger === "even") return { side: "even", strength: null, share: 50 }
+  const share = ((s.stronger === "green" ? s.added : s.subtracted) / both) * 100
+  return {
+    side: s.stronger === "green" ? "buyers" : "sellers",
+    strength: share >= 65 ? "Strong" : share >= 55 ? "Moderate" : "Slight",
+    share,
+  }
+}
+
+const pct = (part: number, total: number) => (total ? Math.round((part / total) * 100) : 0)
+
+/**
+ * One stretch's lines for the hover box, five bullets: buyers, sellers, net,
+ * who dominated and how clearly, and the price change. Only the numbers and
+ * the verdict carry green or red; labels stay plain.
  */
 export function strengthLines(heading: string, s: SwingStrength | null,
                               move?: { from: number; to: number }): ReadoutLine[] {
   const head: ReadoutLine = { label: heading, value: "", kind: "heading" }
   if (!s) return [head, { label: "No bars in this stretch", value: "", bullet: true }]
   if (!s.hasVolume) return [head, { label: "No volume data", value: "", bullet: true }]
-  const side = s.stronger === "even" ? "EVEN" : s.stronger.toUpperCase()
   const both = s.added + s.subtracted
+  const d = dominance(s)
+  const tone = d.side === "buyers" ? GREEN : d.side === "sellers" ? RED : undefined
   const lines: ReadoutLine[] = [
     head,
-    { label: plural(s.greenLed, "green"), value: `+${whole(s.added)} (${pct(s.added, both)}%)`,
-      valueColor: GREEN, bullet: true },
-    { label: plural(s.redLed, "red"), value: `-${whole(s.subtracted)} (${pct(s.subtracted, both)}%)`,
-      valueColor: RED, bullet: true },
-    { label: "Net", value: `${signed(s.net)} → ${side}`, bullet: true,
-      valueColor: s.net > 0 ? GREEN : s.net < 0 ? RED : undefined },
+    { label: "Buyers", value: `+${whole(s.added)} (${pct(s.added, both)}%)`, valueColor: GREEN, bullet: true },
+    { label: "Sellers", value: `-${whole(s.subtracted)} (${pct(s.subtracted, both)}%)`, valueColor: RED, bullet: true },
+    { label: "Net", value: signed(s.net), valueColor: tone, bullet: true },
+    { label: "Dominant", bullet: true, valueColor: tone,
+      value: d.side === "even" ? "EVEN" : `${d.side.toUpperCase()} · ${d.strength}` },
   ]
   if (move) {
     const pts = move.to - move.from
     lines.push({
-      label: `Move (${s.candles} candles)`, bullet: true,
-      value: `${pts > 0 ? "+" : pts < 0 ? "-" : ""}${Math.abs(pts).toFixed(2)} pts`,
+      label: "Price change", bullet: true,
+      value: `${pts > 0 ? "▲ +" : pts < 0 ? "▼ -" : ""}${Math.abs(pts).toFixed(2)} pts`,
       valueColor: pts > 0 ? GREEN : pts < 0 ? RED : undefined,
     })
   }
   return lines
+}
+
+/** The tag beside a swing's title on the chart: "▲ BUYERS" or "▼ SELLERS". */
+export function dominanceTag(s: SwingStrength | null): { text: string; color: string } | null {
+  if (!s || !s.hasVolume) return null
+  const d = dominance(s)
+  if (d.side === "even") return { text: "◆ EVEN", color: "#9ca3af" }
+  return d.side === "buyers"
+    ? { text: `▲ BUYERS${d.strength === "Strong" ? " · STRONG" : ""}`, color: GREEN }
+    : { text: `▼ SELLERS${d.strength === "Strong" ? " · STRONG" : ""}`, color: RED }
 }
 
 export interface SwingSpan {
