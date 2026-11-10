@@ -56,25 +56,21 @@ const signed = (n: number) => (n > 0 ? "+" : n < 0 ? "-" : "") + whole(Math.abs(
 
 export interface Dominance {
   side: "buyers" | "sellers" | "even"
-  /** How clearly: the winner's share of all the volume counted. */
-  strength: "Strong" | "Moderate" | "Slight" | null
+  /** The winner's share of all the volume counted, 0-100. */
   share: number
 }
 
 /**
- * Who dominated a stretch, and how clearly: the winning side's share of the
- * volume that was counted. 65% or more is Strong, 55% or more Moderate, under
- * that Slight -- so 51/49 does not read like 90/10.
+ * Who dominated a stretch, and by how much: the winning side's share of the
+ * volume that was counted, shown as a plain percentage so 51% and 90% read
+ * differently without any graded words (sir found Strong / Moderate / Slight
+ * confusing, 2026-11-10).
  */
 export function dominance(s: SwingStrength): Dominance {
   const both = s.added + s.subtracted
-  if (!both || s.stronger === "even") return { side: "even", strength: null, share: 50 }
+  if (!both || s.stronger === "even") return { side: "even", share: 50 }
   const share = ((s.stronger === "green" ? s.added : s.subtracted) / both) * 100
-  return {
-    side: s.stronger === "green" ? "buyers" : "sellers",
-    strength: share >= 65 ? "Strong" : share >= 55 ? "Moderate" : "Slight",
-    share,
-  }
+  return { side: s.stronger === "green" ? "buyers" : "sellers", share }
 }
 
 const pct = (part: number, total: number) => (total ? Math.round((part / total) * 100) : 0)
@@ -98,7 +94,7 @@ export function strengthLines(heading: string, s: SwingStrength | null,
     { label: "Sellers", value: `-${whole(s.subtracted)} (${pct(s.subtracted, both)}%)`, valueColor: RED, bullet: true },
     { label: "Net", value: signed(s.net), valueColor: tone, bullet: true },
     { label: "Dominant", bullet: true, valueColor: tone,
-      value: d.side === "even" ? "EVEN" : `${d.side.toUpperCase()} · ${d.strength}` },
+      value: d.side === "even" ? "EVEN" : `${d.side.toUpperCase()} ${Math.round(d.share)}%` },
   ]
   if (move) {
     const pts = move.to - move.from
@@ -111,14 +107,15 @@ export function strengthLines(heading: string, s: SwingStrength | null,
   return lines
 }
 
-/** The tag beside a swing's title on the chart: "▲ BUYERS" or "▼ SELLERS". */
+/** The tag beside a swing's title on the chart: "▲ BUYERS 63%" or "▼ SELLERS 58%". */
 export function dominanceTag(s: SwingStrength | null): { text: string; color: string } | null {
   if (!s || !s.hasVolume) return null
   const d = dominance(s)
   if (d.side === "even") return { text: "◆ EVEN", color: "#9ca3af" }
+  const share = Math.round(d.share)
   return d.side === "buyers"
-    ? { text: `▲ BUYERS${d.strength === "Strong" ? " · STRONG" : ""}`, color: GREEN }
-    : { text: `▼ SELLERS${d.strength === "Strong" ? " · STRONG" : ""}`, color: RED }
+    ? { text: `▲ BUYERS ${share}%`, color: GREEN }
+    : { text: `▼ SELLERS ${share}%`, color: RED }
 }
 
 export interface SwingSpan {

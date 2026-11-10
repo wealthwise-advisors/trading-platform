@@ -66,7 +66,7 @@ describe("strengthLines", () => {
     expect(line("Buyers")?.value).toBe("+1,000 (37%)")
     expect(line("Sellers")?.value).toBe("-1,679 (63%)")
     expect(line("Net")?.value).toBe("-679")
-    expect(line("Dominant")?.value).toBe("SELLERS · Moderate")
+    expect(line("Dominant")?.value).toBe("SELLERS 63%")
     expect(line("Price change")?.value).toBe("▼ -23.50 pts")
   })
 
@@ -93,23 +93,24 @@ describe("dominance", () => {
     stronger: added > subtracted ? "green" : added < subtracted ? "red" : "even",
   })
 
-  it.each([[90, 10, "buyers", "Strong"], [65, 35, "buyers", "Strong"], [60, 40, "buyers", "Moderate"],
-           [52, 48, "buyers", "Slight"], [30, 70, "sellers", "Strong"]] as const)(
-    "%s / %s -> %s, %s", (a, b, side, strength) => {
-      expect(of(a, b)).toMatchObject({ side, strength })
+  it.each([[90, 10, "buyers", 90], [60, 40, "buyers", 60], [52, 48, "buyers", 52], [30, 70, "sellers", 70]] as const)(
+    "%s / %s -> %s with %s%%", (a, b, side, share) => {
+      const d = of(a, b)
+      expect(d.side).toBe(side)
+      expect(d.share).toBeCloseTo(share)
     },
   )
 
-  it("an even split has no strength", () => expect(of(50, 50)).toMatchObject({ side: "even", strength: null }))
+  it("an even split is even", () => expect(of(50, 50).side).toBe("even"))
 })
 
 describe("dominanceTag", () => {
-  it("an arrow and the winning side, STRONG when it is", () => {
+  it("an arrow, the winning side and its share", () => {
     const strong = swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1))
-    expect(dominanceTag(strong)).toEqual({ text: "▲ BUYERS · STRONG", color: "#00c853" })
+    expect(dominanceTag(strong)).toEqual({ text: "▲ BUYERS 100%", color: "#00c853" })
     // +60 (buyers 60 / 40) then -55 (sellers 55 / 45): buyers win with 52%.
     const slight = swingStrength([bar(1, 10, 20, 10, 16, 100), bar(2, 10, 20, 10, 14.5, 100)], T(0), T(2))
-    expect(dominanceTag(slight)?.text).toBe("▲ BUYERS")
+    expect(dominanceTag(slight)?.text).toBe("▲ BUYERS 52%")
   })
 
   it("nothing to tag without volume", () => {
