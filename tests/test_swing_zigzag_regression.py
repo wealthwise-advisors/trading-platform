@@ -434,3 +434,48 @@ class TestDeviationUnits:
         for name, frac in (("zigzag_dev_3", d3), ("zigzag_dev_10", d10)):
             assert 0.01 <= frac * 100 <= 2, f"{name}={frac} is outside the slider range"
         assert d3 < d10, "the minor zigzag must be finer than the major one it nests in"
+
+
+def _combined_points(zz10, zz3):
+    """10-leg and 3-leg points merged in time order, as the chart draws them."""
+    pts = [(t, r["type"], r["price"]) for t, r in zz10.iterrows()]
+    pts += [(t, r["type"], r["price"]) for t, r in zz3.iterrows()]
+    return sorted(pts, key=lambda p: p[0])
+
+
+class TestCombinedAlternation:
+    """Reported 2026-11-12 on real /ES: with the 3-leg points added, two highs
+    (or two lows) came one after another, so the line ran high-to-high across
+    the candles instead of touching them, and the colours looked mixed."""
+
+    @pytest.mark.parametrize("seed", [42, 7, 1234])
+    def test_highs_and_lows_alternate(self, seed):
+        df = _reference_df(seed=seed)
+        zz10, zz3 = _major_and_minor(df)
+        pts = _combined_points(zz10, zz3)
+        repeats = [(a, b) for a, b in zip(pts, pts[1:]) if a[1] == b[1]]
+        assert not repeats, f"{len(repeats)} back-to-back same-side points, first: {repeats[0]}"
+
+    @pytest.mark.parametrize("seed", [42, 7, 1234])
+    def test_each_point_is_the_real_extreme_between_its_neighbours(self, seed):
+        df = _reference_df(seed=seed)
+        zz10, zz3 = _major_and_minor(df)
+        pts = _combined_points(zz10, zz3)
+        for prev, cur, nxt in zip(pts, pts[1:], pts[2:]):
+            # Candles strictly between the neighbours: a neighbour's own candle
+            # is already used as the opposite turn, so its other end does not count.
+            seg = df[(df.index > prev[0]) & (df.index < nxt[0])]
+            if seg.empty:
+                continue
+            if seg.empty:
+                continue
+            if cur[1] == "H":
+                assert seg["high"].max() <= cur[2], f"high at {cur[0]} {cur[2]} vs {seg['high'].max()} at {seg['high'].idxmax()}; prev {prev} next {nxt}"
+            else:
+                assert seg["low"].min() >= cur[2], f"low at {cur[0]} {cur[2]} vs {seg['low'].min()} at {seg['low'].idxmin()}; prev {prev} next {nxt}"
+
+    def test_major_pivots_are_never_removed(self):
+        df = _reference_df()
+        zz10, zz3 = _major_and_minor(df)
+        before = calc_zigzag(df["high"], df["low"], df["close"], deviation=DEV_10, legs=10)
+        assert list(zz10.index) == list(before.index)

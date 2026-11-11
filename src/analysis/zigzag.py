@@ -174,6 +174,78 @@ def minor_letter(n: int) -> str:
     return spreadsheet_letter(n).lower()
 
 
+def _alternate_with_majors(majors: pd.DataFrame, minors: pd.DataFrame) -> list:
+    """
+    Timestamps of the minor points to keep so that majors and minors together
+    alternate high/low. Majors are fixed. Two minors on one side in a row keep
+    the more extreme; a minor on the same side as the major next to it goes
+    (the major is the extreme of that stretch by construction).
+    """
+    pts = [(t, r["type"], r["price"], True) for t, r in majors.iterrows()]
+    pts += [(t, r["type"], r["price"], False) for t, r in minors.iterrows()]
+    pts.sort(key=lambda p: (p[0], not p[3]))  # a major first on a tie
+    stack: list = []
+    for p in pts:
+        t, kind, price, major = p
+        # One point per candle: a wide bar can be both a 3-leg high and low,
+        # but the line cannot turn twice on one bar.
+        if stack and stack[-1][0] == t:
+            if not major:
+                continue
+            if not stack[-1][3]:
+                stack.pop()
+        if not stack or stack[-1][1] != kind:
+            stack.append(p)
+            continue
+        top = stack[-1]
+        if major:
+            while stack and not stack[-1][3] and stack[-1][1] == kind:
+                stack.pop()
+            stack.append(p)
+        elif top[3]:
+            continue
+        elif (kind == "H" and price > top[2]) or (kind == "L" and price < top[2]):
+            stack[-1] = p
+    return stack
+
+
+def _snap_to_extremes(points: list, high: pd.Series, low: pd.Series, passes: int = 5) -> list:
+    """
+    Move each minor point onto the real extreme candle between its two
+    neighbours: a high onto the highest high, a low onto the lowest low.
+    Majors stay put. The 3-leg fractal only looks one bar each side, so a turn
+    right beside a wide bar is never a candidate and a later, shallower bar is
+    used instead (11:50 at 4514.50 when 11:40 went to 4512.50); this puts the
+    point where the move really turned. Repeated until nothing moves, since
+    moving one point widens its neighbours' stretches.
+    """
+    pts = list(points)
+    for _ in range(passes):
+        moved = False
+        for i in range(1, len(pts) - 1):
+            t, kind, price, major = pts[i]
+            if major:
+                continue
+            a, b = pts[i - 1][0], pts[i + 1][0]
+            span = high.index[(high.index > a) & (high.index < b)]
+            if len(span) == 0:
+                continue
+            if kind == "H":
+                bt = high.loc[span].idxmax()
+                bp = float(high.loc[bt])
+                better = bp > price
+            else:
+                bt = low.loc[span].idxmin()
+                bp = float(low.loc[bt])
+                better = bp < price
+            if better:
+                pts[i] = (bt, kind, bp, False)
+                moved = True
+        if not moved:
+            break
+    return pts
+
+
 def calc_nested_zigzag(
     high: pd.Series,
     low: pd.Series,
@@ -244,6 +316,26 @@ def calc_nested_zigzag(
         # that actually get their own circle, so the first visible letter is
         # always "A".
         zz_minor = zz_minor[~zz_minor.index.isin(grp.index)]
+        if zz_minor.empty:
+            continue
+
+        # Fit the minor points between the major pivots that bound them, so
+        # the combined line always goes high -> low -> high. Computed on its
+        # own window, the minor zigzag knew nothing of its neighbours: its
+        # first point could be a high right after the swing's opening high,
+        # and the chart then ran high-to-high across the candles (reported on
+        # real /ES 2026-11-12: 63 back-to-back same-side points over 4 days
+        # of 1m). Major pivots are never moved or removed.
+        x1_inclusive = x1 if x1 is not None else full_index[-1]
+        majors = zz10[(zz10.index >= x0) & (zz10.index <= x1_inclusive)]
+        # (time, side) pairs, not times: a wide bar can carry a high and a
+        # low at one timestamp, and .loc on that time would return both.
+        pts = _snap_to_extremes(_alternate_with_majors(majors, zz_minor), high, low)
+        minors = [p for p in pts if not p[3]]
+        zz_minor = pd.DataFrame(
+            {"price": [p[2] for p in minors], "type": [p[1] for p in minors]},
+            index=pd.Index([p[0] for p in minors], name=zz_minor.index.name),
+        )
         if zz_minor.empty:
             continue
 
