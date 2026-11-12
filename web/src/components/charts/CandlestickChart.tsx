@@ -1407,7 +1407,12 @@ export function CandlestickChart({
 
     // ── Same decimal labels mirrored on whichever indicator rows are active ──
     const byTime = new Map(t.map((ts, i) => [ts, i]))
-    const nearestIdx = (ts: string) => byTime.get(ts) ?? 0
+    // A point's own bar. Never a fallback to bar 0: that drew the circle at
+    // the FIRST bar's RSI/MFI value. No bar, no value -- Plotly skips null.
+    const valueAt = (vals: (number | null)[], ts: string) => {
+      const i = byTime.get(ts)
+      return i === undefined ? null : vals[i] ?? null
+    }
     const panelValues: Record<OscRowKey, (number | null)[]> = {
       rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
       mfi: indicators.mfi ?? [],
@@ -1417,7 +1422,7 @@ export function CandlestickChart({
       const vals = panelValues[name]
       data.push({
         type: "scatter", mode: "text+markers",
-        x: zz10.map((p) => p.t), y: zz10.map((p) => vals[nearestIdx(p.t)]),
+        x: zz10.map((p) => p.t), y: zz10.map((p) => valueAt(vals, p.t)),
         marker: { size: 18, color: BG, line: { color: "white", width: 1.4 } },
         text: zz10.map((p) => p.label), textposition: "middle center",
         textfont: { size: 9, color: "white", family: "Arial" },

@@ -36,7 +36,7 @@ interface Reading {
   top: number
   height: number
   boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean; titleColor?: string;
-           width?: number }[]
+           width?: number; beside?: number }[]
 }
 
 function layoutKey(axis: string) {
@@ -121,10 +121,20 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
       // A swing point on this candle is named first: which count (10 Leg or
       // 3 Leg), its number, high or low (2026-11-12).
       const onPoint = pointLines(pointsAt(swingPoints, bar.t, candleTimes))
+      // The swing box goes on the side the price box is NOT on. Near the
+      // chart's right edge that side has no room: the box ran 34px past the
+      // edge and its values were cut off (2026-11-12). Then it sits on the
+      // price box's side instead, just outside it.
+      const swingSide = (priceOnRight: boolean) => {
+        const wantRight = !priceOnRight
+        const room = wantRight ? host.clientWidth - x - 8 : x - 8
+        if (room >= SWING_BOX_WIDTH) return { onRight: wantRight, beside: 0 }
+        return { onRight: priceOnRight, beside: BOX_WIDTH + 8 }
+      }
       if (!sw && onPoint.length) {
         const priceOnRight = boxes[0]?.onRight ?? flip
-        boxes.push({ axis: "swing", title: "Swing point", top: first._offset + 1, lines: onPoint, onRight: !priceOnRight,
-                     width: SWING_BOX_WIDTH })
+        boxes.push({ axis: "swing", title: "Swing point", top: first._offset + 1, lines: onPoint,
+                     ...swingSide(priceOnRight), width: SWING_BOX_WIDTH })
       }
       if (sw) {
         if (swingCache.current.bars !== bars) swingCache.current = { bars, byKey: new Map() }
@@ -145,8 +155,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
         const withPoint = onPoint.length ? [...onPoint, { label: "", value: "", kind: "divider" as const }, ...lines] : lines
-        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines: withPoint, onRight: !priceOnRight,
-                     titleColor: sw.color, width: SWING_BOX_WIDTH })
+        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines: withPoint,
+                     ...swingSide(priceOnRight), titleColor: sw.color, width: SWING_BOX_WIDTH })
       }
       setReading({ x, top, height: bottom - top, boxes })
     }
@@ -169,7 +179,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
              className="absolute rounded-sm font-mono"
              style={{
                top: box.top, width: box.width ?? BOX_WIDTH,
-               left: box.onRight ? reading.x + 8 : reading.x - (box.width ?? BOX_WIDTH) - 8,
+               left: box.onRight ? reading.x + 8 + (box.beside ?? 0)
+                                 : reading.x - (box.width ?? BOX_WIDTH) - 8 - (box.beside ?? 0),
                padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
