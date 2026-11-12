@@ -1133,6 +1133,8 @@ export function CandlestickChart({
     regionPointsBySwing.get(p.swing)!.push(p)
   }
   const swingSpans: SwingSpan[] = []
+  // Every swing number, drawn in a white circle once the price scale is known.
+  const swingLabels: { x: string; price: number; type: "H" | "L"; label: string; big: boolean }[] = []
 
   // Swing points sit on the DRAWN candle that holds them: with candles merged
   // for display, a point left at its own minute fell between two candles.
@@ -1152,15 +1154,15 @@ export function CandlestickChart({
     for (const [ptype, color] of [["H", "#ff6b6b"], ["L", "#69f0ae"]] as const) {
       const pts = zz3Labelable.filter((p) => p.type === ptype)
       if (pts.length) {
-        // A dot on the wick tip and the label outside the candle (above a
-        // high, below a low). A ring centred on the price hid the wick and
-        // read as "not touching", and its red/green ring on a candle of the
-        // other colour looked mixed up (sir, 2026-11-12).
+        // A dot on the wick tip, where the swing touches the candle; the
+        // number goes in a white circle just outside the candle, drawn once
+        // the price scale is known (swingLabels, below the layout margins).
+        const xs = onCandle(pts)
+        pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: false }))
         data.push({
-          type: "scatter", mode: "text+markers", x: onCandle(pts), y: pts.map((p) => p.price),
+          type: "scatter", mode: "markers", x: xs, y: pts.map((p) => p.price),
           marker: { symbol: "circle", size: 6, color, line: { color: BG, width: 1 } },
-          text: pts.map((p) => p.label), textposition: ptype === "H" ? "top center" : "bottom center",
-          textfont: { color: "#f0c040", size: 11, family: "Arial" },
+          text: pts.map((p) => p.label),
           showlegend: false,
           hovertemplate: `<b>${ptype === "H" ? "High" : "Low"} (3L) %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>`,
           xaxis: "x", yaxis: "y",
@@ -1315,14 +1317,15 @@ export function CandlestickChart({
     for (const [ptype, color] of [["H", RED], ["L", GREEN]] as const) {
       const pts = zz10.filter((p) => p.type === ptype)
       if (!pts.length) continue
+      // Dot on the wick tip; the number's circle is drawn with swingLabels.
+      const xs = onCandle(pts)
+      pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: true }))
       data.push({
-        type: "scatter", mode: "text+markers",
-        x: onCandle(pts), y: pts.map((p) => p.price),
+        type: "scatter", mode: "markers",
+        x: xs, y: pts.map((p) => p.price),
         name: ptype === "H" ? "Swing High" : "Swing Low",
-        // Dot on the wick tip, number outside the candle -- see the 3 Leg note.
-        marker: { symbol: "circle", size: 9, color, line: { color: BG, width: 1 } },
-        text: pts.map((p) => p.label), textposition: ptype === "H" ? "top center" : "bottom center",
-        textfont: { color: "white", size: 14, family: "Arial Black, Arial" },
+        marker: { symbol: "circle", size: 7, color, line: { color: BG, width: 1 } },
+        text: pts.map((p) => p.label),
         hovertemplate: "<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
         xaxis: "x", yaxis: "y",
       } as unknown as Data)
@@ -1331,7 +1334,6 @@ export function CandlestickChart({
     // ── Same decimal labels mirrored on whichever indicator rows are active ──
     const byTime = new Map(t.map((ts, i) => [ts, i]))
     const nearestIdx = (ts: string) => byTime.get(ts) ?? 0
-    const borderColors = zz10.map((p) => (p.type === "H" ? RED : GREEN))
     const panelValues: Record<OscRowKey, (number | null)[]> = {
       rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
       mfi: indicators.mfi ?? [],
@@ -1342,7 +1344,7 @@ export function CandlestickChart({
       data.push({
         type: "scatter", mode: "text+markers",
         x: zz10.map((p) => p.t), y: zz10.map((p) => vals[nearestIdx(p.t)]),
-        marker: { size: 20, color: BG, line: { color: borderColors, width: 1.6 } },
+        marker: { size: 18, color: BG, line: { color: "white", width: 1.4 } },
         text: zz10.map((p) => p.label), textposition: "middle center",
         textfont: { size: 9, color: "white", family: "Arial" },
         showlegend: false, cliponaxis: false,
@@ -1830,6 +1832,39 @@ export function CandlestickChart({
   // from it so it starts below both rather than on top of them.
   // 76: three lines of title (Swing + tag, 10 Leg Dev, 3 Leg Dev) above the plot.
   const marginTop = hasSwingHeaders ? 76 + extraHeaderRows * HEADER_ROW_PX : 38
+
+  // ── Swing numbers: white, in a circle, just outside the candle ──────────
+  // Sir, 2026-11-12: one style for every number (white, in a round circle),
+  // big swings a little larger than small ones, nothing covering the candle.
+  // The circle sits a fixed number of PIXELS above a high / below a low, so
+  // it is converted to price through the price row's current scale; the dot
+  // on the wick tip (drawn with the swing traces) marks the touch itself.
+  if (swingLabels.length && priceYRange) {
+    const hostH = plotHostRef.current?.clientHeight || 700
+    const priceRowPx = Math.max(60, (hostH - marginTop - 18) * (domains[0][1] - domains[0][0]))
+    // On a log scale a pixel is a constant RATIO of price, not an amount.
+    const lo = Math.max(1e-9, priceYRange[0]), hi = Math.max(lo * 1.000001, priceYRange[1])
+    const pricePerPx = (hi - lo) / priceRowPx
+    const log10PerPx = (Math.log10(hi) - Math.log10(lo)) / priceRowPx
+    const shifted = (price: number, px: number) =>
+      logScale ? price * Math.pow(10, px * log10PerPx) : price + px * pricePerPx
+    for (const big of [true, false]) {
+      const size = big ? 21 : 17
+      const pts = swingLabels.filter((p) => p.big === big)
+      if (!pts.length) continue
+      const gapPx = size / 2 + 5
+      data.push({
+        type: "scatter", mode: "text+markers",
+        x: pts.map((p) => p.x),
+        y: pts.map((p) => shifted(p.price, (p.type === "H" ? 1 : -1) * gapPx)),
+        marker: { symbol: "circle", size, color: BG, line: { color: "white", width: big ? 1.6 : 1.2 } },
+        text: pts.map((p) => p.label), textposition: "middle center",
+        textfont: { color: "white", size: big ? 11 : 9, family: "Arial" },
+        showlegend: false, cliponaxis: false, hoverinfo: "skip",
+        xaxis: "x", yaxis: "y",
+      } as unknown as Data)
+    }
+  }
 
   // THE FLOOR GROWS WITH THE STUDIES. It was a flat 420px, which is fine for
   // the price panel and three oscillators and hopeless for four: switching MFI
