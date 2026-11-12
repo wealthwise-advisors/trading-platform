@@ -671,10 +671,16 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
     const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
     return (gd.layout.annotations ?? []).map((a) => a.text ?? "").filter((t) => t.includes("Swing"))
   })
-  expect(headers.length).toBeGreaterThan(0)
-  for (const h of headers) expect(h).toMatch(/10 Leg Dev \(/)
+  // Titles, and the "Swing B starts" tags marking where each swing begins.
+  const starts = headers.filter((h) => / Swing [A-Z]+ starts$/.test(h))
+  const titles = headers.filter((h) => !starts.includes(h))
+  expect(titles.length).toBeGreaterThan(0)
+  for (const h of titles) expect(h).toMatch(/10 Leg Dev \(/)
+  // One start tag per swing, with its direction.
+  expect(starts.length).toBe(titles.length)
+  for (const st of starts) expect(st).toMatch(/^[▲▼] Swing [A-Z]+ starts$/)
   // The dominance tag beside each title, where the swing has volume.
-  expect(headers.some((h) => /[▲▼◆] (BUYERS|SELLERS|EVEN)/.test(h))).toBe(true)
+  expect(titles.some((h) => /[▲▼◆] (BUYERS|SELLERS|EVEN)/.test(h))).toBe(true)
 
   const area = own.locator(".draglayer .xy .nsewdrag").first()
   await area.scrollIntoViewIfNeeded()

@@ -53,3 +53,35 @@ export function defaultAggregationSpanMs(t: readonly string[]): number {
 export function chartRunKey(bars: ReadonlyArray<{ t: string }>, interval?: string): string {
   return `${interval ?? ""}|${bars[0]?.t ?? ""}`
 }
+
+/**
+ * The x window to draw, in ms: the user's view (or the default window ending
+ * at the last bar), plus `rightSpaceBars` of empty space -- but ONLY when the
+ * view reaches the last bar. That space is room after the latest candle.
+ *
+ * It used to be added to the end of every view. Panned into the middle, the
+ * view then ran ~35 minutes past where the drag left it, and the price scale,
+ * fitted to the dragged window, did not cover the candles in that extra
+ * stretch: real /ES 5m 2026-11-12, lows at 7593.25 under a scale starting at
+ * 7601. The step is the bars' own interval (barStepMs), not the average gap,
+ * which overnight breaks inflated.
+ */
+export function xWindowMs(
+  t: readonly string[],
+  view: { start: number; end: number } | null,
+  defaultWindow: number,
+  rightSpaceBars: number,
+): [number, number] | undefined {
+  if (t.length < 2) return undefined
+  const first = new Date(t[0]).getTime()
+  const last = new Date(t[t.length - 1]).getTime()
+  const step = barStepMs(t) || 60_000
+  // Dragged past either end, the view stops at the data and keeps its width:
+  // clamping each end on its own let a view dragged before the first bar end
+  // BEFORE it starts -- an empty, inverted chart.
+  const width = view ? Math.max(view.end - view.start, step) : defaultWindow
+  const start = Math.max(first, Math.min(view ? view.start : last - defaultWindow, last - step))
+  const end = Math.min(last, Math.max(view ? view.end : last, start + Math.min(width, last - start)))
+  const pad = end >= last ? step * rightSpaceBars : 0
+  return [start, end + pad]
+}

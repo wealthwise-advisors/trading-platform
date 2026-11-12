@@ -30,7 +30,7 @@ import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
-import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs } from "@/lib/chartWindow"
+import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs, xWindowMs } from "@/lib/chartWindow"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
@@ -53,6 +53,7 @@ import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
 import { dominanceTag, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
+import { swingStarts, type SwingPointInfo } from "@/lib/swingPoints"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
 import {
   MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
@@ -831,6 +832,49 @@ export function CandlestickChart({
     return Math.min(aggregationDefault, last - first || aggregationDefault)
   })()
   const candleBars = resampleOHLC(bars, displayBucketMinutes(bars, displayWindowMs))
+  // Merged candles start on their own grid, so the first one can begin before
+  // the first bar (09:10 for bars from 09:30). The window has to start at the
+  // first DRAWN candle, or that candle is half cut and anything on it (the
+  // "Swing A starts" tag) is outside the axis and hidden (2026-11-12).
+  const firstBarMs = bars.length ? new Date(bars[0].t).getTime() : 0
+  const firstDrawnMs = candleBars.length ? Math.min(new Date(candleBars[0].t).getTime(), firstBarMs) : firstBarMs
+  const tShown = candleBars.length && firstDrawnMs < firstBarMs ? [candleBars[0].t, ...t] : t
+  const viewShown = visibleRange && visibleRange.start <= firstBarMs ? { ...visibleRange, start: firstDrawnMs } : visibleRange
+  // Where a time lands across the plot, 0 (left edge) to 1 (right edge). On
+  // screen the overnight gap is hidden and the drawn candles sit evenly, so
+  // position is counted in candles, not clock time: by the clock, a window
+  // starting in the gap put titles and tags past the edge (2026-11-12).
+  // The plot's real width from the last draw (axis margins and legend
+  // excluded); the host width less a guess left titles a few pixels over.
+  const plotAreaPx = (() => {
+    const gd = plotHostRef.current?.querySelector(".js-plotly-plot") as
+      (HTMLElement & { _fullLayout?: { xaxis?: { _length?: number } } }) | null
+    const len = gd?._fullLayout?.xaxis?._length
+    return typeof len === "number" && len > 100 ? len : Math.max(200, plotWidthPx - 90)
+  })()
+  const drawnMs = candleBars.map((b) => new Date(b.t).getTime())
+  const candlesBefore = (ms: number) => {
+    let lo = 0, hi = drawnMs.length
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (drawnMs[mid] < ms) lo = mid + 1; else hi = mid }
+    return lo
+  }
+  // The edge of the DRAWN candle a swing point sits on. A merged candle can
+  // reach past the point's own price; the number's circle starts from this
+  // edge so it never covers the candle (the dot stays at the exact price).
+  const drawnCandleAt = new Map(candleBars.map((b) => [b.t, b]))
+  const drawnTimes = candleBars.map((b) => b.t)
+  const drawnEdge = (pt: { t: string; type: string; price: number }) => {
+    const cb = drawnCandleAt.get(onDisplayCandle([pt.t], drawnTimes)[0])
+    return pt.type === "H" ? Math.max(pt.price, cb?.h ?? pt.price) : Math.min(pt.price, cb?.l ?? pt.price)
+  }
+  const screenFraction = (ms: number, win: [number, number] | undefined): number | null => {
+    if (!win || !drawnMs.length) return null
+    const a = candlesBefore(win[0])
+    const lastInWin = candlesBefore(win[1] + 1) - 1
+    const padBars = win[1] > drawnMs[drawnMs.length - 1] ? Math.round((win[1] - drawnMs[drawnMs.length - 1]) / Math.max(1, barStepMs(candleBars.map((b) => b.t)))) : 0
+    const span = Math.max(1, lastInWin - a + padBars + 0.5)
+    return (candlesBefore(ms) - a + 0.25) / span
+  }
 
   // Row layout is built dynamically: price is always row 1, then one row per
   // oscillator switched on, in the order RSI(2) / StochRSI / RSI(13) / MFI. Axis
@@ -1133,6 +1177,13 @@ export function CandlestickChart({
     regionPointsBySwing.get(p.swing)!.push(p)
   }
   const swingSpans: SwingSpan[] = []
+  /** How far a "Swing B starts" tag sits from its point, in pixels. */
+  const START_TAG_PX = 58
+  // Every 10 Leg / 3 Leg point for the hover box, by its own bar time.
+  const swingPointInfo: SwingPointInfo[] = [
+    ...zz10.map((p) => ({ t: p.t, level: "10 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price })),
+    ...zz3Labelable.map((p) => ({ t: p.t, level: "3 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price })),
+  ]
   // Every swing number, drawn in a white circle once the price scale is known.
   const swingLabels: { x: string; price: number; type: "H" | "L"; label: string; big: boolean }[] = []
 
@@ -1151,7 +1202,7 @@ export function CandlestickChart({
       name: "ZigZag (3L)", line: { color: "#f0c040", width: 1.0, dash: "dot" },
       hoverinfo: "skip", xaxis: "x", yaxis: "y",
     } as unknown as Data)
-    for (const [ptype, color] of [["H", "#ff6b6b"], ["L", "#69f0ae"]] as const) {
+    for (const ptype of ["H", "L"] as const) {
       const pts = zz3Labelable.filter((p) => p.type === ptype)
       if (pts.length) {
         // A dot on the wick tip, where the swing touches the candle; the
@@ -1161,7 +1212,10 @@ export function CandlestickChart({
         pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: false }))
         data.push({
           type: "scatter", mode: "markers", x: xs, y: pts.map((p) => p.price),
-          marker: { symbol: "circle", size: 6, color, line: { color: BG, width: 1 } },
+          // White, like the numbers: a red dot on a green candle read as a
+          // mistake (2026-11-12). Above or below the candle already says
+          // high or low.
+          marker: { symbol: "circle", size: 6, color: "white", line: { color: BG, width: 1 } },
           text: pts.map((p) => p.label),
           showlegend: false,
           hovertemplate: `<b>${ptype === "H" ? "High" : "Low"} (3L) %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>`,
@@ -1236,6 +1290,8 @@ export function CandlestickChart({
     // per millisecond come from the visible window across the plot's width,
     // less the axis margins.
     const pxPerMs = Math.max(200, plotWidthPx - 90) / Math.max(1, visibleSpanMs)
+    // The window the x-axis draws, so titles can be kept inside it.
+    const shownWin = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
     const placedTitles: PlacedTitle[] = []
     function placeHeaderLevel(xMs: number, html: string): number {
       const xPx = xMs * pxPerMs
@@ -1300,9 +1356,27 @@ export function CandlestickChart({
               fromPrice: minor[0].price, toPrice: minor[minor.length - 1].price }
           : null,
       })
-      const headerLevel = placeHeaderLevel(new Date(xMid).getTime(), headerText)
+      // Kept inside the plot: centred over a swing that starts at the left
+      // edge, "Swing A" hung off the side and read "wing A" (2026-11-12). A
+      // title that would cross an edge is pinned to that edge instead --
+      // only for a swing that is on screen.
+      const halfMs = (titleWidthPx(headerText) / 2 + 6) / pxPerMs
+      const midMs = new Date(xMid).getTime()
+      let titleX = xMid
+      let titleAnchor: "center" | "left" | "right" = "center"
+      let titleCentreMs = midMs
+      const onScreen = shownWin && new Date(x1).getTime() >= shownWin[0] && new Date(x0).getTime() <= shownWin[1]
+      const halfFrac = (titleWidthPx(headerText) / 2 + 14) / plotAreaPx
+      const midFrac = screenFraction(midMs, shownWin)
+      if (shownWin && onScreen && midFrac != null && midFrac - halfFrac < 0) {
+        titleX = toNaiveString(shownWin[0]); titleAnchor = "left"; titleCentreMs = shownWin[0] + halfMs
+      } else if (shownWin && onScreen && midFrac != null && midFrac + halfFrac > 1) {
+        titleX = toNaiveString(shownWin[1]); titleAnchor = "right"; titleCentreMs = shownWin[1] - halfMs
+      }
+      const headerLevel = placeHeaderLevel(titleCentreMs, headerText)
       annotations.push({
-        x: xMid, y: 1.015, yshift: headerLevel * HEADER_ROW_PX, xref: "x", yref: "paper", yanchor: "bottom",
+        // The box's own padding would still poke past the edge it is pinned to.
+        x: titleX, xanchor: titleAnchor, xshift: titleAnchor === "left" ? 6 : titleAnchor === "right" ? -6 : 0, y: 1.015, yshift: headerLevel * HEADER_ROW_PX, xref: "x", yref: "paper", yanchor: "bottom",
         text: headerText,
         showarrow: false, font: { color, size: 10 }, align: "center",
       })
@@ -1314,7 +1388,7 @@ export function CandlestickChart({
     })
 
     // ── Decimal-labeled circles on the price chart ──
-    for (const [ptype, color] of [["H", RED], ["L", GREEN]] as const) {
+    for (const ptype of ["H", "L"] as const) {
       const pts = zz10.filter((p) => p.type === ptype)
       if (!pts.length) continue
       // Dot on the wick tip; the number's circle is drawn with swingLabels.
@@ -1324,7 +1398,7 @@ export function CandlestickChart({
         type: "scatter", mode: "markers",
         x: xs, y: pts.map((p) => p.price),
         name: ptype === "H" ? "Swing High" : "Swing Low",
-        marker: { symbol: "circle", size: 7, color, line: { color: BG, width: 1 } },
+        marker: { symbol: "circle", size: 7, color: "white", line: { color: BG, width: 1 } },
         text: pts.map((p) => p.label),
         hovertemplate: "<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
         xaxis: "x", yaxis: "y",
@@ -1539,11 +1613,23 @@ export function CandlestickChart({
   // 2-hour window every render) is what keeps candles from being plotted
   // outside the y-axis bounds -- and therefore invisible -- once the user
   // zooms/pans to a window with a different price band.
+  // The price row's real height in pixels, from the last draw (Plotly keeps it
+  // on the axis). Estimating it from the host and the margins missed the
+  // swing-title rows and put some circles past the row's edge.
+  const measuredPriceRowPx = (() => {
+    const gd = plotHostRef.current?.querySelector(".js-plotly-plot") as
+      (HTMLElement & { _fullLayout?: { yaxis?: { _length?: number } } }) | null
+    const len = gd?._fullLayout?.yaxis?._length
+    return typeof len === "number" && len > 40 ? len : null
+  })()
   const priceYRange: [number, number] | undefined = bars.length
     ? (() => {
+        // The SAME window the x-axis draws (xWindowMs), so the scale is fitted
+        // to exactly the candles on screen.
         const lastMs = new Date(bars[bars.length - 1].t).getTime()
-        const windowStartMs = visibleRange ? visibleRange.start : lastMs - defaultWindow
-        const windowEndMs = visibleRange ? visibleRange.end : lastMs
+        const shownWindow = xWindowMs(tShown, viewShown, defaultWindow, 0)
+        const windowStartMs = shownWindow ? shownWindow[0] : lastMs - defaultWindow
+        const windowEndMs = shownWindow ? shownWindow[1] : lastMs
         const visible = bars.filter((b) => {
           const ms = new Date(b.t).getTime()
           return ms >= windowStartMs && ms <= windowEndMs
@@ -1605,6 +1691,36 @@ export function CandlestickChart({
         // Whatever the overlays did, the candles themselves must still fit.
         lo = Math.min(lo, barLo)
         hi = Math.max(hi, barHi)
+
+        // Room for the swing-number circles, which sit outside the candle: a
+        // high's circle above it, a low's below. At the edge of the window
+        // the circle went past the price row and hid behind the RSI row
+        // (big "8" at the day's low, 2026-11-12). Widened only on the side
+        // that needs it, by the circle's reach in pixels converted at the
+        // row's scale, so a window with no swing at its edge keeps its height.
+        if (showZigzag && hi > lo) {
+          const reachPx = 22 / 2 + 5 + 22 / 2 + 3
+          const hostH = plotHostRef.current?.clientHeight || 700
+          const rowPx = measuredPriceRowPx ?? Math.max(120, (hostH - 110) * (domains[0][1] - domains[0][0]))
+          const perPx = (hi - lo) / Math.max(40, rowPx - 2 * reachPx)
+          const inWin = [...zigzag.zigzag_10, ...zigzag.zigzag_3].filter((p) => {
+            const ms = new Date(p.t).getTime()
+            return ms >= windowStartMs && ms <= windowEndMs
+          })
+          const highs = inWin.filter((p) => p.type === "H").map(drawnEdge)
+          const lows = inWin.filter((p) => p.type === "L").map(drawnEdge)
+          // A "Swing B starts" tag reaches further: arrow plus its box.
+          const startReachPx = START_TAG_PX + 12
+          const starts = swingStarts(zigzag.zigzag_10).filter((st) => {
+            const ms = new Date(st.t).getTime()
+            return ms >= windowStartMs && ms <= windowEndMs
+          })
+          const perPxS = (hi - lo) / Math.max(40, rowPx - 2 * startReachPx)
+          const sHighs = starts.filter((st) => st.type === "H").map((st) => drawnEdge(st) + startReachPx * perPxS)
+          const sLows = starts.filter((st) => st.type === "L").map((st) => drawnEdge(st) - startReachPx * perPxS)
+          if (highs.length) hi = Math.max(hi, Math.max(...highs) + reachPx * perPx, ...sHighs)
+          if (lows.length) lo = Math.min(lo, Math.min(...lows) - reachPx * perPx, ...sLows)
+        }
         const pad = (hi - lo) * 0.004
         return [lo - pad, hi + pad]
       })()
@@ -1617,21 +1733,11 @@ export function CandlestickChart({
   // them as local time, so the padded boundary must be re-serialized with
   // local getters too (never toISOString(), which forces UTC and would
   // shift the range by the browser's UTC offset relative to the bars).
+  // See xWindowMs: right space only after the last candle, never mid-chart,
+  // or x shows candles the price scale was not fitted to.
   const xRange = (() => {
-    if (t.length < 2) return undefined
-    const first = new Date(t[0]).getTime()
-    const last = new Date(t[t.length - 1]).getTime()
-    const barMs = (last - first) / (t.length - 1)
-    const pad = barMs * chartStyle.rightSpace
-    // Mirrors priceYRange's fallback: default 2-hour window until the user
-    // zooms/pans, then follow that same visibleRange so x and y never
-    // disagree about which window is showing (a later re-render -- new
-    // trade data, a resize -- would otherwise snap x back to the 2-hour
-    // default while y stayed at the user's wider window, stretching a still
-    // 2-hour-wide slice of candles across a much taller price axis).
-    const windowStart = visibleRange ? Math.max(first, visibleRange.start) : Math.max(first, last - defaultWindow)
-    const windowEnd = visibleRange ? Math.min(last, visibleRange.end) : last
-    return [toNaiveString(windowStart), toNaiveString(windowEnd + pad)]
+    const w = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
+    return w ? [toNaiveString(w[0]), toNaiveString(w[1])] : undefined
   })()
 
   const spikeAxis = {
@@ -1833,6 +1939,29 @@ export function CandlestickChart({
   // 76: three lines of title (Swing + tag, 10 Leg Dev, 3 Leg Dev) above the plot.
   const marginTop = hasSwingHeaders ? 76 + extraHeaderRows * HEADER_ROW_PX : 38
 
+  // ── Where each swing starts (2026-11-12) ────────────────────────────────
+  // A small tag in the swing's own colour -- the colour of its title above
+  // the chart -- with the direction: "▲ Swing B starts" / "▼ Swing B starts".
+  // It sits beyond the number's circle on the same side, the arrow stopping
+  // at the circle, at the same point the swing's boundary line is drawn.
+  const tagWin = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
+  for (const st of swingStarts(zz10)) {
+    const color = SWING_COLORS[(st.swing - 1) % SWING_COLORS.length]
+    const above = st.type === "H"
+    // Near an edge the box opens away from it, so it is never cut.
+    const frac = screenFraction(new Date(st.t).getTime(), tagWin)
+    const tagHalf = 68 / plotAreaPx
+    const tagAnchor = frac != null && frac < tagHalf ? "left" : frac != null && frac > 1 - tagHalf ? "right" : "center"
+    annotations.push({
+      x: onDisplayCandle([st.t], candleTimes)[0], y: drawnEdge(st), xref: "x", yref: "y", xanchor: tagAnchor,
+      xshift: tagAnchor === "left" ? 6 : tagAnchor === "right" ? -6 : 0,
+      text: `${st.up ? "▲" : "▼"} Swing ${swingName(st.swing)} starts`,
+      showarrow: true, arrowhead: 2, arrowsize: 1, arrowwidth: 1.2, arrowcolor: color,
+      ax: 0, ay: above ? -START_TAG_PX : START_TAG_PX, standoff: 29,
+      font: { size: 10, color, family: "Arial" }, bgcolor: BG, bordercolor: color, borderwidth: 1, borderpad: 3,
+    } as Partial<Annotations>)
+  }
+
   // ── Swing numbers: white, in a circle, just outside the candle ──────────
   // Sir, 2026-11-12: one style for every number (white, in a round circle),
   // big swings a little larger than small ones, nothing covering the candle.
@@ -1841,7 +1970,7 @@ export function CandlestickChart({
   // on the wick tip (drawn with the swing traces) marks the touch itself.
   if (swingLabels.length && priceYRange) {
     const hostH = plotHostRef.current?.clientHeight || 700
-    const priceRowPx = Math.max(60, (hostH - marginTop - 18) * (domains[0][1] - domains[0][0]))
+    const priceRowPx = measuredPriceRowPx ?? Math.max(60, (hostH - marginTop - 18) * (domains[0][1] - domains[0][0]))
     // On a log scale a pixel is a constant RATIO of price, not an amount.
     const lo = Math.max(1e-9, priceYRange[0]), hi = Math.max(lo * 1.000001, priceYRange[1])
     const pricePerPx = (hi - lo) / priceRowPx
@@ -1849,17 +1978,21 @@ export function CandlestickChart({
     const shifted = (price: number, px: number) =>
       logScale ? price * Math.pow(10, px * log10PerPx) : price + px * pricePerPx
     for (const big of [true, false]) {
-      const size = big ? 21 : 17
+      // Small circles nearly as big as the big ones: at 17px the roman
+      // numerals were hard to read (2026-11-12).
+      const size = big ? 22 : 20
       const pts = swingLabels.filter((p) => p.big === big)
       if (!pts.length) continue
       const gapPx = size / 2 + 5
       data.push({
         type: "scatter", mode: "text+markers",
         x: pts.map((p) => p.x),
-        y: pts.map((p) => shifted(p.price, (p.type === "H" ? 1 : -1) * gapPx)),
+        y: pts.map((p) => shifted(drawnCandleAt.has(p.x)
+          ? (p.type === "H" ? Math.max(p.price, drawnCandleAt.get(p.x)!.h) : Math.min(p.price, drawnCandleAt.get(p.x)!.l))
+          : p.price, (p.type === "H" ? 1 : -1) * gapPx)),
         marker: { symbol: "circle", size, color: BG, line: { color: "white", width: big ? 1.6 : 1.2 } },
         text: pts.map((p) => p.label), textposition: "middle center",
-        textfont: { color: "white", size: big ? 11 : 9, family: "Arial" },
+        textfont: { color: "white", size: big ? 12 : 10.5, family: "Arial" },
         showlegend: false, cliponaxis: false, hoverinfo: "skip",
         xaxis: "x", yaxis: "y",
       } as unknown as Data)
@@ -2790,6 +2923,7 @@ export function CandlestickChart({
           onRelayout={handleRelayout}
         />
         <ChartCrosshair hostRef={plotHostRef} bars={bars} rows={readoutRows} interval={interval} swingSpans={swingSpans}
+                        swingPoints={swingPointInfo} candleTimes={candleBars.map((b) => b.t)}
                         volumeAxis={volRow ? `y${suffixOf("vol")}` : undefined} />
         </div>
         </div>

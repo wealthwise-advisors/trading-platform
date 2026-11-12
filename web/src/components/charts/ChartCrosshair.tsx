@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { nearestBarIndex, readoutLines, type ReadoutLine, type ReadoutRow } from "@/lib/chartReadout"
 import { swingName } from "@/lib/swingHeaders"
+import { pointLines, pointsAt, type SwingPointInfo } from "@/lib/swingPoints"
 import { strengthLines, swingAt, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import type { OHLCVRecord } from "@/lib/types"
 
@@ -42,7 +43,7 @@ function layoutKey(axis: string) {
   return axis === "y" ? "yaxis" : `yaxis${axis.slice(1)}`
 }
 
-export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swingSpans = [] }: {
+export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swingSpans = [], swingPoints = [], candleTimes = [] }: {
   hostRef: RefObject<HTMLDivElement | null>
   bars: OHLCVRecord[]
   rows: ReadoutRow[]
@@ -50,11 +51,15 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
   interval?: string
   /** The swings on the chart; the one under the cursor gets a buyers-vs-sellers box. */
   swingSpans?: SwingSpan[]
+  /** Every 10 Leg / 3 Leg point, so the box can name the one under the cursor. */
+  swingPoints?: SwingPointInfo[]
+  /** The drawn candles' times (candles may be merged to fit the screen). */
+  candleTimes?: string[]
 }) {
   const [reading, setReading] = useState<Reading | null>(null)
   // The latest props without re-binding the mouse listeners on each render.
-  const latest = useRef({ bars, rows, volumeAxis, swingSpans })
-  useEffect(() => { latest.current = { bars, rows, volumeAxis, swingSpans } })
+  const latest = useRef({ bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes })
+  useEffect(() => { latest.current = { bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes } })
   // A swing's box lines, worked out once per swing per dataset, not per pixel.
   const swingCache = useRef<{ bars: OHLCVRecord[] | null; byKey: Map<string, ReadoutLine[]> }>({ bars: null, byKey: new Map() })
   // Bar times in the axis's own units, worked out once per dataset.
@@ -71,7 +76,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
       const gd = host.querySelector(".js-plotly-plot") as unknown as { _fullLayout?: PlotLayout } | null
       const full = gd?._fullLayout
       const xa = full?.xaxis
-      const { bars, rows, volumeAxis, swingSpans } = latest.current
+      const { bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes } = latest.current
       if (!full || !xa || !bars.length || !rows.length) return clear()
 
       const rect = host.getBoundingClientRect()
@@ -113,6 +118,14 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
       // 3 Leg Dev stretches. Top of the price row, on the side the price box
       // is not on, so the two never cover each other.
       const sw = swingAt(swingSpans, bar.t)
+      // A swing point on this candle is named first: which count (10 Leg or
+      // 3 Leg), its number, high or low (2026-11-12).
+      const onPoint = pointLines(pointsAt(swingPoints, bar.t, candleTimes))
+      if (!sw && onPoint.length) {
+        const priceOnRight = boxes[0]?.onRight ?? flip
+        boxes.push({ axis: "swing", title: "Swing point", top: first._offset + 1, lines: onPoint, onRight: !priceOnRight,
+                     width: SWING_BOX_WIDTH })
+      }
       if (sw) {
         if (swingCache.current.bars !== bars) swingCache.current = { bars, byKey: new Map() }
         const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}`
@@ -131,7 +144,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
           swingCache.current.byKey.set(key, lines)
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
-        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines, onRight: !priceOnRight,
+        const withPoint = onPoint.length ? [...onPoint, { label: "", value: "", kind: "divider" as const }, ...lines] : lines
+        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines: withPoint, onRight: !priceOnRight,
                      titleColor: sw.color, width: SWING_BOX_WIDTH })
       }
       setReading({ x, top, height: bottom - top, boxes })

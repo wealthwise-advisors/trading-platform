@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  xWindowMs,
   DEFAULT_WINDOW_BARS, DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs,
 } from "./chartWindow"
 
@@ -92,4 +93,31 @@ describe("chartRunKey", () => {
   })
 
   it("copes with no bars", () => expect(chartRunKey([], "1m")).toBe("1m|"))
+})
+
+describe("xWindowMs", () => {
+  const t = Array.from({ length: 20 }, (_, i) => `2026-11-11T${String(9 + Math.floor((30 + i * 5) / 60)).padStart(2, "0")}:${String((30 + i * 5) % 60).padStart(2, "0")}:00`)
+  const ms = (s: string) => new Date(s).getTime()
+  const step = 5 * 60_000
+
+  it("adds right space after the last candle when the view reaches it", () => {
+    expect(xWindowMs(t, null, 60 * 60_000, 3)).toEqual([ms(t[19]) - 60 * 60_000, ms(t[19]) + 3 * step])
+  })
+
+  it("a view panned into the middle ends exactly where it was left", () => {
+    const view = { start: ms(t[2]), end: ms(t[8]) }
+    expect(xWindowMs(t, view, 60 * 60_000, 3)).toEqual([ms(t[2]), ms(t[8])])
+  })
+
+  it("the space is one bar interval each, not the average gap across a break", () => {
+    const withBreak = [...t, "2026-11-12T09:30:00", "2026-11-12T09:35:00"]
+    const [, end] = xWindowMs(withBreak, null, 60 * 60_000, 2)!
+    expect(end).toBe(ms("2026-11-12T09:35:00") + 2 * step)
+  })
+
+  it("a view dragged past the first bar stops there and keeps its width", () => {
+    const width = 20 * 60_000
+    const view = { start: ms(t[0]) - 3 * 3_600_000, end: ms(t[0]) - 3 * 3_600_000 + width }
+    expect(xWindowMs(t, view, 60 * 60_000, 3)).toEqual([ms(t[0]), ms(t[0]) + width])
+  })
 })
