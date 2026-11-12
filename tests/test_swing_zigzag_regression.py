@@ -34,7 +34,7 @@ from src.strategies import MACrossoverStrategy
 from src.backtesting.engine import BacktestEngine
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 from api.serializers import zigzag_to_records
-from src.analysis.swing_count import calc_swing_count
+from src.analysis.swing_count import calc_swing_count, swing_name
 from api.report.report import generate_html_report
 
 
@@ -256,7 +256,7 @@ class TestEndToEndReportGeneration:
         swing_nums = sorted(int(n) for n in zz10["swing"].unique())
         assert swing_nums, "reference backtest produced no swings -- fixture regressed"
         for swing_num in swing_nums:
-            assert f"Swing {swing_num}" in html, f"Swing {swing_num} header missing from report HTML"
+            assert f"Swing {swing_name(swing_num)}" in html, f"Swing {swing_name(swing_num)} header missing from report HTML"
 
 
 class TestSwingOrientation:

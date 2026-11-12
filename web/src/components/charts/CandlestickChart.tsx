@@ -52,7 +52,7 @@ import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapL
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
 import { dominanceTag, swingStrength, type SwingSpan } from "@/lib/swingStrength"
-import { titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
+import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
 import {
   MAROON_BG, autoRenkoBrick, extendedHoursSpans, heikinAshi, loadChartStyle, renkoBricks, saveChartStyle,
@@ -1273,7 +1273,7 @@ export function CandlestickChart({
       // title, so it reads without hovering.
       const tag = dominanceTag(swingStrength(bars, grp[0].t, grp[grp.length - 1].t))
       const tagHtml = tag ? `  <span style="color:${tag.color}">${tag.text}</span>` : ""
-      const headerText = `<b>Swing ${swingNum}</b>${tagHtml}<br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
+      const headerText = `<b>Swing ${swingName(swingNum)}</b>${tagHtml}<br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
       const minor = regionPointsBySwing.get(swingNum) ?? []
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,

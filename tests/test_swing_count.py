@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.analysis.swing_count import _Pt, calc_swing_count, count_swings, roman
+from src.analysis.swing_count import _Pt, calc_swing_count, count_swings, roman, swing_name
 
 STEP = 4  # bars between turning points
 
@@ -57,22 +57,22 @@ class TestBullishSequence:
     def test_even_a_small_first_push_is_point_1_and_a_break_of_0_flips(self):
         # Sir's trap rule: 0 -> 1 then a low under 0 makes the move a finished trap.
         pts = [(100, "L"), (101, "H"), (95, "L"), (99, "H"), (90, "L")]
-        assert labels(pts) == ["0", "1", "A", "B", "C"]
+        assert labels(pts) == ["0", "1", "1", "2", "3"]
 
 
 class TestFlipToLetters:
     def test_diagram_break_of_0_flips_to_a_b_c(self):
         # 0=100, 1=110, the pullback takes out 0 -> A, bounce under old 1 -> B, C below A.
         pts = [(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")]
-        assert labels(pts) == ["0", "1", "A", "B", "C"]
+        assert labels(pts) == ["0", "1", "1", "2", "3"]
 
     def test_breaking_point_2_flips_like_breaking_0(self):
         pts = [(100, "L"), (110, "H"), (105, "L"), (115, "H"), (103, "L"), (110, "H"), (98, "L")]
-        assert labels(pts) == ["0", "1", "2", "3", "A", "B", "C"]
+        assert labels(pts) == ["0", "1", "2", "3", "1", "2", "3"]
 
     def test_bounce_above_old_top_flips_back_to_numbers(self):
         pts = [(100, "L"), (110, "H"), (95, "L"), (112, "H"), (104, "L")]
-        assert labels(pts) == ["0", "1", "A", "1", "2"]
+        assert labels(pts) == ["0", "1", "1", "1", "2"]
 
     def test_each_direction_is_its_own_run(self):
         pts = [(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")]
@@ -84,11 +84,11 @@ class TestSmallCount:
     def test_roman(self):
         assert [roman(n) for n in (1, 2, 3, 4, 5, 9, 14)] == ["i", "ii", "iii", "iv", "v", "ix", "xiv"]
 
-    def test_small_scale_uses_roman_up_and_lowercase_down(self):
+    def test_small_scale_is_roman_in_both_directions(self):
         up = [(100, "L"), (110, "H"), (105, "L"), (115, "H")]
         assert labels(up, scale="small") == ["0", "i", "ii", "iii"]
         flip = [(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")]
-        assert labels(flip, scale="small") == ["0", "i", "a", "b", "c"]
+        assert labels(flip, scale="small") == ["0", "i", "i", "ii", "iii"]
 
 
 def _es_like(seed=3, n=1500):
@@ -143,4 +143,8 @@ class TestOpeningStretch:
 
 def test_an_equal_low_is_a_break_point_2_must_stay_strictly_above():
     pts = [(100, "L"), (110, "H"), (100, "L"), (105, "H"), (95, "L")]
-    assert labels(pts) == ["0", "1", "A", "B", "C"]
+    assert labels(pts) == ["0", "1", "1", "2", "3"]
+
+
+def test_swings_are_named_by_capital_letters():
+    assert [swing_name(n) for n in (1, 2, 3, 26, 27)] == ["A", "B", "C", "Z", "AA"]

@@ -43,3 +43,20 @@ export function titleLevel(placed: ReadonlyArray<PlacedTitle>, xPx: number, widt
   }
   return best
 }
+
+/**
+ * A swing's name in its title: run 1 is "A", 2 "B", 26 "Z", 27 "AA". Inside a
+ * swing the 10 Leg points are 1, 2, 3 and the 3 Leg points i, ii, iii, so the
+ * three levels never share a style (2026-11-12). Mirrors swing_name() in
+ * src/analysis/swing_count.py.
+ */
+export function swingName(run: number): string {
+  let n = run
+  let out = ""
+  while (n > 0) {
+    const r = (n - 1) % 26
+    out = String.fromCharCode(65 + r) + out
+    n = Math.floor((n - 1) / 26)
+  }
+  return out
+}

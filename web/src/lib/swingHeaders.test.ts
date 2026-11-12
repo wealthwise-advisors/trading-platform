@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { titleLevel, titleWidthPx, type PlacedTitle } from "./swingHeaders"
+import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "./swingHeaders"
 
 describe("titleWidthPx", () => {
   it("measures the longest line, ignoring markup", () => {
@@ -33,4 +33,10 @@ describe("titleLevel", () => {
   })
 
   it("the first title always sits on the base row", () => expect(titleLevel([], 50, W)).toBe(0))
+})
+
+describe("swingName", () => {
+  it("names swings with capital letters", () => {
+    expect([1, 2, 3, 26, 27, 28].map(swingName)).toEqual(["A", "B", "C", "Z", "AA", "AB"])
+  })
 })

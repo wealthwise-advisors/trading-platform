@@ -14,20 +14,22 @@ UPTREND (numbers; odd = highs, even = lows)
   4, 5, 6 ... alternate the same way: each even a higher low that holds the
      previous even, each odd a new high closed above the previous odd
 
-FLIP (letters)
+FLIP (a new swing)
   When a pullback takes out the protected low (0, or the last even low), the
-  pending even is cancelled and the count flips: the new low is A, the old
-  top is the new origin. B is a bounce that stays below that top, C takes out
-  A and closes below it, then D, E ... Taking out the top flips back to
-  numbers. The downtrend mirrors the uptrend exactly.
+  pending even is cancelled and the count flips into a new swing: the old top
+  is its origin, the new low is 1, a bounce that stays below the top is 2, a
+  low that takes out 1 and closes below it is 3, and so on (the email's
+  "1 or A ... a reverse 1, 2, 3"). Taking out the top flips again. The
+  downtrend mirrors the uptrend exactly.
 
 Breaking 0 is by the wick ("takes out the low"); confirming a new odd point is
 by a close beyond the previous odd ("takes out ... and closes above it").
 Breaking a later even low (4 below 2) flips the same way as breaking 0: the
 email's checklist says an even "never breaks the prior even low".
 
-Labels: big count 0, 1, 2, 3 ... / A, B, C ...; small count i, ii, iii ... /
-a, b, c ... (sir: "use caps wherever required to differentiate the swings").
+Labels: each swing (one run of a direction) is named A, B, C ...; inside it
+the 10 Leg points are 0, 1, 2, 3 ... and the 3 Leg points i, ii, iii ...
+A flip starts the next swing letter and the count restarts at 1.
 """
 
 from __future__ import annotations
@@ -60,11 +62,18 @@ def roman(n: int) -> str:
 
 def _label(scale: str, up: bool, n: int) -> str:
     """n >= 1 is the n-th point of a count; n == 0 is an origin."""
+    # Sir via the user, 2026-11-12: each new swing (a run in one direction)
+    # is named A, B, C...; inside it the 10 Leg points are 1, 2, 3... and the
+    # 3 Leg points i, ii, iii..., in either direction. A flip starts a new
+    # swing and the count restarts at 1 (the email's "a reverse 1, 2, 3").
     if n == 0:
         return "0"
-    if scale == "big":
-        return str(n) if up else spreadsheet_letter(n)
-    return roman(n) if up else spreadsheet_letter(n).lower()
+    return str(n) if scale == "big" else roman(n)
+
+
+def swing_name(run: int) -> str:
+    """Run 1 -> "A", 2 -> "B", 27 -> "AA": the name in a swing's title."""
+    return spreadsheet_letter(run)
 
 
 def count_swings(
@@ -203,7 +212,7 @@ def _candidates(high: pd.Series, low: pd.Series, close: pd.Series, deviation: fl
     # was invisible and the count began hours later (real /ES 5m 2026-11-11:
     # low 7593.25 at 09:45, first turn found at 13:05). The email starts every
     # count at Point 0, "the absolute swing low where the upward move begins"
-    # (letters only come from a flip), so the count begins at the lowest low
+    # (a down count only comes from a flip), so the count begins at the lowest low
     # up to the first turn: it replaces a first low, or comes before a first high.
     f = pts[0]
     j = int(np.argmin(low.to_numpy()[: f.pos + 1]))

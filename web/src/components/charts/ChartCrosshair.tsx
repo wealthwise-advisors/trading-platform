@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { nearestBarIndex, readoutLines, type ReadoutLine, type ReadoutRow } from "@/lib/chartReadout"
+import { swingName } from "@/lib/swingHeaders"
 import { strengthLines, swingAt, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import type { OHLCVRecord } from "@/lib/types"
 
@@ -130,7 +131,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
           swingCache.current.byKey.set(key, lines)
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
-        boxes.push({ axis: "swing", title: `Swing ${sw.swing}`, top: first._offset + 1, lines, onRight: !priceOnRight,
+        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines, onRight: !priceOnRight,
                      titleColor: sw.color, width: SWING_BOX_WIDTH })
       }
       setReading({ x, top, height: bottom - top, boxes })

@@ -9,7 +9,7 @@ The output file:
   - Full zoom/pan support: scroll to zoom, drag to pan, range buttons to jump
 """
 
-from src.analysis.swing_count import calc_swing_count
+from src.analysis.swing_count import calc_swing_count, swing_name
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
@@ -464,7 +464,7 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 leg_part = f" | 3 Leg Dev ({letters[0]} to {letters[-1]})" if letters else ""
                 swing_annotations.append(dict(
                     x=x_mid, y=1.005, xref="x", yref="paper", yanchor="bottom",
-                    text=f"<b>Swing {swing_num}</b><br>({first_label} to {last_label}){leg_part}",
+                    text=f"<b>Swing {swing_name(int(swing_num))}</b><br>({first_label} to {last_label}){leg_part}",
                     showarrow=False, font=dict(color=color, size=11),
                     align="center",
                 ))
