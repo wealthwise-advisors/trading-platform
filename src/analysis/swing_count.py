@@ -39,7 +39,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from src.analysis.zigzag import calc_zigzag, spreadsheet_letter
+from src.analysis.zigzag import _alternate_with_majors, _snap_to_extremes, calc_zigzag, spreadsheet_letter
 
 
 @dataclass
@@ -214,6 +214,15 @@ def _candidates(high: pd.Series, low: pd.Series, close: pd.Series, deviation: fl
     # count at Point 0, "the absolute swing low where the upward move begins"
     # (a down count only comes from a flip), so the count begins at the lowest low
     # up to the first turn: it replaces a first low, or comes before a first high.
+    # Each turn on the real extreme candle between its neighbouring turns,
+    # BEFORE the rules run. The turn finder needs `legs // 2` quiet candles
+    # either side, so a wide candle beside a turn is never offered: on real
+    # /ES 10m 2026-10-28 a top sat at 12:50 (7787.25) while 14:30 went to
+    # 7794.25. Moving points after the rules had judged them broke the rules'
+    # own close checks, so the candidates are corrected first.
+    idx = high.index
+    snapped = _snap_to_extremes([(idx[p.pos], p.kind, p.price, False) for p in pts], high, low)
+    pts = [_Pt(int(idx.get_loc(t)), k, float(pr)) for t, k, pr, _ in snapped]
     f = pts[0]
     j = int(np.argmin(low.to_numpy()[: f.pos + 1]))
     start = _Pt(j, "L", float(low.iloc[j]))
@@ -235,6 +244,33 @@ def _frame(points: list[dict], index: pd.Index, swing_of) -> pd.DataFrame:
     )
     df["sub"] = df.groupby("swing").cumcount()
     return df[["price", "type", "swing", "sub", "label"]]
+
+
+def _fit_inside(found: list[dict], a: dict, b: dict | None, high: pd.Series, low: pd.Series, parent: int) -> list[dict]:
+    """
+    The small points of one big move, fitted between its two big points and
+    numbered i, ii, iii in order.
+
+    Counted on their own, the small points ignored the big points around them:
+    the chart drew "3" and "i" side by side as two highs, and some small points
+    sat beside the real turn (real /ES 2026-11-12: 49 back-to-back same-side
+    points over 4 days of 1m). So, as for the old 3 Leg (zigzag.py), the line
+    must go high, low, high through big and small points together, each small
+    point on the real extreme candle between its neighbours. Big points never
+    move. Numbering then runs i, ii, iii through the move, as in sir's figure.
+    """
+    if not found:
+        return []
+    idx = high.index
+    ends = [a] + ([b] if b is not None else [])
+    majors = pd.DataFrame({"type": [e["kind"] for e in ends], "price": [e["price"] for e in ends]},
+                          index=idx[[e["pos"] for e in ends]])
+    minors = pd.DataFrame({"type": [p["kind"] for p in found], "price": [p["price"] for p in found]},
+                          index=idx[[p["pos"] for p in found]])
+    pts = _snap_to_extremes(_alternate_with_majors(majors, minors), high, low)
+    kept = [p for p in pts if not p[3]]
+    return [{"pos": int(idx.get_loc(t)), "kind": k, "price": float(pr), "label": roman(n), "seq": parent}
+            for n, (t, k, pr, _) in enumerate(kept, start=1)]
 
 
 def calc_swing_count(
@@ -263,10 +299,9 @@ def calc_swing_count(
         cands = [p for p in cands if lo < p.pos < hi]
         start = _Pt(a["pos"], a["kind"], a["price"])
         parent = b["seq"] if b is not None else a["seq"]
-        for p in count_swings(cands, c, "small", origin=start):
-            if p["label"] != "0" and lo < p["pos"] < hi:
-                p["seq"] = parent
-                small.append(p)
+        found = [p for p in count_swings(cands, c, "small", origin=start)
+                 if p["label"] != "0" and lo < p["pos"] < hi]
+        small += _fit_inside(found, a, b, high, low, parent)
     small.sort(key=lambda d: d["pos"])
     zz3 = _frame(small, high.index, lambda p: p["seq"])
     return zz10, zz3

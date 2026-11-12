@@ -148,3 +148,39 @@ def test_an_equal_low_is_a_break_point_2_must_stay_strictly_above():
 
 def test_swings_are_named_by_capital_letters():
     assert [swing_name(n) for n in (1, 2, 3, 26, 27)] == ["A", "B", "C", "Z", "AA"]
+
+
+class TestBigAndSmallTogether:
+    """Reported 2026-11-12 with a screenshot: "3" and "i" side by side as two
+    highs, small points beside the real turn. The chart draws big and small
+    points as one line, so they are checked as one line."""
+
+    @pytest.mark.parametrize("seed", [3, 11, 29, 41])
+    def test_highs_and_lows_alternate_through_both_counts(self, seed):
+        df = _es_like(seed)
+        zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"])
+        pts = sorted([(t, r["type"]) for t, r in zz10.iterrows()] + [(t, r["type"]) for t, r in zz3.iterrows()])
+        assert all(a[1] != b[1] for a, b in zip(pts, pts[1:]))
+
+    @pytest.mark.parametrize("seed", [3, 11, 29, 41])
+    def test_every_point_is_the_real_turn_between_its_neighbours(self, seed):
+        df = _es_like(seed)
+        zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"])
+        pts = sorted([(t, r["type"], r["price"]) for t, r in zz10.iterrows()]
+                     + [(t, r["type"], r["price"]) for t, r in zz3.iterrows()])
+        for p, c, n in zip(pts, pts[1:], pts[2:]):
+            seg = df[(df.index > p[0]) & (df.index < n[0])]
+            if seg.empty:
+                continue
+            if c[1] == "H":
+                assert seg["high"].max() <= c[2]
+            else:
+                assert seg["low"].min() >= c[2]
+
+    def test_small_points_count_i_ii_iii_in_order_inside_each_big_move(self):
+        df = _es_like(3)
+        zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"])
+        bounds = list(zz10.index) + [df.index[-1] + pd.Timedelta(minutes=1)]
+        for a, b in zip(bounds, bounds[1:]):
+            inside = zz3[(zz3.index > a) & (zz3.index < b)]
+            assert inside["label"].tolist() == [roman(n) for n in range(1, len(inside) + 1)]

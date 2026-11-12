@@ -2,9 +2,10 @@
 // gets more horizontal pixels (candle width is driven by how many bars are
 // packed into the visible range -- no Plotly line-width setting can widen the
 // body itself). Only the candlestick trace's own OHLC arrays use this;
-// EMA/RSI/Stoch lines, zigzag swing markers, and trade entry/exit markers all
-// keep the original per-bar timestamps, since they're plotted on the same
-// continuous date axis and never needed to align with candle boundaries.
+// EMA/RSI/Stoch lines and trade entry/exit markers keep the original per-bar
+// timestamps, since they're plotted on the same continuous date axis. Swing
+// points do NOT: they mark a candle's high or low, so they move onto the
+// displayed candle that holds them (onDisplayCandle, below).
 //
 // Lives in lib/ rather than inside the chart component so the bucketing and
 // timestamp rules can be tested directly -- both have shipped bugs before.
@@ -108,5 +109,32 @@ export function resampleOHLC(bars: OHLCVRecord[], targetMinutes: number): OHLCVR
       c: grp[grp.length - 1].c,
       v: grp.reduce((sum, g) => sum + (g.v ?? 0), 0),
     }
+  })
+}
+
+/**
+ * Each time moved onto the displayed candle that contains it: the last
+ * candle starting at or before it.
+ *
+ * Swing points mark a candle's high or low. When candles are merged for
+ * display (two 1m bars into one 2m candle), a point left at its own minute
+ * sat between two drawn candles and looked as if it touched neither (real
+ * /ES 1m, 2026-11-12: 46 of 98 points). A merged candle's high is the highest
+ * of its bars, so the point's price is still that candle's high or low.
+ */
+export function onDisplayCandle(times: string[], candleTimes: string[]): string[] {
+  if (!candleTimes.length) return times
+  const starts = candleTimes.map((c) => Date.parse(c))
+  return times.map((t) => {
+    const x = Date.parse(t)
+    let lo = 0
+    let hi = starts.length - 1
+    if (x < starts[0]) return candleTimes[0]
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (starts[mid] <= x) lo = mid
+      else hi = mid - 1
+    }
+    return candleTimes[lo]
   })
 }

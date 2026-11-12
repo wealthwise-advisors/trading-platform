@@ -27,7 +27,7 @@ import { useConfigStore } from "@/store/configStore"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
-import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
+import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
 import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs } from "@/lib/chartWindow"
@@ -1134,20 +1134,33 @@ export function CandlestickChart({
   }
   const swingSpans: SwingSpan[] = []
 
+  // Swing points sit on the DRAWN candle that holds them: with candles merged
+  // for display, a point left at its own minute fell between two candles.
+  const candleTimes = candleBars.map((b) => b.t)
+  const onCandle = (pts: ZigZagPoint[]) => onDisplayCandle(pts.map((p) => p.t), candleTimes)
+  // The 3 Leg line runs through the 10 Leg points too: drawn through the small
+  // points alone it joined a small high to the next small high across the big
+  // low between them, floating over the candles (2026-11-12).
+  const zzLine = [...zz10, ...zz3].sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0))
+
   if (zz3.length) {
     data.push({
-      type: "scatter", mode: "lines", x: zz3.map((p) => p.t), y: zz3.map((p) => p.price),
+      type: "scatter", mode: "lines", x: onCandle(zzLine), y: zzLine.map((p) => p.price),
       name: "ZigZag (3L)", line: { color: "#f0c040", width: 1.0, dash: "dot" },
       hoverinfo: "skip", xaxis: "x", yaxis: "y",
     } as unknown as Data)
     for (const [ptype, color] of [["H", "#ff6b6b"], ["L", "#69f0ae"]] as const) {
       const pts = zz3Labelable.filter((p) => p.type === ptype)
       if (pts.length) {
+        // A dot on the wick tip and the label outside the candle (above a
+        // high, below a low). A ring centred on the price hid the wick and
+        // read as "not touching", and its red/green ring on a candle of the
+        // other colour looked mixed up (sir, 2026-11-12).
         data.push({
-          type: "scatter", mode: "text+markers", x: pts.map((p) => p.t), y: pts.map((p) => p.price),
-          marker: { symbol: "circle", size: 23, color: BG, line: { color, width: 1.6 } },
-          text: pts.map((p) => p.label), textposition: "middle center",
-          textfont: { color: "white", size: 10, family: "Arial" },
+          type: "scatter", mode: "text+markers", x: onCandle(pts), y: pts.map((p) => p.price),
+          marker: { symbol: "circle", size: 6, color, line: { color: BG, width: 1 } },
+          text: pts.map((p) => p.label), textposition: ptype === "H" ? "top center" : "bottom center",
+          textfont: { color: "#f0c040", size: 11, family: "Arial" },
           showlegend: false,
           hovertemplate: `<b>${ptype === "H" ? "High" : "Low"} (3L) %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>`,
           xaxis: "x", yaxis: "y",
@@ -1172,7 +1185,7 @@ export function CandlestickChart({
 
   if (zz10.length) {
     data.push({
-      type: "scatter", mode: "lines", x: zz10.map((p) => p.t), y: zz10.map((p) => p.price),
+      type: "scatter", mode: "lines", x: onCandle(zz10), y: zz10.map((p) => p.price),
       name: "ZigZag (10L)", line: { color: "#2196f3", width: 1.2, dash: "dot" },
       hoverinfo: "skip", xaxis: "x", yaxis: "y",
     } as unknown as Data)
@@ -1304,11 +1317,12 @@ export function CandlestickChart({
       if (!pts.length) continue
       data.push({
         type: "scatter", mode: "text+markers",
-        x: pts.map((p) => p.t), y: pts.map((p) => p.price),
+        x: onCandle(pts), y: pts.map((p) => p.price),
         name: ptype === "H" ? "Swing High" : "Swing Low",
-        marker: { symbol: "circle", size: 24, color: BG, line: { color, width: 1.8 } },
-        text: pts.map((p) => p.label), textposition: "middle center",
-        textfont: { color: "white", size: 10, family: "Arial" },
+        // Dot on the wick tip, number outside the candle -- see the 3 Leg note.
+        marker: { symbol: "circle", size: 9, color, line: { color: BG, width: 1 } },
+        text: pts.map((p) => p.label), textposition: ptype === "H" ? "top center" : "bottom center",
+        textfont: { color: "white", size: 14, family: "Arial Black, Arial" },
         hovertemplate: "<b>Swing %{text}</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
         xaxis: "x", yaxis: "y",
       } as unknown as Data)

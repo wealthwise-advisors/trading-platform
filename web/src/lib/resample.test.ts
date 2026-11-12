@@ -12,7 +12,7 @@
 //      the visible axis. See isoTime.test.ts.
 
 import { describe, it, expect } from "vitest"
-import { resampleOHLC, displayBucketMinutes } from "@/lib/resample"
+import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
 import type { OHLCVRecord } from "@/lib/types"
 import { toNaiveString } from "@/lib/isoTime"
 
@@ -230,5 +230,27 @@ describe("displayBucketMinutes — candle legibility at any zoom", () => {
         expect(b.t).not.toMatch(/Z$/)
       }
     }
+  })
+})
+
+describe("onDisplayCandle", () => {
+  const candles = ["2026-11-10T09:30:00", "2026-11-10T09:32:00", "2026-11-10T09:34:00"]
+
+  it("moves a point inside a merged candle onto that candle", () => {
+    expect(onDisplayCandle(["2026-11-10T09:33:00", "2026-11-10T09:31:00"], candles))
+      .toEqual(["2026-11-10T09:32:00", "2026-11-10T09:30:00"])
+  })
+
+  it("keeps a point already on a candle where it is", () => {
+    expect(onDisplayCandle(["2026-11-10T09:34:00"], candles)).toEqual(["2026-11-10T09:34:00"])
+  })
+
+  it("a point past the last candle goes on the last candle", () => {
+    expect(onDisplayCandle(["2026-11-10T09:35:00"], candles)).toEqual(["2026-11-10T09:34:00"])
+  })
+
+  it("with candles not merged, every point stays on its own bar", () => {
+    const bars = ["2026-11-10T09:30:00", "2026-11-10T09:31:00", "2026-11-10T09:32:00"]
+    expect(onDisplayCandle(bars, bars)).toEqual(bars)
   })
 })

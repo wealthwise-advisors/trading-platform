@@ -360,11 +360,21 @@ export function ResultsPage() {
             {/* h-[60vh] below xl: with no flex-1 chain to inherit from, a chart
                  whose only height instruction is "fill the parent" fills nothing. */}
             <TabsContent value="price" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
-              <Card className="p-1.5 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
+              <Card className="p-1.5 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0 overflow-y-auto">
                 {/* The chart draws its own header now, so that the instrument
                     line and the Indicators / Save / full-screen controls share
                     one row. Rendering ChartHeader here as well would put the
                     instrument on the page twice. */}
+                {/* overflow-y-auto on the Card above: the chart keeps a height
+                    floor so its study rows stay readable (CandlestickChart's
+                    chartMinHeight, ~770px with five rows and the swing titles).
+                    On a 720px screen the floor is taller than the card, and a
+                    Card clips by default, so the range buttons under the
+                    chart were cut off with no way to scroll to them (e2e
+                    layering, 2026-11-12). Scrolling inside the card reaches
+                    them and leaves every height as it was -- holding the floor
+                    up the chain instead (min-h-min) froze the chart at one
+                    size whatever the window did. */}
                 {priceDataQ.data && zigzagQ.data && (
                   <div className="flex-1 min-h-0">
                     <Suspense fallback={<ChartLoading />}>
