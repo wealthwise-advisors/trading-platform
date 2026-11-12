@@ -77,10 +77,11 @@ def equity_minutes() -> pd.DataFrame:
 # ── grouping ────────────────────────────────────────────────────────────────
 
 def test_the_daily_and_weekly_labels_are_their_own_table():
-    assert BAR_DAYS == {"1d": 1, "1w": 7}
+    assert BAR_DAYS == {"1d": 1, "1w": 7, "1mo": 30}
     assert not set(BAR_DAYS) & set(TF_MINUTES), "the intraday table Market Grid replays must not gain them"
     assert set(ALL_TIMEFRAMES) == set(TF_MINUTES) | set(BAR_DAYS)
     assert is_daily_or_longer("1d") and is_daily_or_longer("1w") and not is_daily_or_longer("4h")
+    assert is_daily_or_longer("1mo") and not is_daily_or_longer("1m"), "a month is not a minute"
 
 
 def test_futures_daily_bars_are_dated_by_the_trading_day(globex_minutes):
@@ -169,7 +170,9 @@ def _provider_with(fake) -> SchwabDataProvider:
 
 def test_schwab_fetches_years_of_daily_bars_in_one_request_with_a_year_period():
     fake = _FakeSchwab()
-    df = _provider_with(fake).load("ES", datetime(2006, 9, 16), datetime(2026, 9, 14, 23, 59), "1d")
+    # From a Monday: three weekday bars. (Weekend-dated ones fold into Monday --
+    # see test_weekend_dated_daily_bars_fold_into_monday.)
+    df = _provider_with(fake).load("ES", datetime(2006, 9, 18), datetime(2026, 9, 14, 23, 59), "1d")
     assert len(fake.calls) == 1, f"{len(fake.calls)} requests"
     call = fake.calls[0]
     assert (call["frequencyType"], call["frequency"], call["periodType"], call["symbol"]) == ("daily", 1, "year", "/ES")
@@ -288,3 +291,73 @@ def test_market_grid_does_not_offer_daily_or_weekly(tf):
         "session_start": "09:30", "session_end": "16:00",
     })
     assert r.status_code == 400 and tf in r.text
+
+
+# ── monthly (1mo), added 2026-11-12 ────────────────────────────────────────
+# The chart's 1M button had no API timeframe behind it: it sent "1M", which was
+# rejected, and the chart silently stayed where it was. "1mo", never "1M" --
+# that would read as one minute.
+
+def test_monthly_bars_start_on_the_first_and_hold_the_whole_month(globex_minutes):
+    anchor = day_session_anchor("ES")
+    d = resample_ohlcv(globex_minutes, "1d", anchor)
+    m = resample_ohlcv(globex_minutes, "1mo", anchor)
+    assert [ts.strftime("%Y-%m-%d %H:%M") for ts in m.index] == ["2026-08-01 00:00"]
+    assert m["open"].iloc[0] == d["open"].iloc[0] and m["close"].iloc[0] == d["close"].iloc[-1]
+    assert m["high"].iloc[0] == d["high"].max() and m["low"].iloc[0] == d["low"].min()
+    assert m["volume"].iloc[0] == d["volume"].sum()
+
+
+def test_a_month_boundary_splits_by_trading_day():
+    idx = pd.date_range("2026-07-30 18:00", "2026-08-03 16:59", freq="1min")
+    idx = idx[(idx.hour != 17) & (idx.dayofweek != 5) & ~((idx.dayofweek == 4) & (idx.hour >= 17))
+              & ~((idx.dayofweek == 6) & (idx.hour < 18))]
+    m = resample_ohlcv(_bars(idx), "1mo", day_session_anchor("ES"))
+    # Thursday 30 Jul 18:00 opens Friday 31 Jul's session -> July; Sunday 2 Aug 18:00 -> Monday 3 Aug -> August.
+    assert [ts.strftime("%Y-%m") for ts in m.index] == ["2026-07", "2026-08"]
+
+
+def test_schwab_serves_monthly_natively():
+    from src.data.schwab_provider import _fetch_plan
+    assert _fetch_plan("1mo") == ("monthly", 1, None)
+
+
+def test_synthetic_monthly_bars_sit_on_the_first_of_each_month():
+    start, end = date(2016, 1, 1), date(2026, 9, 14)
+    provider = _build_provider("synthetic", "ES", "1mo", start, end, SPEC)
+    df = provider.load("ES", datetime.combine(start, time(0)), datetime.combine(end, time(23, 59)), "1mo")
+    assert len(df) >= 120 and set(df.index.day) == {1}
+    assert len(set(df.index.to_period("M"))) == len(df), "one bar per month"
+
+
+def test_monthly_bars_are_never_hidden_as_a_weekend():
+    # 1 Nov 2025 was a Saturday; a daily chart hides Saturdays, a monthly one must not.
+    months = pd.date_range("2025-01-01", periods=24, freq="MS")
+    assert (months.dayofweek >= 5).any()
+    assert {"bounds": ["sat", "mon"]} not in compute_rangebreaks(months)
+
+
+def test_a_backtest_runs_on_monthly_bars():
+    r = client.post("/api/backtests", json={
+        "symbol": "ES", "timeframe": "1mo", "data_source": "synthetic", "strategy_id": "ma_crossover",
+        "params": {"fast": 3, "slow": 6}, "start_date": "2006-09-16", "end_date": "2026-09-14",
+        "session_start": "09:30", "session_end": "16:00",
+    })
+    assert r.status_code == 200, r.text[:300]
+    body = r.json()
+    assert body["timeframe"] == "1mo" and body["data_points"] >= 200
+
+
+def test_weekend_dated_daily_bars_fold_into_monday():
+    # Schwab's oldest /ES history has Sunday-evening sessions as bars of their
+    # own (Nov 2006 - Apr 2007). They are Monday's trading day; left alone they
+    # also stopped the chart hiding weekends on a twenty-year daily chart.
+    from src.data.schwab_provider import fold_weekend_daily_bars
+    idx = pd.DatetimeIndex(["2006-11-10 01:00", "2006-11-12 01:00", "2006-11-13 01:00", "2006-11-14 01:00"])
+    df = pd.DataFrame({"open": [10, 20, 21, 30], "high": [11, 25, 22, 31], "low": [9, 19, 18, 29],
+                       "close": [10.5, 21, 21.5, 30.5], "volume": [100, 5, 200, 300]}, index=idx)
+    out = fold_weekend_daily_bars(df)
+    assert [t.strftime("%a %m-%d") for t in out.index] == ["Fri 11-10", "Mon 11-13", "Tue 11-14"]
+    mon = out.iloc[1]
+    assert (mon.open, mon.high, mon.low, mon.close, mon.volume) == (20, 25, 18, 21.5, 205)
+    assert {"bounds": ["sat", "mon"]} in compute_rangebreaks(out.index)

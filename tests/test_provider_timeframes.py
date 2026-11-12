@@ -14,7 +14,7 @@ from src.data.resample import ALL_TIMEFRAMES as TF_MINUTES   # every timeframe t
 #: What the Backtest selector offers, mirroring ALL_CHART_TIMEFRAMES in
 #: web/src/lib/chartSetup.ts. Market Grid offers the same list without 1d and 1w.
 UI_TIMEFRAMES = ["1m", "3m", "5m", "10m", "15m", "20m", "25m",
-                 "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w"]
+                 "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w", "1mo"]
 
 
 def test_every_selectable_timeframe_is_one_the_engine_knows():
@@ -56,9 +56,9 @@ def test_schwab_plans_a_fetch_for_every_timeframe(tf):
     from src.data.schwab_provider import _fetch_plan
 
     freq_type, freq, resample_to = _fetch_plan(tf)
-    if tf in ("1d", "1w"):
+    if tf in ("1d", "1w", "1mo"):
         # Served natively by Schwab, never aggregated here.
-        assert (freq_type, freq, resample_to) == ({"1d": "daily", "1w": "weekly"}[tf], 1, None)
+        assert (freq_type, freq, resample_to) == ({"1d": "daily", "1w": "weekly", "1mo": "monthly"}[tf], 1, None)
         return
     assert freq_type == "minute"
     assert freq in (1, 5, 10, 15, 30), f"{tf} would request an unsupported frequency"

@@ -20,12 +20,13 @@
  * themed by the stylesheet, and cannot hold a collapse control.
  */
 
+import { intervalName } from "@/lib/chartSetup"
 import type { OHLCVRecord } from "@/lib/types"
 
 /** "5m" -> "5"; "1h", "1d", "1w" unchanged. */
 function intervalLabel(interval: string): string {
   const m = /^(\d+)m$/.exec(interval.trim())
-  return m ? m[1] : interval
+  return m ? m[1] : intervalName(interval.trim())
 }
 
 const px = (n: number | null | undefined, digits = 2) =>

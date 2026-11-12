@@ -28,6 +28,7 @@ from datetime import timezone
 from pathlib import Path
 from typing import Iterator, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 import requests
 from loguru import logger
@@ -86,7 +87,7 @@ _NATIVE_MINUTES = {"1m": 1, "5m": 5, "10m": 10, "15m": 15, "30m": 30}
 
 #: Daily and weekly bars, which Schwab serves natively. Unlike minute bars they
 #: go back years, so they are fetched in one request, not 30-day chunks.
-_DAY_PLANS: dict[str, tuple[str, int]] = {"1d": ("daily", 1), "1w": ("weekly", 1)}
+_DAY_PLANS: dict[str, tuple[str, int]] = {"1d": ("daily", 1), "1w": ("weekly", 1), "1mo": ("monthly", 1)}
 
 
 def _fetch_plan(timeframe: str):
@@ -105,6 +106,29 @@ def _fetch_plan(timeframe: str):
     return (*_TF_MAP[base], f"{want}min")
 
 _OHLCV_AGG = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+
+
+def fold_weekend_daily_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Daily bars dated on a weekend belong to the following Monday.
+
+    Schwab's oldest /ES history (Nov 2006 - Apr 2007) has 22 of them -- 21
+    Sunday-evening sessions served as bars of their own, and one Saturday. The
+    app's rule is that the Sunday-evening session is MONDAY's trading day (see
+    _resample_days). Left as they were, any weekend bar also stops the chart
+    hiding weekends, so a twenty-year daily chart showed every weekend as a gap.
+    """
+    if df.empty:
+        return df
+    dow = df.index.dayofweek
+    if not (dow >= 5).any():
+        return df
+    shift = pd.to_timedelta(np.where(dow == 5, 2, np.where(dow == 6, 1, 0)), unit="D")
+    key = df.index + shift
+    agg = {k: v for k, v in _OHLCV_AGG.items() if k in df.columns}
+    out = df.groupby(key, sort=True).agg(agg)
+    out.index = pd.DatetimeIndex(out.index, name=df.index.name)
+    return out
 
 
 def build_timeframe(df: pd.DataFrame, timeframe: str, symbol: str | None = None) -> pd.DataFrame:
@@ -449,6 +473,8 @@ class SchwabDataProvider(DataProvider):
         # six built timeframes started their session on the wrong minute
         # (09:30 session: 20m opened 09:40, 45m at 09:45, 1h at 10:00).
         df = build_timeframe(df, timeframe, symbol)
+        if timeframe == "1d":
+            df = fold_weekend_daily_bars(df)
 
         logger.info(f"  {len(df)} {timeframe} bars  ({df.index.min()} → {df.index.max()})")
         return df

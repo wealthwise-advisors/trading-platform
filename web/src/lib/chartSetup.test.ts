@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest"
 import {
-  QUICK_INTERVALS,
+  QUICK_INTERVALS, intervalName,
   ALL_CHART_TIMEFRAMES, INTRADAY_TIMEFRAMES, daysFor, daysForSet, isDailyOrLonger, isMaxHistory,
   isSpecified, maxRangeDaysFor, rangeLabel, TF_MINUTES, startDateForTimeframe, startDateForTimeframes, UNSPECIFIED,
 } from "./chartSetup"
@@ -108,7 +108,7 @@ describe("a set of timeframes sharing one range", () => {
 describe("the timeframe list", () => {
   it("covers every interval Backtest and Export Data offer, in bar-interval order", () => {
     expect(ALL_CHART_TIMEFRAMES).toEqual([
-      "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
+      "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w", "1mo",
     ])
   })
 
@@ -119,8 +119,9 @@ describe("the timeframe list", () => {
   })
 
   it("knows which are daily or longer, and how far each can reach", () => {
-    expect(ALL_CHART_TIMEFRAMES.filter(isDailyOrLonger)).toEqual(["1d", "1w"])
+    expect(ALL_CHART_TIMEFRAMES.filter(isDailyOrLonger)).toEqual(["1d", "1w", "1mo"])
     expect(maxRangeDaysFor("1d")).toBe(MAX_HISTORY_DAYS)
+    expect(maxRangeDaysFor("1mo")).toBe(MAX_HISTORY_DAYS)
     expect(maxRangeDaysFor("1w")).toBe(MAX_HISTORY_DAYS)
     expect(maxRangeDaysFor("4h")).toBe(MAX_RANGE_DAYS)
     expect(maxRangeDaysFor("3m")).toBe(MAX_RANGE_DAYS)
@@ -220,9 +221,9 @@ describe("rangeLabel reads the specified table and invents nothing", () => {
     expect(rangeLabel(tf)).toBeNull()
   })
 
-  it("covers every offered interval except the three left blank", () => {
+  it("covers every offered interval except the four left blank (1mo has no approved range yet)", () => {
     const unlabelled = ALL_CHART_TIMEFRAMES.filter((tf) => rangeLabel(tf) == null)
-    expect(unlabelled).toEqual(["3m", "25m", "35m"])
+    expect(unlabelled).toEqual(["3m", "25m", "35m", "1mo"])
   })
 })
 
@@ -250,6 +251,23 @@ describe("TF_MINUTES covers every offered intraday timeframe", () => {
 
 describe("QUICK_INTERVALS", () => {
   it("puts 3m and 10m on the Backtest and chart quick buttons, in bar-length order", () => {
-    expect(QUICK_INTERVALS).toEqual(["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"])
+    expect(QUICK_INTERVALS).toEqual(["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1d", "1w", "1mo"])
+  })
+})
+
+describe("intervalName", () => {
+  // The buttons used to SEND these labels; the API rejected "1D", "1W" and "1M"
+  // and the chart silently stayed where it was (2026-11-12).
+  it("sends the API's codes and shows the usual names", () => {
+    expect(QUICK_INTERVALS.map(intervalName)).toEqual(["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"])
+  })
+
+  it("never confuses a month with a minute", () => {
+    expect(intervalName("1m")).toBe("1m")
+    expect(intervalName("1mo")).toBe("1M")
+  })
+
+  it("treats a month as a daily-or-longer interval", () => {
+    expect(isDailyOrLonger("1mo")).toBe(true)
   })
 })

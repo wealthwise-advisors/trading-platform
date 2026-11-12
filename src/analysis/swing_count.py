@@ -113,6 +113,7 @@ def count_swings(
     last_odd: _Pt | None = None
     last_even: _Pt = org             # the protected level
     tent: _Pt | None = None
+    best_odd: _Pt | None = None      # even phase: highest odd candidate not yet closed beyond
     phase = "odd"
 
     def v(p: _Pt) -> float:
@@ -128,7 +129,8 @@ def count_swings(
         return bool(seg.size) and bool((seg < level).any())
 
     def flip(c: _Pt) -> None:
-        nonlocal seq, up, s, odd_kind, n, last_odd, last_even, tent, phase, org
+        nonlocal seq, up, s, odd_kind, n, last_odd, last_even, tent, phase, org, best_odd
+        best_odd = None
         # New origin: the top of the run that just failed.
         top = last_odd
         if tent is not None and phase == "odd" and (top is None or v(tent) > v(top)):
@@ -148,53 +150,88 @@ def count_swings(
         tent = c
         phase = "odd"
 
+    def odd_confirmed_by(end: int) -> bool:
+        """Even phase: the best odd candidate so far took out the last odd and
+        some close beyond the last odd came after the even point, by bar `end`."""
+        return (best_odd is not None and tent is not None and last_odd is not None
+                and v(best_odd) > v(last_odd) and closes_beyond(tent.pos, end, v(last_odd)))
+
+    def promote_best_odd() -> None:
+        """Confirm the even point; the best odd candidate becomes the forming odd."""
+        nonlocal n, last_even, tent, phase, best_odd
+        n += 1
+        emit(tent, _label(scale, up, n), seq)
+        last_even, tent, phase, best_odd = tent, best_odd, "odd", None
+
     for c in cands:
-        is_odd = c.kind == odd_kind
-        if phase == "odd":
-            if is_odd:
-                if tent is None or v(c) > v(tent):
-                    tent = c
-                continue
-            # an even-type point after a tentative odd
-            if tent is None:
-                if n == 0 and v(c) < v(org) and out and out[-1]["pos"] == org.pos and out[-1]["label"] == "0":
-                    # no first point yet: the origin was not the real low
-                    shown.discard(org.pos)
-                    out.pop()
-                    emit(c, "0", seq)
-                    org = last_even = c
+        again = True
+        while again:             # a candidate is looked at again after a phase change
+            again = False
+            is_odd = c.kind == odd_kind
+            if phase == "odd":
+                if is_odd:
+                    if tent is None or v(c) > v(tent):
+                        tent = c
+                    break
+                # an even-type point after a tentative odd
+                if tent is None:
+                    if n == 0 and v(c) < v(org) and out and out[-1]["pos"] == org.pos and out[-1]["label"] == "0":
+                        # no first point yet: the origin was not the real low
+                        shown.discard(org.pos)
+                        out.pop()
+                        emit(c, "0", seq)
+                        org = last_even = c
+                    elif v(c) <= v(last_even):
+                        flip(c)
+                    break
+                # The close beyond the last odd may come after the top itself, up
+                # to this pullback (see best_odd below).
+                valid = last_odd is None or (
+                    v(tent) > v(last_odd) and closes_beyond(last_even.pos, c.pos, v(last_odd))
+                )
+                pulled_back = closes_back(tent.pos, c.pos, s * close[tent.pos])
+                if valid and pulled_back:
+                    n += 1
+                    emit(tent, _label(scale, up, n), seq)
+                    last_odd, tent, phase = tent, None, "even"
+                    best_odd = None
+                    # fall through: c is the first candidate for the pullback
                 elif v(c) <= v(last_even):
                     flip(c)
-                continue
-            valid = last_odd is None or (
-                v(tent) > v(last_odd) and closes_beyond(last_even.pos, tent.pos, v(last_odd))
-            )
-            pulled_back = closes_back(tent.pos, c.pos, s * close[tent.pos])
-            if valid and pulled_back:
-                n += 1
-                emit(tent, _label(scale, up, n), seq)
-                last_odd, tent, phase = tent, None, "even"
-                # fall through: c is the first candidate for the pullback
-            elif v(c) <= v(last_even):
-                flip(c)
-                continue
-            else:
-                continue
+                    break
+                else:
+                    break
 
-        # phase == "even"
-        if not is_odd:
-            if v(c) <= v(last_even):
-                flip(c)
-            elif tent is None or v(c) < v(tent):
-                tent = c
-            continue
-        if tent is None:
-            continue
-        if v(c) > v(last_odd) and closes_beyond(tent.pos, c.pos, v(last_odd)):
-            n += 1
-            emit(tent, _label(scale, up, n), seq)
-            last_even, tent, phase = tent, c, "odd"
+            # phase == "even"
+            if not is_odd:
+                # A close beyond the last odd may have come AFTER the best odd
+                # candidate and before this pullback: real /ES 3m 2026-11-09,
+                # 7 = 7598, 8 = 14:54 7575.75, 15:15 wicked to 7600.50, 15:24
+                # closed at 7598.75 -- that makes 9, and this low is its pullback.
+                if odd_confirmed_by(c.pos - 1):
+                    promote_best_odd()
+                    again = True
+                    continue     # look at c again, now as the pullback of the new odd
+                if v(c) <= v(last_even):
+                    flip(c)
+                elif tent is None or v(c) < v(tent):
+                    tent = c
+                    best_odd = None      # odd candidates before the new low no longer count
+                break
+            if tent is None:
+                break
+            if v(c) > v(last_odd) and closes_beyond(tent.pos, c.pos, v(last_odd)):
+                # The new odd point is the TOP of the move since the even point,
+                # even when the candle that closed beyond came later and lower.
+                if best_odd is None or v(c) >= v(best_odd):
+                    best_odd = c
+                promote_best_odd()
+            elif best_odd is None or v(c) > v(best_odd):
+                best_odd = c
+            break
 
+    if phase == "even" and odd_confirmed_by(len(close) - 1):
+        promote_best_odd()
     if tent is not None:
         emit(tent, _label(scale, up, n + 1), seq)
     out.sort(key=lambda d: d["pos"])
@@ -231,7 +268,162 @@ def _candidates(high: pd.Series, low: pd.Series, close: pd.Series, deviation: fl
             pts[0] = start
     elif j < f.pos:
         pts.insert(0, start)
-    return pts
+    pts = _extend_to_last_candle(pts, high, low, deviation, legs)
+    pts = _one_point_per_candle(pts)
+    return _restore_wick_hidden_turns(pts, high, low, close, deviation)
+
+
+def _one_point_per_candle(pts: list[_Pt]) -> list[_Pt]:
+    """
+    One candle holds one point. A wide candle can be both the highest and the
+    lowest of its window, and the turn finder then offered BOTH, in an order the
+    rules cannot know -- real /ES 4h 2026-06-09 09:00, high 7491 and low 7247.25
+    in one candle: the low was lost and point 3 went to a later wick (7232.25)
+    that never closed below it.
+
+    Keep the side that continues the alternation (after a high, the low), then
+    join any two same-side neighbours this leaves, keeping the more extreme.
+    The wick rule that runs next puts back a turn a wick had hidden.
+    """
+    out: list[_Pt] = []
+    for p in pts:
+        if out and out[-1].pos == p.pos:
+            prev_kind = out[-2].kind if len(out) > 1 else None
+            if prev_kind is not None and out[-1].kind == prev_kind:
+                out[-1] = p                  # the one already kept repeats the side before it
+            continue
+        if out and out[-1].kind == p.kind:   # same side twice: the more extreme stands
+            if (p.kind == "H" and p.price > out[-1].price) or (p.kind == "L" and p.price < out[-1].price):
+                out[-1] = p
+            continue
+        out.append(p)
+    return out
+
+
+def _extend_to_last_candle(pts: list[_Pt], high: pd.Series, low: pd.Series, deviation: float, legs: int) -> list[_Pt]:
+    """
+    The turn finder needs ~legs/2 candles AFTER a turn, so it never sees the
+    newest move: the latest point appeared about 6 candles late. Real /ES 5m
+    2026-11-10: 15:45 closed above C's point 1, 15:50 made 7559, 15:55 closed
+    back below -- sir's rules make that point 3 at 15:55, the app showed nothing.
+
+    From the last turn to the last candle, walk forward with the same
+    `deviation` rule: a more extreme price on the same side moves the turn, a
+    move back of at least `deviation` starts the next one. The rules then
+    judge these points by their closes, like any other.
+    """
+    if not pts:
+        return pts
+    H, L = high.to_numpy(float), low.to_numpy(float)
+    # Only the candles the turn finder could not judge: its last centre is bar
+    # n - (legs // 2 + 1) - 1, so the final legs // 2 + 1 candles are blind.
+    # Earlier candles were judged already; walking them again turned every
+    # small wiggle into a big point (real /ES 10m 2026-11-09 afternoon: 9 big
+    # points, no small ones).
+    blind = len(H) - (legs // 2 + 1)
+    out = list(pts)
+    last = out[-1]
+    if last.pos + 1 < blind:   # the newest point is the move's extreme up to the blind candles
+        if last.kind == "L":
+            j = last.pos + int(np.argmin(L[last.pos:blind]))
+            out[-1] = _Pt(j, "L", float(L[j]))
+        else:
+            j = last.pos + int(np.argmax(H[last.pos:blind]))
+            out[-1] = _Pt(j, "H", float(H[j]))
+    for k in range(max(out[-1].pos + 1, blind), len(H)):
+        cur = out[-1]
+        # Moves and new points always land on the move's REAL extreme since
+        # the last turn: a lower low just before the blind candles must not be
+        # skipped (real /ES 1m 2026-11-11: 15:55 low 7636.75 vs 15:59 7637.50).
+        prev = out[-2] if len(out) > 1 else None
+        # One candle that goes slightly past the newest point AND past the turn
+        # before it: one candle holds one point, and taking out the older turn
+        # is the move that matters (real /ES 1m 2026-11-10 11:00: low 7512.00,
+        # 0.25 under 10:59, and high 7524.25 over point 2 at 7521.25).
+        if cur.kind == "L" and prev is not None and H[k] > prev.price and k > cur.pos:
+            out.append(_Pt(k, "H", float(H[k])))
+            continue
+        if cur.kind == "H" and prev is not None and L[k] < prev.price and k > cur.pos:
+            out.append(_Pt(k, "L", float(L[k])))
+            continue
+        if cur.kind == "L":
+            if L[k] < cur.price:
+                j = cur.pos + int(np.argmin(L[cur.pos:k + 1]))
+                out[-1] = _Pt(j, "L", float(L[j]))
+            elif H[k] - cur.price >= deviation * cur.price:
+                j = cur.pos + 1 + int(np.argmax(H[cur.pos + 1:k + 1]))
+                out.append(_Pt(j, "H", float(H[j])))
+        else:
+            if H[k] > cur.price:
+                j = cur.pos + int(np.argmax(H[cur.pos:k + 1]))
+                out[-1] = _Pt(j, "H", float(H[j]))
+            elif cur.price - L[k] >= deviation * cur.price:
+                j = cur.pos + 1 + int(np.argmin(L[cur.pos + 1:k + 1]))
+                out.append(_Pt(j, "L", float(L[j])))
+    return out
+
+
+def _bounce_before_past(P: np.ndarray, Q: np.ndarray, x: int, end: int, s: int) -> float:
+    """How far price came back from extreme X (P[x]; s=+1 a high, -1 a low)
+    before any candle went past X. Q is the other side (lows for a high)."""
+    best = 0.0
+    for k in range(x + 1, end):
+        if s * P[k] > s * P[x]:
+            break
+        best = max(best, s * (P[x] - Q[k]))
+    return best
+
+
+def _restore_wick_hidden_turns(pts: list[_Pt], high: pd.Series, low: pd.Series, close: pd.Series,
+                               deviation: float) -> list[_Pt]:
+    """
+    Sir's close rule, applied to the candidates themselves.
+
+    The turn finder joins two lows with no turn between them into one, keeping
+    the lower. But when the move made a low X, bounced at least `deviation`,
+    and then went below X only BY WICK (no close below X), sir's rules say X
+    was the turn and the bounce a point: a new low needs a close beyond.
+    Real /ES 5m 2026-11-10: 10:50 low 7503.75 broke point 0, bounced to 7530
+    at 11:05, then 11:55 wicked to 7503.00 closing 7505.75 -- the app started
+    Swing B at 11:55 and lost 10:50 and 11:05. Same for highs, mirrored.
+    """
+    H, L, C = high.to_numpy(float), low.to_numpy(float), close.to_numpy(float)
+    out = list(pts)
+    k = 0
+    while k + 1 < len(out):
+        a, b = out[k], out[k + 1]
+        found = None
+        if b.kind == "L":
+            run = np.inf
+            for x in range(a.pos + 1, b.pos):
+                if L[x] >= run:
+                    continue
+                run = L[x]                                   # x is the move's lowest so far
+                if L[b.pos] >= L[x] or (C[x + 1:b.pos + 1] < L[x]).any():
+                    continue                                 # b is not lower, or closed below x
+                if _bounce_before_past(L, H, x, b.pos, -1) < deviation * L[x]:
+                    continue
+                y = x + 1 + int(np.argmax(H[x + 1:b.pos]))
+                found = (_Pt(x, "L", float(L[x])), _Pt(y, "H", float(H[y])))
+                break
+        else:
+            run = -np.inf
+            for x in range(a.pos + 1, b.pos):
+                if H[x] <= run:
+                    continue
+                run = H[x]
+                if H[b.pos] <= H[x] or (C[x + 1:b.pos + 1] > H[x]).any():
+                    continue
+                if _bounce_before_past(H, L, x, b.pos, 1) < deviation * H[x]:
+                    continue
+                y = x + 1 + int(np.argmin(L[x + 1:b.pos]))
+                found = (_Pt(x, "H", float(H[x])), _Pt(y, "L", float(L[y])))
+                break
+        if found:
+            out[k + 1:k + 1] = list(found)                   # re-check (a, x) next round
+        else:
+            k += 1
+    return out
 
 
 def _frame(points: list[dict], index: pd.Index, swing_of) -> pd.DataFrame:

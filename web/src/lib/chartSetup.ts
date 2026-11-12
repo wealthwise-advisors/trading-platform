@@ -43,8 +43,9 @@
  *
  * TIMEFRAMES THIS TABLE DOES NOT COVER
  * ------------------------------------
- * The app offers fifteen; the table covers twelve. 3m, 25m and 35m have
- * no entry, and deliberately get none: `daysFor` returns null and the caller
+ * The app offers sixteen; the table covers twelve. 3m, 25m, 35m and 1mo
+ * (monthly, added 2026-11-12 when the 1M button was found sending a code the
+ * API rejected) have no entry, and deliberately get none: `daysFor` returns null and the caller
  * leaves the range exactly as the user had it -- unless it is longer than that
  * timeframe can be served (see startDateForTimeframe). 25m and 35m carry
  * proposals in UNSPECIFIED below, NOT applied. 3m carries none: a value for
@@ -105,11 +106,21 @@ export const UNSPECIFIED: Record<string, number> = {
  * toolbar read this ONE list, so the two rows cannot drift apart. 3m and 10m
  * added 2026-10-28 on request.
  */
-export const QUICK_INTERVALS = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"] as const
+export const QUICK_INTERVALS = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1d", "1w", "1mo"] as const
+
+/**
+ * How an interval is NAMED on screen. The values above are the API's own
+ * timeframe codes; the buttons used to send their labels instead ("1D", "1W",
+ * "1M"), which the API rejects -- 1D, 1W and 1M never redrew the chart, and
+ * nothing said why (found 2026-11-12). "1mo", not "1M": 1M would be one minute.
+ */
+export function intervalName(tf: string): string {
+  return ({ "1d": "1D", "1w": "1W", "1mo": "1M" } as Record<string, string>)[tf] ?? tf
+}
 
 /** Every timeframe Backtest and Export Data offer, in bar-interval order. */
 export const ALL_CHART_TIMEFRAMES = [
-  "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w",
+  "1m", "3m", "5m", "10m", "15m", "20m", "25m", "30m", "35m", "45m", "1h", "2h", "4h", "1d", "1w", "1mo",
 ] as const
 
 /**
@@ -132,7 +143,7 @@ export const TF_MINUTES: Record<string, number> = {
 
 /** Daily and weekly bars -- whole trading days, not a bin within one. */
 export function isDailyOrLonger(timeframe: string): boolean {
-  return timeframe === "1d" || timeframe === "1w"
+  return timeframe === "1d" || timeframe === "1w" || timeframe === "1mo"
 }
 
 /**

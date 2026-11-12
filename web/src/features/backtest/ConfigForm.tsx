@@ -15,7 +15,7 @@ import {
 import { SchwabAuthWidget } from "@/components/SchwabAuthWidget"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import {
-  ALL_CHART_TIMEFRAMES, QUICK_INTERVALS, maxRangeDaysFor, startDateForTimeframe,
+  ALL_CHART_TIMEFRAMES, QUICK_INTERVALS, intervalName, maxRangeDaysFor, startDateForTimeframe,
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import {
@@ -295,14 +295,14 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               type="button"
               aria-pressed={cfg.timeframe === tf}
               onClick={() => setInterval(tf)}
-              title={`${tf} bars`}
+              title={`${intervalName(tf)} bars`}
               className={`rounded px-1 py-1 text-[11px] transition-colors ${
                 cfg.timeframe === tf
                   ? "bg-[#2563eb] text-white font-medium"
                   : "bg-[color:var(--raise-2)] text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
               }`}
             >
-              {tf}
+              {intervalName(tf)}
             </button>
           ))}
         </div>

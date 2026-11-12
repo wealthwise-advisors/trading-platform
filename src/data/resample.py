@@ -72,7 +72,7 @@ TF_ALIAS: dict[str, str] = {
 #: 1-minute bars and every session-grid test iterates -- and a weekly bar spans
 #: five sessions, so it cannot sit on a session grid. These are built from whole
 #: session days instead (see _resample_days).
-BAR_DAYS: dict[str, int] = {"1d": 1, "1w": 7}
+BAR_DAYS: dict[str, int] = {"1d": 1, "1w": 7, "1mo": 30}   # 1mo: a calendar month, ~30 days
 
 #: Every timeframe a backtest, the optimizer or a data export accepts.
 ALL_TIMEFRAMES: tuple[str, ...] = (*TF_MINUTES, *BAR_DAYS)
@@ -265,6 +265,8 @@ def _resample_days(df: pd.DataFrame, timeframe: str, session_start=None) -> pd.D
     key = trading_date
     if timeframe == "1w":
         key = trading_date - pd.to_timedelta(trading_date.dayofweek, unit="D")
+    elif timeframe == "1mo":                       # stamped 00:00 on the 1st of the month
+        key = trading_date - pd.to_timedelta(trading_date.day - 1, unit="D")
     out = df.groupby(key, sort=True).agg(agg).dropna(subset=["open"])
     out.index = pd.DatetimeIndex(out.index, name=df.index.name)
     return out

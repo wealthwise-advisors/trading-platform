@@ -122,6 +122,8 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
         if timeframe == "1w":
             start += timedelta(days=(7 - start.weekday()) % 7)
             bars = max(span_days // 7 + 1, 100)
+        elif timeframe == "1mo":
+            bars = max(span_days // 30 + 1, 24)    # month-start stamps: see generate_sample_data
         else:
             bars = max(span_days * 5 // 7 + 1, 100)
     else:

@@ -29,6 +29,10 @@ def generate_sample_data(
     # Build timestamps (skip weekends)
     timestamps = []
     current = start
+    if tf_label == "1mo":
+        # Monthly bars sit on the 1st of each month, like the real ones. A fixed
+        # 30-day step would drift off the 1st and drop months that land on a weekend.
+        timestamps = list(pd.date_range(datetime(start.year, start.month, 1), periods=bars, freq="MS"))
     while len(timestamps) < bars:
         if current.weekday() < 5:  # Mon-Fri
             timestamps.append(current)

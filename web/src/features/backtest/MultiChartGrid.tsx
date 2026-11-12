@@ -10,7 +10,7 @@ import { lazy, Suspense, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
-import { QUICK_INTERVALS, startDateForTimeframe } from "@/lib/chartSetup"
+import { QUICK_INTERVALS, intervalName, startDateForTimeframe } from "@/lib/chartSetup"
 import { useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT } from "@/store/configStore"
 import { buildRunRequest } from "./useRunBacktest"
 import { useFollowLive } from "./useFollowLive"
@@ -50,7 +50,7 @@ function GridCell({ cell, symbol, dataSource, onTf }: {
         timeframe
         <select aria-label="Grid timeframe" value={cell.tf} onChange={(e) => onTf(e.target.value)}
                 className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-1.5 py-0.5 text-foreground">
-          {QUICK_INTERVALS.map((tf) => <option key={tf} value={tf} className="bg-[var(--surface-1)]">{tf}</option>)}
+          {QUICK_INTERVALS.map((tf) => <option key={tf} value={tf} className="bg-[var(--surface-1)]">{intervalName(tf)}</option>)}
         </select>
       </label>
       {/* Tall enough for the chart's own minimum (price plus six rows), so a

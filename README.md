@@ -43,7 +43,7 @@ Entries, exits and every labelled swing are drawn by the same code the backtest 
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **2,982** | **83.2%** | **3.12** | **5** |
+| **3,002** | **83.2%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -378,10 +378,10 @@ it matches
 <tr>
 <td width="50%" valign="top">
 
-### ⏱️ Fifteen timeframes, one clock
+### ⏱️ Sixteen timeframes, one clock
 
 <ol type="I">
-<li><p>1m through 1w. The thirteen intraday ones replay in the Market Grid, where panes advance off a shared market clock measured in market time, not in bars.</p></li>
+<li><p>1m through 1M (monthly); 1D, 1W and 1M on the chart's own buttons. The thirteen intraday ones replay in the Market Grid, where panes advance off a shared market clock measured in market time, not in bars.</p></li>
 <li><p>So a 1m pane and a 1h pane always show the same instant.</p></li>
 </ol>
 
@@ -747,7 +747,7 @@ A React 19 single-page application over the FastAPI backend.
 **A thinkorswim-style chart, verified against thinkorswim's own values.**
 
 - ➜ **Studies** — EMA, VWAP bands, Volume Profile, RSI, StochRSI, MFI, VolumeAvg
-- ➜ **Swing count** — swings A, B, C; inside each, 10 Leg points 1, 2, 3 and 3 Leg points i, ii, iii, by fixed rules; each swing's start marked, each point named on hover
+- ➜ **Swing count** — swings A, B, C; inside each, 10 Leg points 1, 2, 3 and 3 Leg points i, ii, iii, by fixed rules; each swing's start marked, each point named on hover; the newest point shown on the latest candle
 - ➜ **Hover readout** — every panel's values at once, plus buyers vs sellers per swing
 - ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout
 - ➜ **Live** — updates every 15 s on Schwab data
@@ -1101,9 +1101,9 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-2%2C922-22c55e?style=flat-square)
-![python](https://img.shields.io/badge/python-2%2C251-3776AB?style=flat-square&logo=python&logoColor=white)
-![web](https://img.shields.io/badge/web-731-61DAFB?style=flat-square&logo=react&logoColor=white)
+![tests](https://img.shields.io/badge/tests-3%2C002-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-2%2C268-3776AB?style=flat-square&logo=python&logoColor=white)
+![web](https://img.shields.io/badge/web-734-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![coverage](https://img.shields.io/badge/coverage-83.2%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 

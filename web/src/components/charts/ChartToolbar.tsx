@@ -32,7 +32,7 @@ import {
 
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { useConfigStore } from "@/store/configStore"
-import { QUICK_INTERVALS } from "@/lib/chartSetup"
+import { QUICK_INTERVALS, intervalName } from "@/lib/chartSetup"
 import { loadAlerts, saveAlerts, newAlert } from "@/lib/priceAlerts"
 
 /** The quick interval buttons -- the same list the Backtest Interval Picker uses. */
@@ -153,7 +153,7 @@ export function ChartToolbar({
             aria-pressed={cfg.timeframe === tf}
             disabled={runPending}
             onClick={() => setInterval(tf)}
-            title={`Redraw the chart with ${tf} bars`}
+            title={`Redraw the chart with ${intervalName(tf)} bars`}
             className={`grid chart-pill place-items-center rounded-lg px-2 transition-colors
                         disabled:opacity-50 ${
               cfg.timeframe === tf
@@ -161,7 +161,7 @@ export function ChartToolbar({
                 : "text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
             }`}
           >
-            {tf}
+            {intervalName(tf)}
           </button>
         ))}
       </div>
