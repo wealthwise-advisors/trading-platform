@@ -128,6 +128,32 @@ def count_swings(
         seg = s * close[a + 1:b + 1]
         return bool(seg.size) and bool((seg < level).any())
 
+    def breaks(c: _Pt) -> bool:
+        """Does c break the protected level (0, or the last even point)?
+
+        Only on a CLOSE, in both directions. Sir's email has the down swing flip
+        back up when the bounce "breaks AND CLOSES above" the old high. For the
+        up swing it said "takes out the low" (a wick); decided 2026-11-12 to use
+        a close there too -- every other rule in the email (1, 3, the flip back)
+        needs a close, and the common standard is "bodies break structure, wicks
+        sweep". A close AT the low counts: 2 must stay STRICTLY above 0."""
+        if v(c) > v(last_even):
+            return False
+        # The breaking close belongs to THIS pullback: after the swing's latest
+        # odd point, not anywhere since the protected level. Real /ES 3m: a
+        # close equal to 0 came before the swing's first high, and a gap two
+        # days later used it as the break.
+        a = last_even.pos
+        ref = tent if (phase == "odd" and tent is not None and tent.kind == odd_kind) else last_odd
+        if ref is not None and ref.pos > a:
+            a = ref.pos
+        seg = close[a + 1:c.pos + 1]
+        if not seg.size:
+            return False
+        if up:
+            return bool((seg <= last_even.price).any())
+        return bool((seg > last_even.price).any())
+
     def flip(c: _Pt) -> None:
         nonlocal seq, up, s, odd_kind, n, last_odd, last_even, tent, phase, org, best_odd
         best_odd = None
@@ -181,7 +207,7 @@ def count_swings(
                         out.pop()
                         emit(c, "0", seq)
                         org = last_even = c
-                    elif v(c) <= v(last_even):
+                    elif breaks(c):
                         flip(c)
                     break
                 # The close beyond the last odd may come after the top itself, up
@@ -196,7 +222,7 @@ def count_swings(
                     last_odd, tent, phase = tent, None, "even"
                     best_odd = None
                     # fall through: c is the first candidate for the pullback
-                elif v(c) <= v(last_even):
+                elif breaks(c):
                     flip(c)
                     break
                 else:
@@ -212,7 +238,7 @@ def count_swings(
                     promote_best_odd()
                     again = True
                     continue     # look at c again, now as the pullback of the new odd
-                if v(c) <= v(last_even):
+                if breaks(c):
                     flip(c)
                 elif tent is None or v(c) < v(tent):
                     tent = c

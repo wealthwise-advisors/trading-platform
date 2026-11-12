@@ -306,3 +306,38 @@ def test_a_wide_candle_holds_one_point_and_keeps_the_side_that_alternates():
     out = _one_point_per_candle(pts)
     assert [(p.pos, p.kind, p.price) for p in out] == [(0, "H", 7611.5), (9, "L", 7232.25)]
     assert len({p.pos for p in out}) == len(out)
+
+
+class TestDownSwingFlipsBackOnlyOnAClose:
+    """Sir's email: "If the bounce at 2/B breaks AND CLOSES above the old Point 1
+    high, the bearish count fails and flips back to bullish." The up swing ends
+    on a close as well (see test_an_up_swing_ends_only_on_a_close_too)."""
+
+    PTS = [(100, "L"), (110, "H"), (95, "L"), (112, "H"), (104, "L")]
+
+    def test_a_wick_above_the_old_high_does_not_flip(self):
+        cands, close = path(self.PTS)
+        close = np.minimum(close, 109.5)          # the bounce to 112 never closes above 110
+        out = count_swings(cands, close)
+        assert max(d["seq"] for d in out) == 2, "still the down swing that began after A"
+
+    def test_a_close_above_the_old_high_flips_back(self):
+        cands, close = path(self.PTS)             # closes walk straight through 112
+        out = count_swings(cands, close)
+        assert [d["seq"] for d in out][-2:] == [3, 3]
+
+    def test_an_up_swing_ends_only_on_a_close_too(self):
+        # Decided 2026-11-12 (the user's call, after cross-checking common
+        # practice): the email let a WICK end an up swing, but every other rule
+        # in it -- 1, 3 and the flip back up -- needs a close, and the common
+        # standard is "bodies break structure, wicks sweep". Both directions now
+        # end on a close; a close AT the level counts (2 must stay STRICTLY above 0).
+        cands, close = path([(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")])
+        close = np.maximum(close, 100.5)          # wicks under 0 (100), never closes there
+        out = count_swings(cands, close)
+        assert max(d["seq"] for d in out) == 1, "a wick under 0 does not end the up swing"
+
+    def test_a_close_under_0_ends_the_up_swing(self):
+        cands, close = path([(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")])
+        out = count_swings(cands, close)          # closes walk straight through 95
+        assert [(d["seq"], d["price"]) for d in out][:3] == [(1, 100), (1, 110), (2, 95)]
