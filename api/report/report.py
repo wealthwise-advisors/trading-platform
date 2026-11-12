@@ -9,6 +9,7 @@ The output file:
   - Full zoom/pan support: scroll to zoom, drag to pan, range buttons to jump
 """
 
+from src.analysis.swing_count import calc_swing_count
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
@@ -19,7 +20,7 @@ import plotly.io as pio
 from src.backtesting.results import BacktestResults
 from api.serializers import profit_factor_label
 from api.report.charts import (
-    _calc_zigzag, _assign_swing_labels, _calc_nested_zigzag, _SWING_COLORS,
+    _SWING_COLORS,
     _calc_rsi, _calc_stochrsi,
 )
 from datetime import time as time_type
@@ -354,9 +355,10 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     # ── ZigZag swing overlay ──────────────────────────────────────────────────
     has_headers = False
     try:
-        zz = _calc_zigzag(df["high"], df["low"], df["close"], deviation=zz_deviation)
+        # Sir's swing count (src/analysis/swing_count.py): big count on the
+        # 10 Leg turns, small count on the 3 Leg turns inside each big swing.
+        zz, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=zz_deviation, dev_3=zz_deviation_3)
         if not zz.empty:
-            zz = _assign_swing_labels(zz)
             has_headers = True
 
             # ── 3-Leg ZigZag: short-term overlay, letter-labeled (A, B, C...),
@@ -365,7 +367,6 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
             # itself, not a post-hoc time-boundary lookup. Points that
             # coincide with a 10-leg pivot are excluded (already marked by
             # the 10-leg's own circle).
-            zz3 = _calc_nested_zigzag(df["high"], df["low"], df["close"], zz, deviation=zz_deviation_3, legs=3)
             region_letters_by_swingnum: dict = {}
             if not zz3.empty:
                 zz10_time_set = set(zz.index)

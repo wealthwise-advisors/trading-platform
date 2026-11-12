@@ -34,7 +34,7 @@ from src.strategies import MACrossoverStrategy
 from src.backtesting.engine import BacktestEngine
 from src.analysis.zigzag import calc_zigzag, assign_swing_labels, calc_nested_zigzag
 from api.serializers import zigzag_to_records
-from api.report.charts import _calc_zigzag, _assign_swing_labels, _calc_nested_zigzag
+from src.analysis.swing_count import calc_swing_count
 from api.report.report import generate_html_report
 
 
@@ -215,8 +215,8 @@ class TestLiveAndReportIdentical:
 
         live = zigzag_to_records(df, dev_3=DEV_3, dev_10=DEV_10)
 
-        report_zz10 = _assign_swing_labels(_calc_zigzag(df["high"], df["low"], df["close"], deviation=DEV_10))
-        report_zz3 = _calc_nested_zigzag(df["high"], df["low"], df["close"], report_zz10, deviation=DEV_3, legs=3)
+        # report.py draws calc_swing_count's output (sir's count, 2026-11-12).
+        report_zz10, report_zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=DEV_10, dev_3=DEV_3)
 
         def to_records(zz):
             return [
@@ -251,7 +251,8 @@ class TestEndToEndReportGeneration:
 
         html = generate_html_report(results)
 
-        zz10, _ = _major_and_minor(results.price_data)
+        pdf = results.price_data
+        zz10, _ = calc_swing_count(pdf["high"], pdf["low"], pdf["close"], dev_10=DEV_10, dev_3=DEV_3)
         swing_nums = sorted(int(n) for n in zz10["swing"].unique())
         assert swing_nums, "reference backtest produced no swings -- fixture regressed"
         for swing_num in swing_nums:

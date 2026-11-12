@@ -1,0 +1,263 @@
+"""
+Swing count by sir's rules (email of 2026-11-12).
+
+Turning points come from the 10 Leg / 3 Leg zigzag (calc_zigzag); these rules
+decide which of them count and what they are called. Sir confirmed the same
+rules run on both scales: 10 Leg gives the big count, 3 Leg the small count
+inside each big swing.
+
+UPTREND (numbers; odd = highs, even = lows)
+  0  the swing low where the move starts
+  1  the first high; it stands once a later candle closes below its close
+  2  the pullback low; must stay above 0
+  3  takes out the high of 1 and a candle closes above it
+  4, 5, 6 ... alternate the same way: each even a higher low that holds the
+     previous even, each odd a new high closed above the previous odd
+
+FLIP (letters)
+  When a pullback takes out the protected low (0, or the last even low), the
+  pending even is cancelled and the count flips: the new low is A, the old
+  top is the new origin. B is a bounce that stays below that top, C takes out
+  A and closes below it, then D, E ... Taking out the top flips back to
+  numbers. The downtrend mirrors the uptrend exactly.
+
+Breaking 0 is by the wick ("takes out the low"); confirming a new odd point is
+by a close beyond the previous odd ("takes out ... and closes above it").
+Breaking a later even low (4 below 2) flips the same way as breaking 0: the
+email's checklist says an even "never breaks the prior even low".
+
+Labels: big count 0, 1, 2, 3 ... / A, B, C ...; small count i, ii, iii ... /
+a, b, c ... (sir: "use caps wherever required to differentiate the swings").
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+
+from src.analysis.zigzag import calc_zigzag, spreadsheet_letter
+
+
+@dataclass
+class _Pt:
+    pos: int        # bar position
+    kind: str       # "H" or "L"
+    price: float
+
+
+def roman(n: int) -> str:
+    """1 -> i, 4 -> iv, 9 -> ix, 14 -> xiv (lower case)."""
+    out = []
+    for value, sym in ((1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"),
+                       (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")):
+        while n >= value:
+            out.append(sym)
+            n -= value
+    return "".join(out)
+
+
+def _label(scale: str, up: bool, n: int) -> str:
+    """n >= 1 is the n-th point of a count; n == 0 is an origin."""
+    if n == 0:
+        return "0"
+    if scale == "big":
+        return str(n) if up else spreadsheet_letter(n)
+    return roman(n) if up else spreadsheet_letter(n).lower()
+
+
+def count_swings(
+    cands: list[_Pt],
+    close: np.ndarray,
+    scale: str = "big",
+    origin: _Pt | None = None,
+) -> list[dict]:
+    """
+    Walk alternating candidate turning points and tag them by the rules above.
+
+    `origin` forces the starting point and direction (used for the small count
+    inside one big swing); without it the first candidate is the origin.
+    Returns dicts {pos, kind, price, label, seq} in time order, where `seq`
+    counts the run of one direction (1 first; +1 at every flip). The last
+    point still forming is included with its would-be label.
+    """
+    if origin is None:
+        if not cands:
+            return []
+        origin, cands = cands[0], cands[1:]
+
+    out: list[dict] = []
+    shown: set[int] = set()
+
+    def emit(p: _Pt, label: str, seq: int) -> None:
+        out.append({"pos": p.pos, "kind": p.kind, "price": p.price, "label": label, "seq": seq})
+        shown.add(p.pos)
+
+    seq = 1
+    up = origin.kind == "L"          # a low origin starts an uptrend
+    emit(origin, "0", seq)
+    org = origin                     # current run's origin (protected until a first even)
+    s = 1.0 if up else -1.0          # work in "v" space: odd = max, even = min
+    odd_kind = "H" if up else "L"
+    n = 0                            # points confirmed in this run
+    last_odd: _Pt | None = None
+    last_even: _Pt = org             # the protected level
+    tent: _Pt | None = None
+    phase = "odd"
+
+    def v(p: _Pt) -> float:
+        return s * p.price
+
+    def closes_beyond(a: int, b: int, level: float) -> bool:
+        """Some close in bars (a, b] is beyond `level` in v space."""
+        seg = s * close[a + 1:b + 1]
+        return bool(seg.size) and bool((seg > level).any())
+
+    def closes_back(a: int, b: int, level: float) -> bool:
+        seg = s * close[a + 1:b + 1]
+        return bool(seg.size) and bool((seg < level).any())
+
+    def flip(c: _Pt) -> None:
+        nonlocal seq, up, s, odd_kind, n, last_odd, last_even, tent, phase, org
+        # New origin: the top of the run that just failed.
+        top = last_odd
+        if tent is not None and phase == "odd" and (top is None or v(tent) > v(top)):
+            top = tent
+        if top is None:
+            top = org
+        seq += 1
+        up = not up
+        s = -s
+        odd_kind = "H" if up else "L"
+        n = 0
+        last_odd = None
+        last_even = top
+        org = top
+        if top.pos not in shown:
+            emit(top, "0", seq)
+        tent = c
+        phase = "odd"
+
+    for c in cands:
+        is_odd = c.kind == odd_kind
+        if phase == "odd":
+            if is_odd:
+                if tent is None or v(c) > v(tent):
+                    tent = c
+                continue
+            # an even-type point after a tentative odd
+            if tent is None:
+                if n == 0 and v(c) < v(org) and out and out[-1]["pos"] == org.pos and out[-1]["label"] == "0":
+                    # no first point yet: the origin was not the real low
+                    shown.discard(org.pos)
+                    out.pop()
+                    emit(c, "0", seq)
+                    org = last_even = c
+                elif v(c) <= v(last_even):
+                    flip(c)
+                continue
+            valid = last_odd is None or (
+                v(tent) > v(last_odd) and closes_beyond(last_even.pos, tent.pos, v(last_odd))
+            )
+            pulled_back = closes_back(tent.pos, c.pos, s * close[tent.pos])
+            if valid and pulled_back:
+                n += 1
+                emit(tent, _label(scale, up, n), seq)
+                last_odd, tent, phase = tent, None, "even"
+                # fall through: c is the first candidate for the pullback
+            elif v(c) <= v(last_even):
+                flip(c)
+                continue
+            else:
+                continue
+
+        # phase == "even"
+        if not is_odd:
+            if v(c) <= v(last_even):
+                flip(c)
+            elif tent is None or v(c) < v(tent):
+                tent = c
+            continue
+        if tent is None:
+            continue
+        if v(c) > v(last_odd) and closes_beyond(tent.pos, c.pos, v(last_odd)):
+            n += 1
+            emit(tent, _label(scale, up, n), seq)
+            last_even, tent, phase = tent, c, "odd"
+
+    if tent is not None:
+        emit(tent, _label(scale, up, n + 1), seq)
+    out.sort(key=lambda d: d["pos"])
+    return out
+
+
+def _candidates(high: pd.Series, low: pd.Series, close: pd.Series, deviation: float, legs: int) -> list[_Pt]:
+    zz = calc_zigzag(high, low, close, deviation=deviation, legs=legs)
+    if zz.empty:
+        return []
+    pos = high.index.get_indexer(zz.index)
+    pts = [_Pt(int(p), k, float(pr)) for p, k, pr in zip(pos, zz["type"], zz["price"])]
+    # The zigzag needs `legs // 2` candles before a turn, so the opening
+    # stretch is never searched: the day's low at the 4th candle of a session
+    # was invisible and the count began hours later (real /ES 5m 2026-11-11:
+    # low 7593.25 at 09:45, first turn found at 13:05). The email starts every
+    # count at Point 0, "the absolute swing low where the upward move begins"
+    # (letters only come from a flip), so the count begins at the lowest low
+    # up to the first turn: it replaces a first low, or comes before a first high.
+    f = pts[0]
+    j = int(np.argmin(low.to_numpy()[: f.pos + 1]))
+    start = _Pt(j, "L", float(low.iloc[j]))
+    if f.kind == "L":
+        if start.price < f.price:
+            pts[0] = start
+    elif j < f.pos:
+        pts.insert(0, start)
+    return pts
+
+
+def _frame(points: list[dict], index: pd.Index, swing_of) -> pd.DataFrame:
+    if not points:
+        return pd.DataFrame(columns=["price", "type", "swing", "sub", "label"])
+    df = pd.DataFrame(
+        {"price": [p["price"] for p in points], "type": [p["kind"] for p in points],
+         "swing": [swing_of(p) for p in points], "label": [p["label"] for p in points]},
+        index=index[[p["pos"] for p in points]],
+    )
+    df["sub"] = df.groupby("swing").cumcount()
+    return df[["price", "type", "swing", "sub", "label"]]
+
+
+def calc_swing_count(
+    high: pd.Series, low: pd.Series, close: pd.Series,
+    dev_10: float = 0.0010, dev_3: float = 0.0005,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Big (10 Leg) and small (3 Leg) counts as two frames with columns
+    [price, type, swing, sub, label], the shape the chart already reads.
+    `swing` is the run number of the big count: one run per direction.
+    """
+    c = close.to_numpy(dtype=float)
+    big = count_swings(_candidates(high, low, close, dev_10, 3 + 7), c, "big")
+    zz10 = _frame(big, high.index, lambda p: p["seq"])
+
+    small: list[dict] = []
+    ends = big + [None]
+    for a, b in zip(big, ends[1:]):
+        lo = a["pos"]
+        hi = b["pos"] if b is not None else len(high) - 1
+        if hi - lo < 2:
+            continue
+        sl = slice(lo, hi + 1)
+        cands = _candidates(high.iloc[sl], low.iloc[sl], close.iloc[sl], dev_3, 3)
+        cands = [_Pt(p.pos + lo, p.kind, p.price) for p in cands]
+        cands = [p for p in cands if lo < p.pos < hi]
+        start = _Pt(a["pos"], a["kind"], a["price"])
+        parent = b["seq"] if b is not None else a["seq"]
+        for p in count_swings(cands, c, "small", origin=start):
+            if p["label"] != "0" and lo < p["pos"] < hi:
+                p["seq"] = parent
+                small.append(p)
+    small.sort(key=lambda d: d["pos"])
+    zz3 = _frame(small, high.index, lambda p: p["seq"])
+    return zz10, zz3
