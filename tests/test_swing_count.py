@@ -452,10 +452,10 @@ class TestOneLeg:
     10 Leg / 3 Leg points, labelled a, b, c ... in each stretch."""
 
     def _run(self):
+        # Minute bars with small wiggles: on 5m every turn is already a 3 Leg
+        # turn (0.05%+), so the 1 Leg level is empty there by design.
         from src.analysis.swing_count import calc_fine_swings
-        rows = NOV10 + NOV10_PM
-        idx = pd.to_datetime([f"2026-11-10 {r[0]}" for r in rows])
-        df = pd.DataFrame([r[1:] for r in rows], index=idx, columns=["open", "high", "low", "close"])
+        df = _es_like(7, 600)
         zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], open_=df["open"])
         return df, zz10, zz3, calc_fine_swings(df["open"], df["high"], df["low"], df["close"], zz10, zz3)
 
@@ -481,3 +481,13 @@ class TestOneLeg:
         _, zz10, zz3, _ = self._run()
         assert set(zz10["structure"]) <= {"H", "L", "HH", "HL", "LH", "LL", "EH", "EL"}
         assert len(zz3) and "structure" in zz3.columns
+
+
+def test_3_leg_points_start_in_the_first_swing():
+    # Every 3 Leg trigger turn inside a big move is shown, from Swing A on --
+    # they used to start only at Swing B point 4 on some charts (2026-11-13).
+    df = _es_like(3, 800)
+    zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], open_=df["open"])
+    first_swing = zz10[zz10["swing"] == zz10["swing"].min()]
+    end = first_swing.index.max()
+    assert len(zz3[zz3.index <= end]) > 0

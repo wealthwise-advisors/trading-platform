@@ -43,7 +43,7 @@ Entries, exits and every labelled swing are drawn by the same code the backtest 
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| **3,027** | **83.2%** | **3.12** | **5** |
+| **3,033** | **83.2%** | **3.12** | **5** |
 | tests passing | coverage | Python | strategies |
 
 <sub>Verified by the runners, not typed from memory — see [Testing & Quality](#-testing--quality).</sub>
@@ -1100,9 +1100,9 @@ frees the ports first and pins the right Python.
 
 <div align="center">
 
-![tests](https://img.shields.io/badge/tests-3%2C027-22c55e?style=flat-square)
-![python](https://img.shields.io/badge/python-2%2C292-3776AB?style=flat-square&logo=python&logoColor=white)
-![web](https://img.shields.io/badge/web-735-61DAFB?style=flat-square&logo=react&logoColor=white)
+![tests](https://img.shields.io/badge/tests-3%2C033-22c55e?style=flat-square)
+![python](https://img.shields.io/badge/python-2%2C293-3776AB?style=flat-square&logo=python&logoColor=white)
+![web](https://img.shields.io/badge/web-740-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![coverage](https://img.shields.io/badge/coverage-83.2%25-0ea5e9?style=flat-square)
 ![gate](https://img.shields.io/badge/gate-70%25-7c6cf5?style=flat-square)
 

@@ -444,13 +444,14 @@ def calc_swing_count(
         if hi - lo < 2:
             continue
         sl = slice(lo, hi + 1)
-        cands = _candidates(open_.iloc[sl], high.iloc[sl], low.iloc[sl], close.iloc[sl], dev_3)
-        cands = [_Pt(p.pos + lo, p.kind, p.price) for p in cands]
-        cands = [p for p in cands if lo < p.pos < hi]
-        start = _Pt(a["pos"], a["kind"], a["price"])
+        # Every 3 Leg turn sir's trigger confirms inside the big move. They used
+        # to go through the big count's structure rules too, which inside one
+        # short leg threw real turns away: whole stretches -- the start of Swing
+        # A among them -- had no 3 Leg point (2026-11-13, "3 Leg starts at B 4").
+        turns = _trigger_turns(open_.iloc[sl].to_numpy(float), high.iloc[sl].to_numpy(float),
+                               low.iloc[sl].to_numpy(float), close.iloc[sl].to_numpy(float), dev_3)
+        found = [{"pos": t.pos + lo, "kind": t.kind, "price": t.price} for t in turns if 0 < t.pos < hi - lo]
         parent = b["seq"] if b is not None else a["seq"]
-        found = [p for p in count_swings(cands, c, "small", origin=start)
-                 if p["label"] != "0" and lo < p["pos"] < hi]
         small += _fit_inside(found, a, b, high, low, parent)
     small.sort(key=lambda d: d["pos"])
     zz3 = _frame(small, high.index, lambda p: p["seq"])
