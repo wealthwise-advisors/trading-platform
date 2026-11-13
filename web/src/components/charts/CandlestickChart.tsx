@@ -1221,8 +1221,10 @@ export function CandlestickChart({
     regionPointsBySwing.get(p.swing)!.push(p)
   }
   const swingSpans: SwingSpan[] = []
-  /** How far a "Swing B starts" tag sits from its point, in pixels. */
-  const START_TAG_PX = 58
+  /** How far a "Swing B starts" tag sits from its point, in pixels: past the circle and its HH/HL tag. */
+  const START_TAG_PX = 84
+  /** Sideways tilt of that arrow, so the box sits over open space instead of the next points. */
+  const START_TILT_PX = 46
   // Every 10 Leg / 3 Leg point for the hover box, by its own bar time.
   const swingPointInfo: SwingPointInfo[] = [
     ...zz10.map((p) => ({ t: p.t, level: "10 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price,
@@ -1814,7 +1816,7 @@ export function CandlestickChart({
           const highs = inWin.filter((p) => p.type === "H").map(drawnEdge)
           const lows = inWin.filter((p) => p.type === "L").map(drawnEdge)
           // A "Swing B starts" tag reaches further: arrow plus its box.
-          const startReachPx = Math.min(rowPx * 0.25, START_TAG_PX + 12)
+          const startReachPx = Math.min(rowPx * 0.3, START_TAG_PX + 16)
           const starts = swingStarts(zigzag.zigzag_10).filter((st) => {
             const ms = new Date(st.t).getTime()
             return ms >= windowStartMs && ms <= windowEndMs
@@ -2061,7 +2063,9 @@ export function CandlestickChart({
       xshift: tagAnchor === "left" ? 6 : tagAnchor === "right" ? -6 : 0,
       text: `${st.up ? "▲" : "▼"} Swing ${swingName(st.swing)} starts`,
       showarrow: true, arrowhead: 2, arrowsize: 1, arrowwidth: 1.2, arrowcolor: color,
-      ax: 0, ay: above ? -START_TAG_PX : START_TAG_PX, standoff: 29,
+      // tilt toward the new swing (open space), or back inside near the right edge
+      ax: (frac != null && frac > 1 - 2 * tagHalf ? -1 : 1) * START_TILT_PX,
+      ay: above ? -START_TAG_PX : START_TAG_PX, standoff: 29,
       font: { size: 12, color, family: "Arial Black, Arial" }, bgcolor: BG, bordercolor: color, borderwidth: 2, borderpad: 5,
     } as Partial<Annotations>)
   }
