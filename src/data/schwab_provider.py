@@ -217,7 +217,10 @@ class SchwabDataProvider(DataProvider):
         token_dict: dict,
     ) -> None:
         Path(self._tokens_file).parent.mkdir(parents=True, exist_ok=True)
-        with open(self._tokens_file, "w") as f:
+        # Write beside it, then swap: a restart mid-write used to leave an empty
+        # file, and no Schwab data until sir sent a new token.
+        tmp = f"{self._tokens_file}.tmp"
+        with open(tmp, "w") as f:
             json.dump(
                 {
                     "access_token_issued": at_issued.isoformat(),
@@ -227,6 +230,7 @@ class SchwabDataProvider(DataProvider):
                 f,
                 indent=4,
             )
+        Path(tmp).replace(self._tokens_file)
 
     # ------------------------------------------------------------------
     # Auth status — exposed to the Streamlit widget

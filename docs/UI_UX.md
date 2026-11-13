@@ -86,7 +86,7 @@ stacked rows, each oscillator row switched on or off from the chart strip:
 | 4 | 8% | RSI(13) |
 | 5 | 8% | MoneyFlowIndex — empty without volume |
 
-The exported HTML report uses the same layout from `api/report/charts.py`.
+The exported HTML report uses the same layout from `api/report/report.py`.
 The two are kept in step deliberately: a report that looks different from the
 screen it came from cannot be checked against it.
 

@@ -62,13 +62,23 @@ class StoredBacktest:
 
 #: Keyed by (user_id, backtest_id). See the note in the module docstring.
 _store: dict[tuple[int, str], StoredBacktest] = {}
+#: Results kept in memory. Every interval click is a fresh run, so the cache grew
+#: until the server ran out of memory; the database still holds every run.
+MAX_CACHED = 50
+
+
+def _remember(key: tuple[int, str], stored: StoredBacktest) -> None:
+    _store.pop(key, None)                 # re-insert so it counts as newest
+    _store[key] = stored
+    while len(_store) > MAX_CACHED:       # dicts keep insertion order: drop the oldest
+        _store.pop(next(iter(_store)))
 
 
 def save(results: BacktestResults, data_source: str, session_start: time_type,
         session_end: time_type, user_id: int) -> str:
     backtest_id = f"AT-{uuid.uuid4().hex[:10]}"
-    _store[(user_id, backtest_id)] = StoredBacktest(results, data_source,
-                                                    session_start, session_end)
+    _remember((user_id, backtest_id), StoredBacktest(results, data_source,
+                                                     session_start, session_end))
     try:
         repo.insert(backtest_id, results, data_source, session_start, session_end,
                     user_id=user_id)
@@ -92,7 +102,7 @@ def get(backtest_id: str, user_id: int) -> StoredBacktest | None:
     if found is None:
         return None
     stored = StoredBacktest(*found)
-    _store[(user_id, backtest_id)] = stored   # warm the cache for the next endpoint
+    _remember((user_id, backtest_id), stored)   # warm the cache for the next endpoint
     return stored
 
 

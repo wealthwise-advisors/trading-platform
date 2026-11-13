@@ -30,6 +30,9 @@ class ReplaySession:
 
 
 _STORE: dict[str, ReplaySession] = {}
+# shortcut: only the newest MAX_REPLAYS sessions are kept (they live nowhere else, so an
+# older one answers 404 and must be loaded again); raise it if users keep many grids open.
+MAX_REPLAYS = 20
 
 
 def save(session: MultiReplaySession, df: pd.DataFrame, symbol: str, strategy_name: str,
@@ -41,6 +44,8 @@ def save(session: MultiReplaySession, df: pd.DataFrame, symbol: str, strategy_na
         strategy_name=strategy_name, initial_capital=initial_capital,
         data_source=data_source, request=request,
     )
+    while len(_STORE) > MAX_REPLAYS:
+        _STORE.pop(next(iter(_STORE)))
     return replay_id
 
 

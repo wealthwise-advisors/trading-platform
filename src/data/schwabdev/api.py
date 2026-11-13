@@ -20,6 +20,7 @@ in this directory for the full text.
 """
 
 import json
+import os
 import time
 import base64
 import datetime
@@ -235,11 +236,13 @@ class Client:
         :type token_dictionary: dict
         """
         try:
-            with open(self._tokens_file, 'w') as f:
+            tmp = f"{self._tokens_file}.tmp"   # write beside it, then swap: never a half-written file
+            with open(tmp, 'w') as f:
                 toWrite = {"access_token_issued": at_issued.isoformat(), "refresh_token_issued": rt_issued.isoformat(),
                            "token_dictionary": token_dictionary}
                 json.dump(toWrite, f, ensure_ascii=False, indent=4)
                 f.flush()
+            os.replace(tmp, self._tokens_file)
         except Exception as e:
             print(e)
 

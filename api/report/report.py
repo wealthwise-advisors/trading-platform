@@ -19,10 +19,8 @@ import plotly.io as pio
 
 from src.backtesting.results import BacktestResults
 from api.serializers import profit_factor_label
-from api.report.charts import (
-    _SWING_COLORS,
-    _calc_rsi, _calc_stochrsi,
-)
+from src.analysis.indicators import calc_rsi as _calc_rsi, calc_stochrsi as _calc_stochrsi
+
 from datetime import time as time_type
 from src.analysis.indicators import (
     calc_vwap_bands, calc_mfi, calc_volume_avg, calc_volume_split, compute_rangebreaks,
@@ -35,6 +33,8 @@ from api.report.chart_settings_draw import (
 )
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
+
+_SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
 
 
 _G      = "#3fb950"

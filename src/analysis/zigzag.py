@@ -255,6 +255,9 @@ def calc_nested_zigzag(
     legs: int = 3,               # finer than the major one it nests inside
 ) -> pd.DataFrame:
     """
+    OLD SWING LOGIC, kept only for its tests -- sir rejected it (2026-11-12). The app
+    counts swings in src/analysis/swing_count.py; change THAT, not this.
+
     The minor (3-leg) zigzag, computed INDEPENDENTLY per major (10-leg) swing
     rather than once continuously across the whole series -- each major swing
     in `zz10` (already run through assign_swing_labels(), so it has a `swing`
@@ -351,6 +354,9 @@ def calc_nested_zigzag(
 
 def assign_swing_labels(zz: pd.DataFrame) -> pd.DataFrame:
     """
+    OLD SWING LOGIC, kept only for its tests -- sir rejected it (2026-11-12). The app
+    counts swings in src/analysis/swing_count.py; change THAT, not this.
+
     Group ZigZag pivots into swings using a fixed price channel.
 
     A swing's channel [lower, upper] is set by its FIRST TWO pivots

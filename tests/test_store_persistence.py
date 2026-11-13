@@ -304,3 +304,22 @@ def test_the_undefined_flag_is_off_for_a_real_number(tmp_store):
         conn.close()
     assert row["profit_factor"] == 0.0
     assert row["profit_factor_undefined"] == 0
+
+
+def test_the_memory_cache_keeps_only_the_newest_runs(tmp_store, monkeypatch):
+    # Every interval click is a new run; the cache used to keep them all until the
+    # server ran out of memory. Older runs drop out of memory but stay in the database.
+    monkeypatch.setattr(store, "MAX_CACHED", 3)
+    ids = [store.save(_results(), "synthetic", time(9, 30), time(16, 0), user_id=OWNER) for _ in range(5)]
+    assert [bid for _, bid in store._store] == ids[-3:]
+    assert store.get(ids[0], user_id=OWNER) is not None, "an evicted run still loads from the database"
+    assert len(store._store) == 3
+
+
+def test_the_replay_store_keeps_only_the_newest_sessions(monkeypatch):
+    from api import replay_store
+    monkeypatch.setattr(replay_store, "_STORE", {})
+    monkeypatch.setattr(replay_store, "MAX_REPLAYS", 2)
+    ids = [replay_store.save(None, pd.DataFrame(), "ES", "s", 1.0) for _ in range(4)]
+    assert list(replay_store._STORE) == ids[-2:]
+    assert replay_store.get(ids[0]) is None
