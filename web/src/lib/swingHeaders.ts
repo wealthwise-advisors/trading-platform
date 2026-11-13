@@ -8,8 +8,9 @@
  * left swings floating above the chart for no reason (reported 2026-11-10).
  */
 
-/** Plotly's Arial at 10px: about this many pixels per character, plus padding. */
-const CHAR_PX = 5.6
+/** Plotly's Arial at 10px: about this many pixels per character, plus padding.
+ *  5.6 was too narrow for the capitals in "▼ SELLERS 60%": titles touched (2026-11-13). */
+const CHAR_PX = 6.4
 const PAD_PX = 10
 /** Clear space kept between two titles on one row. */
 const GAP_PX = 8

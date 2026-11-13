@@ -4,7 +4,7 @@ import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "./swingHe
 describe("titleWidthPx", () => {
   it("measures the longest line, ignoring markup", () => {
     const html = '<b>Swing 5</b>  <span style="color:#0f0">▲ BUYERS 63%</span><br>10 Leg Dev (A to C) | 3 Leg Dev (a to k)'
-    expect(titleWidthPx(html)).toBeCloseTo("10 Leg Dev (A to C) | 3 Leg Dev (a to k)".length * 5.6 + 10)
+    expect(titleWidthPx(html)).toBeCloseTo("10 Leg Dev (A to C) | 3 Leg Dev (a to k)".length * 6.4 + 10)
   })
 })
 
