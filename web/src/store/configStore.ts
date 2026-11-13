@@ -23,6 +23,7 @@ interface ConfigState {
   session24h: boolean
   zigzagDev3: number
   zigzagDev10: number
+  zigzagDev1: number
 
   backtestId: string | null
   lastRunAt: string | null
@@ -80,6 +81,8 @@ export const ZIGZAG_DEV_MAX = 2
 export const ZIGZAG_DEV_STEP = 0.01
 export const ZIGZAG_DEV_3_DEFAULT = 0.05
 export const ZIGZAG_DEV_10_DEFAULT = 0.1
+// 1 Leg: every candle-close turn by default; a minimum drops the smaller ones.
+export const ZIGZAG_DEV_1_DEFAULT = 0
 
 // Saved configs written before the units fix carry 0.3 for both sliders, which
 // was the old default and meant 0.003% in practice. Read literally now it is a
@@ -100,7 +103,7 @@ export function migrateZigzagDefaults<T extends { zigzagDev3: number; zigzagDev1
 export const CONFIG_SNAPSHOT_KEYS = [
   "dataSource", "symbol", "timeframe", "strategyId", "params", "initialCapital",
   "contractsPerTrade", "commission", "startDate", "endDate", "sessionStart",
-  "sessionEnd", "session24h", "zigzagDev3", "zigzagDev10",
+  "sessionEnd", "session24h", "zigzagDev3", "zigzagDev10", "zigzagDev1",
 ] as const
 
 export type ConfigSnapshot = Pick<ConfigState, typeof CONFIG_SNAPSHOT_KEYS[number]>
@@ -162,6 +165,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   session24h: false,
   zigzagDev3: ZIGZAG_DEV_3_DEFAULT,
   zigzagDev10: ZIGZAG_DEV_10_DEFAULT,
+  zigzagDev1: ZIGZAG_DEV_1_DEFAULT,
 
   backtestId: null,
   lastRunAt: null,

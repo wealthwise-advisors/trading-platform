@@ -81,6 +81,7 @@ export interface BacktestRequest {
   session_end: string | null
   zigzag_dev_3: number
   zigzag_dev_10: number
+  zigzag_dev_1: number
 }
 
 export interface BacktestSummary {

@@ -241,6 +241,13 @@ class TestExistingApiUnchanged:
         # swings (a, b, c) of sir's candle-close count (2026-11-13) -- not Elliott.
         assert set(r.json()) == {"zigzag_10", "zigzag_3", "zigzag_1"}
 
+    def test_zigzag_endpoint_takes_the_1_leg_deviation(self, client, backtest_id):
+        # The side panel's 1-Leg Deviation (2026-11-14): 0 by default, a big
+        # minimum leaves no 1 Leg point at all.
+        r = client.get(f"/api/backtests/{backtest_id}/zigzag", params={"dev_3": 0.0005, "dev_10": 0.001, "dev_1": 0.5})
+        assert r.status_code == 200
+        assert r.json()["zigzag_1"] == []
+
     def test_report_endpoint_gained_no_elliott_params(self, client):
         """Report integration is a later phase -- no Elliott parameters on the endpoint.
 

@@ -245,14 +245,14 @@ def equity_curve_to_records(results: BacktestResults) -> list[dict]:
     ]
 
 
-def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
+def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float, dev_1: float = 0.0) -> dict:
     """Sir's swing count (src/analysis/swing_count.py) -- big count 0, 1, 2 ... /
     A, B, C ... on the 10 Leg turns, small count i, ii ... / a, b ... on the
     3 Leg turns inside each big swing; `swing` is the run of one direction."""
     open_ = df["open"] if "open" in df else None
     zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=dev_10, dev_3=dev_3, open_=open_)
     # The finest level, "1 Leg" (a, b, c ...), between every 10 Leg / 3 Leg point.
-    zz1 = (calc_fine_swings(open_, df["high"], df["low"], df["close"], zz10, zz3)
+    zz1 = (calc_fine_swings(open_, df["high"], df["low"], df["close"], zz10, zz3, deviation=dev_1)
            if open_ is not None else zz3.iloc[0:0])
 
     def to_records(zz: pd.DataFrame) -> list[dict]:

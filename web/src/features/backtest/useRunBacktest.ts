@@ -45,6 +45,7 @@ export function buildRunRequest(s: ReturnType<typeof useConfigStore.getState>, o
     session_end: s.session24h ? null : s.sessionEnd,
     zigzag_dev_3: s.zigzagDev3 / 100,
     zigzag_dev_10: s.zigzagDev10 / 100,
+    zigzag_dev_1: s.zigzagDev1 / 100,
   }
 }
 

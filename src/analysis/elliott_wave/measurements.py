@@ -72,6 +72,8 @@ structure carrying these measurements also carries ``blocked_by: ["OQ-24"]``.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from .models import Pivot, StructureType, Wave
 
 #: 5-leg motive structures. EXT-01 names impulses only; the diagonals are
@@ -223,7 +225,7 @@ def record_extension(
             s.blocked_by.append("OQ-24")
 
 
-def _sole_max(values: dict[str, float]) -> str | None:
+def _sole_max(values: Mapping[str, float]) -> str | None:
     """The single largest entry, or None when two or more tie.
 
     Reject-on-tie, consistent with D-02c. A tie means the reference's "one of

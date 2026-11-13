@@ -186,11 +186,10 @@ class TestLiveAndReportIdentical:
     identical swing/label output for the same backtest."""
 
     def test_deviation_defaults_match_across_layers(self):
-        """web/src/features/backtest/ResultsPage.tsx calls
-        api.getZigZag(id, ZIGZAG_DEV_3_DEFAULT / 100, ZIGZAG_DEV_10_DEFAULT / 100)
-        for the live chart, from the constants in web/src/store/configStore.ts
-        -- these assertions pin the Python-side defaults that must keep
-        matching them.
+        """The live chart starts from ZIGZAG_DEV_3_DEFAULT / ZIGZAG_DEV_10_DEFAULT
+        (web/src/store/configStore.ts) -- the side panel's sliders, sent by
+        ResultsPage.tsx -- and these assertions pin the Python-side defaults
+        that must keep matching them.
         If this test fails, either the frontend or one of these two
         backend defaults changed without the other -- update whichever one
         drifted, don't just adjust the constant here."""

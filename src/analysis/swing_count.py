@@ -192,6 +192,7 @@ def count_swings(
     def promote_best_odd() -> None:
         """Confirm the even point; the best odd candidate becomes the forming odd."""
         nonlocal n, last_even, tent, phase, best_odd
+        assert tent is not None and best_odd is not None   # every caller checks both first
         n += 1
         emit(tent, _label(scale, up, n), seq)
         last_even, tent, phase, best_odd = tent, best_odd, "odd", None
@@ -258,6 +259,7 @@ def count_swings(
                 break
             if tent is None:
                 break
+            assert last_odd is not None   # the even phase begins only once an odd point exists
             if v(c) > v(last_odd) and closes_beyond(tent.pos - 1, c.pos, v(last_odd)):
                 # The new odd point is the TOP of the move since the even point,
                 # even when the candle that closed beyond came later and lower.
@@ -462,7 +464,8 @@ def market_structure(types: list[str], prices: list[float]) -> list[str]:
     """HH / LH for each high and HL / LL for each low, against the previous point
     of the same kind (the first of each kind is just H / L). What the chart
     writes beside every point (2026-11-13: "mention the highs and lows")."""
-    out, last = [], {"H": None, "L": None}
+    out: list[str] = []
+    last: dict[str, float | None] = {"H": None, "L": None}
     for k, p in zip(types, prices):
         prev = last[k]
         if prev is None:
@@ -476,11 +479,11 @@ def market_structure(types: list[str], prices: list[float]) -> list[str]:
 
 
 def calc_fine_swings(open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series,
-                     zz10: pd.DataFrame, zz3: pd.DataFrame) -> pd.DataFrame:
+                     zz10: pd.DataFrame, zz3: pd.DataFrame, deviation: float = 0.0) -> pd.DataFrame:
     """
-    The finest level, "1 Leg": every turn sir's candle-close trigger confirms,
-    with no minimum size, inside each stretch between neighbouring 10 Leg / 3 Leg
-    points. Labelled a, b, c ... restarting in every stretch (2026-11-13: "small
+    The finest level, "1 Leg": every turn sir's candle-close trigger confirms
+    inside each stretch between neighbouring 10 Leg / 3 Leg points -- of any size
+    by default, or at least `deviation` (the side panel's 1-Leg Deviation). Labelled a, b, c ... restarting in every stretch (2026-11-13: "small
     swings in between ... ABCD, alphabetical"). Same columns as zz10 / zz3.
     """
     idx = high.index
@@ -494,7 +497,7 @@ def calc_fine_swings(open_: pd.Series, high: pd.Series, low: pd.Series, close: p
             continue
         sl = slice(a, hi_ + 1)
         turns = _trigger_turns(open_.iloc[sl].to_numpy(float), high.iloc[sl].to_numpy(float),
-                               low.iloc[sl].to_numpy(float), close.iloc[sl].to_numpy(float), 0.0)
+                               low.iloc[sl].to_numpy(float), close.iloc[sl].to_numpy(float), deviation)
         found = [p for p in turns if 0 < p.pos < hi_ - a]
         if not found:
             continue

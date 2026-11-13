@@ -177,8 +177,8 @@ export const api = {
   refreshPriceData: (id: string) =>
     request<PriceDataResponse & { live: boolean }>(`/backtests/${id}/live-refresh`, { method: "POST" }),
   getEquityCurve: (id: string) => request<EquityPoint[]>(`/backtests/${id}/equity-curve`),
-  getZigZag: (id: string, dev3: number, dev10: number) =>
-    request<ZigZagResponse>(`/backtests/${id}/zigzag?dev_3=${dev3}&dev_10=${dev10}`),
+  getZigZag: (id: string, dev3: number, dev10: number, dev1 = 0) =>
+    request<ZigZagResponse>(`/backtests/${id}/zigzag?dev_3=${dev3}&dev_10=${dev10}&dev_1=${dev1}`),
   // Elliott Wave. The three params are the pivot ladder's D-13 values -- the
   // only knobs the backend actually exposes. Defaults intentionally omitted so
   // the server's own defaults apply and the two cannot drift (SRS FR-1e.4).

@@ -470,6 +470,16 @@ class TestOneLeg:
         pts = sorted([(t, r["type"]) for zz in (zz10, zz3, zz1) for t, r in zz.iterrows()])
         assert all(a[1] != b[1] for a, b in zip(pts, pts[1:]))
 
+    def test_a_minimum_size_drops_the_smaller_turns(self):
+        # The side panel's 1-Leg Deviation (2026-11-14): 0 keeps every turn; a
+        # minimum keeps only the turns at least that big, never adds any.
+        from src.analysis.swing_count import calc_fine_swings
+        df, zz10, zz3, every = self._run()
+        some = calc_fine_swings(df["open"], df["high"], df["low"], df["close"], zz10, zz3, deviation=0.0003)
+        assert 0 < len(some) < len(every)
+        none = calc_fine_swings(df["open"], df["high"], df["low"], df["close"], zz10, zz3, deviation=0.05)
+        assert len(none) == 0
+
     def test_letters_run_a_b_c_in_each_stretch(self):
         _, zz10, zz3, zz1 = self._run()
         anchors = sorted(list(zz10.index) + list(zz3.index))

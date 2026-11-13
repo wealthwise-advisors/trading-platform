@@ -83,7 +83,9 @@ def _alternate_by_deviation(pos, kind, val, deviation: float):
     forward and keeping the more extreme of two same-side candidates has no
     such failure mode and degrades smoothly.
     """
-    out_pos, out_kind, out_val = [], [], []
+    out_pos: list = []
+    out_kind: list = []
+    out_val: list = []
     for p, k, v in zip(pos, kind, val):
         if not out_pos:
             out_pos.append(p)

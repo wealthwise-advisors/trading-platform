@@ -341,9 +341,10 @@ def get_equity_curve(backtest_id: str, user=PROTECTED):
 
 
 @router.get("/{backtest_id}/zigzag")
-def get_zigzag(backtest_id: str, dev_3: float = Query(0.0005), dev_10: float = Query(0.0010), user=PROTECTED):
+def get_zigzag(backtest_id: str, dev_3: float = Query(0.0005), dev_10: float = Query(0.0010),
+               dev_1: float = Query(0.0, ge=0.0), user=PROTECTED):
     stored = _get_or_404(backtest_id, user)
-    return serializers.zigzag_to_records(stored.results.price_data, dev_3, dev_10)
+    return serializers.zigzag_to_records(stored.results.price_data, dev_3, dev_10, dev_1)
 
 
 @router.get("/{backtest_id}/elliott-wave", response_model=ElliottWaveResponse)

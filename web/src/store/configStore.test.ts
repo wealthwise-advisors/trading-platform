@@ -55,3 +55,20 @@ describe("defaultDateRange", () => {
     expect(defaultDateRange(earlyMonday).start).toBe("2026-09-25")
   })
 })
+
+describe("1-Leg Deviation (2026-11-14)", () => {
+  it("defaults to 0 -- no minimum, every candle-close turn -- and is saved with the config", async () => {
+    const { useConfigStore, ZIGZAG_DEV_1_DEFAULT, CONFIG_SNAPSHOT_KEYS } = await import("./configStore")
+    expect(ZIGZAG_DEV_1_DEFAULT).toBe(0)
+    expect(useConfigStore.getState().zigzagDev1).toBe(0)
+    expect(CONFIG_SNAPSHOT_KEYS).toContain("zigzagDev1")
+  })
+
+  it("a config saved before it existed loads without losing the current value", async () => {
+    const { useConfigStore } = await import("./configStore")
+    const old = { ...useConfigStore.getState().getSnapshot() } as Record<string, unknown>
+    delete old.zigzagDev1
+    useConfigStore.getState().loadSnapshot(old as never)
+    expect(useConfigStore.getState().zigzagDev1).toBe(0)
+  })
+})

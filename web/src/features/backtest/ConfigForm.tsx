@@ -419,6 +419,16 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
             onChange={(v) => cfg.setField("zigzagDev10", v)}
             min={ZIGZAG_DEV_MIN} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
           />
+          {/* 1 Leg starts at 0: every candle-close turn, the finest level (2026-11-14). */}
+          <SliderField
+            label="1-Leg Deviation %"
+            dot="#f472b6"
+            color="#f472b6"
+            help="Minimum move, as a percentage, before a 1-leg swing (a, b, c) is recorded. 0 keeps every candle-close turn. Drawn on the chart as the pink dotted line."
+            value={cfg.zigzagDev1}
+            onChange={(v) => cfg.setField("zigzagDev1", v)}
+            min={0} max={ZIGZAG_DEV_MAX} step={ZIGZAG_DEV_STEP}
+          />
         </Panel>
       </Section>
       <Section icon="dates" label="Date Range" step={9} anchor="dates" accent="teal">

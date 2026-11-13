@@ -283,6 +283,8 @@ test("the tab strip fits what it can, and its menu opens where it can be used", 
       .filter((t) => t.offsetParent !== null)
     return {
       shown: shown.length,
+      // Every tab, folded ones included: hard-coded 14 went stale when Multi-chart made 15.
+      total: list.querySelectorAll("[role='tab']").length,
       clipped: shown.filter((t) => t.getBoundingClientRect().right > sb.right + 1).length,
       more: document.querySelectorAll("button[title='More analyses']").length,
     }
@@ -316,7 +318,8 @@ test("the tab strip fits what it can, and its menu opens where it can be used", 
   await expect.poll(async () => (await state()).shown).toBeGreaterThan(withRail.shown)
   const noRail = await state()
   expect(noRail.clipped).toBe(0)
-  expect(noRail.shown === 14 ? noRail.more : 1, "every tab fits but '...' is still there").toBe(noRail.shown === 14 ? 0 : 1)
+  expect(noRail.more, noRail.shown === noRail.total ? "every tab fits but '...' is still there" : "tabs are folded but there is no menu")
+    .toBe(noRail.shown === noRail.total ? 0 : 1)
   await own.close()
 })
 
@@ -709,4 +712,31 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   await expect(swingBox).toContainText("Price change")
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
+})
+
+test("the 10 / 3 / 1 Leg Deviation sliders redraw the chart's swings", async ({ page }) => {
+  // They used to change nothing: the chart always asked for the defaults (2026-11-14).
+  await openApp(page)
+  await runBacktest(page)
+  await waitForChartSettled(page)
+  const smallPoints = () => page.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as { data: { type?: string; mode?: string; name?: string; text?: unknown }[] }
+    return gd.data.filter((t) => t.type === "scatter" && t.mode === "markers" && !t.name && Array.isArray(t.text)
+      && (t.text as string[]).length > 0 && (t.text as string[]).every((s) => /^[ivxlc]+$/.test(s)))
+      .reduce((n, t) => n + (t.text as string[]).length, 0)
+  })
+  const before = await smallPoints()
+  expect(before).toBeGreaterThan(0)
+
+  const coarser = page.waitForResponse((r) => r.url().includes("/zigzag?") && r.url().includes("dev_3=0.01&"))
+  await page.getByRole("spinbutton", { name: "3-Leg Deviation %" }).fill("1")
+  expect((await coarser).status()).toBe(200)
+  await expect.poll(smallPoints, { timeout: 20000 }).toBeLessThan(before)
+
+  // At the top of its range the 1 Leg minimum is bigger than any turn: none come back.
+  const fine = page.waitForResponse((r) => r.url().includes("/zigzag?") && r.url().includes("dev_1=0.02"))
+  await page.getByRole("spinbutton", { name: "1-Leg Deviation %" }).fill("2")
+  const res = await fine
+  expect(res.status()).toBe(200)
+  expect((await res.json()).zigzag_1).toEqual([])
 })

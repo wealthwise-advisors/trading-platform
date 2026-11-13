@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { lazy, Suspense, useState } from "react"
 import { api } from "@/lib/api"
-import {
-  useConfigStore, ZIGZAG_DEV_3_DEFAULT, ZIGZAG_DEV_10_DEFAULT,
-} from "@/store/configStore"
+import { useConfigStore } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import {
   WatchlistPanel, MarketSummaryPanel, TradeStatsPanel, AccountSummaryPanel, AlertsPanel,
@@ -127,10 +125,17 @@ export function ResultsPage() {
     queryFn: () => api.getEquityCurve(backtestId!),
     enabled: !!backtestId,
   })
+  // The side panel's 10 / 3 / 1 Leg Deviation sliders. The chart used to ask
+  // for the defaults whatever they said, so moving one changed nothing (2026-11-14).
+  const dev10 = useConfigStore((s) => s.zigzagDev10)
+  const dev3 = useConfigStore((s) => s.zigzagDev3)
+  const dev1 = useConfigStore((s) => s.zigzagDev1)
   const zigzagQ = useQuery({
-    queryKey: ["backtest", backtestId, "zigzag"],
-    queryFn: () => api.getZigZag(backtestId!, ZIGZAG_DEV_3_DEFAULT / 100, ZIGZAG_DEV_10_DEFAULT / 100),
+    queryKey: ["backtest", backtestId, "zigzag", dev3, dev10, dev1],
+    queryFn: () => api.getZigZag(backtestId!, dev3 / 100, dev10 / 100, dev1 / 100),
     enabled: !!backtestId,
+    // Keep the old swings on screen while new ones load, so a slider drag does not blank the chart.
+    placeholderData: (prev) => prev,
   })
   // Elliott Wave: its own top-level tab with its own chart -- never an overlay
   // on Price & Trades. Params are omitted so the server's own D-13 defaults

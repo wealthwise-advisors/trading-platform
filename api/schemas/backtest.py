@@ -31,6 +31,7 @@ class BacktestRequest(BaseModel):
     # zigzag must be finer than the major (10-leg) one it nests inside.
     zigzag_dev_3: float = 0.0005
     zigzag_dev_10: float = 0.0010
+    zigzag_dev_1: float = 0.0
 
 
 class BacktestSummary(BaseModel):

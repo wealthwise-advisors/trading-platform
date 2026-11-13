@@ -365,7 +365,7 @@ def calc_volume_profile(
     value is None/empty when there is no volume to profile, since a profile
     without volume is not a thing that can be approximated.
     """
-    empty = {"prices": [], "volumes": [], "poc": None, "val": None,
+    empty: dict = {"prices": [], "volumes": [], "poc": None, "val": None,
              "vah": None, "bin_size": None}
     if volume is None or len(close) == 0:
         return empty

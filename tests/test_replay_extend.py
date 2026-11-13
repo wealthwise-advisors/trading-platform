@@ -335,7 +335,9 @@ class TestStateSurvivesTheRebuild:
             g, w = grown.panes[tf], whole.panes[tf]
             assert g.cursor == w.cursor
             pd.testing.assert_frame_equal(g.df, w.df, check_freq=False)
-            assert list(g.engine._equity) == pytest.approx(list(w.engine._equity))
+            # (time, equity) pairs: newer pytest rejects approx() on nested tuples (CI, 2026-11-13)
+            assert [t for t, _ in g.engine._equity] == [t for t, _ in w.engine._equity]
+            assert [v for _, v in g.engine._equity] == pytest.approx([v for _, v in w.engine._equity])
             assert len(g.engine._completed_trades) == len(w.engine._completed_trades)
 
 
