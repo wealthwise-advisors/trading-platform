@@ -675,7 +675,6 @@ export function CandlestickChart({
       setDragMode("pan")
       return
     }
-    if (t.id === "erase") { undoDrawing(); return }
     if (t.place) {
       // Armed, not placed: the next click on the chart puts it there.
       setDrawTool(t.id)
@@ -696,6 +695,47 @@ export function CandlestickChart({
   const plotWrapRef = useRef<HTMLDivElement>(null)
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null)
 
+  /** The eraser: remove the drawing nearest the click (within 14px), then stay
+   *  armed for the next one -- back to Pan once nothing is left. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const eraseAt = (px: number, py: number, xa: any, ya: any) => {
+    const X = (v: unknown, ref?: string) =>
+      ref === "paper" ? Number(v) * xa._length : xa.c2p(xa.d2c(v))
+    const Y = (v: unknown, ref?: string) =>
+      ref === "paper" ? (1 - Number(v)) * ya._length : ya.c2p(ya.d2c(v))
+    const toSeg = (x0: number, y0: number, x1: number, y1: number) => {
+      const dx = x1 - x0, dy = y1 - y0, L = dx * dx + dy * dy
+      const k = L ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / L)) : 0
+      return Math.hypot(px - (x0 + k * dx), py - (y0 + k * dy))
+    }
+    let best: { kind: "shape" | "note"; i: number; d: number } | null = null
+    userShapes.forEach((sh, i) => {
+      const x0 = X(sh.x0, sh.xref), x1 = X(sh.x1, sh.xref), y0 = Y(sh.y0, sh.yref), y1 = Y(sh.y1, sh.yref)
+      if (![x0, x1, y0, y1].every(Number.isFinite)) return
+      const edge = Math.min(toSeg(x0, y0, x1, y0), toSeg(x1, y0, x1, y1), toSeg(x1, y1, x0, y1), toSeg(x0, y1, x0, y0))
+      const inside = px >= Math.min(x0, x1) && px <= Math.max(x0, x1) && py >= Math.min(y0, y1) && py <= Math.max(y0, y1)
+      // Inside a box is a hit, but a note or line right under the cursor wins.
+      const d = sh.type === "line" ? toSeg(x0, y0, x1, y1) : inside ? Math.min(edge, 10) : edge
+      if (!best || d < best.d) best = { kind: "shape", i, d }
+    })
+    userNotes.forEach((n, i) => {
+      const x = X(n.x, n.xref), y = Y(n.y, n.yref)
+      // the anchor, or the note's box above it (ay)
+      const d = Math.min(Math.hypot(px - x, py - y), Math.hypot(px - x, py - (y + Number(n.ay ?? 0))))
+      if (!best || d < best.d) best = { kind: "note", i, d }
+    })
+    const hit = best as { kind: "shape" | "note"; i: number; d: number } | null
+    if (!hit || hit.d > 14) return
+    if (hit.kind === "shape") {
+      // shortcut: a Fibonacci drawing is several lines, and this removes the one
+      // clicked; Undo removes a whole Fibonacci set.
+      setUserShapes((s) => s.filter((_, j) => j !== hit.i))
+    } else {
+      setUserNotes((n) => n.filter((_, j) => j !== hit.i))
+    }
+    if (userShapes.length + userNotes.length <= 1) { setDrawTool("pan"); setDragMode("pan") }
+  }
+
   const placeAt = (clientX: number, clientY: number) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gd = plotWrapRef.current?.querySelector(".js-plotly-plot") as any
@@ -706,6 +746,7 @@ export function CandlestickChart({
     const py = clientY - rect.top - ya._offset
     // Only on the price panel: a click on an oscillator row is not a price.
     if (px < 0 || px > xa._length || py < 0 || py > ya._length) return
+    if (drawTool === "erase") { eraseAt(px, py, xa, ya); return }
     const price = Number(ya.p2d(py))
     if (!Number.isFinite(price)) return
     if (drawTool === "hline") {
@@ -1348,12 +1389,14 @@ export function CandlestickChart({
     // The window the x-axis draws, so titles can be kept inside it.
     const shownWin = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
     const placedTitles: PlacedTitle[] = []
-    function placeHeaderLevel(xMs: number, html: string): number {
+    function placeHeaderLevel(xMs: number, html: string, onScreen: boolean): number {
       const xPx = xMs * pxPerMs
       const widthPx = titleWidthPx(html)
       const level = titleLevel(placedTitles, xPx, widthPx)
       placedTitles.push({ xPx, widthPx, level })
-      maxHeaderLevel = Math.max(maxHeaderLevel, level)
+      // Only titles on screen decide the rows reserved above the chart: a
+      // second row kept for an off-screen swing left a blank band (2026-11-13).
+      if (onScreen) maxHeaderLevel = Math.max(maxHeaderLevel, level)
       return level
     }
 
@@ -1401,6 +1444,7 @@ export function CandlestickChart({
       const tagHtml = tag ? `  <span style="color:${tag.color}">${tag.text}</span>` : ""
       const headerText = `<b>Swing ${swingName(swingNum)}</b>${tagHtml}<br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
       const minor = regionPointsBySwing.get(swingNum) ?? []
+      const fine = zz1.filter((p) => p.swing === swingNum)
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,
         tenLeg: { from: grp[0].t, to: grp[grp.length - 1].t, label: `${firstLabel} to ${lastLabel}`,
@@ -1409,6 +1453,11 @@ export function CandlestickChart({
           ? { from: minor[0].t, to: minor[minor.length - 1].t,
               label: `${minor[0].label} to ${minor[minor.length - 1].label}`,
               fromPrice: minor[0].price, toPrice: minor[minor.length - 1].price }
+          : null,
+        oneLeg: fine.length >= 2
+          ? { from: fine[0].t, to: fine[fine.length - 1].t,
+              label: `${fine[0].label} to ${fine[fine.length - 1].label}`,
+              fromPrice: fine[0].price, toPrice: fine[fine.length - 1].price }
           : null,
       })
       // Kept inside the plot: centred over a swing that starts at the left
@@ -1428,7 +1477,7 @@ export function CandlestickChart({
       } else if (shownWin && onScreen && midFrac != null && midFrac + halfFrac > 1) {
         titleX = toNaiveString(shownWin[1]); titleAnchor = "right"; titleCentreMs = shownWin[1] - halfMs
       }
-      const headerLevel = placeHeaderLevel(titleCentreMs, headerText)
+      const headerLevel = placeHeaderLevel(titleCentreMs, headerText, !!onScreen)
       annotations.push({
         // The box's own padding would still poke past the edge it is pinned to.
         x: titleX, xanchor: titleAnchor, xshift: titleAnchor === "left" ? 6 : titleAnchor === "right" ? -6 : 0, y: 1.015, yshift: headerLevel * HEADER_ROW_PX, xref: "x", yref: "paper", yanchor: "bottom",
@@ -1769,8 +1818,11 @@ export function CandlestickChart({
           const hostH = plotHostRef.current?.clientHeight || 700
           const rowPx = measuredPriceRowPx ?? Math.max(120, (hostH - 110) * (domains[0][1] - domains[0][0]))
           // Never more than a fifth of the row each side: the candles keep the rest.
+          // Exactly what is drawn: gap 5 + circle 26, and the HH tag (centre 10px
+          // past the circle, ~9px half height). It was 12px more, which left the
+          // top of the chart empty (2026-11-13).
           const reachPx = Math.min(rowPx * 0.2, markScale(rowPx) *
-            (26 + 5 + (rowPx >= TAG_MIN_ROW_PX ? 24 : 0) + Math.max(0, ...inWin.map((p) => p.label.length - 2)) * 6))
+            (5 + 26 + (rowPx >= TAG_MIN_ROW_PX ? 19 : 0) + Math.max(0, ...inWin.map((p) => p.label.length - 2)) * 6))
           const perPx = (hi - lo) / Math.max(40, rowPx - 2 * reachPx)
           const highs = inWin.filter((p) => p.type === "H").map(drawnEdge)
           const lows = inWin.filter((p) => p.type === "L").map(drawnEdge)

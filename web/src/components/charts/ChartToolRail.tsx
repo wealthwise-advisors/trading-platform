@@ -86,12 +86,13 @@ export const TOOLS: ToolSpec[] = [
   { id: "text", label: "Note", icon: <Type className={I} aria-hidden />,
     place: true, hint: "Note — click the chart where the note should go",
     howTo: "Click the chart where the note should go" },
-  // Plotly's "eraseshape" is a modebar BUTTON, not a dragmode -- there is no
-  // click-a-shape-to-delete mode to switch the mouse into. So this undoes the
-  // last drawing, which is the action a user reaches for the eraser to
-  // perform, and it is honest about being an undo rather than a hover-erase.
-  { id: "erase", label: "Undo drawing", icon: <Eraser className={I} aria-hidden />,
-    hint: "Remove the last drawing you added" },
+  // A real eraser: armed like the click-to-place tools, then a click on any
+  // drawing removes that one (CandlestickChart's eraseAt). It used to undo the
+  // last drawing only, which read as "the eraser does not work" (2026-11-13);
+  // undo stays on the toolbar's arrow.
+  { id: "erase", label: "Eraser", icon: <Eraser className={I} aria-hidden />,
+    place: true, hint: "Eraser — click a drawing to remove it",
+    howTo: "Click a drawing to remove it (Esc to stop)" },
   { id: "clear", label: "Clear all", icon: <Trash2 className={I} aria-hidden />,
     hint: "Remove every drawing on this chart" },
 ]

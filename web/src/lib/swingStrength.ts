@@ -127,6 +127,8 @@ export interface SwingSpan {
   /** Times and prices of the stretch's first and last pivots. */
   tenLeg: { from: string; to: string; label: string; fromPrice: number; toPrice: number }
   threeLeg: { from: string; to: string; label: string; fromPrice: number; toPrice: number } | null
+  /** The 1 Leg points (a, b, c ...) inside the swing, when there are any. */
+  oneLeg?: { from: string; to: string; label: string; fromPrice: number; toPrice: number } | null
 }
 
 /** The swing whose region holds bar time `t`, or null. */

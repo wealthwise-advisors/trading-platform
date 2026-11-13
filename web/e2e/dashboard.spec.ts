@@ -407,9 +407,11 @@ test("every drawing tool on the rail puts something on the chart", async ({ brow
   await expect.poll(() => count("annotations")).toBe(notes + 1)
   await expect(plot).toContainText("Test note")
 
-  // Undo takes the note back; Clear all removes every drawing.
-  await rail.getByRole("button", { name: "Undo drawing" }).click()
+  // The eraser removes the drawing clicked -- here the note, by its pin.
+  await rail.getByRole("button", { name: "Eraser" }).click()
+  await p.mouse.click(np.x, np.y)
   await expect.poll(() => count("annotations")).toBe(notes)
+  // Clear all removes every drawing.
   await rail.getByRole("button", { name: "Clear all" }).click()
   await expect.poll(() => count("shapes")).toBe(before - 4)
 

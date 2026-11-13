@@ -138,7 +138,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
       }
       if (sw) {
         if (swingCache.current.bars !== bars) swingCache.current = { bars, byKey: new Map() }
-        const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}`
+        const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}|${sw.oneLeg?.to ?? ""}`
         let lines = swingCache.current.byKey.get(key)
         if (!lines) {
           // 10 Leg, a dotted rule, then 3 Leg.
@@ -149,6 +149,12 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
               ? [{ label: "", value: "", kind: "divider" as const },
                  ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to),
                                   { from: sw.threeLeg.fromPrice, to: sw.threeLeg.toPrice })]
+              : []),
+            // 1 Leg Dev, the finest level, the same way (2026-11-13).
+            ...(sw.oneLeg
+              ? [{ label: "", value: "", kind: "divider" as const },
+                 ...strengthLines(`1 Leg Dev (${sw.oneLeg.label})`, swingStrength(bars, sw.oneLeg.from, sw.oneLeg.to),
+                                  { from: sw.oneLeg.fromPrice, to: sw.oneLeg.toPrice })]
               : []),
           ]
           swingCache.current.byKey.set(key, lines)
