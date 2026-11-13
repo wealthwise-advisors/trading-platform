@@ -671,9 +671,17 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
     const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
     return (gd.layout.annotations ?? []).map((a) => a.text ?? "").filter((t) => t.includes("Swing"))
   })
+  const keyHover = await own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string; hovertext?: string }[] } }
+    return (gd.layout.annotations ?? []).find((a) => a.text === "ⓘ Swing key")?.hovertext ?? ""
+  })
   // Titles, and the "Swing B starts" tags marking where each swing begins.
   const starts = headers.filter((h) => / Swing [A-Z]+ starts$/.test(h))
-  const titles = headers.filter((h) => !starts.includes(h))
+  // The key box in the corner explains the marks (2026-11-13); it is not a title.
+  const keys = headers.filter((h) => h === "ⓘ Swing key")
+  expect(keys).toHaveLength(1)
+  expect(keyHover).toMatch(/10 Leg[\s\S]*3 Leg[\s\S]*1 Leg[\s\S]*HH higher high/)
+  const titles = headers.filter((h) => !starts.includes(h) && !keys.includes(h))
   expect(titles.length).toBeGreaterThan(0)
   for (const h of titles) expect(h).toMatch(/10 Leg Dev \(/)
   // One start tag per swing, with its direction.

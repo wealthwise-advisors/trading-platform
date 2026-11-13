@@ -1238,7 +1238,10 @@ export function CandlestickChart({
   // ── 1 Leg: every candle-close turn between the 10 Leg / 3 Leg points ──
   // (2026-11-13: "small swings in between ... ABCD"). Its own pink line through
   // all three levels; letters only, no circle, so it reads as the finest level.
-  if (zz1.length) {
+  // Drawn only when zoomed in -- every drawn candle one real candle. Zoomed out
+  // the letters crowded every candle (2026-11-13); the hover still names them.
+  const showFine = zz1.length > 0 && candleBars.length === bars.length
+  if (showFine) {
     const fineLine = [...zz10, ...zz3, ...zz1].sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0))
     data.push({
       type: "scatter", mode: "lines", x: onCandle(fineLine), y: fineLine.map((p) => p.price),
@@ -2005,6 +2008,26 @@ export function CandlestickChart({
   // The circle sits a fixed number of PIXELS above a high / below a low, so
   // it is converted to price through the price row's current scale; the dot
   // on the wick tip (drawn with the swing traces) marks the touch itself.
+  // The swing key: a small tag in the price row's lower-left corner whose hover
+  // explains every mark -- a full box there covered points (2026-11-13).
+  if (showZigzag && zz10.length) {
+    annotations.push({
+      xref: "paper", x: 0.004, xanchor: "left", yref: "paper", y: domains[0][0] + 0.004, yanchor: "bottom",
+      showarrow: false, bgcolor: BG, bordercolor: "rgba(163,163,194,0.45)", borderwidth: 1, borderpad: 3,
+      font: { size: 10, color: "white", family: "Arial" },
+      text: "ⓘ Swing key",
+      hovertext: [
+        "<b>Swing key</b>",
+        "1, 2, 3 = 10 Leg (blue line)",
+        "i, ii, iii = 3 Leg (yellow line)",
+        `a, b, c = 1 Leg (pink line)${showFine ? "" : " -- zoom in to see"}`,
+        "HH higher high · HL higher low",
+        "LH lower high · LL lower low",
+      ].join("<br>"),
+      hoverlabel: { bgcolor: BG, bordercolor: "rgba(163,163,194,0.6)", font: { color: "white", size: 11 } },
+    } as Partial<Annotations>)
+  }
+
   if (swingLabels.length && priceYRange) {
     const hostH = plotHostRef.current?.clientHeight || 700
     const priceRowPx = measuredPriceRowPx ?? Math.max(60, (hostH - marginTop - 18) * (domains[0][1] - domains[0][0]))
