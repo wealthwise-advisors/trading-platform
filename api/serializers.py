@@ -6,7 +6,7 @@ is not touched -- all conversion logic lives here.
 
 import math
 import numpy as np
-from src.analysis.swing_count import calc_swing_count
+from src.analysis.swing_count import calc_fine_swings, calc_swing_count
 from datetime import time as time_type
 import pandas as pd
 
@@ -249,7 +249,11 @@ def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
     """Sir's swing count (src/analysis/swing_count.py) -- big count 0, 1, 2 ... /
     A, B, C ... on the 10 Leg turns, small count i, ii ... / a, b ... on the
     3 Leg turns inside each big swing; `swing` is the run of one direction."""
-    zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=dev_10, dev_3=dev_3)
+    open_ = df["open"] if "open" in df else None
+    zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=dev_10, dev_3=dev_3, open_=open_)
+    # The finest level, "1 Leg" (a, b, c ...), between every 10 Leg / 3 Leg point.
+    zz1 = (calc_fine_swings(open_, df["high"], df["low"], df["close"], zz10, zz3)
+           if open_ is not None else zz3.iloc[0:0])
 
     def to_records(zz: pd.DataFrame) -> list[dict]:
         if zz.empty:
@@ -258,11 +262,12 @@ def zigzag_to_records(df: pd.DataFrame, dev_3: float, dev_10: float) -> dict:
             {
                 "t": ts.isoformat(), "price": float(row["price"]), "type": row["type"],
                 "swing": int(row["swing"]), "sub": int(row["sub"]), "label": row["label"],
+                "structure": row["structure"],
             }
             for ts, row in zz.iterrows()
         ]
 
-    return {"zigzag_10": to_records(zz10), "zigzag_3": to_records(zz3)}
+    return {"zigzag_10": to_records(zz10), "zigzag_3": to_records(zz3), "zigzag_1": to_records(zz1)}
 
 
 def elliott_wave_to_records(

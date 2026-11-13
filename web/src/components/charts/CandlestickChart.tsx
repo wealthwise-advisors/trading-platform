@@ -283,6 +283,8 @@ export function CandlestickChart({
   // palette it was first built with until something else re-renders it.
   useThemeStore((st) => st.theme)
   const { paper: BG, grid: GRID, ink: INK, inkDim: INK_DIM, hover: HOVER } = chartTheme()
+  /** The 1 Leg level: pink, a hue clearly apart from the blue 10 Leg and yellow 3 Leg lines. */
+  const FINE_PINK = "#f472b6"
   // react-plotly.js's useResizeHandler only listens for window "resize"
   // events -- it never fires when the CONTAINER grows/shrinks from a pure
   // CSS/flex change (KPI row shrinking, footer removal, etc., all of which
@@ -1140,6 +1142,7 @@ export function CandlestickChart({
   // ── ZigZag overlay with per-swing numbering ───────────────────────────
   const zz10 = showZigzag ? zigzag.zigzag_10 : []
   const zz3 = showZigzag ? zigzag.zigzag_3 : []
+  const zz1 = showZigzag ? zigzag.zigzag_1 ?? [] : []
 
   // 10-leg swing group boundaries, computed once up front -- used to draw
   // the swing rectangles further below. The 3-leg zigzag's own `swing` field
@@ -1181,11 +1184,17 @@ export function CandlestickChart({
   const START_TAG_PX = 58
   // Every 10 Leg / 3 Leg point for the hover box, by its own bar time.
   const swingPointInfo: SwingPointInfo[] = [
-    ...zz10.map((p) => ({ t: p.t, level: "10 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price })),
-    ...zz3Labelable.map((p) => ({ t: p.t, level: "3 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price })),
+    ...zz10.map((p) => ({ t: p.t, level: "10 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price,
+                          structure: p.structure })),
+    ...zz3Labelable.map((p) => ({ t: p.t, level: "3 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price,
+                                  structure: p.structure })),
+    ...zz1.map((p) => ({ t: p.t, level: "1 Leg" as const, label: p.label, type: p.type as "H" | "L", price: p.price })),
   ]
   // Every swing number, drawn in a white circle once the price scale is known.
-  const swingLabels: { x: string; price: number; type: "H" | "L"; label: string; big: boolean }[] = []
+  // big: 10 Leg circle, small: 3 Leg circle, fine: 1 Leg letter (no circle).
+  // structure: HH / HL / LH / LL beside the circle (2026-11-13).
+  const swingLabels: { x: string; price: number; type: "H" | "L"; label: string; big: boolean; fine?: boolean;
+                       structure?: string }[] = []
 
   // Swing points sit on the DRAWN candle that holds them: with candles merged
   // for display, a point left at its own minute fell between two candles.
@@ -1209,7 +1218,8 @@ export function CandlestickChart({
         // number goes in a white circle just outside the candle, drawn once
         // the price scale is known (swingLabels, below the layout margins).
         const xs = onCandle(pts)
-        pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: false }))
+        pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: false,
+                                                 structure: p.structure }))
         data.push({
           type: "scatter", mode: "markers", x: xs, y: pts.map((p) => p.price),
           // White, like the numbers: a red dot on a green candle read as a
@@ -1223,6 +1233,27 @@ export function CandlestickChart({
         } as unknown as Data)
       }
     }
+  }
+
+  // ── 1 Leg: every candle-close turn between the 10 Leg / 3 Leg points ──
+  // (2026-11-13: "small swings in between ... ABCD"). Its own pink line through
+  // all three levels; letters only, no circle, so it reads as the finest level.
+  if (zz1.length) {
+    const fineLine = [...zz10, ...zz3, ...zz1].sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0))
+    data.push({
+      type: "scatter", mode: "lines", x: onCandle(fineLine), y: fineLine.map((p) => p.price),
+      name: "ZigZag (1L)", line: { color: FINE_PINK, width: 0.8, dash: "dot" },
+      hoverinfo: "skip", xaxis: "x", yaxis: "y",
+    } as unknown as Data)
+    const xs = onCandle(zz1)
+    zz1.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: false, fine: true }))
+    data.push({
+      type: "scatter", mode: "markers", x: xs, y: zz1.map((p) => p.price),
+      marker: { symbol: "circle", size: 4, color: FINE_PINK },
+      text: zz1.map((p) => p.label), showlegend: false,
+      hovertemplate: "<b>%{text} (1L)</b><br>%{x}<br>@ %{y:.2f}<extra></extra>",
+      xaxis: "x", yaxis: "y",
+    } as unknown as Data)
   }
 
   // Hoisted out of the `if` block below so the layout/margin/title code
@@ -1393,7 +1424,8 @@ export function CandlestickChart({
       if (!pts.length) continue
       // Dot on the wick tip; the number's circle is drawn with swingLabels.
       const xs = onCandle(pts)
-      pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: true }))
+      pts.forEach((p, i) => swingLabels.push({ x: xs[i], price: p.price, type: p.type, label: p.label, big: true,
+                                               structure: p.structure }))
       data.push({
         type: "scatter", mode: "markers",
         x: xs, y: pts.map((p) => p.price),
@@ -1704,7 +1736,7 @@ export function CandlestickChart({
         // that needs it, by the circle's reach in pixels converted at the
         // row's scale, so a window with no swing at its edge keeps its height.
         if (showZigzag && hi > lo) {
-          const reachPx = 22 / 2 + 5 + 22 / 2 + 3
+          const reachPx = 22 / 2 + 5 + 22 / 2 + 3 + 14   // circle, then the HH / HL label
           const hostH = plotHostRef.current?.clientHeight || 700
           const rowPx = measuredPriceRowPx ?? Math.max(120, (hostH - 110) * (domains[0][1] - domains[0][0]))
           const perPx = (hi - lo) / Math.max(40, rowPx - 2 * reachPx)
@@ -1963,7 +1995,7 @@ export function CandlestickChart({
       text: `${st.up ? "▲" : "▼"} Swing ${swingName(st.swing)} starts`,
       showarrow: true, arrowhead: 2, arrowsize: 1, arrowwidth: 1.2, arrowcolor: color,
       ax: 0, ay: above ? -START_TAG_PX : START_TAG_PX, standoff: 29,
-      font: { size: 10, color, family: "Arial" }, bgcolor: BG, bordercolor: color, borderwidth: 1, borderpad: 3,
+      font: { size: 12, color, family: "Arial Black, Arial" }, bgcolor: BG, bordercolor: color, borderwidth: 2, borderpad: 5,
     } as Partial<Annotations>)
   }
 
@@ -1986,7 +2018,7 @@ export function CandlestickChart({
       // Small circles nearly as big as the big ones: at 17px the roman
       // numerals were hard to read (2026-11-12).
       const size = big ? 22 : 20
-      const pts = swingLabels.filter((p) => p.big === big)
+      const pts = swingLabels.filter((p) => p.big === big && !p.fine)
       if (!pts.length) continue
       const gapPx = size / 2 + 5
       data.push({
@@ -2000,6 +2032,33 @@ export function CandlestickChart({
         textfont: { color: "white", size: big ? 12 : 10.5, family: "Arial" },
         showlegend: false, cliponaxis: false, hoverinfo: "skip",
         xaxis: "x", yaxis: "y",
+      } as unknown as Data)
+      // HH / HL / LH / LL just beyond the circle, in plain white text.
+      const named = pts.filter((p) => p.structure)
+      if (named.length) {
+        data.push({
+          type: "scatter", mode: "text",
+          x: named.map((p) => p.x),
+          y: named.map((p) => shifted(drawnCandleAt.has(p.x)
+            ? (p.type === "H" ? Math.max(p.price, drawnCandleAt.get(p.x)!.h) : Math.min(p.price, drawnCandleAt.get(p.x)!.l))
+            : p.price, (p.type === "H" ? 1 : -1) * (gapPx + size / 2 + 8))),
+          text: named.map((p) => p.structure), textposition: "middle center",
+          textfont: { color: "white", size: big ? 10 : 9, family: "Arial" },
+          showlegend: false, cliponaxis: false, hoverinfo: "skip", xaxis: "x", yaxis: "y",
+        } as unknown as Data)
+      }
+    }
+    const fine = swingLabels.filter((p) => p.fine)
+    if (fine.length) {
+      data.push({
+        type: "scatter", mode: "text",
+        x: fine.map((p) => p.x),
+        y: fine.map((p) => shifted(drawnCandleAt.has(p.x)
+          ? (p.type === "H" ? Math.max(p.price, drawnCandleAt.get(p.x)!.h) : Math.min(p.price, drawnCandleAt.get(p.x)!.l))
+          : p.price, (p.type === "H" ? 1 : -1) * 9)),
+        text: fine.map((p) => p.label), textposition: "middle center",
+        textfont: { color: FINE_PINK, size: 9.5, family: "Arial" },
+        showlegend: false, cliponaxis: false, hoverinfo: "skip", xaxis: "x", yaxis: "y",
       } as unknown as Data)
     }
   }
@@ -2266,6 +2325,7 @@ export function CandlestickChart({
   if (showZigzag) {
     legendEntries.push(
       { label: "ZigZag (3L)", color: "#f0c040", kind: "dot", note: "3-leg swing structure" },
+      { label: "ZigZag (1L)", color: "#f472b6", kind: "dot", note: "1-leg swings a, b, c" },
       { label: "ZigZag (10L)", color: "#2196f3", kind: "dot", note: "10-leg swing structure" },
       { label: "Swing High", color: "#ff6b6b", kind: "marker", symbol: "circle",
         note: "numbered circle at the high" },

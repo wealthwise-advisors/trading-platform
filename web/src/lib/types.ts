@@ -209,11 +209,15 @@ export interface ZigZagPoint {
   swing: number
   sub: number
   label: string
+  /** HH / HL / LH / LL against the last point of its kind (H / L for the first). */
+  structure?: string
 }
 
 export interface ZigZagResponse {
   zigzag_10: ZigZagPoint[]
   zigzag_3: ZigZagPoint[]
+  /** The finest level, 1 Leg: a, b, c ... between the 10 Leg / 3 Leg points. */
+  zigzag_1?: ZigZagPoint[]
 }
 
 export interface WinLoss {

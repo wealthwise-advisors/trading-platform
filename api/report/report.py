@@ -357,7 +357,8 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
     try:
         # Sir's swing count (src/analysis/swing_count.py): big count on the
         # 10 Leg turns, small count on the 3 Leg turns inside each big swing.
-        zz, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=zz_deviation, dev_3=zz_deviation_3)
+        zz, zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=zz_deviation, dev_3=zz_deviation_3,
+                                   open_=df["open"] if "open" in df else None)
         if not zz.empty:
             has_headers = True
 

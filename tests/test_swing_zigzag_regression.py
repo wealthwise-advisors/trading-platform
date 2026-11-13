@@ -216,12 +216,14 @@ class TestLiveAndReportIdentical:
         live = zigzag_to_records(df, dev_3=DEV_3, dev_10=DEV_10)
 
         # report.py draws calc_swing_count's output (sir's count, 2026-11-12).
-        report_zz10, report_zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=DEV_10, dev_3=DEV_3)
+        report_zz10, report_zz3 = calc_swing_count(df["high"], df["low"], df["close"], dev_10=DEV_10, dev_3=DEV_3,
+                                                   open_=df["open"])
 
         def to_records(zz):
             return [
                 {"t": ts.isoformat(), "price": float(row["price"]), "type": row["type"],
-                 "swing": int(row["swing"]), "sub": int(row["sub"]), "label": row["label"]}
+                 "swing": int(row["swing"]), "sub": int(row["sub"]), "label": row["label"],
+                 "structure": row["structure"]}
                 for ts, row in zz.iterrows()
             ]
 

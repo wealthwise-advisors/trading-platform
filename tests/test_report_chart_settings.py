@@ -46,7 +46,10 @@ def _df(bars=400, start="2025-01-02 09:30", freq="5min", seed=3, volume=True):
     rng = np.random.default_rng(seed)
     close = np.round((5000 + rng.normal(0, 2, bars).cumsum()) * 4) / 4
     df = pd.DataFrame({
-        "open": close, "close": close,
+        # Each candle opens at the last close, like real bars. open == close made
+        # every candle a doji, and sir's candle-close trigger (2026-11-13) finds
+        # no swing in a chart of dojis.
+        "open": np.r_[close[0], close[:-1]], "close": close,
         "high": close + rng.integers(1, 8, bars) * 0.25,
         "low": close - rng.integers(1, 8, bars) * 0.25,
     }, index=idx)

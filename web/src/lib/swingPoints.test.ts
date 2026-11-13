@@ -52,3 +52,16 @@ describe("swingStarts", () => {
     expect(swingStarts(Z)[1]).toEqual({ swing: 2, t: "2026-11-11T11:00:00", price: 7590, type: "L", up: false })
   })
 })
+
+describe("pointLines with HH / HL and the 1 Leg level", () => {
+  it("names the structure and lists 10 Leg, 3 Leg, then 1 Leg", () => {
+    const pts: SwingPointInfo[] = [
+      { t: "x", level: "1 Leg", label: "b", type: "H", price: 7612 },
+      { t: "x", level: "10 Leg", label: "3", type: "H", price: 7612, structure: "HH" },
+    ]
+    expect(pointLines(pts).slice(1).map((l) => `${l.label} | ${l.value}`)).toEqual([
+      "10 Leg point 3 | HH · High 7612.00",
+      "1 Leg point b | High 7612.00",
+    ])
+  })
+})

@@ -9,10 +9,12 @@ import { onDisplayCandle } from "@/lib/resample"
 export interface SwingPointInfo {
   /** The bar the point belongs to. */
   t: string
-  level: "10 Leg" | "3 Leg"
+  level: "10 Leg" | "3 Leg" | "1 Leg"
   label: string
   type: "H" | "L"
   price: number
+  /** HH / HL / LH / LL, when the level carries it. */
+  structure?: string
 }
 
 /**
@@ -28,15 +30,17 @@ export function pointsAt(points: readonly SwingPointInfo[], barT: string, candle
   return points.filter((p) => onDisplayCandle([p.t], [...candleTimes])[0] === hovered)
 }
 
-/** "Swing point" heading, then one bullet per point: 10 Leg first. */
+const LEVEL_ORDER = { "10 Leg": 0, "3 Leg": 1, "1 Leg": 2 } as const
+
+/** "Swing point" heading, then one bullet per point: 10 Leg, then 3 Leg, then 1 Leg. */
 export function pointLines(pts: readonly SwingPointInfo[]): ReadoutLine[] {
   if (!pts.length) return []
-  const ordered = [...pts].sort((a, b) => (a.level === b.level ? 0 : a.level === "10 Leg" ? -1 : 1))
+  const ordered = [...pts].sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
   return [
     { label: "Swing point on this candle", value: "", kind: "heading" },
     ...ordered.map((p) => ({
       label: `${p.level} point ${p.label}`,
-      value: `${p.type === "H" ? "High" : "Low"} ${p.price.toFixed(2)}`,
+      value: `${p.structure ? `${p.structure} · ` : ""}${p.type === "H" ? "High" : "Low"} ${p.price.toFixed(2)}`,
       bullet: true,
     })),
   ]

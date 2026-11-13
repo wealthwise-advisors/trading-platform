@@ -237,7 +237,9 @@ class TestExistingApiUnchanged:
         r = client.get(f"/api/backtests/{backtest_id}/zigzag",
                        params={"dev_3": 0.003, "dev_10": 0.003})
         assert r.status_code == 200
-        assert set(r.json()) == {"zigzag_10", "zigzag_3"}
+        # Exact, so nothing arrives unannounced. Grew once: zigzag_1, the 1 Leg
+        # swings (a, b, c) of sir's candle-close count (2026-11-13) -- not Elliott.
+        assert set(r.json()) == {"zigzag_10", "zigzag_3", "zigzag_1"}
 
     def test_report_endpoint_gained_no_elliott_params(self, client):
         """Report integration is a later phase -- no Elliott parameters on the endpoint.

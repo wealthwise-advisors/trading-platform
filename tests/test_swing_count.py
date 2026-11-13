@@ -287,25 +287,27 @@ def test_point_3_sits_on_the_top_even_when_the_close_above_1_comes_later():
     # 107, then a candle at 111.5 closes over 110. Point 3 is the move's top,
     # 112, confirmed by that later close -- not the lower 111.5 (real /ES 3m
     # 2026-11-09: 15:15 wick 7600.50, 15:24 close over point 7 at a 7600.00 high).
-    pts = [(100, "L"), (110, "H"), (105, "L"), (112, "H"), (107, "L"), (111.5, "H"), (104, "L")]
+    pts = [(100, "L"), (110, "H"), (105, "L"), (112, "H"), (111, "H"), (104, "L")]
     cands, close = path(pts)
     close = np.minimum(close, 109.5)
     close[STEP] = 110          # point 1's own close
-    close[5 * STEP] = 110.5    # the later candle closes over 110
+    close[4 * STEP] = 110.5    # a later candle of the SAME push closes over 110
     out = count_swings(cands, close)
     three = [d for d in out if d["label"] == "3"]
     assert [d["price"] for d in three] == [112]
 
 
-def test_a_wide_candle_holds_one_point_and_keeps_the_side_that_alternates():
-    # Real /ES 4h 2026-06-09 09:00: one candle was both a high (7491) and a low
-    # (7247.25). After a high, the low is the turn; the high is dropped, and the
-    # later wick to 7232.25 (no close below) joins as the same side.
-    from src.analysis.swing_count import _one_point_per_candle
-    pts = [_Pt(0, "H", 7611.5), _Pt(5, "L", 7247.25), _Pt(5, "H", 7491.0), _Pt(9, "L", 7232.25)]
-    out = _one_point_per_candle(pts)
-    assert [(p.pos, p.kind, p.price) for p in out] == [(0, "H", 7611.5), (9, "L", 7232.25)]
-    assert len({p.pos for p in out}) == len(out)
+def test_a_push_that_turns_back_before_closing_beyond_is_not_the_point():
+    # 112 wicks over 1 (110) with no close above, then a real turn back to 107;
+    # only the NEXT push (111.5) closes over 110. "Takes out AND closes beyond"
+    # is one move: point 3 is 111.5, not 112 (real /ES 3m 2026-11-10 10:48).
+    pts = [(100, "L"), (110, "H"), (105, "L"), (112, "H"), (107, "L"), (111.5, "H"), (104, "L")]
+    cands, close = path(pts)
+    close = np.minimum(close, 109.5)
+    close[STEP] = 110
+    close[5 * STEP] = 110.5
+    out = count_swings(cands, close)
+    assert [d["price"] for d in out if d["label"] == "3"] == [111.5]
 
 
 class TestDownSwingFlipsBackOnlyOnAClose:
@@ -341,3 +343,141 @@ class TestDownSwingFlipsBackOnlyOnAClose:
         cands, close = path([(100, "L"), (110, "H"), (95, "L"), (105, "H"), (90, "L")])
         out = count_swings(cands, close)          # closes walk straight through 95
         assert [(d["seq"], d["price"]) for d in out][:3] == [(1, 100), (1, 110), (2, 95)]
+
+
+
+class TestCandleCloseTrigger:
+    """Sir's tagging rules (2026-11-13): a high is confirmed when a RED candle
+    closes below the close of the last GREEN candle, and tagged on the highest
+    wick of the move; a low when a GREEN candle closes above the close of the
+    last RED candle, tagged on the lowest wick. Mirrored in a down swing."""
+
+    @staticmethod
+    def turns(rows, dev=0.0):
+        from src.analysis.swing_count import _trigger_turns
+        o, h, l, c = (np.array(col, float) for col in zip(*rows))
+        return [(p.pos, p.kind, p.price) for p in _trigger_turns(o, h, l, c, dev)]
+
+    def test_a_red_close_under_the_green_close_confirms_the_high(self):
+        rows = [(100, 101, 99, 100.5),   # 0 green
+                (100.5, 105, 100, 104),  # 1 green, close 104
+                (104, 104.5, 102, 103)]  # 2 red, closes 103 < 104 -> high confirmed
+        assert self.turns(rows)[-1] == (1, "H", 105)
+
+    def test_the_red_trigger_that_wicked_higher_is_the_high(self):
+        rows = [(100, 104, 99, 103.5),   # 0 green
+                (103.5, 106, 102, 103)]  # 1 red, wick 106, closes under 103.5
+        assert self.turns(rows)[-1] == (1, "H", 106)
+
+    def test_a_red_close_that_holds_the_green_close_confirms_nothing(self):
+        rows = [(100, 105, 99, 104),
+                (104.5, 105, 104, 104.2)]   # red, but closes above 104
+        assert all(k != "H" for _, k, _ in self.turns(rows))
+
+    def test_a_green_close_over_the_red_close_confirms_the_low(self):
+        rows = [(100, 105, 99, 104),      # 0 green
+                (104, 104, 98, 99),       # 1 red -> high 105 confirmed
+                (99, 99.5, 96, 97),       # 2 red, close 97
+                (97, 99, 96.5, 98)]       # 3 green, 98 > 97 -> low confirmed
+        assert self.turns(rows)[-1] == (2, "L", 96)
+
+    def test_the_low_is_the_lowest_wick_of_the_whole_pullback(self):
+        # Sir's 10 Nov catch: the low one candle before the last red still counts.
+        rows = [(100, 105, 99, 104),      # 0 green
+                (104, 104, 95, 96),       # 1 red, the pullback's lowest wick 95
+                (96, 97, 95.5, 95.8),     # 2 red, the last red before the trigger
+                (95.8, 98, 95.6, 97)]     # 3 green, closes over 95.8 -> low confirmed
+        assert self.turns(rows)[-1] == (1, "L", 95)
+
+    def test_a_doji_is_neither_green_nor_red(self):
+        rows = [(100, 105, 99, 104),
+                (104, 104.5, 103, 104)]   # doji: no trigger
+        assert self.turns(rows) == []
+
+    def test_a_turn_smaller_than_the_leg_size_is_not_counted(self):
+        rows = [(100, 101, 99, 100.5), (100.5, 102, 100, 101.8), (101.8, 101.9, 101.5, 101.6),
+                (101.6, 101.8, 101.4, 101.7)]   # a 0.5-point dip: under 0.10%? no -- 0.5% here
+        assert len(self.turns(rows, dev=0.01)) == 1, "a 0.5% turn is not a 1% turn"
+
+    def test_a_wide_red_candle_takes_the_low_and_the_high_moves_before_it(self):
+        # Real /ES 1W 2025-07-28: a red candle from its high down to the move's
+        # low. One candle, one point: the low takes it, and the high moves to the
+        # best candle before it (its own higher wick never closed there).
+        rows = [(100, 106, 99, 105),      # 0 green
+                (105, 105.5, 101, 102),   # 1 red -> high 106 confirmed
+                (102, 104, 101.5, 103.5), # 2 green, 103.5 > 102 -> low 101 confirmed
+                (104, 104, 95, 97),       # 3 red, high 104 FIRST, then down to 95
+                (97, 103, 98, 102)]       # 4 green, 102 > 97 -> low confirmed
+        assert self.turns(rows)[-2:] == [(2, "H", 104), (3, "L", 95)]
+
+    def test_a_wide_red_candle_right_after_the_low_extends_that_low(self):
+        # Real /ES 1D 2025-06-13: the red candle straight after the low opened at
+        # its high and fell below everything -- no candle to keep a high on.
+        rows = [(100, 106, 99, 105),      # 0 green
+                (105, 105.5, 101, 102),   # 1 red -> high 106
+                (102, 103, 100, 102.5),   # 2 green -> low 100 (bar 2)
+                (102.5, 104, 95, 97),     # 3 red: high 104 then down to 95
+                (97, 103, 98, 102)]       # 4 green -> low
+        assert self.turns(rows)[-2:] == [(0, "H", 106), (3, "L", 95)]
+
+    def test_the_count_uses_the_candle_open_for_its_colour(self):
+        idx = pd.date_range("2026-11-13 09:30", periods=6, freq="5min")
+        df = pd.DataFrame({"open": [100, 100.5, 104, 102, 99, 98], "high": [101, 105, 104.5, 102.5, 99.5, 101],
+                           "low": [99, 100, 101, 98, 97, 97.5], "close": [100.5, 104, 102, 99, 98, 100.5]}, index=idx)
+        zz10, _ = calc_swing_count(df["high"], df["low"], df["close"], dev_10=0.0, open_=df["open"])
+        assert ("H", 105) in list(zip(zz10["type"], zz10["price"]))
+
+
+def test_a_pullback_candle_closing_above_1_counts_for_point_3():
+    # Point 2's own candle closes above point 1: its low came first, so the
+    # next higher high is point 3 (real /ES 10m 2026-11-10 14:40).
+    pts = [(100, "L"), (110, "H"), (105, "L"), (112, "H"), (104, "L")]
+    cands, close = path(pts)
+    close = np.minimum(close, 109.5)
+    close[STEP] = 110            # point 1's own close
+    close[2 * STEP] = 111        # point 2's candle closes above 110
+    out = count_swings(cands, close)
+    assert [d["price"] for d in out if d["label"] == "3"] == [112]
+
+
+def test_every_point_is_named_hh_hl_lh_ll_against_the_last_of_its_kind():
+    from src.analysis.swing_count import market_structure
+    types = ["L", "H", "L", "H", "L", "H", "L"]
+    prices = [100, 110, 105, 115, 103, 112, 99]
+    assert market_structure(types, prices) == ["L", "H", "HL", "HH", "LL", "LH", "LL"]
+
+
+class TestOneLeg:
+    """The finest level (2026-11-13): every candle-close turn between the
+    10 Leg / 3 Leg points, labelled a, b, c ... in each stretch."""
+
+    def _run(self):
+        from src.analysis.swing_count import calc_fine_swings
+        rows = NOV10 + NOV10_PM
+        idx = pd.to_datetime([f"2026-11-10 {r[0]}" for r in rows])
+        df = pd.DataFrame([r[1:] for r in rows], index=idx, columns=["open", "high", "low", "close"])
+        zz10, zz3 = calc_swing_count(df["high"], df["low"], df["close"], open_=df["open"])
+        return df, zz10, zz3, calc_fine_swings(df["open"], df["high"], df["low"], df["close"], zz10, zz3)
+
+    def test_it_finds_points_and_each_sits_on_its_candle(self):
+        df, _, _, zz1 = self._run()
+        assert len(zz1) > 0
+        for t, r in zz1.iterrows():
+            assert r["price"] == (df.loc[t, "high"] if r["type"] == "H" else df.loc[t, "low"])
+
+    def test_all_three_levels_together_alternate_high_and_low(self):
+        _, zz10, zz3, zz1 = self._run()
+        pts = sorted([(t, r["type"]) for zz in (zz10, zz3, zz1) for t, r in zz.iterrows()])
+        assert all(a[1] != b[1] for a, b in zip(pts, pts[1:]))
+
+    def test_letters_run_a_b_c_in_each_stretch(self):
+        _, zz10, zz3, zz1 = self._run()
+        anchors = sorted(list(zz10.index) + list(zz3.index))
+        for a, b in zip(anchors, anchors[1:] + [zz1.index.max() + pd.Timedelta("1min")]):
+            inside = zz1[(zz1.index > a) & (zz1.index < b)]["label"].tolist()
+            assert inside == [chr(97 + i) for i in range(len(inside))]
+
+    def test_10_and_3_leg_points_carry_their_hh_hl_label(self):
+        _, zz10, zz3, _ = self._run()
+        assert set(zz10["structure"]) <= {"H", "L", "HH", "HL", "LH", "LL", "EH", "EL"}
+        assert len(zz3) and "structure" in zz3.columns
