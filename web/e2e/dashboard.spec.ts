@@ -685,7 +685,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   expect(keyHover).toMatch(/10 Leg[\s\S]*3 Leg[\s\S]*1 Leg[\s\S]*HH higher high/)
   const titles = headers.filter((h) => !starts.includes(h) && !keys.includes(h))
   expect(titles.length).toBeGreaterThan(0)
-  for (const h of titles) expect(h).toMatch(/10 Leg Dev \(/)
+  // One-line titles (2026-11-13); the Leg Dev ranges are in the hover box.
+  for (const h of titles) expect(h).toMatch(/^<b>Swing [A-Z]+<\/b>/)
   // One start tag per swing, with its direction.
   expect(starts.length).toBe(titles.length)
   for (const st of starts) expect(st).toMatch(/^[▲▼] Swing [A-Z]+ starts$/)

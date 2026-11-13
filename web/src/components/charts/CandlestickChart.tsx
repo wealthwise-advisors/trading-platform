@@ -28,7 +28,7 @@ import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
-import { statusLines, swingStatus } from "@/lib/swingStatus"
+import { swingStatus } from "@/lib/swingStatus"
 
 /** Swing circles and tags shrink with a short price row: at full size on a
  *  ~150px row they took the room the candles needed, and the price scale blew
@@ -1214,15 +1214,6 @@ export function CandlestickChart({
   // here entirely (no letter, no circle) rather than drawn a second time.
   const zz10TimeSet = new Set(zz10.map((p) => p.t))
   const zz3Labelable = zz3.filter((p) => !zz10TimeSet.has(p.t))
-  // Per parent swing, the ordered list of 3-leg letters inside it -- lets
-  // the swing header show "3 Leg Dev (A to H)" alongside the existing
-  // "(1.1 to 1.5)" range.
-  const regionLettersBySwing = new Map<number, string[]>()
-  for (const p of zz3Labelable) {
-    if (!regionLettersBySwing.has(p.swing)) regionLettersBySwing.set(p.swing, [])
-    regionLettersBySwing.get(p.swing)!.push(p.label)
-  }
-  const regionLetters: string[][] = swingGroups.map(([swingNum]) => regionLettersBySwing.get(swingNum) ?? [])
   // Each swing's stretches, for the hover's buyers-vs-sellers box.
   const regionPointsBySwing = new Map<number, ZigZagPoint[]>()
   for (const p of zz3Labelable) {
@@ -1322,7 +1313,7 @@ export function CandlestickChart({
   // A second row of swing titles sits this many pixels above the first: three
   // lines of 10px text plus a gap. Pixels, not a share of the plot, so rows
   // never overlap however tall the chart is.
-  const HEADER_ROW_PX = 44
+  const HEADER_ROW_PX = 18
 
   if (zz10.length) {
     data.push({
@@ -1431,18 +1422,14 @@ export function CandlestickChart({
       // of how principled the underlying rule was. Collision avoidance is
       // now handled ENTIRELY by row placement instead: text format is never
       // the variable, so every header is always identical to swing 1's.
-      const letters = regionLetters[i]
-      // 3 Leg Dev on its own line: a title half as wide fits beside its
-      // neighbour instead of being lifted above it (2026-11-10).
-      const legPart = letters.length
-        ? `<br>3 Leg Dev (${letters[0]} to ${letters[letters.length - 1]})`
-        : ""
       // "10 Leg Dev" named before (A to B), as the 3-leg part already is (2026-11-10).
       // Who dominated the swing's 10 Leg stretch, as a coloured tag beside its
       // title, so it reads without hovering.
       const tag = dominanceTag(swingStrength(bars, grp[0].t, grp[grp.length - 1].t))
       const tagHtml = tag ? `  <span style="color:${tag.color}">${tag.text}</span>` : ""
-      const headerText = `<b>Swing ${swingName(swingNum)}</b>${tagHtml}<br>10 Leg Dev (${firstLabel} to ${lastLabel})${legPart}`
+      // One line: three-line titles stacked in two rows and took the top of the
+      // chart (2026-11-13). The 10 / 3 / 1 Leg Dev ranges are in the hover box.
+      const headerText = `<b>Swing ${swingName(swingNum)}</b>${tagHtml}`
       const minor = regionPointsBySwing.get(swingNum) ?? []
       const fine = zz1.filter((p) => p.swing === swingNum)
       swingSpans.push({
@@ -2054,7 +2041,7 @@ export function CandlestickChart({
   // ZigZag swing headers, and the indicator readout overlay is positioned
   // from it so it starts below both rather than on top of them.
   // 76: three lines of title (Swing + tag, 10 Leg Dev, 3 Leg Dev) above the plot.
-  const marginTop = hasSwingHeaders ? 76 + extraHeaderRows * HEADER_ROW_PX : 38
+  const marginTop = hasSwingHeaders ? 34 + extraHeaderRows * HEADER_ROW_PX : 38
 
   // ── Where each swing starts (2026-11-12) ────────────────────────────────
   // A small tag in the swing's own colour -- the colour of its title above
@@ -2591,20 +2578,6 @@ export function CandlestickChart({
           every control together -- this line is the quote now, nothing else. */}
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
                    interval={interval} bars={bars} />
-      {/* Where the swing stands, on its own line under the header: inside the
-          header it would not shrink and squeezed the O/H/L/C readout into a
-          column, pushing the chart down on a 1280px screen (2026-11-13). */}
-      {nowStatus && (
-        <div data-testid="swing-now" className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pb-1 text-xs"
-             style={{ color: nowStatus.up ? "#22c55e" : "#ef4444" }}>
-          {statusLines(nowStatus).map((l, i) => (
-            <span key={i} className={i === 0 ? "font-semibold" : "text-foreground"}>
-              {l.replace(/<\/?b>/g, "")}
-            </span>
-          ))}
-        </div>
-      )}
-
       {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
           line, as the reference draws them. They were two stacked rows,
           which cost the plot a strip of height to say nothing the one row
