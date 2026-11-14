@@ -26,10 +26,16 @@ describe("titleLevel", () => {
     expect(titleLevel(placed, 180, 60)).toBe(0)
   })
 
-  it("a dense run alternates between two rows, never climbs", () => {
+  it("a dense run stays within three rows, never climbs past them", () => {
     const placed: PlacedTitle[] = []
     for (const x of [0, 120, 240, 360, 480]) placed.push({ xPx: x, widthPx: W, level: titleLevel(placed, x, W) })
-    expect(placed.map((p) => p.level).every((l) => l === 0 || l === 1)).toBe(true)
+    expect(placed.every((p) => p.level <= 2)).toBe(true)
+  })
+
+  it("a third row is used only when both lower rows are taken there (2026-11-14)", () => {
+    const placed: PlacedTitle[] = [{ xPx: 100, widthPx: W, level: 0 }, { xPx: 110, widthPx: W, level: 1 }]
+    expect(titleLevel(placed, 120, W)).toBe(2)
+    expect(titleLevel([{ xPx: 100, widthPx: W, level: 0 }], 120, W)).toBe(1)
   })
 
   it("the first title always sits on the base row", () => expect(titleLevel([], 50, W)).toBe(0))

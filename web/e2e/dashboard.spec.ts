@@ -694,7 +694,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   expect(starts.length).toBe(titles.length)
   for (const st of starts) expect(st).toMatch(/^[▲▼] Swing [A-Z]+ starts$/)
   // The dominance tag beside each title, where the swing has volume.
-  expect(titles.some((h) => /[▲▼◆] (BUYERS|SELLERS|EVEN)/.test(h))).toBe(true)
+  // Who dominated, in brackets (2026-11-14): "(Dominant: Buyers 66%)".
+  expect(titles.some((h) => /\(Dominant: (Buyers|Sellers|Even) \d+%\)/.test(h.replace(/<[^>]*>/g, "")))).toBe(true)
 
   const area = own.locator(".draglayer .xy .nsewdrag").first()
   await area.scrollIntoViewIfNeeded()

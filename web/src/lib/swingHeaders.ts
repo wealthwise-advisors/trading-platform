@@ -32,7 +32,8 @@ export interface PlacedTitle {
  * already placed; with every row taken, the row whose nearest neighbour is
  * furthest away.
  */
-export function titleLevel(placed: ReadonlyArray<PlacedTitle>, xPx: number, widthPx: number, maxLevels = 2): number {
+// Three rows: two left titles touching when zoomed out (2026-11-14); still capped, so no staircase.
+export function titleLevel(placed: ReadonlyArray<PlacedTitle>, xPx: number, widthPx: number, maxLevels = 3): number {
   const colliders = placed.filter((p) => Math.abs(p.xPx - xPx) < (p.widthPx + widthPx) / 2 + GAP_PX)
   const taken = new Set(colliders.map((p) => p.level))
   for (let level = 0; level < maxLevels; level++) if (!taken.has(level)) return level

@@ -59,7 +59,7 @@ import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
-import { dominanceTag, swingStrength, type SwingSpan } from "@/lib/swingStrength"
+import { dominantTitle, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
 import { swingStarts, type SwingPointInfo } from "@/lib/swingPoints"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
@@ -1437,8 +1437,8 @@ export function CandlestickChart({
         ? { from: grp[0].t, to: grp.length > 1 ? grp[grp.length - 1].t : x1, label: `${firstLabel} to ${lastLabel}`,
             fromPrice: grp[0].price, toPrice: grp[grp.length - 1].price }
         : { from: prevEnd.t, to: grp[0].t, label: `start to ${lastLabel}`, fromPrice: prevEnd.price, toPrice: grp[0].price }
-      const tag = dominanceTag(swingStrength(bars, tenLeg.from, tenLeg.to))
-      const tagHtml = tag ? `  <span style="color:${tag.color}">${tag.text}</span>` : ""
+      const sides = dominantTitle(swingStrength(bars, tenLeg.from, tenLeg.to))
+      const tagHtml = sides ? `  ${sides}` : ""
       // One line: three-line titles stacked in two rows and took the top of the
       // chart (2026-11-13). The 10 / 3 / 1 Leg Dev ranges are in the hover box.
       const headerText = `<b>Swing ${swingName(swingNum)}</b>${tagHtml}`
@@ -2069,6 +2069,20 @@ export function CandlestickChart({
   // 76: three lines of title (Swing + tag, 10 Leg Dev, 3 Leg Dev) above the plot.
   const marginTop = hasSwingHeaders ? 34 + extraHeaderRows * HEADER_ROW_PX : 38
 
+  // Zoomed out, the 3 Leg circles and their HH / LL tags piled on top of each
+  // other (2026-11-14). Counted by points, not candles: merged candles stay wide
+  // while the points, one per real bar, pile up. With less than this many pixels
+  // per 3 Leg point on screen they all step back to the small dots on the yellow
+  // line -- all of them, so the rule is the same across the chart; zoom in and
+  // they return, as 1 Leg does. The hover box still names every point.
+  const PX_PER_3_LEG_POINT = 30
+  const shownWinForMarks = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
+  const threeLegOnScreen = zz3Labelable.filter((p) => {
+    const ms = new Date(p.t).getTime()
+    return !shownWinForMarks || (ms >= shownWinForMarks[0] && ms <= shownWinForMarks[1])
+  }).length
+  const roomFor3Leg = plotAreaPx / Math.max(1, threeLegOnScreen) >= PX_PER_3_LEG_POINT
+
   // ── Swing numbers: white, in a circle, just outside the candle ──────────
   // Sir, 2026-11-12: one style for every number (white, in a round circle),
   // big swings a little larger than small ones, nothing covering the candle.
@@ -2086,7 +2100,7 @@ export function CandlestickChart({
       hovertext: [
         "<b>Swing key</b>",
         "1, 2, 3 = 10 Leg (blue line)",
-        "i, ii, iii = 3 Leg (yellow line)",
+        `i, ii, iii = 3 Leg (yellow line)${roomFor3Leg ? "" : " -- zoom in to see"}`,
         `a, b, c = 1 Leg (pink line)${showFine ? "" : " -- zoom in to see"}`,
         "HH higher high · HL higher low",
         "LH lower high · LL lower low",
@@ -2132,6 +2146,7 @@ export function CandlestickChart({
       ({ x0: cx - halfW, x1: cx + halfW, y0: cy - halfH, y1: cy + halfH })
     if (showZigzag && zz10.length) taken.push(around(42, priceRowPx - 10, 44, 11))   // the "ⓘ Swing key" corner tag
     for (const lv of LEVELS) {
+      if (lv.name === "3 Leg" && !roomFor3Leg) continue
       const pts = swingLabels.filter(lv.pick)
       if (!pts.length) continue
       // Long numerals (xviii) grow their circle instead of spilling out of it.

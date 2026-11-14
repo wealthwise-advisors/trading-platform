@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dominance, dominanceTag, strengthLines, swingAt, swingStrength, type SwingSpan } from "./swingStrength"
+import { dominance, dominantTitle, strengthLines, swingAt, swingStrength, type SwingSpan } from "./swingStrength"
 import type { OHLCVRecord } from "./types"
 
 const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
@@ -104,17 +104,24 @@ describe("dominance", () => {
   it("an even split is even", () => expect(of(50, 50).side).toBe("even"))
 })
 
-describe("dominanceTag", () => {
-  it("an arrow, the winning side and its share", () => {
-    const strong = swingStrength([bar(1, 10, 20, 10, 20, 1000)], T(0), T(1))
-    expect(dominanceTag(strong)).toEqual({ text: "▲ BUYERS 100%", color: "#00c853" })
+describe("dominantTitle", () => {
+  // Only who won the swing and by how much, beside its name (2026-11-14:
+  // "just write who is dominant and its percentage"). The split is in the hover box.
+  it("the winning side and its share of the volume", () => {
     // +60 (buyers 60 / 40) then -55 (sellers 55 / 45): buyers win with 52%.
     const slight = swingStrength([bar(1, 10, 20, 10, 16, 100), bar(2, 10, 20, 10, 14.5, 100)], T(0), T(2))
-    expect(dominanceTag(slight)?.text).toBe("▲ BUYERS 52%")
+    expect(dominantTitle(slight)!.replace(/<[^>]*>/g, "")).toBe("(Dominant: Buyers 52%)")
+    expect(dominantTitle(slight)).toContain("#00c853")
   })
 
-  it("nothing to tag without volume", () => {
-    expect(dominanceTag(swingStrength([bar(1, 1, 2, 1, 2, null)], T(0), T(1)))).toBeNull()
+  it("sellers in red", () => {
+    const down = swingStrength([bar(1, 10, 20, 10, 11, 1000)], T(0), T(1))
+    expect(dominantTitle(down)!.replace(/<[^>]*>/g, "")).toBe("(Dominant: Sellers 100%)")
+    expect(dominantTitle(down)).toContain("#ff6b6b")
+  })
+
+  it("nothing to show without volume", () => {
+    expect(dominantTitle(swingStrength([bar(1, 1, 2, 1, 2, null)], T(0), T(1)))).toBeNull()
   })
 })
 

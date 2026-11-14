@@ -750,6 +750,7 @@ A React 19 single-page application over the FastAPI backend.
 - ➜ **Swing count** — swings A, B, C; inside each, 10 Leg points 1, 2, 3, 3 Leg points i, ii, iii and 1 Leg points a, b, c, each confirmed by a candle close; every point marked HH / HL / LH / LL; each swing's start boxed, each point named on hover
 - ➜ **Swing deviation sliders** — 10, 3 and 1 Leg minimum move sizes in the side panel redraw the chart's swings; 1 Leg starts at 0 (every candle-close turn)
 - ➜ **Hover readout** — every panel's values at once, plus buyers vs sellers per swing
+- ➜ **Swing titles** — each swing names its dominant side and share, e.g. (Dominant: Buyers 66%); zoomed out, 3 Leg points thin to dots until there is room
 - ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout
 - ➜ **Live** — updates every 15 s on Schwab data
 

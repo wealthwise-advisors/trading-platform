@@ -107,15 +107,18 @@ export function strengthLines(heading: string, s: SwingStrength | null,
   return lines
 }
 
-/** The tag beside a swing's title on the chart: "▲ BUYERS 63%" or "▼ SELLERS 58%". */
-export function dominanceTag(s: SwingStrength | null): { text: string; color: string } | null {
+/**
+ * Beside a swing's title: who dominated it and by how much, "(Dominant: Buyers
+ * 66%)" in green or "(Dominant: Sellers 58%)" in red -- the same verdict as the
+ * hover box's 10 Leg Dev "Dominant" line (2026-11-14: "just who is dominant and
+ * its percentage"; both sides read as confusing).
+ */
+export function dominantTitle(s: SwingStrength | null): string | null {
   if (!s || !s.hasVolume) return null
   const d = dominance(s)
-  if (d.side === "even") return { text: "◆ EVEN", color: "#9ca3af" }
-  const share = Math.round(d.share)
-  return d.side === "buyers"
-    ? { text: `▲ BUYERS ${share}%`, color: GREEN }
-    : { text: `▼ SELLERS ${share}%`, color: RED }
+  if (d.side === "even") return `(Dominant: Even 50%)`
+  const color = d.side === "buyers" ? GREEN : RED
+  return `(<span style="color:${color}"><b>Dominant: ${d.side === "buyers" ? "Buyers" : "Sellers"} ${Math.round(d.share)}%</b></span>)`
 }
 
 export interface SwingSpan {
