@@ -26,13 +26,22 @@ export function useSelectInterval() {
 
   const select = (tf: string) => {
     const cfg = useConfigStore.getState()
+    const before = { timeframe: cfg.timeframe, startDate: cfg.startDate }
     cfg.setField("timeframe", tf)
     // Null when the interval has no specified range (25m, 35m): the dates are
     // then left exactly as they were, rather than moved by a guessed number.
     const start = startDateForTimeframe(cfg.endDate, tf, cfg.startDate)
     if (start) cfg.setField("startDate", start)
-    run.mutate({ timeframe: tf, startDate: start || undefined })
+    run.mutate({ timeframe: tf, startDate: start || undefined }, {
+      // The chart did not move, so neither may the highlight: a failed run left
+      // 30m lit over a 5m chart (2026-11-14). The error is shown by the caller.
+      onError: () => {
+        const now = useConfigStore.getState()
+        now.setField("timeframe", before.timeframe)
+        now.setField("startDate", before.startDate)
+      },
+    })
   }
 
-  return { select, pending: run.isPending }
+  return { select, pending: run.isPending, error: run.error as Error | null }
 }

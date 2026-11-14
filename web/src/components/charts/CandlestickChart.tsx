@@ -1846,8 +1846,12 @@ export function CandlestickChart({
           // Exactly what is drawn: gap 5 + circle 26, and the HH tag (centre 10px
           // past the circle, ~9px half height). It was 12px more, which left the
           // top of the chart empty (2026-11-13).
+          // The widest numeral on the whole chart, not just on screen: as long ones
+          // (xxxviii) scrolled in and out the room changed and the price scale
+          // wobbled while zooming (2026-11-14).
+          const longestLabelExtra = Math.max(0, ...[...zigzag.zigzag_10, ...zigzag.zigzag_3].map((p) => p.label.length - 2))
           const reachPx = Math.min(rowPx * 0.2, markScale(rowPx) *
-            (5 + 26 + (rowPx >= TAG_MIN_ROW_PX ? 19 : 0) + Math.max(0, ...inWin.map((p) => p.label.length - 2)) * 6))
+            (5 + 26 + (rowPx >= TAG_MIN_ROW_PX ? 19 : 0) + longestLabelExtra * 6))
           const perPx = (hi - lo) / Math.max(40, rowPx - 2 * reachPx)
           const highs = inWin.filter((p) => p.type === "H").map(drawnEdge)
           const lows = inWin.filter((p) => p.type === "L").map(drawnEdge)

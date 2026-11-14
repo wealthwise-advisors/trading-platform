@@ -777,3 +777,24 @@ test("dragging the chart up keeps it there; reset brings the fitted price scale 
   await expect.poll(async () => Math.abs((await yr())[0] - fitted[0]), { timeout: 10_000 }).toBeLessThan((fitted[1] - fitted[0]) * 0.02)
   await own.close()
 })
+
+test("a timeframe switch that fails says so, and the highlight stays on what is shown", async ({ browser }) => {
+  // A dropped connection made 30m light up while the chart stayed on 5m, with
+  // no word about why (2026-11-14).
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const group = own.getByRole("group", { name: "Bar interval" }).first()
+  const shown = await group.locator("button[aria-pressed='true']").innerText()
+  await own.route("**/api/backtests", (route) => route.request().method() === "POST"
+    ? route.fulfill({ status: 503, contentType: "application/json",
+        body: JSON.stringify({ detail: "Couldn't reach the market data source just now. Check the internet connection and try again." }) })
+    : route.continue())
+  const other = shown === "30m" ? "15m" : "30m"
+  await group.getByRole("button", { name: other, exact: true }).click()
+  await expect(own.getByRole("alert").filter({ hasText: /internet/i })).toBeVisible({ timeout: 15_000 })
+  await expect(group.locator("button[aria-pressed='true']")).toHaveText(shown)
+  await own.unroute("**/api/backtests")
+  await own.close()
+})

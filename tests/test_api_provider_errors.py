@@ -264,3 +264,30 @@ class TestOvernightSessionFetchWindow:
         r = client.post("/api/replay", json=body)
         assert r.status_code == 200, r.text[:200]
         assert r.json()["fetch_start_date"] is None
+
+
+class TestNetworkDropDuringARun:
+    """A brief internet drop (2026-11-14: 'Failed to resolve api.schwabapi.com')
+    escaped as a bare 500 and the chart's timeframe switch failed silently. It is
+    a temporary outage, not a server defect: 503 with what to do."""
+
+    def test_unreachable_data_source_is_503_with_a_plain_message(self, monkeypatch):
+        import requests
+
+        import api.routers.backtests as bt
+
+        class _Offline:
+            def load(self, *a, **k):
+                raise requests.exceptions.ConnectionError("Failed to resolve 'api.schwabapi.com'")
+
+            def __getattr__(self, name):
+                raise requests.exceptions.ConnectionError("offline")
+
+        monkeypatch.setattr(bt, "_build_provider", lambda *a, **k: _Offline())
+        body = _replay_body("ES", source="synthetic")
+        body.pop("session_start")
+        body.pop("session_end")
+        r = TestClient(app, raise_server_exceptions=False).post("/api/backtests", json=body)
+        assert r.status_code == 503, f"got {r.status_code}: {r.text[:200]}"
+        detail = r.json()["detail"]
+        assert "internet" in detail.lower() and "try again" in detail.lower()

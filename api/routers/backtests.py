@@ -5,6 +5,7 @@ from datetime import datetime, time as time_type, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import requests
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from loguru import logger
@@ -143,6 +144,14 @@ def _build_provider(data_source: str, symbol: str, timeframe: str,
     return CSVDataProvider("data/historical")
 
 
+# A dropped connection to the data source is a temporary outage, not a defect:
+# 2026-11-14 a DNS blip ("Failed to resolve api.schwabapi.com") escaped as a bare
+# 500 and the chart's timeframe switch failed with no word to the user.
+_NETWORK_ERRORS = (requests.exceptions.RequestException, ConnectionError, TimeoutError)
+_NETWORK_MESSAGE = ("Couldn't reach the market data source just now. Check the internet "
+                    "connection and try again.")
+
+
 def _explain_run_failure(exc: Exception, req) -> str:
     """Turn an engine/provider error into something a user can act on.
 
@@ -223,6 +232,9 @@ def run_backtest(req: BacktestRequest, user=PROTECTED):
     end_dt = datetime.combine(req.end_date, time_type(23, 59))
     try:
         results = engine.run(start=start_dt, end=end_dt)
+    except _NETWORK_ERRORS as exc:
+        logger.warning(f"run: data source unreachable: {exc}")
+        raise HTTPException(503, _NETWORK_MESSAGE)
     except (ValueError, ImportError, RuntimeError) as exc:
         raise HTTPException(400, _explain_run_failure(exc, req))
 

@@ -120,7 +120,7 @@ export function ChartToolbar({
 
   // Set the interval, move to its lookback, and re-run -- the same action the
   // Volume Profile dialog's day-range table takes. See useSelectInterval.
-  const { select: setInterval, pending: runPending } = useSelectInterval()
+  const { select: setInterval, pending: runPending, error: intervalError } = useSelectInterval()
 
   const addAlert = () => {
     const p = Number(price)
@@ -165,6 +165,13 @@ export function ChartToolbar({
           </button>
         ))}
       </div>
+      {/* A switch that failed says why, beside the buttons; the next pick clears it. */}
+      {intervalError && !runPending && (
+        <span role="alert" title={intervalError.message}
+              className="max-w-[320px] truncate text-xs text-destructive">
+          Couldn't switch: {intervalError.message}
+        </span>
+      )}
 
       <span className="mx-0.5 h-4 w-px shrink-0 bg-[color:var(--hairline-soft)]" aria-hidden />
 
