@@ -23,3 +23,8 @@ import createPlotlyComponent from "react-plotly.js/factory"
 const Plot = createPlotlyComponent(Plotly)
 
 export default Plot
+
+/** Save a drawn chart as a PNG at its on-screen size, twice the pixels for a sharp picture. */
+export function downloadChartPng(gd: HTMLElement, filename: string): Promise<string> {
+  return Plotly.downloadImage(gd, { format: "png", filename, width: gd.clientWidth, height: gd.clientHeight, scale: 2 } as never)
+}

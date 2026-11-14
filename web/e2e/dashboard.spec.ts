@@ -740,3 +740,20 @@ test("the 10 / 3 / 1 Leg Deviation sliders redraw the chart's swings", async ({ 
   expect(res.status()).toBe(200)
   expect((await res.json()).zigzag_1).toEqual([])
 })
+
+test("the camera button saves the chart as a PNG", async ({ browser }) => {
+  // It clicked Plotly's own download button, which went away with the modebar,
+  // so the camera did nothing at all (2026-11-14).
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const download = own.waitForEvent("download", { timeout: 30_000 })
+  await own.getByRole("button", { name: "Download chart as PNG" }).first().click()
+  const file = await download
+  expect(file.suggestedFilename()).toMatch(/\.png$/)
+  const path = await file.path()
+  const { statSync } = await import("node:fs")
+  expect(statSync(path).size, "an empty picture").toBeGreaterThan(10_000)
+  await own.close()
+})

@@ -4,7 +4,7 @@
 // annotation logic, mirroring the Python trace-by-trace.
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Plot from "@/lib/plot"
+import Plot, { downloadChartPng } from "@/lib/plot"
 import { chartTheme } from "@/lib/chartTheme"
 import { ChartHeader } from "@/components/charts/ChartHeader"
 import { ChartLegendMenu, type LegendEntry } from "@/components/charts/ChartLegendMenu"
@@ -483,11 +483,11 @@ export function CandlestickChart({
     else void el.requestFullscreen?.().catch(() => {})
   }
 
-  /** Plotly's own PNG export, from the menu rather than only the modebar. */
+  /** The toolbar's camera: Plotly's PNG export. It used to click Plotly's own
+   *  download button, which went with the modebar, so it did nothing (2026-11-14). */
   const downloadPng = () => {
     const plot = containerRef.current?.querySelector<HTMLElement>(".js-plotly-plot")
-    const btn = plot?.querySelector<HTMLElement>('[data-title="Download plot as a PNG"]')
-    btn?.click()
+    if (plot) void downloadChartPng(plot, `${symbol}_${interval}_${new Date().toISOString().slice(0, 10)}`)
   }
 
   // ── Save as default / Reset to factory default ─────────────────────────
