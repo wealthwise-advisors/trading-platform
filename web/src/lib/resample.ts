@@ -22,6 +22,9 @@ import { formatterFor } from "@/lib/isoTime"
  * gives a ~12px slot and a ~6px body, which reads as a candle.
  */
 const MAX_VISIBLE_CANDLES = 90
+/** A candle body narrower than this reads as a hairline (measured; see above). */
+const MIN_BODY_PX = 4
+const NICE_MULTIPLES = [1, 2, 3, 5, 10, 15, 30, 60, 120, 240, 480, 960]
 
 /** Median positive gap between consecutive bars, in ms. */
 function nativeStepMs(bars: OHLCVRecord[]): number {
@@ -47,12 +50,24 @@ function nativeStepMs(bars: OHLCVRecord[]): number {
  * Returns a whole multiple of the data's own interval; resampleOHLC snaps to
  * that grid anyway, and returning the native interval means "do not aggregate".
  */
-export function displayBucketMinutes(bars: OHLCVRecord[], windowMs: number): number {
+export function displayBucketMinutes(bars: OHLCVRecord[], windowMs: number,
+                                     plotPx = 1103, prevMinutes?: number): number {
   if (bars.length < 2) return 1
   const stepMs = nativeStepMs(bars)
   const span = Math.max(windowMs, stepMs)
   const barsInWindow = span / stepMs
-  const multiple = Math.max(1, Math.ceil(barsInWindow / MAX_VISIBLE_CANDLES))
+  // The candle count that keeps a 4px body on THIS chart's width -- a fixed 90
+  // re-merged a 1m chart every 90 minutes of zoom, and every re-merge redrew
+  // all the candles at once: the chart shook as it zoomed (2026-11-14).
+  const max = Math.max(MAX_VISIBLE_CANDLES / 3, Math.floor((plotPx * 0.49) / MIN_BODY_PX))
+  const count = (m: number) => barsInWindow / m
+  // Tidy sizes only (1, 2, 3, 5, 10, 15 ... bars), so a zoom crosses few of them.
+  let multiple = NICE_MULTIPLES.find((m) => count(m) <= max) ?? Math.ceil(barsInWindow / max)
+  // Dead band: zooming in, stay on the coarser size until the finer one clearly
+  // fits, so a zoom held near a threshold does not flip back and forth.
+  const prev = prevMinutes ? Math.round((prevMinutes * 60_000) / stepMs) : 0
+  const at = NICE_MULTIPLES.indexOf(prev)
+  if (at > 0 && prev > multiple && count(prev) <= max && count(NICE_MULTIPLES[at - 1]) > max * 0.8) multiple = prev
   return (stepMs * multiple) / 60_000
 }
 

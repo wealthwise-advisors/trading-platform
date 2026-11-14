@@ -233,6 +233,42 @@ describe("displayBucketMinutes — candle legibility at any zoom", () => {
   })
 })
 
+describe("displayBucketMinutes -- smooth zooming (2026-11-14)", () => {
+  // Zooming 1m shook the chart: at a fixed 90 candles it re-merged every
+  // 90 minutes of window (87 candles -> 62 -> 87 ...).
+  const NICE = [1, 2, 3, 5, 10, 15, 30, 60, 120, 240, 480, 960]
+
+  it("a wider chart keeps the bars' own candles for longer", () => {
+    const bars = makeBars(1000, 1)
+    expect(displayBucketMinutes(bars, 180 * 60e3, 1800)).toBe(1)
+    expect(displayBucketMinutes(bars, 180 * 60e3, 1103)).toBeGreaterThan(1)
+  })
+
+  it("merges only into tidy sizes, so it switches rarely", () => {
+    const bars = makeBars(3000, 1)
+    for (let min = 30; min <= 3000; min += 37) {
+      expect(NICE).toContain(displayBucketMinutes(bars, min * 60e3, 1800))
+    }
+  })
+
+  it("never draws more candles than stay legible on that width", () => {
+    const bars = makeBars(3000, 1)
+    for (let min = 30; min <= 3000; min += 37) {
+      const m = displayBucketMinutes(bars, min * 60e3, 1800)
+      expect(((1800 / (min / m)) * 0.49)).toBeGreaterThanOrEqual(4)
+    }
+  })
+
+  it("does not flip back to finer candles until there is clear room (no back-and-forth)", () => {
+    const bars = makeBars(3000, 1)
+    const max = Math.floor((1800 * 0.49) / 4)          // 220 candles on 1800px
+    const w = Math.round(max * 0.9) * 60e3              // 1m would just fit...
+    expect(displayBucketMinutes(bars, w, 1800)).toBe(1)
+    expect(displayBucketMinutes(bars, w, 1800, 2)).toBe(2)   // ...but coming from 2m, stay 2m
+    expect(displayBucketMinutes(bars, Math.round(max * 0.7) * 60e3, 1800, 2)).toBe(1)
+  })
+})
+
 describe("onDisplayCandle", () => {
   const candles = ["2026-11-10T09:30:00", "2026-11-10T09:32:00", "2026-11-10T09:34:00"]
 

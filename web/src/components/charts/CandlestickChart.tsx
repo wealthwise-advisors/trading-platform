@@ -588,6 +588,13 @@ export function CandlestickChart({
   // chart back to its default window under anyone who had panned or zoomed.
   const runKey = chartRunKey(bars, interval)
   useEffect(() => setVisibleRange(null), [runKey])
+  /** The last display candle size, for displayBucketMinutes' dead band. */
+  const lastBucketRef = useRef<number | undefined>(undefined)
+  /** A price range the user dragged the chart to vertically; null = fit the window. */
+  const [manualY, setManualY] = useState<[number, number] | null>(null)
+  /** The fitted price range of the last draw, for telling a drag from a zoom. */
+  const priceYRangeRef = useRef<[number, number] | undefined>(undefined)
+  useEffect(() => { setManualY(null); lastBucketRef.current = undefined }, [runKey])
   const compareQ = useQuery({
     queryKey: ["compare", chartStyle.compare, runKey],
     queryFn: () => fetchCompare!(chartStyle.compare!),
@@ -851,6 +858,17 @@ export function CandlestickChart({
       setActiveRange("All")     // autorange IS the whole range
       return
     }
+    // Dragged up or down on purpose: keep the price scale where it was left.
+    // It snapped back to the fitted range on release, so the chart jumped
+    // (2026-11-14). A wheel zoom changes the span and a sideways drag barely
+    // moves it -- both keep the automatic scale. "auto" / reset give it back.
+    const y0 = e["yaxis.range[0]"], y1 = e["yaxis.range[1]"]
+    if (typeof y0 === "number" && typeof y1 === "number" && !logScale && priceYRangeRef.current) {
+      const [c0, c1] = manualY ?? priceYRangeRef.current
+      const span = c1 - c0
+      const sameSpan = Math.abs((y1 - y0) - span) < span * 0.01
+      if (sameSpan && Math.abs(y0 - c0) > span * 0.03) setManualY([y0, y1])
+    }
     const r0 = e["xaxis.range[0]"]
     const r1 = e["xaxis.range[1]"]
     if (typeof r0 === "string" && typeof r1 === "string") {
@@ -883,7 +901,11 @@ export function CandlestickChart({
     }
     return Math.min(aggregationDefault, last - first || aggregationDefault)
   })()
-  const candleBars = resampleOHLC(bars, displayBucketMinutes(bars, displayWindowMs))
+  // Sized to the chart's real width, and remembering the last size so a zoom
+  // near a threshold does not flip the candles back and forth (2026-11-14).
+  const bucketMinutes = displayBucketMinutes(bars, displayWindowMs, Math.max(200, plotWidthPx - 90), lastBucketRef.current)
+  lastBucketRef.current = bucketMinutes
+  const candleBars = resampleOHLC(bars, bucketMinutes)
   // Merged candles start on their own grid, so the first one can begin before
   // the first bar (09:10 for bars from 09:30). The window has to start at the
   // first DRAWN candle, or that candle is half cut and anything on it (the
@@ -1846,6 +1868,9 @@ export function CandlestickChart({
         return [lo - pad, hi + pad]
       })()
     : undefined
+  // A copy: Plotly writes a drag's range into the array it was handed, which made
+  // every vertical drag look like no move at all.
+  priceYRangeRef.current = priceYRange ? [priceYRange[0], priceYRange[1]] : undefined
 
   // Pad the x-axis range a few bars beyond the first/last candle so the
   // edge tick labels (e.g. the last time on the right) aren't clipped by
@@ -2017,7 +2042,7 @@ export function CandlestickChart({
       // A log axis takes its range as log10 of the price, so handing it the
       // linear range would put the window in the wrong place entirely.
       range: isPrice
-        ? (logScale && priceYRange
+        ? (manualY && !logScale ? manualY : logScale && priceYRange
             ? [Math.log10(Math.max(1e-9, priceYRange[0])), Math.log10(Math.max(1e-9, priceYRange[1]))]
             : priceYRange)
         : name === "vol" ? [0, volAxisTop] : name === "rsi13" ? rsi13Range : [0, 100],
@@ -2689,7 +2714,7 @@ export function CandlestickChart({
         onAlertsChanged={() => setAlertTick((n) => n + 1)}
         onZoomIn={() => zoomBy(0.6)}
         onZoomOut={() => zoomBy(1 / 0.6)}
-        onResetView={() => { setVisibleRange(null); setActiveRange(null) }}
+        onResetView={() => { setVisibleRange(null); setActiveRange(null); setManualY(null) }}
         actions={chartActions}
         studies={<>
           <div className={STUDY_CHIP}>
@@ -3171,7 +3196,7 @@ export function CandlestickChart({
         logScale={logScale}
         onRange={(id, start, end) => { setVisibleRange({ start, end }); setActiveRange(id || null) }}
         onToggleLog={() => setLogScale((v) => !v)}
-        onAuto={() => { setVisibleRange(null); setActiveRange(null); setLogScale(false) }}
+        onAuto={() => { setVisibleRange(null); setActiveRange(null); setLogScale(false); setManualY(null) }}
       />
     </div>
   )

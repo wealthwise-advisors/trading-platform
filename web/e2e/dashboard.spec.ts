@@ -758,3 +758,22 @@ test("the camera button saves the chart as a PNG", async ({ browser }) => {
   expect(statSync(path).size, "an empty picture").toBeGreaterThan(10_000)
   await own.close()
 })
+
+test("dragging the chart up keeps it there; reset brings the fitted price scale back", async ({ browser }) => {
+  // It snapped back on release, so every vertical drag jumped (2026-11-14).
+  const own = await browser.newPage()
+  await openApp(own)
+  await runBacktest(own)
+  await waitForChartSettled(own)
+  const yr = () => own.evaluate(() => (document.querySelector(".js-plotly-plot") as unknown as { _fullLayout: { yaxis: { range: number[] } } })._fullLayout.yaxis.range.slice())
+  const area = (await own.locator(".draglayer .xy .nsewdrag").first().boundingBox())!
+  const cx = area.x + area.width * 0.6, cy = area.y + area.height * 0.4
+  const fitted = await yr()
+  await own.mouse.move(cx, cy); await own.mouse.down(); await own.mouse.move(cx + 2, cy + 120, { steps: 12 }); await own.mouse.up()
+  await own.waitForTimeout(1500)
+  const dragged = await yr()
+  expect(Math.abs(dragged[0] - fitted[0]), "the chart snapped back").toBeGreaterThan((fitted[1] - fitted[0]) * 0.1)
+  await own.getByRole("button", { name: "Reset the view" }).first().click()
+  await expect.poll(async () => Math.abs((await yr())[0] - fitted[0]), { timeout: 10_000 }).toBeLessThan((fitted[1] - fitted[0]) * 0.02)
+  await own.close()
+})
