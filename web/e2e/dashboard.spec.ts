@@ -711,6 +711,9 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   await expect(swingBox).toContainText("Net")
   await expect(swingBox).toContainText("Dominant")
   await expect(swingBox).toContainText("Price change")
+  // Sir's swing levels (2026-11-17): anchored VWAP and the midpoint, as prices.
+  await expect(swingBox).toContainText(/Volume Breakeven\s*\d+(\.\d+)?/)
+  await expect(swingBox).toContainText(/50% Equilibrium\s*\d+(\.\d+)?/)
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

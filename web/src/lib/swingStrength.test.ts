@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dominance, dominantTitle, strengthLines, swingAt, swingStrength, type SwingSpan } from "./swingStrength"
+import { dominance, dominantTitle, strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "./swingStrength"
 import type { OHLCVRecord } from "./types"
 
 const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
@@ -140,5 +140,42 @@ describe("swingAt", () => {
 
   it("nothing outside every swing", () => {
     expect(swingAt(spans, T(30))).toBeNull()
+  })
+})
+
+describe("swingBreakeven -- sir's swing levels (2026-11-17)", () => {
+  // Sir's own worked example: three candles from the swing low to the 7545.50 swing high.
+  const sirs = [
+    bar(1, 7495, 7510, 7490, 7505, 4200),
+    bar(2, 7505, 7525, 7502, 7522, 5100),
+    bar(3, 7522, 7545.5, 7520, 7544.5, 9802),
+  ]
+
+  it("reproduces sir's example: breakeven 7523.54, equilibrium 7517.75", () => {
+    const b = swingBreakeven(sirs, T(1), T(3))!
+    expect(b).toMatchObject({ high: 7545.5, low: 7490, volume: 19102, equilibrium: 7517.75 })
+    // His sheet shows 143,714,736 because it rounded each typical price to 2 dp first; unrounded is 29 less.
+    expect(b.priceVolume).toBeCloseTo(143_714_706.67, 1)
+    expect(b.breakeven).toBeCloseTo(7523.54, 2)
+  })
+
+  it("counts both pivot candles and nothing outside them", () => {
+    const b = swingBreakeven([bar(0, 1, 9999, 1, 1, 9e6), ...sirs, bar(4, 1, 9999, 1, 1, 9e6)], T(1), T(3))!
+    expect(b.high).toBe(7545.5)
+    expect(b.volume).toBe(19102)
+  })
+
+  it("no volume: the midpoint still stands, the breakeven does not", () => {
+    const b = swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3))!
+    expect(b.breakeven).toBeNull()
+    expect(b.equilibrium).toBe(7517.75)
+    expect(swingBreakeven(sirs, T(8), T(9))).toBeNull()
+  })
+
+  it("adds two bullets to the hover box, after the price change", () => {
+    const lines = strengthLines("x", swingStrength(sirs, T(0), T(3)), { from: 7490, to: 7545.5 }, swingBreakeven(sirs, T(1), T(3)))
+    expect(lines.slice(-2).map((l) => [l.label, l.value])).toEqual([["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"]])
+    const none = strengthLines("x", swingStrength(sirs, T(0), T(3)), undefined, swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3)))
+    expect(none.at(-2)?.value).toBe("—")
   })
 })

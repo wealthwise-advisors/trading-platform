@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, type RefObject } from "react"
 import { nearestBarIndex, readoutLines, type ReadoutLine, type ReadoutRow } from "@/lib/chartReadout"
 import { swingName } from "@/lib/swingHeaders"
 import { pointLines, pointsAt, type SwingPointInfo } from "@/lib/swingPoints"
-import { strengthLines, swingAt, swingStrength, type SwingSpan } from "@/lib/swingStrength"
+import { strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import type { OHLCVRecord } from "@/lib/types"
 
 interface PlotAxis {
@@ -144,17 +144,20 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
           // 10 Leg, a dotted rule, then 3 Leg.
           lines = [
             ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to),
-                             { from: sw.tenLeg.fromPrice, to: sw.tenLeg.toPrice }),
+                             { from: sw.tenLeg.fromPrice, to: sw.tenLeg.toPrice },
+                             swingBreakeven(bars, sw.tenLeg.from, sw.tenLeg.to)),
             ...(sw.threeLeg
               ? [{ label: "", value: "", kind: "divider" as const },
                  ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to),
-                                  { from: sw.threeLeg.fromPrice, to: sw.threeLeg.toPrice })]
+                                  { from: sw.threeLeg.fromPrice, to: sw.threeLeg.toPrice },
+                             swingBreakeven(bars, sw.threeLeg.from, sw.threeLeg.to))]
               : []),
             // 1 Leg Dev, the finest level, the same way (2026-11-13).
             ...(sw.oneLeg
               ? [{ label: "", value: "", kind: "divider" as const },
                  ...strengthLines(`1 Leg Dev (${sw.oneLeg.label})`, swingStrength(bars, sw.oneLeg.from, sw.oneLeg.to),
-                                  { from: sw.oneLeg.fromPrice, to: sw.oneLeg.toPrice })]
+                                  { from: sw.oneLeg.fromPrice, to: sw.oneLeg.toPrice },
+                             swingBreakeven(bars, sw.oneLeg.from, sw.oneLeg.to))]
               : []),
           ]
           swingCache.current.byKey.set(key, lines)

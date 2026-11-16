@@ -14,6 +14,7 @@
 
 import type { OHLCVRecord } from "./types"
 import type { ReadoutLine } from "./chartReadout"
+import { price } from "./priceFormat"
 import { buyerSellerSplit } from "./volumeAverage"
 
 export interface SwingStrength {
@@ -49,6 +50,39 @@ export function swingStrength(bars: ReadonlyArray<OHLCVRecord>, from: string, to
   }
 }
 
+export interface SwingBreakeven {
+  high: number
+  low: number
+  volume: number
+  /** Sum of typical price x volume over the swing's candles. */
+  priceVolume: number
+  /** priceVolume / volume: the swing's anchored VWAP. Null without volume. */
+  breakeven: number | null
+  /** (high + low) / 2: the swing's pure midpoint. */
+  equilibrium: number
+}
+
+/**
+ * Sir's swing levels (2026-11-17). Typical price (H+L+C)/3 x volume, candle by
+ * candle; the sum over the swing's total volume is the True Volume Breakeven
+ * (the VWAP anchored at the swing's start), and the swing's highest high and
+ * lowest low halve to the 50% Swing Equilibrium. Unlike swingStrength, BOTH
+ * pivot candles count: his Bar 1 is the swing low itself.
+ */
+export function swingBreakeven(bars: ReadonlyArray<OHLCVRecord>, from: string, to: string): SwingBreakeven | null {
+  const inside = bars.filter((b) => b.t >= from && b.t <= to)
+  if (!inside.length) return null
+  let high = -Infinity, low = Infinity, volume = 0, priceVolume = 0
+  for (const b of inside) {
+    high = Math.max(high, b.h)
+    low = Math.min(low, b.l)
+    if (b.v == null || !Number.isFinite(b.v)) continue
+    volume += b.v
+    priceVolume += ((b.h + b.l + b.c) / 3) * b.v
+  }
+  return { high, low, volume, priceVolume, breakeven: volume > 0 ? priceVolume / volume : null, equilibrium: (high + low) / 2 }
+}
+
 const GREEN = "#00c853"
 const RED = "#ff6b6b"
 const whole = (n: number) => Math.round(n).toLocaleString("en-US")
@@ -81,7 +115,7 @@ const pct = (part: number, total: number) => (total ? Math.round((part / total) 
  * the verdict carry green or red; labels stay plain.
  */
 export function strengthLines(heading: string, s: SwingStrength | null,
-                              move?: { from: number; to: number }): ReadoutLine[] {
+                              move?: { from: number; to: number }, levels?: SwingBreakeven | null): ReadoutLine[] {
   const head: ReadoutLine = { label: heading, value: "", kind: "heading" }
   if (!s) return [head, { label: "No bars in this stretch", value: "", bullet: true }]
   if (!s.hasVolume) return [head, { label: "No volume data", value: "", bullet: true }]
@@ -103,6 +137,10 @@ export function strengthLines(heading: string, s: SwingStrength | null,
       value: `${pts > 0 ? "▲ +" : pts < 0 ? "▼ -" : ""}${Math.abs(pts).toFixed(2)} pts`,
       valueColor: pts > 0 ? GREEN : pts < 0 ? RED : undefined,
     })
+  }
+  if (levels) {
+    lines.push({ label: "Volume Breakeven", value: price(levels.breakeven), bullet: true },
+               { label: "50% Equilibrium", value: price(levels.equilibrium), bullet: true })
   }
   return lines
 }
