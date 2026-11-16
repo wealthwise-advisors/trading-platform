@@ -681,3 +681,39 @@ class TestStrategyParamDefaults:
 
         with pytest.raises(ValueError, match="Unknown strategy id"):
             build_strategy("does_not_exist", {})
+
+
+class TestSwingStretches:
+    """Each pane's newest swing, counted on the bars it has CLOSED so far."""
+
+    @staticmethod
+    def _wavy(timeframes):
+        # _minute_bars has open == close: candles with no colour never turn. Real waves here.
+        import math
+        df = _minute_bars(480)
+        close = pd.Series([4500 + 30 * math.sin(i / 25) for i in range(len(df))], index=df.index)
+        df["open"], df["close"] = close.shift(1).fillna(close), close
+        df["high"], df["low"] = df[["open", "close"]].max(axis=1) + 0.5, df[["open", "close"]].min(axis=1) - 0.5
+        return MultiReplaySession(df=df, timeframes=timeframes, symbol="ES",
+                                  strategy_factory=lambda: MACrossoverStrategy(fast=9, slow=21))
+
+    def test_one_stretch_per_pane_inside_its_closed_bars(self):
+        s = self._wavy(["1m", "5m"])
+        while not s.is_done:
+            s.tick()
+        out = s.swing_stretches()
+        assert set(out) == {"1m", "5m"}
+        for tf, st in out.items():
+            closed = s.panes[tf].df.iloc[:s.panes[tf].cursor]
+            assert closed.index[0].isoformat() <= st["from"] <= st["to"] <= closed.index[-1].isoformat()
+            assert st["name"] and isinstance(st["up"], bool)
+
+    def test_nothing_before_a_pane_has_bars(self):
+        assert _session(["5m"]).swing_stretches() == {}
+
+    def test_it_never_reads_bars_the_clock_has_not_reached(self):
+        s = self._wavy(["1m"])
+        for _ in range(120):
+            s.tick()
+        cutoff = s.panes["1m"].df.index[s.panes["1m"].cursor - 1].isoformat()
+        assert s.swing_stretches()["1m"]["to"] <= cutoff

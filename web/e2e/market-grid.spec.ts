@@ -536,3 +536,41 @@ test("Volume average, buyers and sellers are in both tables and add up", async (
   }
   await page.close()
 })
+
+test("Live state shows each timeframe's swing levels: breakeven, 50% equilibrium, buyer control", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const page = await browser.newPage({ viewport: { width: 2600, height: 1200 } })
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+
+  const n = (s: string) => Number(s.replace(/,/g, ""))
+  const table = page.locator("table.grid-table").first()
+  const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+  const cols = ["SWING", "SWING HIGH", "SWING LOW", "SWING VOLUME", "VOLUME BREAKEVEN", "50% EQUILIBRIUM", "BUYER CONTROL"]
+  const at = cols.map((h) => headers.indexOf(h))
+  // Sir's order, side by side, just before Last signal.
+  expect(at.every((i, k) => i >= 0 && i === at[0] + k)).toBe(true)
+  const [iSwing, iHigh, iLow, iVol, iBe, iEq, iBc] = at
+  const rows = table.locator("tbody tr")
+  // The swings arrive a moment after the bars: wait for the first row's.
+  await expect(rows.first().locator("td").nth(iSwing)).toHaveText(/^[A-Z]+ [▲▼] \(.+ to .+\)$/, { timeout: 30_000 })
+  let checked = 0
+  for (const cells of await rows.evaluateAll((trs) => trs.map((tr) => [...tr.querySelectorAll("td")].map((td) => td.textContent!.trim())))) {
+    if (cells[iSwing] === "—") continue          // a timeframe with too few candles for a swing yet
+    const [high, low, be, eq] = [iHigh, iLow, iBe, iEq].map((i) => n(cells[i]))
+    expect(high).toBeGreaterThanOrEqual(low)
+    expect(be).toBeGreaterThanOrEqual(low)
+    expect(be).toBeLessThanOrEqual(high)
+    expect(eq).toBeCloseTo((high + low) / 2, 1)
+    expect(n(cells[iVol])).toBeGreaterThan(0)
+    expect(cells[iBc]).toMatch(/^[\d,]+ \(\d+%\)$/)
+    checked++
+  }
+  expect(checked).toBeGreaterThan(0)
+  if (process.env.GRID_SHOT) {
+    await rows.first().locator("td").nth(iBc).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: process.env.GRID_SHOT })
+  }
+  await page.close()
+})

@@ -60,6 +60,8 @@ export interface SwingBreakeven {
   breakeven: number | null
   /** (high + low) / 2: the swing's pure midpoint. */
   equilibrium: number
+  /** Cumulative Buyer Control: every candle's buyer volume, added up (not rounded per candle). */
+  buyers: number
 }
 
 /**
@@ -72,15 +74,16 @@ export interface SwingBreakeven {
 export function swingBreakeven(bars: ReadonlyArray<OHLCVRecord>, from: string, to: string): SwingBreakeven | null {
   const inside = bars.filter((b) => b.t >= from && b.t <= to)
   if (!inside.length) return null
-  let high = -Infinity, low = Infinity, volume = 0, priceVolume = 0
+  let high = -Infinity, low = Infinity, volume = 0, priceVolume = 0, buyers = 0
   for (const b of inside) {
     high = Math.max(high, b.h)
     low = Math.min(low, b.l)
     if (b.v == null || !Number.isFinite(b.v)) continue
     volume += b.v
     priceVolume += ((b.h + b.l + b.c) / 3) * b.v
+    buyers += b.v * (buyerSellerSplit(b)?.buyerPct ?? 0.5)
   }
-  return { high, low, volume, priceVolume, breakeven: volume > 0 ? priceVolume / volume : null, equilibrium: (high + low) / 2 }
+  return { high, low, volume, priceVolume, buyers, breakeven: volume > 0 ? priceVolume / volume : null, equilibrium: (high + low) / 2 }
 }
 
 const GREEN = "#00c853"
@@ -108,6 +111,13 @@ export function dominance(s: SwingStrength): Dominance {
 }
 
 const pct = (part: number, total: number) => (total ? Math.round((part / total) * 100) : 0)
+
+/** Cumulative Buyer Control as the grid and the hover box print it: "17,002 (89%)". */
+export function buyerControl(b: SwingBreakeven): { text: string; side: "buyers" | "sellers" | "even" } {
+  if (!(b.volume > 0)) return { text: "—", side: "even" }
+  const share = b.buyers / b.volume
+  return { text: `${whole(b.buyers)} (${Math.round(share * 100)}%)`, side: share > 0.5 ? "buyers" : share < 0.5 ? "sellers" : "even" }
+}
 
 /**
  * One stretch's lines for the hover box, five bullets: buyers, sellers, net,
@@ -141,6 +151,9 @@ export function strengthLines(heading: string, s: SwingStrength | null,
   if (levels) {
     lines.push({ label: "Volume Breakeven", value: price(levels.breakeven), bullet: true },
                { label: "50% Equilibrium", value: price(levels.equilibrium), bullet: true })
+    const bc = buyerControl(levels)
+    lines.push({ label: "Buyer Control", value: bc.text, bullet: true,
+                 valueColor: bc.side === "buyers" ? GREEN : bc.side === "sellers" ? RED : undefined })
   }
   return lines
 }

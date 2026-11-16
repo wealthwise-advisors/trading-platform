@@ -536,6 +536,15 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                             for tf, bf in result["backfill"].items()
                         },
                     })
+                elif action == "swings":
+                    # Each timeframe's newest swing, for the Live state table's
+                    # swing columns. Asked for by the client when its bars
+                    # change, not sent per frame: a count per pane per tick
+                    # would slow a fast replay for rows nobody is reading yet.
+                    await websocket.send_json({
+                        "type": "swings",
+                        "swings": await asyncio.to_thread(session.swing_stretches),
+                    })
             except asyncio.TimeoutError:
                 pass  # no control message this tick -- fall through to stepping
 

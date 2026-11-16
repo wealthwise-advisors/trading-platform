@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dominance, dominantTitle, strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "./swingStrength"
+import { buyerControl, dominance, dominantTitle, strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "./swingStrength"
 import type { OHLCVRecord } from "./types"
 
 const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
@@ -172,10 +172,19 @@ describe("swingBreakeven -- sir's swing levels (2026-11-17)", () => {
     expect(swingBreakeven(sirs, T(8), T(9))).toBeNull()
   })
 
-  it("adds two bullets to the hover box, after the price change", () => {
+  it("cumulative buyer control: sir's 17,002.4 of 19,102, 89%", () => {
+    const b = swingBreakeven(sirs, T(1), T(3))!
+    expect(b.buyers).toBeCloseTo(17002.4, 1)
+    expect(buyerControl(b)).toEqual({ text: "17,002 (89%)", side: "buyers" })
+    expect(buyerControl(swingBreakeven([bar(1, 10, 20, 10, 12, 1000)], T(1), T(1))!)).toEqual({ text: "200 (20%)", side: "sellers" })
+    expect(buyerControl(swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3))!)).toEqual({ text: "—", side: "even" })
+  })
+
+  it("adds three bullets to the hover box, after the price change", () => {
     const lines = strengthLines("x", swingStrength(sirs, T(0), T(3)), { from: 7490, to: 7545.5 }, swingBreakeven(sirs, T(1), T(3)))
-    expect(lines.slice(-2).map((l) => [l.label, l.value])).toEqual([["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"]])
+    expect(lines.slice(-3).map((l) => [l.label, l.value])).toEqual(
+      [["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"], ["Buyer Control", "17,002 (89%)"]])
     const none = strengthLines("x", swingStrength(sirs, T(0), T(3)), undefined, swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3)))
-    expect(none.at(-2)?.value).toBe("—")
+    expect(none.at(-3)?.value).toBe("—")
   })
 })

@@ -659,3 +659,20 @@ class MultiReplaySession:
 
     def bar_counts(self) -> dict[str, int]:
         return {tf: len(p.stamps) for tf, p in self.panes.items()}
+
+
+    def swing_stretches(self) -> dict[str, dict]:
+        """Each pane's newest swing (sir's count, the chart's default turn sizes) on
+        the bars it has closed so far -- never one the clock has not reached."""
+        from src.analysis.swing_count import calc_swing_count, current_swing_stretch
+
+        out: dict[str, dict] = {}
+        for tf, pane in self.panes.items():
+            closed = pane.df.iloc[:pane.cursor]
+            if closed.empty:
+                continue
+            zz10, _ = calc_swing_count(closed["high"], closed["low"], closed["close"], open_=closed["open"])
+            stretch = current_swing_stretch(zz10, closed.index[-1])
+            if stretch:
+                out[tf] = stretch
+        return out

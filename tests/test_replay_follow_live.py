@@ -99,6 +99,21 @@ class TestTheExtendAction:
             ws.send_json({"action": "extend"})
             assert ws.receive_json()["type"] == "extended"
 
+    def test_swings_reports_each_panes_newest_swing(self):
+        replay_id = _create(timeframes=["5m", "15m"])
+        with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:
+            ws.send_json({"action": "swings"})
+            assert ws.receive_json() == {"type": "swings", "swings": {}}   # no bar closed yet
+            ws.send_json({"action": "seek", "ticks": 300})
+            assert ws.receive_json()["type"] == "frames"
+            assert ws.receive_json()["type"] == "restored"
+            assert ws.receive_json()["type"] == "seeked"
+            ws.send_json({"action": "swings"})
+            reply = ws.receive_json()
+        assert reply["type"] == "swings" and set(reply["swings"]) == {"5m", "15m"}
+        for st in reply["swings"].values():
+            assert set(st) == {"swing", "name", "up", "label", "from", "to"} and st["from"] <= st["to"]
+
     def test_the_socket_survives_repeated_extends(self):
         replay_id = _create()
         with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:

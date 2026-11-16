@@ -512,3 +512,29 @@ def calc_fine_swings(open_: pd.Series, high: pd.Series, low: pd.Series, close: p
                  for n, (t, k, pr, _) in enumerate(kept, start=1)]
     rows.sort(key=lambda d: d["pos"])
     return _frame(rows, idx, lambda p: p["seq"])
+
+
+def current_swing_stretch(zz10: pd.DataFrame, last_time) -> dict | None:
+    """
+    The newest swing's 10 Leg stretch, for the Market Grid's swing columns.
+
+    The SAME stretch the chart's swing box measures (`tenLeg` in
+    web/src/components/charts/CandlestickChart.tsx) -- change one, change the
+    other: first point to last point; a swing with one point so far runs from
+    the last point of the swing before it, or to `last_time` when it is the
+    very first.
+    """
+    if zz10.empty:
+        return None
+    run = int(zz10["swing"].max())
+    grp, prev = zz10[zz10["swing"] == run], zz10[zz10["swing"] < run]
+    first, last = grp["label"].iloc[0], grp["label"].iloc[-1]
+    if len(grp) > 1 or prev.empty:
+        start, end, label = grp.index[0], (grp.index[-1] if len(grp) > 1 else last_time), f"{first} to {last}"
+    else:
+        start, end, label = prev.index[-1], grp.index[0], f"start to {last}"
+    body = grp[grp["label"] != "0"]
+    # In an up swing the odd points are highs; with only its origin, a low start means up.
+    up = body["type"].iloc[0] == "H" if len(body) else grp["type"].iloc[0] == "L"
+    return {"swing": run, "name": swing_name(run), "up": bool(up), "label": label,
+            "from": pd.Timestamp(start).isoformat(), "to": pd.Timestamp(end).isoformat()}

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.analysis.swing_count import _Pt, calc_swing_count, count_swings, roman, swing_name
+from src.analysis.swing_count import _Pt, calc_swing_count, count_swings, current_swing_stretch, roman, swing_name
 
 STEP = 4  # bars between turning points
 
@@ -501,3 +501,36 @@ def test_3_leg_points_start_in_the_first_swing():
     first_swing = zz10[zz10["swing"] == zz10["swing"].min()]
     end = first_swing.index.max()
     assert len(zz3[zz3.index <= end]) > 0
+
+
+class TestCurrentSwingStretch:
+    """The newest swing's 10 Leg stretch for the Market Grid -- the same stretch the chart's
+    swing box measures (CandlestickChart.tsx `tenLeg`)."""
+
+    @staticmethod
+    def _zz(rows):
+        idx = pd.DatetimeIndex([pd.Timestamp("2026-11-16 09:30") + pd.Timedelta(minutes=m) for m, *_ in rows])
+        return pd.DataFrame({"price": [r[1] for r in rows], "type": [r[2] for r in rows],
+                             "swing": [r[3] for r in rows], "label": [r[4] for r in rows]}, index=idx)
+
+    LAST = pd.Timestamp("2026-11-16 12:00")
+
+    def test_no_points_no_stretch(self):
+        assert current_swing_stretch(self._zz([]), self.LAST) is None
+
+    def test_first_point_to_last_point_of_the_newest_swing(self):
+        zz = self._zz([(0, 100, "L", 1, "0"), (5, 110, "H", 1, "1"), (9, 104, "L", 1, "2"),
+                       (20, 90, "L", 2, "1"), (26, 96, "H", 2, "2"), (31, 85, "L", 2, "3")])
+        assert current_swing_stretch(zz, self.LAST) == {
+            "swing": 2, "name": "B", "up": False, "label": "1 to 3",
+            "from": "2026-11-16T09:50:00", "to": "2026-11-16T10:01:00"}
+
+    def test_a_swing_with_one_point_runs_from_where_the_last_swing_ended(self):
+        zz = self._zz([(0, 100, "L", 1, "0"), (5, 110, "H", 1, "1"), (20, 90, "L", 2, "1")])
+        assert current_swing_stretch(zz, self.LAST) == {
+            "swing": 2, "name": "B", "up": False, "label": "start to 1",
+            "from": "2026-11-16T09:35:00", "to": "2026-11-16T09:50:00"}
+
+    def test_a_lone_first_point_runs_to_the_latest_candle(self):
+        s = current_swing_stretch(self._zz([(0, 100, "L", 1, "0")]), self.LAST)
+        assert (s["from"], s["to"], s["up"]) == ("2026-11-16T09:30:00", "2026-11-16T12:00:00", True)

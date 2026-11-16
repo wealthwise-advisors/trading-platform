@@ -471,6 +471,17 @@ export interface ReplayExtendedMessage {
   is_done: boolean
 }
 
+/** A timeframe's newest swing and its 10 Leg stretch (first point to last point),
+ *  as current_swing_stretch() in src/analysis/swing_count.py reports it. */
+export interface SwingStretch {
+  swing: number
+  name: string
+  up: boolean
+  label: string
+  from: string
+  to: string
+}
+
 export type ReplayWsMessage =
   | ReplayFramesMessage
   | ReplayFrameMessage
@@ -484,6 +495,8 @@ export type ReplayWsMessage =
   // Sent between the fast-forward's frame and "seeked": every pane's WHOLE
   // history, so a rebuilt session shows what it showed before (2026-10-27).
   | { type: "restored"; backfill: Record<string, ReplayBackfill> }
+  // Reply to the `swings` action: each timeframe's newest swing.
+  | { type: "swings"; swings: Record<string, SwingStretch> }
   | { type: "error"; message: string }
 
 export interface SchwabStatus {

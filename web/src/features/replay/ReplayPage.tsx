@@ -82,6 +82,8 @@ import {
   waitForServer,
 } from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
+import { buyerControl, swingBreakeven } from "@/lib/swingStrength"
+import type { SwingStretch } from "@/lib/types"
 
 type Status = "idle" | "loading" | "ready" | "playing" | "paused" | "done"
 
@@ -409,6 +411,8 @@ export function ReplayPage() {
   // single-pane state; a one-timeframe session simply has one key.
   const [panes, setPanes] = useState<Record<string, PaneState>>({})
   const [activeTimeframes, setActiveTimeframes] = useState<string[]>([])
+  /** Each timeframe's newest swing, for the Live state table's swing columns. */
+  const [swings, setSwings] = useState<Record<string, SwingStretch>>({})
   const [baseTimeframe, setBaseTimeframe] = useState("")
   /** Resolution the session's bars were fetched at. Timeframes finer than this
    *  cannot be added to the running session -- resampling down would invent
@@ -600,6 +604,7 @@ export function ReplayPage() {
     setTicksProcessed(0)
     setMarketTime(null)
     setTape([])
+    setSwings({})
   }
 
   /**
@@ -787,6 +792,8 @@ export function ReplayPage() {
           } else {
             setStatus("ready")
           }
+        } else if (msg.type === "swings") {
+          setSwings(msg.swings)
         } else if (msg.type === "error") {
           setError(msg.message); setStatus("idle")
         }
@@ -1375,6 +1382,30 @@ export function ReplayPage() {
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showVp, shownTfKey, panes, vpBins, vpValueArea])
+
+  // Ask the server for each timeframe's newest swing once the bars stop moving
+  // -- paused, finished, or between live candles. NOT while a replay is running:
+  // the server counts the swings between two ticks, and asking every second
+  // slowed playback enough to fail the grid's own tests (2026-11-17). So the
+  // swing columns show the last settled swing until the tape rests.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const ws = wsRef.current
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "swings" }))
+    }, 700)
+    return () => clearTimeout(id)
+  }, [ticksProcessed, activeTimeframes])
+
+  /** Sir's swing levels (2026-11-17) for each timeframe's newest swing, off the pane's own bars. */
+  const swingLevels = useMemo(() => {
+    const out = new Map<string, ReturnType<typeof swingBreakeven>>()
+    for (const tf of shownTimeframes) {
+      const st = swings[tf]
+      if (st && panes[tf]) out.set(tf, swingBreakeven(panes[tf].bars, st.from, st.to))
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownTfKey, panes, swings])
 
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
   // ── POC Match / POC vs Avg on the Consolidated tape ────────────────
@@ -2674,6 +2705,16 @@ export function ReplayPage() {
                       {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                       {showVp && vsAvgHeader("VA Low Average", valCols.average,
                         "Each timeframe's VA Low against the average VA Low of the selected timeframes")}
+                      <th className="text-left p-2 font-medium whitespace-nowrap" title="The timeframe's newest swing and its 10 Leg points">Swing</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap">Swing High</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap">Swing Low</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap">Swing Volume</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="Typical price (H+L+C)/3 × volume, added over the swing's candles, ÷ the swing's total volume">Volume Breakeven</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="(Swing High + Swing Low) ÷ 2">50% Equilibrium</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="Buyer volume of every candle in the swing, added up, and its share of the swing's volume">Buyer Control</th>
                       <th className="text-left p-2 font-medium">Last signal</th>
                     </tr>
                   </thead>
@@ -2778,6 +2819,29 @@ export function ReplayPage() {
                           {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#2f80ff" }}>{num(vp?.val)}</td>}
                           {showVp && vsAvgCell("VA Low", vp?.val, valCols.average)}
+                          {(() => {
+                            const st = swings[tf]
+                            const lv = swingLevels.get(tf) ?? null
+                            const bc = lv ? buyerControl(lv) : null
+                            return (
+                              <>
+                                <td className="p-2 font-mono whitespace-nowrap" data-testid={`swing-${tf}`}
+                                    style={st ? { color: st.up ? GOOD : CRITICAL } : undefined}
+                                    title={st ? `10 Leg points ${st.label}` : undefined}>
+                                  {st ? `${st.name} ${st.up ? "▲" : "▼"} (${st.label})` : "—"}
+                                </td>
+                                <td className="p-2 text-right font-mono">{num(lv?.high)}</td>
+                                <td className="p-2 text-right font-mono">{num(lv?.low)}</td>
+                                <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(lv?.volume)}</td>
+                                <td className="p-2 text-right font-mono">{num(lv?.breakeven)}</td>
+                                <td className="p-2 text-right font-mono">{num(lv?.equilibrium)}</td>
+                                <td className="p-2 text-right font-mono whitespace-nowrap"
+                                    style={bc && bc.side !== "even" ? { color: bc.side === "buyers" ? GOOD : CRITICAL } : undefined}>
+                                  {bc?.text ?? "—"}
+                                </td>
+                              </>
+                            )
+                          })()}
                           <td className="p-2 text-xs">
                             {pane.lastSignal ? (
                               <span style={{ color: pane.lastSignal.type === "BUY" ? GOOD : pane.lastSignal.type === "SELL" ? CRITICAL : "#e3b341" }}>

@@ -751,7 +751,8 @@ A React 19 single-page application over the FastAPI backend.
 - ➜ **Swing deviation sliders** — 10, 3 and 1 Leg minimum move sizes in the side panel redraw the chart's swings; 1 Leg starts at 0 (every candle-close turn)
 - ➜ **Hover readout** — every panel's values at once, plus buyers vs sellers per swing
 - ➜ **Swing titles** — each swing names its dominant side and share, e.g. (Dominant: Buyers 66%); zoomed out, 3 Leg points thin to dots until there is room
-- ➜ **Swing levels** — the swing hover box adds Volume Breakeven (the swing's anchored VWAP: typical price × volume ÷ total volume) and 50% Equilibrium (midpoint of the swing's high and low), for 10 Leg, 3 Leg and 1 Leg
+- ➜ **Swing levels** — the swing hover box adds Volume Breakeven (the swing's anchored VWAP: typical price × volume ÷ total volume) 50% Equilibrium (midpoint of the swing's high and low) and Buyer Control (buyer volume of every candle, added up, with its share), for 10 Leg, 3 Leg and 1 Leg
+- ➜ **Swing levels in the Market Grid** — Live state shows each timeframe's newest swing: Swing, Swing High, Swing Low, Swing Volume, Volume Breakeven, 50% Equilibrium, Buyer Control
 - ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout
 - ➜ **Live** — updates every 15 s on Schwab data
 
