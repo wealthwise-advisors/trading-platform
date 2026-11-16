@@ -28,6 +28,36 @@ import requests
 import threading
 import webbrowser
 import urllib.parse
+
+_SAVE_LOCK = threading.Lock()
+
+
+def save_json_whole(path: str, data: dict, attempts: int = 50) -> None:
+    """Write beside the file, then swap it in: never a half-written token file.
+
+    Each save gets its own temporary name and saves in this process take turns:
+    a shared "<file>.tmp" let overlapping saves rename each other's file away
+    (WinError 2). On Windows the swap is refused while a reader has the file
+    open (WinError 32 / 5), so it is retried briefly instead of giving up and
+    dropping a freshly refreshed token.
+    """
+    tmp = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
+    with _SAVE_LOCK:
+        try:
+            with open(tmp, "w") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+                f.flush()
+            for i in range(attempts):
+                try:
+                    os.replace(tmp, path)
+                    return
+                except PermissionError:
+                    if i == attempts - 1:
+                        raise
+                    time.sleep(0.05)
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
 from .stream import Stream
 
 
@@ -236,13 +266,9 @@ class Client:
         :type token_dictionary: dict
         """
         try:
-            tmp = f"{self._tokens_file}.tmp"   # write beside it, then swap: never a half-written file
-            with open(tmp, 'w') as f:
-                toWrite = {"access_token_issued": at_issued.isoformat(), "refresh_token_issued": rt_issued.isoformat(),
-                           "token_dictionary": token_dictionary}
-                json.dump(toWrite, f, ensure_ascii=False, indent=4)
-                f.flush()
-            os.replace(tmp, self._tokens_file)
+            save_json_whole(self._tokens_file, {"access_token_issued": at_issued.isoformat(),
+                                                "refresh_token_issued": rt_issued.isoformat(),
+                                                "token_dictionary": token_dictionary})
         except Exception as e:
             print(e)
 
