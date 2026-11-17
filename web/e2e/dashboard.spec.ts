@@ -729,7 +729,7 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   // Swing levels (2026-11-17): every swing carries its breakeven label; the checkbox takes them off.
   const levelLabels = () => own.evaluate(() => {
     const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
-    return (gd.layout.annotations ?? []).map((a) => a.text ?? "").map((t) => t.replace(/<br>/g, " | ").replace(/<[^>]*>/g, "")).filter((t) => /^•  Buyers \/ Sellers +\d+% \/ \d+% \| •  Volume Breakeven +[\d,.]+ \| •  50% Equilibrium +[\d,.]+$/.test(t))
+    return (gd.layout.annotations ?? []).map((a) => a.text ?? "").map((t) => t.replace(/<br>/g, " | ").replace(/<[^>]*>/g, "")).filter((t) => /^•  Range +10 Leg .+ \| •  Buyers \/ Sellers +\d+% \/ \d+% \| •  Volume Breakeven +[\d,.]+ \| •  50% Equilibrium +[\d,.]+$/.test(t))
   })
   expect((await levelLabels()).length).toBeGreaterThan(0)
   expect((await levelLabels()).length).toBeLessThanOrEqual(titles.length)
