@@ -129,14 +129,19 @@ export function strengthLines(heading: string, s: SwingStrength | null,
   const head: ReadoutLine = { label: heading, value: "", kind: "heading" }
   if (!s) return [head, { label: "No bars in this stretch", value: "", bullet: true }]
   if (!s.hasVolume) return [head, { label: "No volume data", value: "", bullet: true }]
-  const both = s.added + s.subtracted
-  const d = dominance(s)
+  // Sir's Buyer Control (2026-11-17) replaces the 10 Nov winner-takes-all count
+  // wherever the swing's levels are known: one rule, one number, everywhere.
+  const useLevels = !!levels && levels.volume > 0
+  const buyers = useLevels ? levels!.buyers : s.added
+  const sellers = useLevels ? levels!.volume - levels!.buyers : s.subtracted
+  const both = buyers + sellers
+  const d = useLevels ? controlOf(levels!) : dominance(s)
   const tone = d.side === "buyers" ? GREEN : d.side === "sellers" ? RED : undefined
   const lines: ReadoutLine[] = [
     head,
-    { label: "Buyers", value: `+${whole(s.added)} (${pct(s.added, both)}%)`, valueColor: GREEN, bullet: true },
-    { label: "Sellers", value: `-${whole(s.subtracted)} (${pct(s.subtracted, both)}%)`, valueColor: RED, bullet: true },
-    { label: "Net", value: signed(s.net), valueColor: tone, bullet: true },
+    { label: "Buyers", value: `+${whole(buyers)} (${pct(buyers, both)}%)`, valueColor: GREEN, bullet: true },
+    { label: "Sellers", value: `-${whole(sellers)} (${pct(sellers, both)}%)`, valueColor: RED, bullet: true },
+    { label: "Net", value: signed(buyers - sellers), valueColor: tone, bullet: true },
     { label: "Dominant", bullet: true, valueColor: tone,
       value: d.side === "even" ? "EVEN" : `${d.side.toUpperCase()} ${Math.round(d.share)}%` },
   ]
@@ -151,22 +156,25 @@ export function strengthLines(heading: string, s: SwingStrength | null,
   if (levels) {
     lines.push({ label: "Volume Breakeven", value: price(levels.breakeven), bullet: true },
                { label: "50% Equilibrium", value: price(levels.equilibrium), bullet: true })
-    const bc = buyerControl(levels)
-    lines.push({ label: "Buyer Control", value: bc.text, bullet: true,
-                 valueColor: bc.side === "buyers" ? GREEN : bc.side === "sellers" ? RED : undefined })
   }
   return lines
 }
 
+/** Who controlled a swing by sir's Buyer Control: buyer volume over all the swing's volume. */
+function controlOf(b: SwingBreakeven): Dominance {
+  const share = (b.buyers / b.volume) * 100
+  return share > 50 ? { side: "buyers", share } : share < 50 ? { side: "sellers", share: 100 - share } : { side: "even", share: 50 }
+}
+
 /**
  * Beside a swing's title: who dominated it and by how much, "(Dominant: Buyers
- * 66%)" in green or "(Dominant: Sellers 58%)" in red -- the same verdict as the
- * hover box's 10 Leg Dev "Dominant" line (2026-11-14: "just who is dominant and
- * its percentage"; both sides read as confusing).
+ * 56%)" in green or "(Dominant: Sellers 60%)" in red. Since 2026-11-17 by sir's
+ * Buyer Control, the same number as the swing's box and hover -- the 10 Nov
+ * winner-takes-all count left two different percentages on one swing.
  */
-export function dominantTitle(s: SwingStrength | null): string | null {
-  if (!s || !s.hasVolume) return null
-  const d = dominance(s)
+export function dominantTitle(b: SwingBreakeven | null): string | null {
+  if (!b || !(b.volume > 0)) return null
+  const d = controlOf(b)
   if (d.side === "even") return `(Dominant: Even 50%)`
   const color = d.side === "buyers" ? GREEN : RED
   return `(<span style="color:${color}"><b>Dominant: ${d.side === "buyers" ? "Buyers" : "Sellers"} ${Math.round(d.share)}%</b></span>)`
@@ -200,6 +208,8 @@ export interface SwingLevelMarks {
   leader: string
   /** In full, for sir: "Buyers in control (89%)". */
   control: string
+  /** Buyers' whole-number share of the swing's volume; sellers are 100 minus it. */
+  buyerPct: number
 }
 
 /**
@@ -216,5 +226,6 @@ export function swingLevelMarks(bars: ReadonlyArray<OHLCVRecord>, from: string, 
   const share = Math.round((side === "sellers" ? 1 - buyerShare : buyerShare) * 100)
   const who = side === "buyers" ? "Buyers" : side === "sellers" ? "Sellers" : "Even"
   return { from, to, breakeven: lv.breakeven, equilibrium: lv.equilibrium, side, leader: `${who} ${share}%`,
-           control: side === "even" ? "Buyers and sellers even (50%)" : `${who} in control (${share}%)` }
+           control: side === "even" ? "Buyers and sellers even (50%)" : `${who} in control (${share}%)`,
+           buyerPct: Math.round(buyerShare * 100) }
 }

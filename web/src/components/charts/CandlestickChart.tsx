@@ -59,7 +59,7 @@ import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
-import { dominantTitle, swingLevelMarks, swingStrength, type SwingSpan } from "@/lib/swingStrength"
+import { dominantTitle, swingBreakeven, swingLevelMarks, type SwingSpan } from "@/lib/swingStrength"
 import { swingName, titleLevel, titleWidthPx, type PlacedTitle } from "@/lib/swingHeaders"
 import { swingStarts, type SwingPointInfo } from "@/lib/swingPoints"
 import { arrowNote, channelShapes, measureShape } from "@/lib/drawingTools"
@@ -1422,16 +1422,6 @@ export function CandlestickChart({
       return level
     }
 
-    // The swing before, for "Volume Breakeven moved up / down ... from Swing C".
-    let prevLevel: { name: string; breakeven: number } | null = null
-    // Zoomed out over many swings, full boxes covered the candles: then only the
-    // latest swing keeps its full box, the rest a one-line box (details on hover).
-    const swingsOnScreen = swingGroups.filter(([, grp], k) => {
-      const s0 = new Date(grp[0].t).getTime()
-      const s1 = new Date(k + 1 < swingGroups.length ? swingGroups[k + 1][1][0].t : t[t.length - 1]).getTime()
-      return !shownWin || (s1 >= shownWin[0] && s0 <= shownWin[1])
-    }).length
-    const compact = swingsOnScreen > 2
     swingGroups.forEach(([swingNum, grp], i) => {
       const x0 = grp[0].t
       const x1 = i + 1 < swingGroups.length ? swingGroups[i + 1][1][0].t : t[t.length - 1]
@@ -1474,7 +1464,7 @@ export function CandlestickChart({
         ? { from: grp[0].t, to: grp.length > 1 ? grp[grp.length - 1].t : x1, label: `${firstLabel} to ${lastLabel}`,
             fromPrice: grp[0].price, toPrice: grp[grp.length - 1].price }
         : { from: prevEnd.t, to: grp[0].t, label: `start to ${lastLabel}`, fromPrice: prevEnd.price, toPrice: grp[0].price }
-      const sides = dominantTitle(swingStrength(bars, tenLeg.from, tenLeg.to))
+      const sides = dominantTitle(swingBreakeven(bars, tenLeg.from, tenLeg.to))
       const tagHtml = sides ? `  ${sides}` : ""
       // One line: three-line titles stacked in two rows and took the top of the
       // chart (2026-11-13). The 10 / 3 / 1 Leg Dev ranges are in the hover box.
@@ -1486,89 +1476,70 @@ export function CandlestickChart({
       // they read as half lines (user, 2026-11-17).
       const marks = swingLevelsOn ? swingLevelMarks(bars, tenLeg.from, tenLeg.to) : null
       if (marks) {
-        // Design 1, picked by the user (2026-11-17): a band from the 50% Equilibrium
-        // to the Volume Breakeven across the whole swing, the breakeven as its edge,
-        // and one chip saying who controlled the swing. Cyan buyers / orange sellers:
-        // two clearly different hues, never red / green (see sir-color-distinction).
-        const zone = marks.side === "sellers" ? "#ff8a3d" : "#26c6da"
+        // Each swing: a light band from its 50% Equilibrium to its Volume Breakeven,
+        // a thin breakeven line ending in a dot, and one small dark box. Kept small
+        // and quiet: the big coloured boxes read as bulky (user, 2026-11-17). Only
+        // who was in control is coloured, in the standard green / red.
+        const tone = marks.side === "sellers" ? "#ff5252" : marks.side === "buyers" ? "#00e676" : "#e5e7eb"
         const [bandLo, bandHi] = [Math.min(marks.breakeven, marks.equilibrium), Math.max(marks.breakeven, marks.equilibrium)]
         shapes.push(
           { type: "rect", xref: "x", yref: "y", x0, x1, y0: bandLo, y1: bandHi,
-            fillcolor: zone, opacity: 0.35, line: { width: 0 }, layer: "below" },
+            fillcolor: tone, opacity: 0.12, line: { width: 0 }, layer: "below" },
           { type: "line", xref: "x", yref: "y", x0, x1, y0: marks.breakeven, y1: marks.breakeven,
-            line: { color: zone, width: 4 } },
+            line: { color: tone, width: 2 } },
         )
-        // The chip sits over the visible part of its swing, just under the titles.
-        // It is pinned to a real candle: a point in a hidden gap (a weekend, the
-        // night) is not drawn, which lost Swing A's chip on 15m. Rows are chosen
-        // by the titles' own overlap check, in pixels.
+        // The box sits over the visible part of its swing, just under the titles,
+        // pinned to a real candle (a point in a hidden gap is not drawn). Rows come
+        // from the titles' own overlap check, in pixels.
         const sx0 = new Date(x0).getTime(), sx1 = new Date(x1).getTime()
         const a = shownWin ? Math.max(sx0, shownWin[0]) : sx0
         const b = shownWin ? Math.min(sx1, shownWin[1]) : sx1
-        let at: string | null = null, gap = Infinity
+        let at: string | null = null, last: string | null = null, gap = Infinity
         for (const tt of t) {
           const ms = new Date(tt).getTime()
-          if (ms >= a && ms <= b && Math.abs(ms - (a + b) / 2) < gap) { at = tt; gap = Math.abs(ms - (a + b) / 2) }
+          if (ms < a || ms > b) continue
+          last = tt
+          if (Math.abs(ms - (a + b) / 2) < gap) { at = tt; gap = Math.abs(ms - (a + b) / 2) }
+        }
+        // The dot where the swing's breakeven line ends.
+        if (last) {
+          data.push({
+            type: "scatter", mode: "markers", x: [last], y: [marks.breakeven],
+            marker: { size: 7, color: tone, line: { color: "#0b0d14", width: 1 } },
+            showlegend: false, hoverinfo: "skip", xaxis: "x", yaxis: "y",
+          } as unknown as Data)
         }
         if (at) {
-          // Everything in full words, no abbreviations: sir reads these (user, 2026-11-17).
-          const lines = [`<b>Swing ${swingName(swingNum)} — ${marks.control}</b>`,
-            `Volume Breakeven ${fmtPrice(marks.breakeven)}   ·   50% Equilibrium ${fmtPrice(marks.equilibrium)}`]
-          // Swing to swing: how far value moved from the swing before.
-          if (prevLevel) {
-            const d = marks.breakeven - prevLevel.breakeven
-            lines.push(d === 0 ? `Volume Breakeven unchanged from Swing ${prevLevel.name}`
-              : `Volume Breakeven moved ${d > 0 ? "up" : "down"} ${fmtPrice(Math.abs(d))} from Swing ${prevLevel.name}`)
-          }
-          // The swing still running: where the price is now against its breakeven.
-          const lastBar = bars[bars.length - 1]
-          if (i === swingGroups.length - 1 && lastBar) {
-            const d = lastBar.c - marks.breakeven
-            lines.push(`<b>Price now ${fmtPrice(lastBar.c)} — ${d === 0 ? "at" : `${fmtPrice(Math.abs(d))} ${d > 0 ? "above" : "below"}`} the Volume Breakeven</b>`)
-          }
-          const latest = i === swingGroups.length - 1
-          const text = compact && !latest ? lines[0] : lines.join("<br>")
-          const widthPx = titleWidthPx(text) * 1.1
-          const frac = screenFraction(new Date(at).getTime(), shownWin)
-          const anchor = frac != null && frac * plotAreaPx < widthPx / 2 ? "left"
-            : frac != null && (1 - frac) * plotAreaPx < widthPx / 2 ? "right" : "center"
-          const xPx = anchor === "left" ? widthPx / 2 : anchor === "right" ? plotAreaPx - widthPx / 2
-            : (frac ?? 0.5) * plotAreaPx
-          // Zoomed out, the latest swing's full box goes to the bottom of the price
-          // chart, clear of the one-line boxes along the top.
-          const atBottom = compact && latest
-          const row = atBottom ? 0 : titleLevel(placedChips, xPx, widthPx)
-          if (!atBottom) placedChips.push({ xPx, widthPx, level: row })
-          // The line says what it is, in words, where the swing begins on screen.
+          // Three points, label and value, inside the swing's dotted area. No heading:
+          // the swing's name and "Dominant" are in its title above (user, 2026-11-17).
+          const text = [
+            // Both sides, adding to 100: "Buyer Control: Sellers 60%" read as a contradiction (user, 2026-11-17).
+            `•  Buyers / Sellers   <span style="color:#00e676"><b>${marks.buyerPct}%</b></span>`
+              + ` / <span style="color:#ff5252"><b>${100 - marks.buyerPct}%</b></span>`,
+            `•  Volume Breakeven   <b>${fmtPrice(marks.breakeven)}</b>`,
+            `•  50% Equilibrium   <b>${fmtPrice(marks.equilibrium)}</b>`,
+          ].join("<br>")
+          // From the swing's first visible candle, so the box sits inside its dotted
+          // area; near the right edge it hangs back from the swing's last candle.
           let first: string | null = null
           for (const tt of t) { const ms = new Date(tt).getTime(); if (ms >= a && ms <= b) { first = tt; break } }
-          if (first && (!compact || i === swingGroups.length - 1)) {
-            levelBoxes.push({
-              x: first, xref: "x", xanchor: "left", y: marks.breakeven, yref: "y", yanchor: "bottom", yshift: 3,
-              text: `Volume Breakeven ${fmtPrice(marks.breakeven)}`, showarrow: false,
-              font: { color: "#ffffff", size: 10, family: "Arial" }, bgcolor: "rgba(0,0,0,0.7)", borderpad: 2,
-            })
-          }
+          const widthPx = titleWidthPx(text) * 0.9
+          const startFrac = screenFraction(new Date(first ?? at).getTime(), shownWin) ?? 0
+          const fromRight = startFrac * plotAreaPx + widthPx > plotAreaPx
+          const xPx = fromRight ? plotAreaPx - widthPx / 2 : startFrac * plotAreaPx + widthPx / 2
+          const row = titleLevel(placedChips, xPx, widthPx)
+          placedChips.push({ xPx, widthPx, level: row })
           levelBoxes.push({
-            // Near an edge the chip is pinned to the plot's edge (paper), so it stays whole.
-            ...(anchor === "center" ? { x: at, xref: "x" as const } : { x: anchor === "left" ? 0.004 : 0.996, xref: "paper" as const }),
-            xanchor: anchor,
-            y: atBottom ? domains[0][0] : domains[0][1], yref: "paper", yanchor: atBottom ? "bottom" : "top",
-            yshift: atBottom ? 6 : -6 - row * (compact ? 26 : 62),
-            // Only a one-line box needs a hover: a box with a hover catches the mouse,
-            // and a full box covering the chart stopped it being dragged (2026-11-17).
-            hovertext: compact && !latest ? [`<b>Swing ${swingName(swingNum)}</b>`,
-                        `Volume Breakeven ${fmtPrice(marks.breakeven)}: the swing's average price, weighted by volume`,
-                        `50% Equilibrium ${fmtPrice(marks.equilibrium)}: the middle of the swing's high and low`,
-                        `${marks.control}: share of the swing's volume that was buying or selling`].join("<br>") : undefined,
-            text,
-            showarrow: false, align: "center",
-            font: { color: "#ffffff", size: 11, family: "Arial" },
-            bgcolor: zone, bordercolor: zone, borderwidth: 1, borderpad: 5, opacity: 0.95,
+            ...(fromRight ? { x: 0.996, xref: "paper" as const, xanchor: "right" as const }
+              : { x: first ?? at, xref: "x" as const, xanchor: "left" as const, xshift: 4 }),
+            y: domains[0][1], yref: "paper", yanchor: "top", yshift: -6 - row * 50,
+            // No pop-up of its own: it opened over the swing hover box (user, 2026-11-17).
+            text, showarrow: false, align: "left",
+            font: { color: "#e5e7eb", size: 10, family: "Arial" },
+            bgcolor: "rgba(11,13,20,0.85)", bordercolor: "rgba(255,255,255,0.25)", borderwidth: 1, borderpad: 5,
           })
         }
       }
-      prevLevel = marks ? { name: swingName(swingNum), breakeven: marks.breakeven } : null
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,
         tenLeg,
@@ -2241,12 +2212,10 @@ export function CandlestickChart({
         ...(swingLevelsOn ? [
           "",
           "<b>Swing levels</b> (checkbox \"Swing levels\")",
-          "Band = from the swing's 50% Equilibrium (its middle) to its Volume Breakeven",
-          "Solid edge = Volume Breakeven: the swing's average price, weighted by volume",
-          "Cyan = buyers controlled the swing · orange = sellers",
-          "Thick line = the swing's Volume Breakeven, named on the line",
-          "Box on top = the swing, who was in control, its Volume Breakeven and 50% Equilibrium,",
-          "how far the Volume Breakeven moved from the swing before, and (latest swing) the price now",
+          "Line with a dot = the swing's Volume Breakeven (its average price, weighted by volume)",
+          "Light band = from the swing's 50% Equilibrium (its middle) to its Volume Breakeven",
+          "Green = buyers in control of the swing · red = sellers",
+          "Box in the swing = Buyers / Sellers share of its volume, Volume Breakeven, 50% Equilibrium",
         ] : []),
       ].join("<br>"),
       hoverlabel: { bgcolor: BG, bordercolor: "rgba(163,163,194,0.6)", font: { color: "white", size: 11 } },

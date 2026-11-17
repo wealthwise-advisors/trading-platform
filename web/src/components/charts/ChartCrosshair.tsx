@@ -191,7 +191,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
                left: box.onRight ? reading.x + 8 + (box.beside ?? 0)
                                  : reading.x - (box.width ?? BOX_WIDTH) - 8 - (box.beside ?? 0),
                padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
-               background: "rgba(10,10,16,0.96)", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
+               // Solid: at 96% the swing boxes behind showed through and read as merged text (2026-11-17).
+               background: "#0a0a10", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
              }}>
           {/* A titled box with sections (the swing box) gets a solid rule
               under its title; the study boxes keep their compact form. */}

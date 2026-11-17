@@ -104,24 +104,36 @@ describe("dominance", () => {
   it("an even split is even", () => expect(of(50, 50).side).toBe("even"))
 })
 
-describe("dominantTitle", () => {
-  // Only who won the swing and by how much, beside its name (2026-11-14:
-  // "just write who is dominant and its percentage"). The split is in the hover box.
-  it("the winning side and its share of the volume", () => {
-    // +60 (buyers 60 / 40) then -55 (sellers 55 / 45): buyers win with 52%.
-    const slight = swingStrength([bar(1, 10, 20, 10, 16, 100), bar(2, 10, 20, 10, 14.5, 100)], T(0), T(2))
-    expect(dominantTitle(slight)!.replace(/<[^>]*>/g, "")).toBe("(Dominant: Buyers 52%)")
-    expect(dominantTitle(slight)).toContain("#00c853")
+describe("dominantTitle -- by sir's Buyer Control since 2026-11-17", () => {
+  const sirs = [bar(1, 7495, 7510, 7490, 7505, 4200), bar(2, 7505, 7525, 7502, 7522, 5100), bar(3, 7522, 7545.5, 7520, 7544.5, 9802)]
+
+  it("buyer volume over all the swing's volume: sir's example is Buyers 89%", () => {
+    const t = dominantTitle(swingBreakeven(sirs, T(1), T(3)))!
+    expect(t.replace(/<[^>]*>/g, "")).toBe("(Dominant: Buyers 89%)")
+    expect(t).toContain("#00c853")
+  })
+
+  it("both sides of every candle count: buyers 60 + 45 of 200 is 53%, not the old rule's 52%", () => {
+    const two = [bar(1, 10, 20, 10, 16, 100), bar(2, 10, 20, 10, 14.5, 100)]
+    expect(dominantTitle(swingBreakeven(two, T(1), T(2)))!.replace(/<[^>]*>/g, "")).toBe("(Dominant: Buyers 53%)")
   })
 
   it("sellers in red", () => {
-    const down = swingStrength([bar(1, 10, 20, 10, 11, 1000)], T(0), T(1))
-    expect(dominantTitle(down)!.replace(/<[^>]*>/g, "")).toBe("(Dominant: Sellers 100%)")
-    expect(dominantTitle(down)).toContain("#ff6b6b")
+    const down = dominantTitle(swingBreakeven([bar(1, 10, 20, 10, 11, 1000)], T(1), T(1)))!
+    expect(down.replace(/<[^>]*>/g, "")).toBe("(Dominant: Sellers 90%)")
+    expect(down).toContain("#ff6b6b")
+  })
+
+  it("the hover's Buyers, Sellers and Dominant use the same rule when the levels are given", () => {
+    const lines = strengthLines("x", swingStrength(sirs, T(0), T(3)), undefined, swingBreakeven(sirs, T(1), T(3)))
+    const v = (label: string) => lines.find((l) => l.label === label)?.value
+    expect([v("Buyers"), v("Sellers"), v("Dominant")]).toEqual(["+17,002 (89%)", "-2,100 (11%)", "BUYERS 89%"])
+    expect(lines.map((l) => l.label)).not.toContain("Buyer Control")
   })
 
   it("nothing to show without volume", () => {
-    expect(dominantTitle(swingStrength([bar(1, 1, 2, 1, 2, null)], T(0), T(1)))).toBeNull()
+    expect(dominantTitle(swingBreakeven([bar(1, 1, 2, 1, 2, null)], T(1), T(1)))).toBeNull()
+    expect(dominantTitle(null)).toBeNull()
   })
 })
 
@@ -180,12 +192,12 @@ describe("swingBreakeven -- sir's swing levels (2026-11-17)", () => {
     expect(buyerControl(swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3))!)).toEqual({ text: "—", side: "even" })
   })
 
-  it("adds three bullets to the hover box, after the price change", () => {
+  it("adds two bullets to the hover box, after the price change", () => {
     const lines = strengthLines("x", swingStrength(sirs, T(0), T(3)), { from: 7490, to: 7545.5 }, swingBreakeven(sirs, T(1), T(3)))
-    expect(lines.slice(-3).map((l) => [l.label, l.value])).toEqual(
-      [["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"], ["Buyer Control", "17,002 (89%)"]])
+    expect(lines.slice(-2).map((l) => [l.label, l.value])).toEqual(
+      [["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"]])
     const none = strengthLines("x", swingStrength(sirs, T(0), T(3)), undefined, swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3)))
-    expect(none.at(-3)?.value).toBe("—")
+    expect(none.at(-2)?.value).toBe("—")
   })
 })
 
@@ -202,6 +214,7 @@ describe("swingLevelMarks -- sir's levels drawn across each swing (2026-11-17)",
     expect(m.breakeven).toBeCloseTo(7523.54, 2)
     expect(m.leader).toBe("Buyers 89%")
     expect(m.control).toBe("Buyers in control (89%)")
+    expect(m.buyerPct).toBe(89)
   })
 
   it("sellers lead: the label says so", () => {
@@ -209,6 +222,7 @@ describe("swingLevelMarks -- sir's levels drawn across each swing (2026-11-17)",
     expect(m.side).toBe("sellers")
     expect(m.leader).toBe("Sellers 80%")
     expect(m.control).toBe("Sellers in control (80%)")
+    expect(m.buyerPct).toBe(20)
   })
 
   it("no volume, no breakeven: nothing is drawn", () => {
