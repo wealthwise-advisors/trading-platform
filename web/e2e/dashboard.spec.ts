@@ -701,14 +701,24 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   const area = own.locator(".draglayer .xy .nsewdrag").first()
   await area.scrollIntoViewIfNeeded()
   const box = (await area.boundingBox())!
-  // Somewhere inside the swings: try a few points until one lands in a swing.
+  // The swing box shows only on a swing point, and only that point's own leg
+  // (2026-11-17): hover a 10 Leg circle ("1", "2" ...), then a spot between points.
   const swingBox = own.getByTestId("chart-readout-swing")
-  for (const f of [0.5, 0.35, 0.65, 0.2, 0.8]) {
-    await own.mouse.move(box.x + box.width * f, box.y + box.height * 0.5)
-    if (await swingBox.count()) break
-  }
+  const bigX = await own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as {
+      data: { mode?: string; text?: string[]; x?: string[] }[]; _fullLayout: { xaxis: { d2p: (x: string) => number } } }
+    const r = document.querySelector(".draglayer .xy .nsewdrag")!.getBoundingClientRect()
+    const xs: number[] = []
+    for (const d of gd.data) {
+      if (d.mode !== "text+markers" || !d.text) continue
+      d.x!.forEach((x, k) => { if (/^[0-9]+$/.test(String(d.text![k]))) xs.push(r.left + gd._fullLayout.xaxis.d2p(x)) })
+    }
+    return xs.filter((x) => x > r.left + 5 && x < r.right - 5)
+  })
+  expect(bigX.length).toBeGreaterThan(0)
+  await own.mouse.move(bigX[bigX.length - 1], box.y + box.height * 0.3)
   await expect(swingBox).toBeVisible()
-  await expect(swingBox).toContainText("10 Leg Dev (")
+  await expect(swingBox).toContainText(/10 Leg Dev \(\S+ to \S+\)|First point of its count/)
   await expect(swingBox).toContainText("Net")
   await expect(swingBox).toContainText("Dominant")
   await expect(swingBox).toContainText("Price change")

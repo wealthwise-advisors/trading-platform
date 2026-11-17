@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { nearestBarIndex, readoutLines, type ReadoutLine, type ReadoutRow } from "@/lib/chartReadout"
 import { swingName } from "@/lib/swingHeaders"
-import { pointLines, pointsAt, type SwingPointInfo } from "@/lib/swingPoints"
+import { legsEndingAt, pointLines, pointsAt, type SwingPointInfo } from "@/lib/swingPoints"
 import { strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "@/lib/swingStrength"
 import type { OHLCVRecord } from "@/lib/types"
 
@@ -131,41 +131,31 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         if (room >= SWING_BOX_WIDTH) return { onRight: wantRight, beside: 0 }
         return { onRight: priceOnRight, beside: BOX_WIDTH + 8 }
       }
-      if (!sw && onPoint.length) {
-        const priceOnRight = boxes[0]?.onRight ?? flip
-        boxes.push({ axis: "swing", title: "Swing point", top: first._offset + 1, lines: onPoint,
-                     ...swingSide(priceOnRight), width: SWING_BOX_WIDTH })
-      }
-      if (sw) {
+      // Only on a swing point, and only that point's own leg(s): one section per
+      // level on the candle (10 Leg, 3 Leg, 1 Leg), each from the previous point of
+      // its level to this one. The whole swing's range never changed as the cursor
+      // moved, so it read as constant (user, 2026-11-17).
+      const here = pointsAt(swingPoints, bar.t, candleTimes)
+      if (here.length) {
         if (swingCache.current.bars !== bars) swingCache.current = { bars, byKey: new Map() }
-        const key = `${sw.swing}|${sw.tenLeg.from}|${sw.tenLeg.to}|${sw.threeLeg?.to ?? ""}|${sw.oneLeg?.to ?? ""}`
+        const legs = legsEndingAt(swingPoints, here)
+        const key = legs.map((l) => `${l.point.level}|${l.point.t}`).join(",")
         let lines = swingCache.current.byKey.get(key)
         if (!lines) {
-          // 10 Leg, a dotted rule, then 3 Leg.
-          lines = [
-            ...strengthLines(`10 Leg Dev (${sw.tenLeg.label})`, swingStrength(bars, sw.tenLeg.from, sw.tenLeg.to),
-                             { from: sw.tenLeg.fromPrice, to: sw.tenLeg.toPrice },
-                             swingBreakeven(bars, sw.tenLeg.from, sw.tenLeg.to)),
-            ...(sw.threeLeg
-              ? [{ label: "", value: "", kind: "divider" as const },
-                 ...strengthLines(`3 Leg Dev (${sw.threeLeg.label})`, swingStrength(bars, sw.threeLeg.from, sw.threeLeg.to),
-                                  { from: sw.threeLeg.fromPrice, to: sw.threeLeg.toPrice },
-                             swingBreakeven(bars, sw.threeLeg.from, sw.threeLeg.to))]
-              : []),
-            // 1 Leg Dev, the finest level, the same way (2026-11-13).
-            ...(sw.oneLeg
-              ? [{ label: "", value: "", kind: "divider" as const },
-                 ...strengthLines(`1 Leg Dev (${sw.oneLeg.label})`, swingStrength(bars, sw.oneLeg.from, sw.oneLeg.to),
-                                  { from: sw.oneLeg.fromPrice, to: sw.oneLeg.toPrice },
-                             swingBreakeven(bars, sw.oneLeg.from, sw.oneLeg.to))]
-              : []),
-          ]
+          lines = [...onPoint]
+          for (const { point, from } of legs) {
+            lines.push({ label: "", value: "", kind: "divider" as const })
+            lines.push(...(from
+              ? strengthLines(`${point.level} Dev (${from.label} to ${point.label})`, swingStrength(bars, from.t, point.t),
+                              { from: from.price, to: point.price }, swingBreakeven(bars, from.t, point.t))
+              : [{ label: `${point.level} point ${point.label}`, value: "", kind: "heading" as const },
+                 { label: "First point of its count: no leg before it", value: "", bullet: true }]))
+          }
           swingCache.current.byKey.set(key, lines)
         }
         const priceOnRight = boxes[0]?.onRight ?? flip
-        const withPoint = onPoint.length ? [...onPoint, { label: "", value: "", kind: "divider" as const }, ...lines] : lines
-        boxes.push({ axis: "swing", title: `Swing ${swingName(sw.swing)}`, top: first._offset + 1, lines: withPoint,
-                     ...swingSide(priceOnRight), titleColor: sw.color, width: SWING_BOX_WIDTH })
+        boxes.push({ axis: "swing", title: sw ? `Swing ${swingName(sw.swing)}` : "Swing point", top: first._offset + 1,
+                     lines, ...swingSide(priceOnRight), titleColor: sw?.color, width: SWING_BOX_WIDTH })
       }
       setReading({ x, top, height: bottom - top, boxes })
     }

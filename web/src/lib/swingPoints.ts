@@ -77,3 +77,18 @@ export function swingStarts(points: ReadonlyArray<{ t: string; price: number; ty
   }
   return out
 }
+
+/**
+ * The leg that ends at each point on the hovered candle: from the previous point
+ * of the SAME level to this one, 10 Leg first. The hover box shows these, one
+ * section per level on the candle, instead of the whole swing's range, so the
+ * numbers change from point to point (user, 2026-11-17).
+ */
+export function legsEndingAt(all: readonly SwingPointInfo[], here: readonly SwingPointInfo[]):
+    { point: SwingPointInfo; from: SwingPointInfo | null }[] {
+  return [...here].sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]).map((point) => {
+    const before = all.filter((p) => p.level === point.level && p.t < point.t)
+    const from = before.reduce<SwingPointInfo | null>((best, p) => (!best || p.t > best.t ? p : best), null)
+    return { point, from }
+  })
+}

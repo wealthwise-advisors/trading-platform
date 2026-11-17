@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { pointLines, pointsAt, swingStarts, type SwingPointInfo } from "./swingPoints"
+import { legsEndingAt, pointLines, pointsAt, swingStarts, type SwingPointInfo } from "./swingPoints"
 
 const P: SwingPointInfo[] = [
   { t: "2026-11-11T10:05:00", level: "3 Leg", label: "ii", type: "L", price: 7601.25 },
@@ -63,5 +63,22 @@ describe("pointLines with HH / HL and the 1 Leg level", () => {
       "10 Leg point 3 | HH · High 7612.00",
       "1 Leg point b | High 7612.00",
     ])
+  })
+})
+
+describe("legsEndingAt", () => {
+  const ALL: SwingPointInfo[] = [
+    { t: "2026-11-11T10:00:00", level: "10 Leg", label: "2", type: "H", price: 7620 },
+    { t: "2026-11-11T10:02:00", level: "3 Leg", label: "i", type: "H", price: 7615 },
+    ...P,
+  ]
+
+  it("one leg per level on the candle, 10 Leg first, each from the previous point of its own level", () => {
+    const legs = legsEndingAt(ALL, pointsAt(ALL, "2026-11-11T10:05:00", []))
+    expect(legs.map((l) => `${l.point.level} ${l.from?.label} to ${l.point.label}`)).toEqual(["10 Leg 2 to 3", "3 Leg i to ii"])
+  })
+
+  it("the first point of a level has no leg before it", () => {
+    expect(legsEndingAt(ALL, [ALL[0]])[0].from).toBeNull()
   })
 })
