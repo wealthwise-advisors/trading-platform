@@ -1513,11 +1513,12 @@ export function CandlestickChart({
           // Three points, label and value, inside the swing's dotted area. No heading:
           // the swing's name and "Dominant" are in its title above (user, 2026-11-17).
           // The swing's whole range per level: the hover box shows only the hovered point's leg (2026-11-17).
-          const span = (pts: { label: string }[]) => (pts.length >= 2 ? `${pts[0].label} to ${pts[pts.length - 1].label}` : null)
-          const range = [`10 Leg ${tenLeg.label}`,
-            span(minor) && `3 Leg ${span(minor)}`, span(fine) && `1 Leg ${span(fine)}`].filter(Boolean).join("  ·  ")
+          // "10 Leg (1-8) | 3 Leg (i-xxii) | 1 Leg (a-b)" (user, 2026-11-17).
+          const span = (pts: { label: string }[]) => (pts.length >= 2 ? `(${pts[0].label}-${pts[pts.length - 1].label})` : null)
+          const range = [`10 Leg (${tenLeg.label.replace(" to ", "-")})`,
+            span(minor) && `3 Leg ${span(minor)}`, span(fine) && `1 Leg ${span(fine)}`].filter(Boolean).join("  |  ")
           const text = [
-            `•  Range   <b>${range}</b>`,
+            `•  Range - <b>${range}</b>`,
             // Both sides, adding to 100: "Buyer Control: Sellers 60%" read as a contradiction (user, 2026-11-17).
             `•  Buyers / Sellers   <span style="color:#00e676"><b>${marks.buyerPct}%</b></span>`
               + ` / <span style="color:#ff5252"><b>${100 - marks.buyerPct}%</b></span>`,
