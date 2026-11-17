@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buyerControl, dominance, dominantTitle, strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "./swingStrength"
+import { buyerControl, dominance, swingLevelMarks, dominantTitle, strengthLines, swingAt, swingBreakeven, swingStrength, type SwingSpan } from "./swingStrength"
 import type { OHLCVRecord } from "./types"
 
 const T = (m: number) => `2026-11-09T10:${String(m).padStart(2, "0")}:00`
@@ -186,5 +186,33 @@ describe("swingBreakeven -- sir's swing levels (2026-11-17)", () => {
       [["Volume Breakeven", "7523.54"], ["50% Equilibrium", "7517.75"], ["Buyer Control", "17,002 (89%)"]])
     const none = strengthLines("x", swingStrength(sirs, T(0), T(3)), undefined, swingBreakeven(sirs.map((x) => ({ ...x, v: null })), T(1), T(3)))
     expect(none.at(-3)?.value).toBe("—")
+  })
+})
+
+describe("swingLevelMarks -- sir's levels drawn across each swing (2026-11-17)", () => {
+  const sirs = [
+    bar(1, 7495, 7510, 7490, 7505, 4200),
+    bar(2, 7505, 7525, 7502, 7522, 5100),
+    bar(3, 7522, 7545.5, 7520, 7544.5, 9802),
+  ]
+
+  it("one breakeven and one equilibrium line over the swing's own stretch, labelled with who led", () => {
+    const m = swingLevelMarks(sirs, T(1), T(3))!
+    expect(m).toMatchObject({ from: T(1), to: T(3), equilibrium: 7517.75, side: "buyers" })
+    expect(m.breakeven).toBeCloseTo(7523.54, 2)
+    expect(m.leader).toBe("Buyers 89%")
+    expect(m.control).toBe("Buyers in control (89%)")
+  })
+
+  it("sellers lead: the label says so", () => {
+    const m = swingLevelMarks([bar(1, 20, 20, 10, 12, 1000)], T(1), T(1))!
+    expect(m.side).toBe("sellers")
+    expect(m.leader).toBe("Sellers 80%")
+    expect(m.control).toBe("Sellers in control (80%)")
+  })
+
+  it("no volume, no breakeven: nothing is drawn", () => {
+    expect(swingLevelMarks(sirs.map((x) => ({ ...x, v: null })), T(1), T(3))).toBeNull()
+    expect(swingLevelMarks(sirs, T(8), T(9))).toBeNull()
   })
 })

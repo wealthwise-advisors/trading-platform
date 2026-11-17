@@ -686,7 +686,8 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   const keys = headers.filter((h) => h === "ⓘ Swing key")
   expect(keys).toHaveLength(1)
   expect(keyHover).toMatch(/10 Leg[\s\S]*3 Leg[\s\S]*1 Leg[\s\S]*HH higher high/)
-  const titles = headers.filter((h) => !starts.includes(h) && !keys.includes(h))
+  // The swing-level boxes ("Swing A — Buyers in control ...") name their swing too; they are not titles.
+  const titles = headers.filter((h) => !starts.includes(h) && !keys.includes(h) && !h.includes("Volume Breakeven"))
   expect(titles.length).toBeGreaterThan(0)
   // One-line titles (2026-11-13); the Leg Dev ranges are in the hover box.
   for (const h of titles) expect(h).toMatch(/^<b>Swing [A-Z]+<\/b>/)
@@ -714,6 +715,17 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   // Sir's swing levels (2026-11-17): anchored VWAP and the midpoint, as prices.
   await expect(swingBox).toContainText(/Volume Breakeven\s*\d+(\.\d+)?/)
   await expect(swingBox).toContainText(/50% Equilibrium\s*\d+(\.\d+)?/)
+
+  // Swing levels (2026-11-17): every swing carries its breakeven label; the checkbox takes them off.
+  const levelLabels = () => own.evaluate(() => {
+    const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
+    return (gd.layout.annotations ?? []).map((a) => a.text ?? "").map((t) => t.replace(/<br>/g, " | ").replace(/<[^>]*>/g, "")).filter((t) => /^Swing [A-Z]+ — (Buyers|Sellers) in control \(\d+%\)|Buyers and sellers even/.test(t) && t.includes("50% Equilibrium"))
+  })
+  expect((await levelLabels()).length).toBeGreaterThan(0)
+  expect((await levelLabels()).length).toBeLessThanOrEqual(titles.length)
+  if (process.env.LEVELS_SHOT) await own.screenshot({ path: process.env.LEVELS_SHOT })
+  await own.getByRole("checkbox", { name: "Show swing levels" }).uncheck()
+  await expect.poll(levelLabels).toHaveLength(0)
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

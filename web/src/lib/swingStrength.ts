@@ -189,3 +189,32 @@ export interface SwingSpan {
 export function swingAt(spans: ReadonlyArray<SwingSpan>, t: string): SwingSpan | null {
   return spans.find((s) => t >= s.start && t < s.end) ?? spans.find((s) => t === s.end) ?? null
 }
+
+export interface SwingLevelMarks {
+  from: string
+  to: string
+  breakeven: number
+  equilibrium: number
+  side: "buyers" | "sellers" | "even"
+  /** Who led, in words: "Buyers 89%". */
+  leader: string
+  /** In full, for sir: "Buyers in control (89%)". */
+  control: string
+}
+
+/**
+ * What the chart draws across one swing for its "Swing levels" study: a line at
+ * the Volume Breakeven, a dotted line at the 50% Equilibrium, and who led the
+ * swing by Buyer Control -- so swings read side by side, swing to swing,
+ * without hovering (2026-11-17). Null when the swing has no volume to weigh.
+ */
+export function swingLevelMarks(bars: ReadonlyArray<OHLCVRecord>, from: string, to: string): SwingLevelMarks | null {
+  const lv = swingBreakeven(bars, from, to)
+  if (!lv || lv.breakeven == null) return null
+  const buyerShare = lv.buyers / lv.volume
+  const side = buyerShare > 0.5 ? "buyers" : buyerShare < 0.5 ? "sellers" : "even"
+  const share = Math.round((side === "sellers" ? 1 - buyerShare : buyerShare) * 100)
+  const who = side === "buyers" ? "Buyers" : side === "sellers" ? "Sellers" : "Even"
+  return { from, to, breakeven: lv.breakeven, equilibrium: lv.equilibrium, side, leader: `${who} ${share}%`,
+           control: side === "even" ? "Buyers and sellers even (50%)" : `${who} in control (${share}%)` }
+}
