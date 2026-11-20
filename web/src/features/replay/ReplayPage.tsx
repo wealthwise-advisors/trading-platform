@@ -32,7 +32,7 @@ import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
-import { SESSION_PRESETS, SESSION_ZONES } from "@/lib/sessionZone"
+import { SESSION_PRESETS, SESSION_ZONES, toZone } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { avgWord, structureZones } from "@/lib/structureZones"
@@ -2229,13 +2229,18 @@ export function ReplayPage() {
             })()}
           </div>
         )}
-        {ready && totalTicks > 0 && (
+        {/* Always shown once a session is loaded: hidden at 0 ticks, the dial
+            simply vanished when the session window had no candles yet (RTH
+            before its open, 2026-11-20) and read as removed. */}
+        {ready && (
           <div className="mt-3">
             <TickProgress
               processed={ticksProcessed}
               total={totalTicks}
               playing={status === "playing"}
-              detail={marketTime ? barCloseLabel(marketTime, TF_MINUTES[baseTimeframe] ?? 1) : undefined}
+              detail={totalTicks === 0
+                ? `no candles in this session window yet (${session24h ? "24 hours" : `${toZone(sessionStart, tzOffset)}–${toZone(sessionEnd, tzOffset)} ${TZ_LABEL}`})`
+                : marketTime ? barCloseLabel(marketTime, TF_MINUTES[baseTimeframe] ?? 1) : undefined}
             />
           </div>
         )}
