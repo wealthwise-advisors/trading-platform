@@ -99,6 +99,16 @@ class TestTheExtendAction:
             ws.send_json({"action": "extend"})
             assert ws.receive_json()["type"] == "extended"
 
+    def test_volume_context_is_answered_per_timeframe(self):
+        replay_id = _create(timeframes=["5m", "15m"])
+        with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:
+            ws.send_json({"action": "volume_context"})
+            reply = ws.receive_json()
+        # Synthetic data has nothing outside its session, so each timeframe's context may be
+        # empty -- but the reply always names every timeframe it knows, or none at all.
+        assert reply["type"] == "volume_context"
+        assert set(reply["context"]) in (set(), {"5m", "15m"})
+
     def test_swings_reports_each_panes_newest_swing(self):
         replay_id = _create(timeframes=["5m", "15m"])
         with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:

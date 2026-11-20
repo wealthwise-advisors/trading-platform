@@ -676,3 +676,24 @@ class MultiReplaySession:
             if stretch:
                 out[tf] = stretch
         return out
+
+
+    def volume_context(self, limit: int = 2000) -> dict[str, dict]:
+        """The volumes each pane does NOT draw -- bars before the session and
+        outside its hours -- so Vol Avg (20) is warm from the first bar, as the
+        Backtest chart's volume_context and thinkorswim are (2026-11-20: on a
+        09:30 session, 20m and 1h showed no Vol Avg for hours). Finished bars
+        only. `volume_source` is the unfiltered frame plus earlier history, set by
+        the API; without it there is no context."""
+        src = getattr(self, "volume_source", None)
+        if src is None or src.empty:
+            return {}
+        data_end = src.index.max() + pd.Timedelta(minutes=TF_MINUTES[self.data_timeframe])
+        out: dict[str, dict] = {}
+        for tf, pane in self.panes.items():
+            full = resample_ohlcv(src, tf, bar_anchor(self.symbol))
+            full = full[full.index + pd.Timedelta(minutes=TF_MINUTES[tf]) <= data_end]
+            ctx = full.loc[~full.index.isin(pane.df.index), "volume"].tail(limit)
+            out[tf] = {"t": [t.isoformat() for t in ctx.index],
+                       "v": [None if pd.isna(v) else float(v) for v in ctx.values]}
+        return out

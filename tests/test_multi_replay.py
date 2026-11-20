@@ -717,3 +717,28 @@ class TestSwingStretches:
             s.tick()
         cutoff = s.panes["1m"].df.index[s.panes["1m"].cursor - 1].isoformat()
         assert s.swing_stretches()["1m"]["to"] <= cutoff
+
+
+class TestVolumeContext:
+    """Vol Avg (20) warm-up for the Market Grid (2026-11-20): every timeframe gets the
+    volumes of the bars it does NOT draw -- before the session and outside its hours --
+    the way the Backtest chart's volume_context works."""
+
+    def test_bars_before_and_outside_the_session_finished_only(self):
+        raw = _minute_bars(600, start=datetime(2026, 1, 5, 8, 0))          # 08:00 - 17:59
+        kept = raw[(raw.index.time >= datetime(2026, 1, 5, 9, 30).time())
+                   & (raw.index.time < datetime(2026, 1, 5, 16, 0).time())]
+        s = MultiReplaySession(df=kept, timeframes=["1m", "5m"], symbol="ES",
+                               strategy_factory=lambda: MACrossoverStrategy(fast=9, slow=21))
+        s.volume_source = raw
+        ctx = s.volume_context()
+        for tf in ("1m", "5m"):
+            drawn = {t.isoformat() for t in s.panes[tf].df.index}
+            assert ctx[tf]["t"] and not drawn & set(ctx[tf]["t"])           # never a bar the pane draws
+            assert ctx[tf]["t"] == sorted(ctx[tf]["t"])
+        assert ctx["5m"]["t"][0] == "2026-01-05T08:00:00"                    # the morning before 09:30
+        assert "2026-01-05T16:00:00" in ctx["5m"]["t"]                       # the evening after 16:00
+        assert ctx["5m"]["t"][-1] <= "2026-01-05T17:55:00"                   # only finished bars
+
+    def test_no_source_no_context(self):
+        assert _session(["5m"]).volume_context() == {}

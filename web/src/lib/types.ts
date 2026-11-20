@@ -497,6 +497,8 @@ export type ReplayWsMessage =
   | { type: "restored"; backfill: Record<string, ReplayBackfill> }
   // Reply to the `swings` action: each timeframe's newest swing.
   | { type: "swings"; swings: Record<string, SwingStretch> }
+  // Reply to `volume_context`: each timeframe's Vol Avg warm-up volumes.
+  | { type: "volume_context"; context: Record<string, { t: string[]; v: (number | null)[] }> }
   | { type: "error"; message: string }
 
 export interface SchwabStatus {

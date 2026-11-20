@@ -189,6 +189,25 @@ def _load_bars(req: ReplayCreateRequest, source_tf: str, spec: dict):
     return df
 
 
+def _volume_source(req: ReplayCreateRequest, source_tf: str, spec: dict, raw):
+    """The unfiltered bars plus five days before them: what the Market Grid's Vol Avg
+    (20) warms up on, as the Backtest chart's volume_context does. A nicety -- any
+    failure leaves the plain session bars, never an error."""
+    import pandas as pd
+    if req.data_source == "synthetic" or raw is None or raw.empty:
+        return raw
+    try:
+        first = raw.index.min()
+        provider = _build_provider(req.data_source, req.symbol, source_tf,
+                                   (first - timedelta(days=5)).date(), first.date(), spec,
+                                   session_start=req.session_start)
+        earlier = provider.load(req.symbol, first - timedelta(days=5), first - timedelta(minutes=1), source_tf)
+        earlier = earlier[earlier.index < first]
+        return pd.concat([earlier, raw]).sort_index()
+    except Exception:                                          # noqa: BLE001
+        return raw
+
+
 def _apply_session(df, session_start, session_end):
     """Keep only in-session bars, mirroring BacktestEngine's filter.
 
@@ -270,8 +289,13 @@ def _extend_session(stored) -> dict:
 
     try:
         source_tf = _source_timeframe(req.timeframes or [req.timeframe])
-        df = _load_bars(req, source_tf, get_contract_spec(req.symbol))
-        df = _apply_session(df, req.session_start, req.session_end)
+        raw = _load_bars(req, source_tf, get_contract_spec(req.symbol))
+        df = _apply_session(raw, req.session_start, req.session_end)
+        # The warm-up grows with the session: new bars outside its hours count too.
+        old = getattr(session, "volume_source", None)
+        import pandas as pd
+        session.volume_source = (raw if old is None else
+                                 pd.concat([old, raw]).loc[lambda d: ~d.index.duplicated(keep="last")].sort_index())
     except HTTPException as exc:
         return session.no_extension(f"could not reach the data source: {exc.detail}")
     except Exception as exc:                                  # noqa: BLE001
@@ -293,8 +317,8 @@ def create_replay(req: ReplayCreateRequest):
     # Fetch fine enough to build every pane faithfully; the CLOCK still ticks
     # once per base_tf bar, so tick counts and playback speed are unaffected.
     source_tf = _source_timeframe(timeframes)
-    df = _load_bars(req, source_tf, spec)
-    df = _apply_session(df, req.session_start, req.session_end)
+    raw = _load_bars(req, source_tf, spec)
+    df = _apply_session(raw, req.session_start, req.session_end)
     waiting = False
     if df.empty:
         now_et = _market_now()
@@ -368,6 +392,7 @@ def create_replay(req: ReplayCreateRequest):
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
+    session.volume_source = _volume_source(req, source_tf, spec, raw)
     fetch_start = _fetch_start(req)
     strategy_name = session.panes[base_tf].engine.strategy.name
     replay_id = replay_store.save(session, df, req.symbol, strategy_name,
@@ -535,6 +560,13 @@ async def replay_ws(websocket: WebSocket, replay_id: str):
                             tf: _backfill_to_dict(bf)
                             for tf, bf in result["backfill"].items()
                         },
+                    })
+                elif action == "volume_context":
+                    # The volumes each timeframe does not draw, so the Live state
+                    # table's Vol Avg (20) is warm from the first bar (2026-11-20).
+                    await websocket.send_json({
+                        "type": "volume_context",
+                        "context": await asyncio.to_thread(session.volume_context),
                     })
                 elif action == "swings":
                     # Each timeframe's newest swing, for the Live state table's

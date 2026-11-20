@@ -181,3 +181,38 @@ export function volumeAxisMax(
   const top = Math.min(highest, Math.max(typical * 1.6, avgMax))
   return top > 0 ? top * 1.1 : 1
 }
+
+/**
+ * Vol Avg over the newest `length` volumes up to bar `count - 1`, counting the
+ * bars the pane draws AND the warm-up `ctx` (bars before the session and outside
+ * its hours), in time order -- the Backtest chart's volume_context rule, so the
+ * Market Grid's average is there from the first bar (2026-11-20). Null without
+ * `length` volumes or with a missing one.
+ */
+export function volumeAverageAtWithContext(
+  bars: ReadonlyArray<{ t: string; v: number | null }>,
+  count: number,
+  ctx: { t: string[]; v: (number | null)[] } | undefined,
+  length: number,
+): number | null {
+  if (!ctx || !ctx.t.length) return volumeAverageAt(bars, count, length)
+  let i = Math.min(count, bars.length) - 1
+  if (i < 0) return null
+  const until = bars[i].t
+  // The newest context entry at or before this bar.
+  let lo = 0, hi = ctx.t.length - 1, k = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (ctx.t[mid] <= until) { k = mid; lo = mid + 1 } else hi = mid - 1
+  }
+  let sum = 0
+  for (let n = 0; n < length; n++) {
+    let v: number | null
+    if (i >= 0 && (k < 0 || bars[i].t >= ctx.t[k])) v = bars[i--].v
+    else if (k >= 0) v = ctx.v[k--]
+    else return null
+    if (v == null) return null
+    sum += v
+  }
+  return sum / length
+}

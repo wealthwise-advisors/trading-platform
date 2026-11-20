@@ -32,11 +32,11 @@ import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
-import { SESSION_PRESETS, SESSION_ZONES, toZone } from "@/lib/sessionZone"
+import { SESSION_PRESETS, SESSION_ZONES, fromZone, toZone, useZoneOffset } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { avgWord, priceZone } from "@/lib/structureZones"
-import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAt } from "@/lib/volumeAverage"
+import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAtWithContext } from "@/lib/volumeAverage"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -399,6 +399,8 @@ export function ReplayPage() {
   const [activeTimeframes, setActiveTimeframes] = useState<string[]>([])
   /** Each timeframe's newest swing, for the Live state table's swing columns. */
   const [swings, setSwings] = useState<Record<string, SwingStretch>>({})
+  /** Each timeframe's Vol Avg warm-up: volumes of the bars it does not draw (2026-11-20). */
+  const [volCtx, setVolCtx] = useState<Record<string, { t: string[]; v: (number | null)[] }>>({})
   const [baseTimeframe, setBaseTimeframe] = useState("")
   /** Resolution the session's bars were fetched at. Timeframes finer than this
    *  cannot be added to the running session -- resampling down would invent
@@ -446,7 +448,9 @@ export function ReplayPage() {
    * because the numbers genuinely differ. Offsets are minutes to ADD to the
    * Eastern timestamp for display.
    */
-  const [tzOffset, setTzOffset] = useState(0)
+  // One zone for the whole app: picking CT here or on the Backtest page relabels both (2026-11-20).
+  const tzOffset = useZoneOffset((z) => z.offset)
+  const setTzOffset = useZoneOffset((z) => z.setOffset)
 
   const [jumpDate, setJumpDate] = useState("")
   const [jumpTime, setJumpTime] = useState("12:20")
@@ -591,6 +595,7 @@ export function ReplayPage() {
     setMarketTime(null)
     setTape([])
     setSwings({})
+    setVolCtx({})
   }
 
   /**
@@ -780,6 +785,8 @@ export function ReplayPage() {
           }
         } else if (msg.type === "swings") {
           setSwings(msg.swings)
+        } else if (msg.type === "volume_context") {
+          setVolCtx(msg.context)
         } else if (msg.type === "error") {
           setError(msg.message); setStatus("idle")
         }
@@ -1377,7 +1384,9 @@ export function ReplayPage() {
   useEffect(() => {
     const id = setTimeout(() => {
       const ws = wsRef.current
-      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "swings" }))
+      if (ws?.readyState !== WebSocket.OPEN) return
+      ws.send(JSON.stringify({ action: "swings" }))
+      ws.send(JSON.stringify({ action: "volume_context" }))
     }, 700)
     return () => clearTimeout(id)
   }, [ticksProcessed, activeTimeframes])
@@ -1432,10 +1441,10 @@ export function ReplayPage() {
 
   /** The heading row over a Market Grid table: every column under a group, sir's four
    *  zones in price order, a border between groups (user, 2026-11-20). */
-  const groupRow = (lead: [string, number, string][], tail: [string, number, string][]) => {
+  const groupRow = (lead: [string, number, string][], tail: [string, number, string][], past = false) => {
     const g: [string, number, string, string?][] = [
       ...lead,
-      ...(showVp && showVwap ? [["Price zone", 1, "grp-pz", "where price is now"]] as [string, number, string, string][] : []),
+      ...(showVp && showVwap ? [["Price zone", 1, "grp-pz", past ? "where price was at that candle" : "where price is now"]] as [string, number, string, string][] : []),
       ...(showVp ? [["Resistance level", 2, "grp-res", "above = buy / reversal"]] as [string, number, string, string][] : []),
       ...(showVwap ? [["Breakout zone", 1 + 2 * devLevels.length, "grp-brk", "VWAP high → VAH low"]] as [string, number, string, string][] : []),
       ...(showVp ? [["Equilibrium core · POC", 3, "grp-core", "neutral = no trade zone"],
@@ -1818,7 +1827,7 @@ export function ReplayPage() {
              note the extra evening of bars at the front of the replay looks
              like the wrong date range was loaded. */
           <p className="text-xs text-muted-foreground mt-2">
-            Session starts at <span className="font-mono">{sessionStart}</span>, which is the
+            Session starts at <span className="font-mono">{toZone(sessionStart, tzOffset)} {TZ_LABEL}</span>, which is the
             previous evening — loaded from <span className="text-foreground/70">{fetchedFrom}</span> so
             the first session is complete and its VWAP anchors at the session open.
           </p>
@@ -1903,9 +1912,9 @@ export function ReplayPage() {
         <div className="mt-1 space-y-1.5">
           <div className="flex items-center gap-1.5">
           <Label className="text-xs">
-            Session Hours (ET)
+            Session Hours ({TZ_LABEL})
           </Label>
-          <InfoDot label="Session hours (ET)" align="left">
+          <InfoDot label={`Session hours (${TZ_LABEL})`} align="left">
             The window each pane is cut to, and the anchor each pane&apos;s VWAP
             resets at. The data itself is always Eastern; the clock buttons only
             relabel it. Getting this wrong is what makes a VWAP disagree with
@@ -1937,7 +1946,13 @@ export function ReplayPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
             {SESSION_PRESETS.map((p) => {
               const on = !session24h && sessionStart === p.from && sessionEnd === p.to
-              const [name, ...rest] = p.label.split(" ")
+              const name = p.label.split(" ")[0]
+              // The window in the chosen zone, as the Backtest page shows it.
+              const clock12 = (hhmm: string) => {
+                const [h, m] = hhmm.split(":").map(Number)
+                return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`
+              }
+              const rest = [`${clock12(toZone(p.from, tzOffset))} – ${clock12(toZone(p.to, tzOffset))}${p.from > p.to ? " (next day)" : ""}`]
               return (
                 // A WRAPPER, because the "i" is a button and the card is a
                 // button, and a button inside a button is invalid HTML that
@@ -2022,14 +2037,14 @@ export function ReplayPage() {
 
             <div className="custom-session-row">
               <span className="custom-session-label">From</span>
-              <TimeField value={sessionStart} onChange={setSessionStart}
+              <TimeField value={toZone(sessionStart, tzOffset)} onChange={(v) => setSessionStart(fromZone(v, tzOffset))}
                          label="Session start" segmented className="cs-time"
                          title={lockTitle("data")}
                          disabled={ready || session24h} />
             </div>
             <div className="custom-session-row">
               <span className="custom-session-label">To</span>
-              <TimeField value={sessionEnd} onChange={setSessionEnd}
+              <TimeField value={toZone(sessionEnd, tzOffset)} onChange={(v) => setSessionEnd(fromZone(v, tzOffset))}
                          label="Session end" segmented className="cs-time"
                          title={lockTitle("data")}
                          disabled={ready || session24h} />
@@ -2755,7 +2770,10 @@ export function ReplayPage() {
                             )}
                           </td>
                           <td className="p-2 font-mono text-xs">
-                            {last ? closeInTz(last.t, TF_MINUTES[tf]) : "—"}
+                            {/* Said in words: a long timeframe early in a session has no
+                                finished candle yet, and a row of dashes read as lost data. */}
+                            {last ? closeInTz(last.t, TF_MINUTES[tf])
+                              : <span className="text-muted-foreground whitespace-nowrap">first {tf} candle not closed yet</span>}
                           </td>
                           <td className="p-2 font-mono text-xs text-muted-foreground">{last ? inTz(last.t) : "—"}</td>
                           <td className="p-2 text-right font-mono">{price(last?.o)}</td>
@@ -2769,7 +2787,7 @@ export function ReplayPage() {
                           <td className="p-2 text-right font-mono text-muted-foreground">
                             {last?.v != null ? last.v.toLocaleString() : "\u2014"}
                           </td>
-                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAt(pane.bars, pane.bars.length, volLength), 2)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAtWithContext(pane.bars, pane.bars.length, volCtx[tf], volLength), 2)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber((last ? buyerSellerSplit(last) : null)?.buyers)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber((last ? buyerSellerSplit(last) : null)?.sellers)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">
@@ -2983,7 +3001,7 @@ export function ReplayPage() {
                    style={{ overflow: "auto", maxHeight: tapeFs.isFull ? undefined : 460 }}>
                 <table className="w-full text-sm table-sticky grid-table tape-table">
                   <thead className="grid-thead sticky top-0">
-                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"]], [["Trade", 2, "grp-trade"]])}
+                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"]], [["Trade", 2, "grp-trade"]], true)}
                     <tr>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">Opened ({TZ_LABEL})</th>
@@ -3065,7 +3083,7 @@ export function ReplayPage() {
                           <td className="p-2 text-right font-mono text-muted-foreground tape-g">
                             {r.v != null ? r.v.toLocaleString() : "\u2014"}
                           </td>
-                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAt(panes[r.tf]?.bars ?? [], r.barIndex, volLength), 2)}</td>
+                          <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAtWithContext(panes[r.tf]?.bars ?? [], r.barIndex, volCtx[r.tf], volLength), 2)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.buyers)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.sellers)}</td>
                             {showVp && showVwap && (() => {

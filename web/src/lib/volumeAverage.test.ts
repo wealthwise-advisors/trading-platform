@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   DEFAULT_VOLUME_AVG_LENGTH, VOLUME_AVG_STORE_KEY, buyerSellerSplit, clampVolumeAvgLength,
-  loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverage, volumeAverageAt, volumeAverageWithContext,
+  loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverage, volumeAverageAt, volumeAverageWithContext, volumeAverageAtWithContext,
   volumeAxisMax, volumeBarColors, VOLUME_UP, VOLUME_DOWN, VOLUME_FLAT,
 } from "./volumeAverage"
 import type { OHLCVRecord } from "./types"
@@ -198,5 +198,26 @@ describe("saved settings", () => {
     })
     expect(loadVolumeAvgSettings()).toEqual(FACTORY)
     expect(() => saveVolumeAvgSettings(FACTORY)).not.toThrow()
+  })
+})
+
+describe("volumeAverageAtWithContext -- the Market Grid's Vol Avg warm-up (2026-11-20)", () => {
+  const bar = (t: string, v: number | null) => ({ t, v })
+  const bars = [bar("2026-11-20T09:30:00", 10), bar("2026-11-20T09:35:00", 20)]
+  const ctx = { t: ["2026-11-20T09:20:00", "2026-11-20T09:25:00", "2026-11-20T16:00:00"], v: [30, 40, 999] }
+
+  it("the newest `length` volumes by time, the pane's own and the ones it does not draw", () => {
+    expect(volumeAverageAtWithContext(bars, 2, ctx, 4)).toBe((10 + 20 + 30 + 40) / 4)
+    expect(volumeAverageAtWithContext(bars, 2, ctx, 3)).toBe((20 + 10 + 40) / 3)
+  })
+
+  it("never looks past the bar it is for: 16:00 comes after 09:35", () => {
+    expect(volumeAverageAtWithContext(bars, 1, ctx, 3)).toBe((10 + 40 + 30) / 3)
+  })
+
+  it("not enough volumes, or a missing one, gives no average; no context is the plain rule", () => {
+    expect(volumeAverageAtWithContext(bars, 2, ctx, 5)).toBeNull()
+    expect(volumeAverageAtWithContext([bar("2026-11-20T09:30:00", null)], 1, ctx, 1)).toBeNull()
+    expect(volumeAverageAtWithContext(bars, 2, undefined, 2)).toBe(volumeAverageAt(bars, 2, 2))
   })
 })
