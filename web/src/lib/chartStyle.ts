@@ -136,14 +136,15 @@ function minuteOfDay(t: string): number | null {
  * Runs of bars outside 09:30-16:00 ET, as [first bar, last bar] pairs, for
  * shading. Daily and longer bars have no session, so they return nothing.
  */
-export function extendedHoursSpans(times: ReadonlyArray<string>, stepMs: number): [string, string][] {
+/** `offset`: minutes the times are shifted from Eastern (Central -60), so regular hours move with them. */
+export function extendedHoursSpans(times: ReadonlyArray<string>, stepMs: number, offset = 0): [string, string][] {
   if (!(stepMs > 0) || stepMs >= 20 * 3_600_000) return []
   const out: [string, string][] = []
   let start: string | null = null
   let prev: string | null = null
   for (const t of times) {
     const m = minuteOfDay(t)
-    const outside = m != null && (m < RTH_OPEN || m >= RTH_CLOSE)
+    const outside = m != null && (m < RTH_OPEN + offset || m >= RTH_CLOSE + offset)
     if (outside && start == null) start = t
     if (!outside && start != null) {
       out.push([start, prev!])

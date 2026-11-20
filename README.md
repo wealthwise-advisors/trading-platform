@@ -752,6 +752,7 @@ A React 19 single-page application over the FastAPI backend.
 - ➜ **Hover readout** — every panel's values at once, plus buyers vs sellers per swing
 - ➜ **Swing titles** — each swing names its dominant side and share, e.g. (Dominant: Buyers 66%); zoomed out, 3 Leg points thin to dots until there is room
 - ➜ **Swing levels** — the swing hover box adds Volume Breakeven (the swing's anchored VWAP: typical price × volume ÷ total volume) 50% Equilibrium (midpoint of the swing's high and low) and Buyer Control (buyer volume of every candle, added up, with its share), for 10 Leg, 3 Leg and 1 Leg
+- ➜ **Chart in your time zone** — the chart follows Session Hours' ET / CT / MT / PT: time axis, hover Date, swing points, trades and extended-hours shading; daily and longer candles keep their dates
 - ➜ **Swing levels on the chart** — every swing gets a thin breakeven line (green = buyers in control, red = sellers) over a light band to its 50% Equilibrium, and a small box: the swing's range per level (Range - 10 Leg (1-4) | 3 Leg (i-vii) | 1 Leg (a-b)), Buyers / Sellers %, Volume Breakeven, 50% Equilibrium; hovering a swing point shows only that point's own leg; the title's Dominant % uses the same Buyer Control rule; "Swing levels" checkbox turns it off
 - ➜ **Swing levels in the Market Grid** — Live state shows each timeframe's newest swing: Swing, Swing High, Swing Low, Swing Volume, Volume Breakeven, 50% Equilibrium, Buyer Control
 - ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout

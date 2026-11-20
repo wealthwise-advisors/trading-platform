@@ -8,6 +8,7 @@ import { describe, it, expect } from "vitest"
 import {
   SESSION_ZONES, ZONE_KEY, fromZone, loadZoneOffset, saveZoneOffset,
   shiftClock, toZone, zoneShort,
+  shiftTimes,
 } from "./sessionZone"
 
 function memStore(seed: Record<string, string> = {}) {
@@ -120,5 +121,20 @@ describe("the choice persists per browser", () => {
   it("survives having no storage at all, as a server render has none", () => {
     expect(loadZoneOffset(null)).toBe(0)
     expect(() => saveZoneOffset(-60, null)).not.toThrow()
+  })
+})
+
+describe("shiftTimes -- the chart in the chosen zone (2026-11-20: sir's 7:40 AM CT candle read 8:40 AM)", () => {
+  it("moves every naive timestamp, deep inside objects and arrays, and nothing else", () => {
+    const data = { bars: [{ t: "2026-11-18T08:40:00", c: 7388.25 }], zz: { zigzag_10: [{ t: "2026-11-18T08:38:00", label: "1" }] },
+                   note: "2026-11-18", name: "ES", n: 3, none: null }
+    expect(shiftTimes(data, -60)).toEqual({ bars: [{ t: "2026-11-18T07:40:00", c: 7388.25 }],
+      zz: { zigzag_10: [{ t: "2026-11-18T07:38:00", label: "1" }] }, note: "2026-11-18", name: "ES", n: 3, none: null })
+  })
+
+  it("crosses midnight backwards, and Eastern (0) returns the very same object", () => {
+    expect(shiftTimes(["2026-11-18T00:30:00"], -60)).toEqual(["2026-11-17T23:30:00"])
+    const same = { t: "2026-11-18T08:40:00" }
+    expect(shiftTimes(same, 0)).toBe(same)
   })
 })

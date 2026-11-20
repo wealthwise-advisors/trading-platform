@@ -20,7 +20,9 @@
  * and 3 in winter -- which is why no zone that skips DST is offered here rather
  * than offered and silently wrong for half the year.
  */
+import { create } from "zustand"
 import { pad } from "./clock"
+import { toNaiveString } from "./isoTime"
 
 export interface SessionZone {
   /** Shown on the control, e.g. "CT". */
@@ -109,3 +111,29 @@ export function saveZoneOffset(offset: number, store: Store | null = browserStor
     /* storage blocked -- the choice simply does not persist */
   }
 }
+
+const NAIVE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
+
+/**
+ * Every naive timestamp in `v` (deep through objects and arrays) moved by
+ * `minutes`, so the chart reads in the chosen zone: sir's thinkorswim shows
+ * Central, and the chart's 8:40 AM was his 7:40 AM candle (2026-11-20). Only
+ * what the chart DRAWS is shifted -- the data and every request stay Eastern.
+ * Offset 0 hands back the same object, so Eastern costs nothing.
+ */
+export function shiftTimes<T>(v: T, minutes: number): T {
+  if (!minutes) return v
+  const walk = (x: unknown): unknown => {
+    if (typeof x === "string") return NAIVE_TIME.test(x) ? toNaiveString(new Date(x).getTime() + minutes * 60_000) : x
+    if (Array.isArray(x)) return x.map(walk)
+    if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, y]) => [k, walk(y)]))
+    return x
+  }
+  return walk(v) as T
+}
+
+/** The chosen zone, shared: the chart redraws the moment a Session Hours zone is picked. */
+export const useZoneOffset = create<{ offset: number; setOffset: (n: number) => void }>((set) => ({
+  offset: loadZoneOffset(),
+  setOffset: (n) => { saveZoneOffset(n); set({ offset: n }) },
+}))

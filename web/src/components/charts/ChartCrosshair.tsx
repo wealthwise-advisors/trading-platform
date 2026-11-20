@@ -43,7 +43,7 @@ function layoutKey(axis: string) {
   return axis === "y" ? "yaxis" : `yaxis${axis.slice(1)}`
 }
 
-export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swingSpans = [], swingPoints = [], candleTimes = [] }: {
+export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swingSpans = [], swingPoints = [], candleTimes = [], zone }: {
   hostRef: RefObject<HTMLDivElement | null>
   bars: OHLCVRecord[]
   rows: ReadoutRow[]
@@ -55,11 +55,13 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
   swingPoints?: SwingPointInfo[]
   /** The drawn candles' times (candles may be merged to fit the screen). */
   candleTimes?: string[]
+  /** The zone the times are shown in, when not Eastern, named after the Date ("7:40 AM CT"). */
+  zone?: string
 }) {
   const [reading, setReading] = useState<Reading | null>(null)
   // The latest props without re-binding the mouse listeners on each render.
-  const latest = useRef({ bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes })
-  useEffect(() => { latest.current = { bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes } })
+  const latest = useRef({ bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes, zone })
+  useEffect(() => { latest.current = { bars, rows, volumeAxis, swingSpans, swingPoints, candleTimes, zone } })
   // A swing's box lines, worked out once per swing per dataset, not per pixel.
   const swingCache = useRef<{ bars: OHLCVRecord[] | null; byKey: Map<string, ReadoutLine[]> }>({ bars: null, byKey: new Map() })
   // Bar times in the axis's own units, worked out once per dataset.
@@ -98,6 +100,8 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
 
       const boxes: Reading["boxes"] = rows.map((row, r) => {
         const lines = readoutLines(row, bar, i, volumeAxis)
+        const date = lines.find((l) => l.label === "Date")
+        if (date && latest.current.zone) date.value = `${date.value} ${latest.current.zone}`
         // Under the cursor's height on price, as the reference has it.
         if (r === 0 && py <= first._offset + first._length) {
           lines.splice(1, 0, { label: "Y", value: first.p2d(py - first._offset).toFixed(2) })

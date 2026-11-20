@@ -57,7 +57,7 @@ import { useFollowLive } from "@/features/backtest/useFollowLive"
  * Named exports, hence the .then() mapping -- React.lazy resolves `default`.
  */
 const CandlestickChart = lazy(() =>
-  import("@/components/charts/CandlestickChart").then((m) => ({ default: m.CandlestickChart })))
+  import("@/components/charts/CandlestickChart").then((m) => ({ default: m.ZonedCandlestickChart })))
 const ElliottWaveChart = lazy(() =>
   import("@/components/charts/ElliottWaveChart").then((m) => ({ default: m.ElliottWaveChart })))
 const EquityChart = lazy(() =>

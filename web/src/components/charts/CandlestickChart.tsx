@@ -27,6 +27,7 @@ import { useConfigStore } from "@/store/configStore"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
+import { shiftTimes, useZoneOffset, zoneShort } from "@/lib/sessionZone"
 import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
 import { swingStatus } from "@/lib/swingStatus"
 
@@ -95,6 +96,8 @@ interface CandlestickChartProps {
   zigzag: ZigZagResponse
   trades: TradeRecord[]
   showZigzag?: boolean
+  /** Minutes the times were shifted from Eastern for display (Central -60); 0 = Eastern. */
+  zoneOffset?: number
   /** Initial state of the StochRSI panel's checkbox. */
   showStochRsi?: boolean
   // Session VWAP with ±2σ bands, overlaid on the price panel. Same
@@ -265,6 +268,27 @@ function MenuToggle({
   )
 }
 
+/**
+ * The chart in the zone picked under Session Hours (ET / CT / MT / PT): every
+ * time it draws -- axis, hover Date, swing points, trades -- moves by the zone's
+ * offset (2026-11-20: sir's thinkorswim reads Central, the chart read Eastern).
+ * Daily and longer candles are stamped at midnight and keep their date.
+ */
+export function ZonedCandlestickChart(props: CandlestickChartProps) {
+  const zone = useZoneOffset((z) => z.offset)
+  const off = /^(1d|1w|1mo)$/i.test(props.interval) ? 0 : zone
+  const bars = useMemo(() => shiftTimes(props.bars, off), [props.bars, off])
+  const indicators = useMemo(() => shiftTimes(props.indicators, off), [props.indicators, off])
+  const volumeContext = useMemo(() => shiftTimes(props.volumeContext, off), [props.volumeContext, off])
+  const zigzag = useMemo(() => shiftTimes(props.zigzag, off), [props.zigzag, off])
+  const trades = useMemo(() => shiftTimes(props.trades, off), [props.trades, off])
+  const { fetchCompare } = props
+  const compare = useMemo(() => fetchCompare && ((sym: string) => fetchCompare(sym).then((r) => shiftTimes(r, off))),
+                          [fetchCompare, off])
+  return <CandlestickChart {...props} bars={bars} indicators={indicators} volumeContext={volumeContext}
+                           zigzag={zigzag} trades={trades} fetchCompare={compare} zoneOffset={off} />
+}
+
 export function CandlestickChart({
   // strategyName is still part of the props -- every caller passes it and the
   // export path reads the same shape -- but nothing in here draws it: the
@@ -274,7 +298,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true,
+  symbol, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -1005,7 +1029,7 @@ export function CandlestickChart({
   const shapes: Partial<Shape>[] = []
   // Extended hours tinted, as thinkorswim does; across every row.
   if (chartStyle.shadeExtended) {
-    for (const [a, b] of extendedHoursSpans(t, barStepMs(t))) {
+    for (const [a, b] of extendedHoursSpans(t, barStepMs(t), zoneOffset)) {
       shapes.push({ type: "rect", xref: "x", yref: "paper", x0: a, x1: b, y0: 0, y1: 1,
                     fillcolor: "rgba(148,163,184,0.07)", line: { width: 0 }, layer: "below" } as Partial<Shape>)
     }
@@ -3288,6 +3312,7 @@ export function CandlestickChart({
           onRelayout={handleRelayout}
         />
         <ChartCrosshair hostRef={plotHostRef} bars={bars} rows={readoutRows} interval={interval} swingSpans={swingSpans}
+                        zone={zoneOffset ? zoneShort(zoneOffset) : undefined}
                         swingPoints={swingPointInfo} candleTimes={candleBars.map((b) => b.t)}
                         volumeAxis={volRow ? `y${suffixOf("vol")}` : undefined} />
         </div>

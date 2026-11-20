@@ -19,7 +19,7 @@ import {
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import {
-  SESSION_ZONES, fromZone, loadZoneOffset, saveZoneOffset, toZone, zoneShort,
+  SESSION_ZONES, fromZone, toZone, useZoneOffset, zoneShort,
 } from "@/lib/sessionZone"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -85,7 +85,9 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
    * Read from storage once, on the initialiser, so a reload keeps the choice
    * without a second render that flashes Eastern first.
    */
-  const [zoneOffset, setZoneOffset] = useState(loadZoneOffset)
+  // Shared, so the chart follows the zone too (2026-11-20).
+  const zoneOffset = useZoneOffset((s) => s.offset)
+  const setZoneOffset = useZoneOffset((s) => s.setOffset)
 
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: api.strategies })
   const { data: dataSources } = useQuery({ queryKey: ["data-sources"], queryFn: api.dataSources })
@@ -528,7 +530,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
                   aria-label={`times in ${z.short}`}
                   title={z.label}
                   className={`tz-pill${zoneOffset === z.offset ? " tz-pill-on" : ""}`}
-                  onClick={() => { setZoneOffset(z.offset); saveZoneOffset(z.offset) }}
+                  onClick={() => setZoneOffset(z.offset)}
                 >
                   {z.short}
                 </button>

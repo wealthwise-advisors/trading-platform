@@ -90,3 +90,11 @@ describe("stored style", () => {
     },
   )
 })
+
+describe("extendedHoursSpans in another zone", () => {
+  it("Central times: regular hours are 8:30 to 15:00, so 08:30 is not shaded but 08:29 is", () => {
+    const ct = ["2026-11-18T08:29:00", "2026-11-18T08:30:00", "2026-11-18T14:59:00", "2026-11-18T15:00:00"]
+    expect(extendedHoursSpans(ct, 60_000, -60)).toEqual([
+      ["2026-11-18T08:29:00", "2026-11-18T08:29:00"], ["2026-11-18T15:00:00", "2026-11-18T15:00:00"]])
+  })
+})

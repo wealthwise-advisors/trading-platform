@@ -16,7 +16,7 @@ import { buildRunRequest } from "./useRunBacktest"
 import { useFollowLive } from "./useFollowLive"
 
 const CandlestickChart = lazy(() =>
-  import("@/components/charts/CandlestickChart").then((m) => ({ default: m.CandlestickChart })))
+  import("@/components/charts/CandlestickChart").then((m) => ({ default: m.ZonedCandlestickChart })))
 
 export const DEFAULT_GRID_TIMEFRAMES = ["1m", "5m", "15m", "1h"]
 
