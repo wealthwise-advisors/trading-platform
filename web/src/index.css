@@ -2398,8 +2398,17 @@ table.grid-table thead tr.grp-row th.grp-sup { color: #5a9bff; background: #1727
 table.grid-table thead tr.grp-row th:first-child { left: auto; }
 /* Two heading rows: the group row sticks at the top, the column names just under it. */
 .grp-row th.grp { height: 34px; box-sizing: border-box; }
-.table-sticky thead tr.grp-row + tr th { top: 34px; }
+/* The whole two-row heading sticks as one block. Pinning the second row at a fixed 34px
+   broke once the group notes made the first row 42px: the rows overlapped and wrapped
+   body text showed through above "Last signal" (2026-11-20). */
+.table-sticky thead:has(> tr.grp-row) { position: sticky; top: 0; z-index: 3; }
+/* Separate borders, not collapsed: with collapsed borders Chrome let wrapped body text
+   (a long Last signal) show through the sticky heading while scrolling. Each cell draws
+   its right and bottom line, the table its left and top, so every line stays 1px. */
+table.grid-table { border-collapse: separate; border-spacing: 0;
+  border-left: 1px solid var(--hairline-soft); border-top: 1px solid var(--hairline-soft); }
+.grp-row th.grp { border-width: 0 1px 2px 0; }
 /* Bordered cells, so the grid reads as a table (user, 2026-11-20). */
-.grid-table th, .grid-table td { border: 1px solid var(--hairline-soft); }
+.grid-table th, .grid-table td { border: 0; border-right: 1px solid var(--hairline-soft); border-bottom: 1px solid var(--hairline-soft); }
 /* Price Zone cells: the word in its zone's colour, as the group headings. */
 .pz-res { color: #fbbf24; } .pz-brk { color: #c084fc; } .pz-core { color: #d1d5db; } .pz-sup { color: #5a9bff; }
