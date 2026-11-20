@@ -35,6 +35,7 @@ import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/c
 import { SESSION_PRESETS, SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
+import { avgWord, structureZones } from "@/lib/structureZones"
 import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAt } from "@/lib/volumeAverage"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
@@ -1427,6 +1428,9 @@ export function ReplayPage() {
    */
   const vahCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.vah })))
   const valCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.val })))
+  // Sir's structure zones across the timeframes on screen (lib/structureZones).
+  const zones = structureZones(shownTimeframes.map((tf) => ({
+    vwap: panes[tf]?.vwap ?? null, poc: paneProfiles.get(tf)?.poc, vah: paneProfiles.get(tf)?.vah, val: paneProfiles.get(tf)?.val })))
 
   /** "X vs Avg" header: the name, and the average it measures from in brackets. */
   const vsAvgHeader = (name: string, average: number | null, title: string) => (
@@ -1449,7 +1453,7 @@ export function ReplayPage() {
     return (
       <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
           title={`${what} ${value.toFixed(2)} is ${v.side === "equal" ? "at" : v.side} the average ${average.toFixed(2)}`}>
-        {`${v.side === "above" ? "▲" : v.side === "below" ? "▼" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
+        {`${v.side === "above" ? "▲" : v.side === "below" ? "▼" : "="} ${avgWord(v.side)} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
       </td>
     )
   }
@@ -2629,6 +2633,24 @@ export function ReplayPage() {
                   does NOT reproduce that against a production build, so the
                   original diagnosis was wrong. It stays inline because
                   maxHeight is already here and the two belong together. */}
+              {/* STRUCTURE ZONES (sir, 2026-11-20): four price zones from every
+                  timeframe's levels at once, with what each one means. */}
+              {liveOpen && showVp && (
+                <div className="structure-zones" data-testid="structure-zones">
+                  {([
+                    ["Resistance level", "z-res", zones.resistance && `High ${price(zones.resistance.high)} · Avg ${price(zones.resistance.avg)}`, "Above: buy / reversal"],
+                    ["Breakout zone", "z-brk", zones.breakout && `VWAP high ${price(zones.breakout.vwapHigh)} → VAH low ${price(zones.breakout.vahLow)}`, "Between these: breakout"],
+                    ["Equilibrium core · POC", "z-core", zones.core && `High ${price(zones.core.high)} · Avg ${price(zones.core.avg)} · Low ${price(zones.core.low)}`, "Neutral: no trade zone"],
+                    ["Support floor", "z-sup", zones.support && `High ${price(zones.support.high)} · Avg ${price(zones.support.avg)} · Low ${price(zones.support.low)}`, "Below: short / reversal"],
+                  ] as const).map(([name, cls, values, meaning]) => (
+                    <div key={name} className={`zone-card ${cls}`}>
+                      <div className="zone-name">{name}</div>
+                      <div className="zone-values font-mono">{values || "—"}</div>
+                      <div className="zone-meaning">{meaning}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div hidden={!liveOpen}
                    style={{ overflow: "auto", maxHeight: liveFs.isFull ? undefined : 420 }}>
                 <table className="w-full text-sm grid-table table-sticky">
@@ -2654,12 +2676,12 @@ export function ReplayPage() {
                           two sit adjacent and differ by whatever sigma happens
                           to be, so a 10-point gap looks like a disagreement
                           between platforms rather than two different rows. */}
-                      {showVwap && <th className="text-right p-2 font-medium">VWAP</th>}
+                      {showVwap && <th className="text-right p-2 font-medium zone-head" data-zone="Breakout zone">VWAP</th>}
                       {showVwap && devLevels.flatMap((d) => [
                         <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                         <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                       ])}
-                      {showVp && <th className="text-right p-2 font-medium">POC</th>}
+                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Equilibrium core">POC</th>}
                       {/* POC MATCH: the timeframes whose POC shares the same
                           digits before the decimal point, in one colour per
                           level. */}
@@ -2684,10 +2706,10 @@ export function ReplayPage() {
                           )}
                         </th>
                       )}
-                      {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Resistance">VAHigh</th>}
                       {showVp && vsAvgHeader("VA High Average", vahCols.average,
                         "Each timeframe's VA High against the average VA High of the selected timeframes")}
-                      {showVp && <th className="text-right p-2 font-medium">VALow</th>}
+                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Support floor">VALow</th>}
                       {showVp && vsAvgHeader("VA Low Average", valCols.average,
                         "Each timeframe's VA Low against the average VA Low of the selected timeframes")}
                       <th className="text-left p-2 font-medium whitespace-nowrap" title="The timeframe's newest swing and its 10 Leg points">Swing</th>
@@ -2795,7 +2817,7 @@ export function ReplayPage() {
                                     ? `POC ${vp?.poc?.toFixed(2)} is ${sd === "equal" ? "at" : sd} the average ${pocCols.average.toFixed(2)}`
                                     : undefined}>
                                 {sd && d != null
-                                  ? `${sd === "above" ? "▲" : sd === "below" ? "▼" : "="} ${d > 0 ? "+" : ""}${d.toFixed(2)}`
+                                  ? `${sd === "above" ? "▲" : sd === "below" ? "▼" : "="} ${avgWord(sd)} ${d > 0 ? "+" : ""}${d.toFixed(2)}`
                                   : "—"}
                               </td>
                             )
@@ -2960,7 +2982,7 @@ export function ReplayPage() {
                       <th className="text-right p-2 font-medium">Vol Avg ({volLength})</th>
                       <th className="text-right p-2 font-medium">Buyers</th>
                       <th className="text-right p-2 font-medium">Sellers</th>
-                      {showVwap && <th className="text-right p-2 font-medium tape-g">VWAP</th>}
+                      {showVwap && <th className="text-right p-2 font-medium tape-g zone-head" data-zone="Breakout zone">VWAP</th>}
                         {/* Same columns and labels as Live state above. These were
                             previously visible only for the newest tick, so reading a
                             band or the profile at an earlier bar meant pausing at
@@ -2969,7 +2991,7 @@ export function ReplayPage() {
                           <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                           <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                         ])}
-                        {showVp && <th className="text-right p-2 font-medium tape-g">POC</th>}
+                        {showVp && <th className="text-right p-2 font-medium tape-g zone-head" data-zone="Equilibrium core">POC</th>}
                         {/* The Live state table's two POC columns, for the
                             past: each row measured against every timeframe's
                             POC as it stood when that bar closed. */}
@@ -2990,10 +3012,10 @@ export function ReplayPage() {
                             )}
                           </th>
                         )}
-                        {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                        {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Resistance">VAHigh</th>}
                         {showVp && vsAvgHeader("VA High Average", vahCols.average,
                           "Each row's VA High against the common average VA High -- the same average the Live state table prints")}
-                        {showVp && <th className="text-right p-2 font-medium">VALow</th>}
+                        {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Support floor">VALow</th>}
                         {showVp && vsAvgHeader("VA Low Average", valCols.average,
                           "Each row's VA Low against the common average VA Low -- the same average the Live state table prints")}
                       <th className="text-left p-2 font-medium tape-g">Position</th>
@@ -3086,7 +3108,7 @@ export function ReplayPage() {
                               return (
                                 <td className="p-2 text-right font-mono whitespace-nowrap" style={{ color }}
                                     title={`POC ${poc.toFixed(2)} against the common average ${avg.toFixed(2)}`}>
-                                  {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
+                                  {`${v.side === "above" ? "\u25B2" : v.side === "below" ? "\u25BC" : "="} ${avgWord(v.side)} ${v.diff > 0 ? "+" : ""}${v.diff.toFixed(2)}`}
                                 </td>
                               )
                             })()}

@@ -2377,3 +2377,20 @@ button, [role="button"] {
   border: 1px solid #e0507a66;
   color: #f0789c;
 }
+
+/* Sir's structure zones (2026-11-20): the Market Grid panel and the tag over each zone's first column. */
+.structure-zones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; padding: 0.5rem 0.75rem 0.75rem; }
+@media (max-width: 1100px) { .structure-zones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.zone-card { border: 1px solid var(--hairline-soft); border-left-width: 4px; border-radius: 8px; padding: 0.45rem 0.65rem; }
+.zone-name { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.zone-values { font-size: 0.82rem; margin-top: 0.15rem; }
+.zone-meaning { font-size: 0.72rem; opacity: 0.7; margin-top: 0.1rem; }
+.z-res { border-left-color: #ff3b30; } .z-res .zone-name { color: #ff3b30; }
+.z-brk { border-left-color: #c084fc; } .z-brk .zone-name { color: #c084fc; }
+.z-core { border-left-color: #9ca3af; } .z-core .zone-name { color: #9ca3af; }
+.z-sup { border-left-color: #2f80ff; } .z-sup .zone-name { color: #2f80ff; }
+.zone-head::before { content: attr(data-zone); display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.zone-head[data-zone='Resistance']::before { color: #ff3b30; }
+.zone-head[data-zone='Breakout zone']::before { color: #c084fc; }
+.zone-head[data-zone='Equilibrium core']::before { color: #9ca3af; }
+.zone-head[data-zone='Support floor']::before { color: #2f80ff; }

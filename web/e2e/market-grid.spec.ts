@@ -355,7 +355,7 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
     const colMean = cells.reduce((s, c) => s + c.value, 0) / cells.length
     expect(headerAvg, `${avgCol} header is not the mean of its column`).toBeCloseTo(colMean, 1)
     for (const c of cells) {
-      const diff = Number(/^[▲▼=]\s*([+-]?[\d.]+)$/.exec(c.text)?.[1])
+      const diff = Number(/^[▲▼=]\s*(?:High|Low|Neutral)\s*([+-]?[\d.]+)$/.exec(c.text)?.[1])
       expect(diff, `${c.text} is not ${c.value} minus ${colMean}`).toBeCloseTo(c.value - colMean, 1)
       if (c.value > colMean + 1e-6) expect(c.color).toBe(green)
       if (c.value < colMean - 1e-6) expect(c.color).toBe(red)
@@ -437,7 +437,7 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
     if (r.avgText.startsWith("▼")) expect(r.avgColor).toBe(red)
 
     // The cell prints only the difference, measured from the common average.
-    const m = /^[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.avgText)
+    const m = /^[▲▼=]\s*(?:High|Low|Neutral)\s*([+-]?[\d.]+)$/.exec(r.avgText)
     expect(m, `POC vs Avg cell is not a signed difference: ${r.avgText}`).not.toBeNull()
     const diff = Number(m![1])
     expect(Math.abs(r.poc - diff - liveAvg), `${r.avgText} does not add up for POC ${r.poc}`).toBeLessThan(0.02)
@@ -505,7 +505,7 @@ test("VA High Average and VA Low Average work like POC Average, in both tables",
     expect(tape.rows.length).toBeGreaterThan(5)
 
     for (const r of [...live.rows, ...tape.rows]) {
-      const m = /^[▲▼=]\s*([+-]?[\d.]+)$/.exec(r.text)
+      const m = /^[▲▼=]\s*(?:High|Low|Neutral)\s*([+-]?[\d.]+)$/.exec(r.text)
       expect(m, `not a signed difference: ${r.text}`).not.toBeNull()
       expect(Math.abs(r.value - Number(m![1]) - live.average), `${r.text} does not add up for ${r.value}`).toBeLessThan(0.02)
       if (r.text.startsWith("▲")) expect(r.color).toBe(green)
@@ -572,5 +572,23 @@ test("Live state shows each timeframe's swing levels: breakeven, 50% equilibrium
     await rows.first().locator("td").nth(iBc).scrollIntoViewIfNeeded()
     await page.screenshot({ path: process.env.GRID_SHOT })
   }
+  await page.close()
+})
+
+test("Structure Zones: resistance, breakout, equilibrium core and support floor from every timeframe", async ({ browser }) => {
+  // Sir, 2026-11-20. The words ▲ High / ▼ Low / = Neutral sit in the vs-average cells.
+  test.setTimeout(240_000)
+  const page = await browser.newPage()
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+  const zones = page.getByTestId("structure-zones")
+  await expect(zones).toBeVisible()
+  await expect(zones).toContainText(/Resistance level\s*High [\d.]+ · Avg [\d.]+\s*Above: buy \/ reversal/)
+  await expect(zones).toContainText(/Breakout zone\s*VWAP high [\d.]+ → VAH low [\d.]+/)
+  await expect(zones).toContainText(/Equilibrium core · POC\s*High [\d.]+ · Avg [\d.]+ · Low [\d.]+\s*Neutral: no trade zone/)
+  await expect(zones).toContainText(/Support floor\s*High [\d.]+ · Avg [\d.]+ · Low [\d.]+\s*Below: short \/ reversal/)
+  const cells = await page.locator("table.grid-table").first().locator("tbody td").allInnerTexts()
+  expect(cells.some((t) => /^[▲▼=] (High|Low|Neutral) /.test(t))).toBe(true)
   await page.close()
 })
