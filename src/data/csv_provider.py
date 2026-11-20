@@ -14,6 +14,10 @@ class CSVDataProvider(DataProvider):
     Timestamp can be any format pandas can parse.
     """
 
+    #: Only the demo (synthetic) data uses this, and it writes one file per timeframe:
+    #: there is no matching 1m file to build candles from. See BacktestEngine.run.
+    serves_minutes = False
+
     def __init__(self, data_dir: str = "data/historical"):
         self.data_dir = Path(data_dir)
 

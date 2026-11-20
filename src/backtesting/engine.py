@@ -76,7 +76,18 @@ class BacktestEngine:
             f"{start.date()} -> {end.date()}"
         )
 
-        df = self.data_provider.load(self.symbol, start, end, self.timeframe)
+        from src.data.resample import bar_anchor, is_daily_or_longer, resample_ohlcv
+        # With session hours on an intraday timeframe above 1m, cut the MINUTES to the
+        # session and then build the candles, as the Market Grid does. Cutting finished
+        # candles by their open time threw away the 9:00 1h/2h/4h candle under RTH --
+        # and the real 9:30-10:00 trading inside it (2026-11-20).
+        minutes_first = (bool(self.session_start or self.session_end) and self.timeframe != "1m"
+                         and getattr(self.data_provider, "serves_minutes", True)
+                         and not is_daily_or_longer(self.timeframe))
+        df = self.data_provider.load(self.symbol, start, end, "1m" if minutes_first else self.timeframe)
+        minutes = df
+        if minutes_first and not df.empty:
+            df = resample_ohlcv(df, self.timeframe, bar_anchor(self.symbol))
         loaded = df
 
         # Filter to trading session window (applied per day across the full range).
@@ -88,7 +99,6 @@ class BacktestEngine:
         # time, which such a bar has no meaningful value for -- Schwab stamps a
         # daily candle at midnight, so a 09:30-16:00 window would drop every
         # one. Each of those bars already is a whole session or more.
-        from src.data.resample import is_daily_or_longer
         if (self.session_start or self.session_end) and not is_daily_or_longer(self.timeframe):
             # Captured before filtering so a "no bars remain" error can show what
             # the data provider actually returned -- a session-window mismatch
@@ -100,7 +110,8 @@ class BacktestEngine:
             first_ts = df.index.min() if bars_before else None
             last_ts = df.index.max() if bars_before else None
 
-            bar_times = df.index.time
+            frame = minutes if minutes_first else df
+            bar_times = frame.index.time
             if self.session_start and self.session_end:
                 if self.session_start <= self.session_end:
                     # Strict at the end: see the note in api/routers/replay.py
@@ -113,7 +124,9 @@ class BacktestEngine:
                 mask = bar_times >= self.session_start
             else:
                 mask = bar_times <= self.session_end
-            df = df[mask]
+            df = frame[mask]
+            if minutes_first and not df.empty:
+                df = resample_ohlcv(df, self.timeframe, bar_anchor(self.symbol))
             logger.info(
                 f"Session filter {self.session_start} – {self.session_end} EST: "
                 f"{len(df)} bars remain"
