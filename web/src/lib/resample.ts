@@ -127,6 +127,8 @@ export function resampleOHLC(bars: OHLCVRecord[], targetMinutes: number): OHLCVR
   })
 }
 
+const parsedStarts = new WeakMap<string[], number[]>()
+
 /**
  * Each time moved onto the displayed candle that contains it: the last
  * candle starting at or before it.
@@ -139,7 +141,10 @@ export function resampleOHLC(bars: OHLCVRecord[], targetMinutes: number): OHLCVR
  */
 export function onDisplayCandle(times: string[], candleTimes: string[]): string[] {
   if (!candleTimes.length) return times
-  const starts = candleTimes.map((c) => Date.parse(c))
+  // Parsed once per candle array: callers pass one point at a time, and re-parsing every
+  // candle per point cost ~0.2s per chart redraw on 1m x 5 days (2026-11-20).
+  let starts = parsedStarts.get(candleTimes)
+  if (!starts) parsedStarts.set(candleTimes, (starts = candleTimes.map((c) => Date.parse(c))))
   return times.map((t) => {
     const x = Date.parse(t)
     let lo = 0

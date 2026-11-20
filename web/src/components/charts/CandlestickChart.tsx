@@ -616,6 +616,11 @@ export function CandlestickChart({
   useEffect(() => setVisibleRange(null), [runKey])
   /** The last display candle size, for displayBucketMinutes' dead band. */
   const lastBucketRef = useRef<number | undefined>(undefined)
+  // Each wheel notch is its own relayout; rebuilding the chart for every one froze it
+  // for seconds on 1m data. Plotly has already moved the axis, so the rebuild waits
+  // for the burst to end (2026-11-20).
+  const rangeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(rangeTimer.current), [])
   /** A price range the user dragged the chart to vertically; null = fit the window. */
   const [manualY, setManualY] = useState<[number, number] | null>(null)
   /** The fitted price range of the last draw, for telling a drag from a zoom. */
@@ -879,6 +884,7 @@ export function CandlestickChart({
     }
 
     if (e["xaxis.autorange"]) {
+      clearTimeout(rangeTimer.current)
       if (!bars.length) return
       setVisibleRange({ start: new Date(bars[0].t).getTime(), end: new Date(bars[bars.length - 1].t).getTime() })
       setActiveRange("All")     // autorange IS the whole range
@@ -898,10 +904,14 @@ export function CandlestickChart({
     const r0 = e["xaxis.range[0]"]
     const r1 = e["xaxis.range[1]"]
     if (typeof r0 === "string" && typeof r1 === "string") {
-      setVisibleRange({ start: new Date(r0).getTime(), end: new Date(r1).getTime() })
-      // Dragged or zoomed by hand: whatever preset was lit no longer
-      // describes what is on screen, so nothing is lit.
-      setActiveRange(null)
+      const range = { start: new Date(r0).getTime(), end: new Date(r1).getTime() }
+      clearTimeout(rangeTimer.current)
+      rangeTimer.current = setTimeout(() => {
+        setVisibleRange(range)
+        // Dragged or zoomed by hand: whatever preset was lit no longer
+        // describes what is on screen, so nothing is lit.
+        setActiveRange(null)
+      }, 180)
     }
   }
 
