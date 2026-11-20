@@ -35,7 +35,7 @@ import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/c
 import { SESSION_PRESETS, SESSION_ZONES, toZone } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
-import { avgWord, structureZones } from "@/lib/structureZones"
+import { avgWord, priceZone } from "@/lib/structureZones"
 import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAt } from "@/lib/volumeAverage"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
@@ -1428,10 +1428,30 @@ export function ReplayPage() {
    */
   const vahCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.vah })))
   const valCols = averageColumn(shownTimeframes.map((tf) => ({ tf, value: paneProfiles.get(tf)?.val })))
-  // Sir's structure zones across the timeframes on screen (lib/structureZones).
-  const zones = structureZones(shownTimeframes.map((tf) => ({
-    vwap: panes[tf]?.vwap ?? null, poc: paneProfiles.get(tf)?.poc, vah: paneProfiles.get(tf)?.vah, val: paneProfiles.get(tf)?.val })))
 
+
+  /** The heading row over a Market Grid table: every column under a group, sir's four
+   *  zones in price order, a border between groups (user, 2026-11-20). */
+  const groupRow = (lead: [string, number, string][], tail: [string, number, string][]) => {
+    const g: [string, number, string, string?][] = [
+      ...lead,
+      ...(showVp && showVwap ? [["Price zone", 1, "grp-pz", "where price is now"]] as [string, number, string, string][] : []),
+      ...(showVp ? [["Resistance level", 2, "grp-res", "above = buy / reversal"]] as [string, number, string, string][] : []),
+      ...(showVwap ? [["Breakout zone", 1 + 2 * devLevels.length, "grp-brk", "VWAP high → VAH low"]] as [string, number, string, string][] : []),
+      ...(showVp ? [["Equilibrium core · POC", 3, "grp-core", "neutral = no trade zone"],
+                    ["Support floor", 2, "grp-sup", "below = short / reversal"]] as [string, number, string, string][] : []),
+      ...tail,
+    ]
+    return (
+      <tr className="grp-row">
+        {g.map(([name, span, cls, note]) => (
+          <th key={name} colSpan={span} className={`grp ${cls}`}>
+            {name}{note && <span className="grp-note">{note}</span>}
+          </th>
+        ))}
+      </tr>
+    )
+  }
   /** "X vs Avg" header: the name, and the average it measures from in brackets. */
   const vsAvgHeader = (name: string, average: number | null, title: string) => (
     <th className="text-right p-2 font-medium whitespace-nowrap" title={title}>
@@ -2638,28 +2658,12 @@ export function ReplayPage() {
                   does NOT reproduce that against a production build, so the
                   original diagnosis was wrong. It stays inline because
                   maxHeight is already here and the two belong together. */}
-              {/* STRUCTURE ZONES (sir, 2026-11-20): four price zones from every
-                  timeframe's levels at once, with what each one means. */}
-              {liveOpen && showVp && (
-                <div className="structure-zones" data-testid="structure-zones">
-                  {([
-                    ["Resistance level", "z-res", zones.resistance && `High ${price(zones.resistance.high)} · Avg ${price(zones.resistance.avg)}`, "Above: buy / reversal"],
-                    ["Breakout zone", "z-brk", zones.breakout && `VWAP high ${price(zones.breakout.vwapHigh)} → VAH low ${price(zones.breakout.vahLow)}`, "Between these: breakout"],
-                    ["Equilibrium core · POC", "z-core", zones.core && `High ${price(zones.core.high)} · Avg ${price(zones.core.avg)} · Low ${price(zones.core.low)}`, "Neutral: no trade zone"],
-                    ["Support floor", "z-sup", zones.support && `High ${price(zones.support.high)} · Avg ${price(zones.support.avg)} · Low ${price(zones.support.low)}`, "Below: short / reversal"],
-                  ] as const).map(([name, cls, values, meaning]) => (
-                    <div key={name} className={`zone-card ${cls}`}>
-                      <div className="zone-name">{name}</div>
-                      <div className="zone-values font-mono">{values || "—"}</div>
-                      <div className="zone-meaning">{meaning}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
               <div hidden={!liveOpen}
                    style={{ overflow: "auto", maxHeight: liveFs.isFull ? undefined : 420 }}>
                 <table className="w-full text-sm grid-table table-sticky">
                   <thead className="grid-thead">
+                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"], ["Trade", 3, "grp-trade"]],
+                             [["Swing", 7, "grp-swing"], ["Signal", 1, "grp-sig"]])}
                     <tr>
                       <th className="text-left p-2 font-medium">TF</th>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
@@ -2681,12 +2685,16 @@ export function ReplayPage() {
                           two sit adjacent and differ by whatever sigma happens
                           to be, so a 10-point gap looks like a disagreement
                           between platforms rather than two different rows. */}
-                      {showVwap && <th className="text-right p-2 font-medium zone-head" data-zone="Breakout zone">VWAP</th>}
+                      {showVp && showVwap && <th className="text-left p-2 font-medium whitespace-nowrap" title="Where this timeframe's price is now among its own levels: at or above VA High buy / reversal, between VWAP and VA High breakout, around the POC no trade, at or below VA Low short / reversal">Price Zone</th>}
+                      {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                      {showVp && vsAvgHeader("VA High Average", vahCols.average,
+                        "Each timeframe's VA High against the average VA High of the selected timeframes")}
+                      {showVwap && <th className="text-right p-2 font-medium">VWAP</th>}
                       {showVwap && devLevels.flatMap((d) => [
                         <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                         <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                       ])}
-                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Equilibrium core">POC</th>}
+                      {showVp && <th className="text-right p-2 font-medium">POC</th>}
                       {/* POC MATCH: the timeframes whose POC shares the same
                           digits before the decimal point, in one colour per
                           level. */}
@@ -2711,10 +2719,7 @@ export function ReplayPage() {
                           )}
                         </th>
                       )}
-                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Resistance">VAHigh</th>}
-                      {showVp && vsAvgHeader("VA High Average", vahCols.average,
-                        "Each timeframe's VA High against the average VA High of the selected timeframes")}
-                      {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Support floor">VALow</th>}
+                      {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                       {showVp && vsAvgHeader("VA Low Average", valCols.average,
                         "Each timeframe's VA Low against the average VA Low of the selected timeframes")}
                       <th className="text-left p-2 font-medium whitespace-nowrap" title="The timeframe's newest swing and its 10 Leg points">Swing</th>
@@ -2778,6 +2783,12 @@ export function ReplayPage() {
                               style={{ color: pnl === 0 ? NEUTRAL : pnl > 0 ? GOOD : CRITICAL }}>
                             {pnl >= 0 ? "+" : ""}${Math.round(pnl).toLocaleString()}
                           </td>
+                          {showVp && showVwap && (() => {
+                            const z = priceZone(last?.c, { vah: vp?.vah, val: vp?.val, vwap: pane.vwap })
+                            return <td className={`p-2 font-semibold whitespace-nowrap ${z?.cls ?? "text-muted-foreground"}`}>{z?.word ?? "—"}</td>
+                          })()}
+                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>{num(vp?.vah)}</td>}
+                          {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                           {showVwap && <td className="p-2 text-right font-mono" style={{ color: "#ce93d8" }}>{num(pane.vwap)}</td>}
                           {/* Grouped by whole number, exactly as the Consolidated
                               tape is, and off the SAME grouping -- so a level that
@@ -2827,8 +2838,6 @@ export function ReplayPage() {
                               </td>
                             )
                           })()}
-                          {showVp && <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>{num(vp?.vah)}</td>}
-                          {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                           {showVp && <td className="p-2 text-right font-mono" style={{ color: "#2f80ff" }}>{num(vp?.val)}</td>}
                           {showVp && vsAvgCell("VA Low", vp?.val, valCols.average)}
                           {(() => {
@@ -2974,6 +2983,7 @@ export function ReplayPage() {
                    style={{ overflow: "auto", maxHeight: tapeFs.isFull ? undefined : 460 }}>
                 <table className="w-full text-sm table-sticky grid-table tape-table">
                   <thead className="grid-thead sticky top-0">
+                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"]], [["Trade", 2, "grp-trade"]])}
                     <tr>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">Opened ({TZ_LABEL})</th>
@@ -2987,7 +2997,11 @@ export function ReplayPage() {
                       <th className="text-right p-2 font-medium">Vol Avg ({volLength})</th>
                       <th className="text-right p-2 font-medium">Buyers</th>
                       <th className="text-right p-2 font-medium">Sellers</th>
-                      {showVwap && <th className="text-right p-2 font-medium tape-g zone-head" data-zone="Breakout zone">VWAP</th>}
+                        {showVp && showVwap && <th className="text-left p-2 font-medium whitespace-nowrap" title="Where this timeframe's price is now among its own levels: at or above VA High buy / reversal, between VWAP and VA High breakout, around the POC no trade, at or below VA Low short / reversal">Price Zone</th>}
+                        {showVp && <th className="text-right p-2 font-medium">VAHigh</th>}
+                        {showVp && vsAvgHeader("VA High Average", vahCols.average,
+                          "Each row's VA High against the common average VA High -- the same average the Live state table prints")}
+                      {showVwap && <th className="text-right p-2 font-medium tape-g">VWAP</th>}
                         {/* Same columns and labels as Live state above. These were
                             previously visible only for the newest tick, so reading a
                             band or the profile at an earlier bar meant pausing at
@@ -2996,7 +3010,7 @@ export function ReplayPage() {
                           <th key={`u${d}`} className="text-right p-2 font-medium">Upper +{d.toFixed(1)}&sigma;</th>,
                           <th key={`l${d}`} className="text-right p-2 font-medium">Lower -{d.toFixed(1)}&sigma;</th>,
                         ])}
-                        {showVp && <th className="text-right p-2 font-medium tape-g zone-head" data-zone="Equilibrium core">POC</th>}
+                        {showVp && <th className="text-right p-2 font-medium tape-g">POC</th>}
                         {/* The Live state table's two POC columns, for the
                             past: each row measured against every timeframe's
                             POC as it stood when that bar closed. */}
@@ -3017,10 +3031,7 @@ export function ReplayPage() {
                             )}
                           </th>
                         )}
-                        {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Resistance">VAHigh</th>}
-                        {showVp && vsAvgHeader("VA High Average", vahCols.average,
-                          "Each row's VA High against the common average VA High -- the same average the Live state table prints")}
-                        {showVp && <th className="text-right p-2 font-medium zone-head" data-zone="Support floor">VALow</th>}
+                        {showVp && <th className="text-right p-2 font-medium">VALow</th>}
                         {showVp && vsAvgHeader("VA Low Average", valCols.average,
                           "Each row's VA Low against the common average VA Low -- the same average the Live state table prints")}
                       <th className="text-left p-2 font-medium tape-g">Position</th>
@@ -3057,6 +3068,16 @@ export function ReplayPage() {
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(volumeAverageAt(panes[r.tf]?.bars ?? [], r.barIndex, volLength), 2)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.buyers)}</td>
                           <td className="p-2 text-right font-mono text-muted-foreground">{volumeNumber(buyerSellerSplit(r)?.sellers)}</td>
+                            {showVp && showVwap && (() => {
+                              const z = priceZone(r.c, { vah: vp?.vah, val: vp?.val, vwap: r.vwap })
+                              return <td className={`p-2 font-semibold whitespace-nowrap ${z?.cls ?? "text-muted-foreground"}`}>{z?.word ?? "—"}</td>
+                            })()}
+                            {showVp && (
+                              <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>
+                                {tapeNum(vp?.vah)}
+                              </td>
+                            )}
+                            {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                           {showVwap && (
                             <td className="p-2 text-right font-mono tape-g" style={{ color: "#c79ae0" }}>
                               {price(r.vwap)}
@@ -3117,12 +3138,6 @@ export function ReplayPage() {
                                 </td>
                               )
                             })()}
-                            {showVp && (
-                              <td className="p-2 text-right font-mono" style={{ color: "#ff3b30" }}>
-                                {tapeNum(vp?.vah)}
-                              </td>
-                            )}
-                            {showVp && vsAvgCell("VA High", vp?.vah, vahCols.average)}
                             {showVp && (
                               <td className="p-2 text-right font-mono" style={{ color: "#2f80ff" }}>
                                 {tapeNum(vp?.val)}

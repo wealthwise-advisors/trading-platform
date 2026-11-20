@@ -2378,19 +2378,28 @@ button, [role="button"] {
   color: #f0789c;
 }
 
-/* Sir's structure zones (2026-11-20): the Market Grid panel and the tag over each zone's first column. */
-.structure-zones { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; padding: 0.5rem 0.75rem 0.75rem; }
-@media (max-width: 1100px) { .structure-zones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.zone-card { border: 1px solid var(--hairline-soft); border-left-width: 4px; border-radius: 8px; padding: 0.45rem 0.65rem; }
-.zone-name { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.zone-values { font-size: 0.82rem; margin-top: 0.15rem; }
-.zone-meaning { font-size: 0.72rem; opacity: 0.7; margin-top: 0.1rem; }
-.z-res { border-left-color: #ff3b30; } .z-res .zone-name { color: #ff3b30; }
-.z-brk { border-left-color: #c084fc; } .z-brk .zone-name { color: #c084fc; }
-.z-core { border-left-color: #9ca3af; } .z-core .zone-name { color: #9ca3af; }
-.z-sup { border-left-color: #2f80ff; } .z-sup .zone-name { color: #2f80ff; }
-.zone-head::before { content: attr(data-zone); display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.zone-head[data-zone='Resistance']::before { color: #ff3b30; }
-.zone-head[data-zone='Breakout zone']::before { color: #c084fc; }
-.zone-head[data-zone='Equilibrium core']::before { color: #9ca3af; }
-.zone-head[data-zone='Support floor']::before { color: #2f80ff; }
+/* Market Grid group headings (2026-11-20): every column under a group, sir's zones in price order. */
+.grp-row th.grp { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 6px 8px; border: 1px solid var(--hairline-mid); border-bottom-width: 2px; white-space: nowrap; }
+.grp-note { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: 0.85; margin-top: 1px; }
+/* Specific enough to beat the tape's own heading colours; group cells are opaque (sticky). */
+table.grid-table thead tr.grp-row th.grp-time { color: #a5f3fc; background: #123a40; }
+table.grid-table thead tr.grp-row th.grp-ohlc { color: #e0e7ff; background: #232c58; }
+table.grid-table thead tr.grp-row th.grp-vol { color: #bbf7d0; background: #17402a; }
+table.grid-table thead tr.grp-row th.grp-trade { color: #fde68a; background: #463812; }
+table.grid-table thead tr.grp-row th.grp-pz { color: #f5f5f5; background: #3f3f46; }
+table.grid-table thead tr.grp-row th.grp-swing { color: #99f6e4; background: #0f3d38; }
+table.grid-table thead tr.grp-row th.grp-sig { color: #fbcfe8; background: #4a1d3a; }
+table.grid-table thead tr.grp-row th.grp-res { color: #fbbf24; background: #4a3207; }
+table.grid-table thead tr.grp-row th.grp-brk { color: #c084fc; background: #2c2140; }
+table.grid-table thead tr.grp-row th.grp-core { color: #d1d5db; background: #262a33; }
+table.grid-table thead tr.grp-row th.grp-sup { color: #5a9bff; background: #172744; }
+/* The first group spans several columns: pinning it to the left edge covered the others when scrolled. */
+table.grid-table thead tr.grp-row th:first-child { left: auto; }
+/* Two heading rows: the group row sticks at the top, the column names just under it. */
+.grp-row th.grp { height: 34px; box-sizing: border-box; }
+.table-sticky thead tr.grp-row + tr th { top: 34px; }
+/* Bordered cells, so the grid reads as a table (user, 2026-11-20). */
+.grid-table th, .grid-table td { border: 1px solid var(--hairline-soft); }
+/* Price Zone cells: the word in its zone's colour, as the group headings. */
+.pz-res { color: #fbbf24; } .pz-brk { color: #c084fc; } .pz-core { color: #d1d5db; } .pz-sup { color: #5a9bff; }

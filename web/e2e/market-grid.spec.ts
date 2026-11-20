@@ -284,7 +284,7 @@ test("POC Match groups by whole number, POC vs Avg is green above / red below", 
   await loadAndPlay(page)
 
   const table = page.locator("table.grid-table").first()
-  const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+  const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim())
   const iPoc = headers.findIndex((h) => /^POC$/i.test(h))
   const iMatch = headers.findIndex((h) => /^POC MATCH/i.test(h))
   const iAvg = headers.findIndex((h) => /^POC AVERAGE/i.test(h))
@@ -390,7 +390,7 @@ test("the Consolidated tape carries POC Match and POC vs Avg, against the Live t
 
   const readTable = async (idx: number) => {
     const table = page.locator("table.grid-table").nth(idx)
-    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+    const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim())
     const ix = (re: RegExp) => headers.findIndex((h) => re.test(h))
     const cols = { close: 0, poc: ix(/^POC$/i), match: ix(/^POC MATCH/i), avg: ix(/^POC AVERAGE/i) }
     expect(cols.match, `no POC Match column in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
@@ -475,7 +475,7 @@ test("VA High Average and VA Low Average work like POC Average, in both tables",
 
   const read = async (idx: number, valueCol: RegExp, avgCol: RegExp) => {
     const table = page.locator("table.grid-table").nth(idx)
-    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim())
+    const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim())
     const iv = headers.findIndex((h) => valueCol.test(h))
     const ia = headers.findIndex((h) => avgCol.test(h))
     expect(iv, `no ${valueCol} in ${JSON.stringify(headers)}`).toBeGreaterThan(-1)
@@ -525,7 +525,7 @@ test("Volume average, buyers and sellers are in both tables and add up", async (
   const n = (s: string) => Number(s.replace(/,/g, ""))
   for (const idx of [0, 1]) {
     const table = page.locator("table.grid-table").nth(idx)
-    const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+    const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim().toUpperCase())
     expect(headers).toContain("VOL AVG (20)")
     const [iv, ib, is] = ["VOLUME", "BUYERS", "SELLERS"].map((h) => headers.indexOf(h))
     expect(ib).toBe(headers.indexOf("VOL AVG (20)") + 1)
@@ -546,7 +546,7 @@ test("Live state shows each timeframe's swing levels: breakeven, 50% equilibrium
 
   const n = (s: string) => Number(s.replace(/,/g, ""))
   const table = page.locator("table.grid-table").first()
-  const headers = (await table.locator("thead th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+  const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim().toUpperCase())
   const cols = ["SWING", "SWING HIGH", "SWING LOW", "SWING VOLUME", "VOLUME BREAKEVEN", "50% EQUILIBRIUM", "BUYER CONTROL"]
   const at = cols.map((h) => headers.indexOf(h))
   // Sir's order, side by side, just before Last signal.
@@ -575,19 +575,31 @@ test("Live state shows each timeframe's swing levels: breakeven, 50% equilibrium
   await page.close()
 })
 
-test("Structure Zones: resistance, breakout, equilibrium core and support floor from every timeframe", async ({ browser }) => {
-  // Sir, 2026-11-20. The words ▲ High / ▼ Low / = Neutral sit in the vs-average cells.
+test("Group headings over every column, sir's zones in price order, and the Price Zone column", async ({ browser }) => {
+  // User and sir, 2026-11-20: a heading row above the column names; Resistance, Breakout,
+  // Equilibrium core, Support floor; Price Zone says where each timeframe's price is.
   test.setTimeout(240_000)
   const page = await browser.newPage()
   await openApp(page)
   await goToMarketGrid(page)
   await loadAndPlay(page)
-  const zones = page.getByTestId("structure-zones")
-  await expect(zones).toBeVisible()
-  await expect(zones).toContainText(/Resistance level\s*High [\d.]+ · Avg [\d.]+\s*Above: buy \/ reversal/)
-  await expect(zones).toContainText(/Breakout zone\s*VWAP high [\d.]+ → VAH low [\d.]+/)
-  await expect(zones).toContainText(/Equilibrium core · POC\s*High [\d.]+ · Avg [\d.]+ · Low [\d.]+\s*Neutral: no trade zone/)
-  await expect(zones).toContainText(/Support floor\s*High [\d.]+ · Avg [\d.]+ · Low [\d.]+\s*Below: short \/ reversal/)
+  for (const idx of [0, 1]) {
+    const table = page.locator("table.grid-table").nth(idx)
+    const groups = (await table.locator("thead tr.grp-row th").allInnerTexts()).map((g) => g.split("\n")[0].trim().toUpperCase())
+    const zones = groups.filter((g) => /RESISTANCE|BREAKOUT|EQUILIBRIUM|SUPPORT/.test(g))
+    expect(zones).toEqual(["RESISTANCE LEVEL", "BREAKOUT ZONE", "EQUILIBRIUM CORE · POC", "SUPPORT FLOOR"])
+    expect(groups.slice(0, 3)).toEqual(["TIME", "OHLC", "VOLUME"])
+    // The group spans add up to exactly the columns underneath.
+    const spans = await table.locator("thead tr.grp-row th").evaluateAll((ths) => ths.reduce((n, th) => n + (th as HTMLTableCellElement).colSpan, 0))
+    expect(spans).toBe(await table.locator("thead tr:last-child th").count())
+    const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+    const iz = headers.indexOf("PRICE ZONE")
+    expect(iz).toBeGreaterThan(-1)
+    await expect.poll(async () => {
+      const cell = await table.locator("tbody tr").first().locator("td").nth(iz).innerText()
+      return /^(Buy \/ Reversal|Breakout|No trade|Short \/ Reversal)$/.test(cell.trim())
+    }, { timeout: 30_000 }).toBe(true)
+  }
   const cells = await page.locator("table.grid-table").first().locator("tbody td").allInnerTexts()
   expect(cells.some((t) => /^[▲▼=] (High|Low|Neutral) /.test(t))).toBe(true)
   await page.close()
