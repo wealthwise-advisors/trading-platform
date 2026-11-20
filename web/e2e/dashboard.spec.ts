@@ -823,3 +823,21 @@ test("a timeframe switch that fails says so, and the highlight stays on what is 
   await own.unroute("**/api/backtests")
   await own.close()
 })
+
+test("Backtest Session Hours: one-click Globex and RTH, shown in the chosen zone", async ({ page }) => {
+  // The Backtest page had only the custom window; the Market Grid's two presets now sit here too (2026-11-20).
+  await openApp(page)
+  await page.getByRole("button", { name: "times in CT" }).click()
+  const globex = page.getByRole("button", { name: "session preset Globex" })
+  await expect(globex).toContainText("5:00 PM – 4:00 PM (next day)")
+  await globex.click()
+  await expect(globex).toHaveAttribute("aria-pressed", "true")
+  await expect(page.getByText("Runs as 18:00–17:00 ET")).toBeVisible()
+  const rth = page.getByRole("button", { name: "session preset RTH" })
+  await expect(rth).toContainText("8:30 AM – 3:00 PM")
+  await rth.click()
+  await expect(rth).toHaveAttribute("aria-pressed", "true")
+  await expect(globex).toHaveAttribute("aria-pressed", "false")
+  await page.getByRole("button", { name: "times in ET" }).click()
+  await expect(rth).toContainText("9:30 AM – 4:00 PM")
+})

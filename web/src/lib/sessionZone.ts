@@ -137,3 +137,22 @@ export const useZoneOffset = create<{ offset: number; setOffset: (n: number) => 
   offset: loadZoneOffset(),
   setOffset: (n) => { saveZoneOffset(n); set({ offset: n }) },
 }))
+
+/** The two sessions that matter, one click each, on the Market Grid and the Backtest page alike.
+ *  `from` / `to` are EASTERN, as stored; the labels are Eastern too (the pages relabel them by zone). */
+export const SESSION_PRESETS = [
+  {
+    // "(next day)" is load-bearing, not decoration: 6:00 PM to 5:00 PM reads as
+    // a 23-hour window running backwards unless you already know the futures
+    // session crosses midnight. Picking the wrong window is the exact mistake
+    // this control exists to prevent, so the card says which day it ends on.
+    label: "Globex 6:00 PM – 5:00 PM (next day)",
+    from: "18:00", to: "17:00",
+    why: "The futures session, 18:00–17:00 ET (17:00–16:00 CT). This is what a broker platform's DAY VWAP anchors to, so use it when comparing VWAP or bands against one.",
+  },
+  {
+    label: "RTH 9:30 AM – 4:00 PM",
+    from: "09:30", to: "16:00",
+    why: "Regular cash hours, 09:30–16:00 ET. VWAP starts at the cash open and ignores overnight flow.",
+  },
+] as const

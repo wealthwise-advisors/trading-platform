@@ -32,7 +32,7 @@ import { DeviationColorSettings } from "@/components/DeviationColorSettings"
 import { DayCountStepper } from "@/components/DayCountStepper"
 import { steppedEndDate } from "@/lib/dayRange"
 import { INTRADAY_TIMEFRAMES, TF_MINUTES, startDateForTimeframes } from "@/lib/chartSetup"
-import { SESSION_ZONES } from "@/lib/sessionZone"
+import { SESSION_PRESETS, SESSION_ZONES } from "@/lib/sessionZone"
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAt } from "@/lib/volumeAverage"
@@ -149,22 +149,7 @@ const PARAM_INFO: Record<string, string> = {
     "How many bars either side a high or low must beat to count as a swing point. Divergences are measured between those points, so a larger value finds fewer and slower swings, a smaller one finds more and noisier ones.",
 }
 
-const SESSION_PRESETS = [
-  {
-    // "(next day)" is load-bearing, not decoration: 6:00 PM to 5:00 PM reads as
-    // a 23-hour window running backwards unless you already know the futures
-    // session crosses midnight. Picking the wrong window is the exact mistake
-    // this control exists to prevent, so the card says which day it ends on.
-    label: "Globex 6:00 PM – 5:00 PM (next day)",
-    from: "18:00", to: "17:00",
-    why: "The futures session, 18:00–17:00 ET (17:00–16:00 CT). This is what a broker platform's DAY VWAP anchors to, so use it when comparing VWAP or bands against one.",
-  },
-  {
-    label: "RTH 9:30 AM – 4:00 PM",
-    from: "09:30", to: "16:00",
-    why: "Regular cash hours, 09:30–16:00 ET. VWAP starts at the cash open and ignores overnight flow.",
-  },
-] as const
+// SESSION_PRESETS lives in lib/sessionZone, shared with the Backtest page's Session Hours.
 
 /** Display clocks. The data itself is always Eastern; these only relabel it.
  *  The shared list, not a second copy of it: the Backtest page's Session Hours

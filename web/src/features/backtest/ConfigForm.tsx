@@ -19,7 +19,7 @@ import {
 } from "@/lib/chartSetup"
 import { steppedEndDate, startDateForDays } from "@/lib/dayRange"
 import {
-  SESSION_ZONES, fromZone, toZone, useZoneOffset, zoneShort,
+  SESSION_PRESETS, SESSION_ZONES, fromZone, toZone, useZoneOffset, zoneShort,
 } from "@/lib/sessionZone"
 import { SavedConfigsPanel } from "@/components/SavedConfigsPanel"
 import { TimeField } from "@/components/ui/time-field"
@@ -34,7 +34,7 @@ import {
 } from "./ConfigParts"
 import {
   Settings2, Database, FileSpreadsheet, LineChart, Radio, Clock,
-  Wallet, Layers, Percent, Play, ChevronsLeft, ChevronsUpDown,
+  Wallet, Layers, Percent, Play, ChevronsLeft, ChevronsUpDown, Globe, Landmark, Check,
 } from "lucide-react"
 
 /** Icon and one-line description per data source, keyed on the API's id. */
@@ -503,6 +503,36 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {/* ── session hours ────────────────────────────────────────────────── */}
       <Section icon="session" step={10} anchor="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember">
         <Panel>
+          {/* The Market Grid's two presets, one click each (user, 2026-11-20: the
+              Backtest page had only the custom window). Times read in the zone
+              picked below; what is stored stays Eastern. */}
+          <div className="grid grid-cols-1 gap-2 mb-3">
+            {SESSION_PRESETS.map((p) => {
+              const on = !cfg.session24h && cfg.sessionStart === p.from && cfg.sessionEnd === p.to
+              const name = p.label.split(" ")[0]
+              const clock12 = (hhmm: string) => {
+                const [h, m] = hhmm.split(":").map(Number)
+                return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`
+              }
+              const range = `${clock12(toZone(p.from, zoneOffset))} – ${clock12(toZone(p.to, zoneOffset))}${p.from > p.to ? " (next day)" : ""}`
+              return (
+                <button key={p.label} type="button" aria-pressed={on} aria-label={`session preset ${name}`} title={p.why}
+                        className={`preset-card relative${on ? " preset-card-on" : ""}`}
+                        onClick={() => { cfg.setField("session24h", false); cfg.setField("sessionStart", p.from); cfg.setField("sessionEnd", p.to) }}>
+                  <span aria-hidden className="preset-icon">
+                    {name === "Globex" ? <Globe size={18} strokeWidth={1.9} /> : <Landmark size={18} strokeWidth={1.9} />}
+                  </span>
+                  <span className="preset-text relative">
+                    <span className="preset-name">{name}</span>
+                    <span className="preset-range">{range}</span>
+                  </span>
+                  <span aria-hidden className={`preset-radio${on ? " preset-radio-on" : ""}`}>
+                    {on && <Check size={12} strokeWidth={3.4} />}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
           {/* 24-hour keeps every bar. It is not just a viewing preference: BTC
               trades continuously, so a 09:30-16:00 window silently discards 54%
               of its bars and changes the backtest, not only the chart. */}
