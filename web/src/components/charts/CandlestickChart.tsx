@@ -21,6 +21,7 @@ type DragMode =
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
 import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint, LiveSignal } from "@/lib/types"
+import { chartMarks, type EconEvent } from "@/lib/econCalendar"
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
@@ -93,6 +94,10 @@ interface CandlestickChartProps {
   live?: "streaming" | "polling"
   /** The strategy's signals on bars that closed after the run. */
   liveSignals?: LiveSignal[]
+  /** Official economic releases (Feature 8), Eastern like the bars. */
+  econEvents?: EconEvent[]
+  /** The next high-impact release within 24 h, named beside the instrument. */
+  nextEvent?: { event: EconEvent; minutes: number } | null
   strategyName: string
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
@@ -290,6 +295,7 @@ export function ZonedCandlestickChart(props: CandlestickChartProps) {
   const zigzag = useMemo(() => shiftTimes(props.zigzag, off), [props.zigzag, off])
   const trades = useMemo(() => shiftTimes(props.trades, off), [props.trades, off])
   const liveSignals = useMemo(() => shiftTimes(props.liveSignals, off), [props.liveSignals, off])
+  const econEvents = useMemo(() => shiftTimes(props.econEvents, off), [props.econEvents, off])
   const { fetchCompare } = props
   const compare = useMemo(() => fetchCompare && ((sym: string) => fetchCompare(sym).then((r) => shiftTimes(r, off))),
                           [fetchCompare, off])
@@ -297,7 +303,7 @@ export function ZonedCandlestickChart(props: CandlestickChartProps) {
   // every setting from storage, exactly as it does when it first opens.
   const epoch = useChartTemplateEpoch((s) => s.epoch)
   return <CandlestickChart key={epoch} {...props} bars={bars} indicators={indicators} volumeContext={volumeContext}
-                           zigzag={zigzag} trades={trades} liveSignals={liveSignals} fetchCompare={compare} zoneOffset={off} />
+                           zigzag={zigzag} trades={trades} liveSignals={liveSignals} econEvents={econEvents} fetchCompare={compare} zoneOffset={off} />
 }
 
 export function CandlestickChart({
@@ -309,7 +315,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, live, liveSignals = [], bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
+  symbol, live, liveSignals = [], econEvents = [], nextEvent = null, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -358,6 +364,7 @@ export function CandlestickChart({
   // VWAP and its bands, and stacking a second envelope on top of that without
   // being asked makes the candles harder to read, not easier.
   const [bbOn, setBbOn] = useState(studies0.bb ?? false)
+  const [eventsOn, setEventsOn] = useState(studies0.events ?? true)
   // Sir's swing levels drawn across every swing (2026-11-17); on by default so they show without hunting.
   const [swingLevelsOn, setSwingLevelsOn] = useState(studies0.swingLevels ?? true)
   const [vwapPanelOpen, setVwapPanelOpen] = useState(false)
@@ -571,7 +578,7 @@ export function CandlestickChart({
   const [templateNote, setTemplateNote] = useState("")
   const loadTemplates = () => api.listTemplates().then(setTemplates).catch(() => setTemplates([]))
   const studiesNow = (): Studies => ({
-    vwap: vwapOn, bb: bbOn, swingLevels: swingLevelsOn, volumeProfile: vpOn,
+    vwap: vwapOn, bb: bbOn, swingLevels: swingLevelsOn, volumeProfile: vpOn, events: eventsOn,
     rsi2: osc.rsi2, stochrsi: osc.stochrsi, rsi13: osc.rsi13, mfi: osc.mfi,
   })
   const templateAction = async (what: string, run: () => Promise<unknown>) => {
@@ -1099,6 +1106,17 @@ export function CandlestickChart({
       layer: "above",
     } as Partial<Shape>))
   const annotations: Partial<Annotations>[] = []
+  // Economic releases (Feature 8): a dotted line at each high or medium event inside the
+  // bars, labelled at the top. Amber for high, sky for medium: two clearly different hues.
+  if (eventsOn && t.length > 1) {
+    for (const m of chartMarks(econEvents, t[0], t[t.length - 1])) {
+      const color = m.impact === "high" ? "#f59e0b" : "#38bdf8"
+      shapes.push({ type: "line", xref: "x", yref: "paper", x0: m.at, x1: m.at, y0: 0, y1: 1,
+                    line: { color, width: 1.2, dash: "dot" }, layer: "below" } as Partial<Shape>)
+      annotations.push({ x: m.at, xref: "x", y: 1, yref: "paper", yanchor: "bottom", showarrow: false,
+                         text: m.label, font: { size: 10, color }, hovertext: m.titles.join("<br>") } as Partial<Annotations>)
+    }
+  }
   // The swing-level boxes, drawn last so no swing tag or circle sits on top of them.
   const levelBoxes: Partial<Annotations>[] = []
 
@@ -2770,6 +2788,7 @@ export function CandlestickChart({
                   <MenuHeader title="Indicators" onClose={() => setIndicatorMenu(false)} />
                   <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
                   <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
+                  <MenuToggle label="Economic events" checked={eventsOn} onChange={setEventsOn} />
                   {showZigzag && <MenuToggle label="Swing levels" checked={swingLevelsOn} onChange={setSwingLevelsOn} />}
                   <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
                   {OSC_ORDER.map((key) => (
@@ -2923,7 +2942,7 @@ export function CandlestickChart({
           ride here moved down to the toolbar row, where the reference keeps
           every control together -- this line is the quote now, nothing else. */}
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
-                   interval={interval} bars={bars} live={live} lastSignal={liveSignals[liveSignals.length - 1]} />
+                   interval={interval} bars={bars} live={live} lastSignal={liveSignals[liveSignals.length - 1]} nextEvent={nextEvent} />
       {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
           line, as the reference draws them. They were two stacked rows,
           which cost the plot a strip of height to say nothing the one row

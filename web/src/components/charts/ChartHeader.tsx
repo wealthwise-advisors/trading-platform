@@ -22,6 +22,7 @@
 
 import { intervalName } from "@/lib/chartSetup"
 import type { LiveSignal, OHLCVRecord } from "@/lib/types"
+import type { EconEvent } from "@/lib/econCalendar"
 
 /** "5m" -> "5"; "1h", "1d", "1w" unchanged. */
 function intervalLabel(interval: string): string {
@@ -58,10 +59,12 @@ interface ChartHeaderProps {
   live?: "streaming" | "polling"
   /** The strategy's newest live signal, named beside the chip. */
   lastSignal?: LiveSignal
+  /** The next high-impact economic release within 24 h (Feature 8). */
+  nextEvent?: { event: EconEvent; minutes: number } | null
 }
 
 export function ChartHeader({
-  symbol, description, exchange, interval, bars, actions, live, lastSignal,
+  symbol, description, exchange, interval, bars, actions, live, lastSignal, nextEvent,
 }: ChartHeaderProps) {
   const last = bars.length ? bars[bars.length - 1] : null
   const prev = bars.length > 1 ? bars[bars.length - 2] : null
@@ -130,6 +133,13 @@ export function ChartHeader({
                     live === "streaming" ? "bg-emerald-500/12 text-emerald-700 ring-emerald-400/30 dark:text-emerald-300"
                                          : "bg-amber-500/12 text-amber-700 ring-amber-400/30 dark:text-amber-300"}`}>
               Live &middot; {live}
+            </span>
+          )}
+          {nextEvent && (
+            <span data-testid="chart-next-event" title={`${nextEvent.event.title}, ${nextEvent.event.at.replace("T", " ")} ET`}
+                  className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">
+              {nextEvent.event.title.split(",")[0]} in {nextEvent.minutes >= 60
+                ? `${Math.floor(nextEvent.minutes / 60)} h ${nextEvent.minutes % 60} min` : `${nextEvent.minutes} min`}
             </span>
           )}
           {live && lastSignal && (

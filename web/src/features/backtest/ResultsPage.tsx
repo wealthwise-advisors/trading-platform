@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { lazy, Suspense, useState } from "react"
+import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
@@ -36,6 +36,7 @@ import { MultiChartGrid } from "@/features/backtest/MultiChartGrid"
 import { useFollowLive } from "@/features/backtest/useFollowLive"
 import { useLiveSession } from "@/features/live/useLiveSession"
 import { PaperTradingPanel } from "@/features/live/PaperTradingPanel"
+import { nextHighImpact, nowEastern } from "@/lib/econCalendar"
 import { ResearchPanel } from "@/features/backtest/ResearchPanel"
 
 /**
@@ -125,6 +126,23 @@ export function ResultsPage() {
   // The paper session is driven here, not in its tab, so it keeps getting closed bars
   // whichever tab is open (a hidden tab unmounts, and a session without bars is reaped).
   const live = useLiveSession(priceDataQ.data?.bars)
+  // Economic releases over the chart's days and the next 24 h (Feature 8).
+  const barsNow = priceDataQ.data?.bars
+  const calFrom = barsNow?.[0]?.t.slice(0, 10)
+  const calTo = barsNow?.length ? barsNow[barsNow.length - 1].t.slice(0, 10) : undefined
+  const calendarQ = useQuery({
+    queryKey: ["calendar", calFrom, calTo, "chart"],
+    queryFn: () => {
+      const next = new Date(`${calTo}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 2)
+      const end = next.toISOString().slice(0, 10)
+      const today = nowEastern().slice(0, 10)
+      return api.calendar(calFrom!, end > today ? end : today)
+    },
+    enabled: !!calFrom && !!calTo, staleTime: 30 * 60_000,
+  })
+  const [clock, setClock] = useState(nowEastern)
+  useEffect(() => { const id = setInterval(() => setClock(nowEastern()), 60_000); return () => clearInterval(id) }, [])
+  const nextEvent = useMemo(() => nextHighImpact(calendarQ.data?.events ?? [], clock), [calendarQ.data, clock])
 
   const equityQ = useQuery({
     queryKey: ["backtest", backtestId, "equity-curve"],
@@ -398,6 +416,8 @@ export function ResultsPage() {
                         bars={priceDataQ.data.bars}
                         live={priceDataQ.data.live ? (priceDataQ.data.stream ? "streaming" : "polling") : undefined}
                         liveSignals={priceDataQ.data.live_signals}
+                        econEvents={calendarQ.data?.events}
+                        nextEvent={nextEvent}
                         indicators={priceDataQ.data.indicators}
                         volumeContext={priceDataQ.data.volume_context}
                         fetchCompare={(sym) => api.compareSymbol(backtestId!, sym)}

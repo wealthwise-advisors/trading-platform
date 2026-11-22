@@ -27,7 +27,7 @@ interface ConfigState {
 
   backtestId: string | null
   lastRunAt: string | null
-  page: "backtest" | "replay" | "export"
+  page: "backtest" | "replay" | "export" | "scanner" | "calendar"
   /** Which results tab is showing. Lifted out of the Tabs component so a
    *  header link can open the view it names -- "Strategy Lab" that lands on
    *  the page but not the optimiser has not taken you anywhere. */
@@ -37,7 +37,7 @@ interface ConfigState {
   setParam: (name: string, value: number) => void
   setParams: (params: Record<string, number>) => void
   setBacktestId: (id: string | null) => void
-  setPage: (page: "backtest" | "replay" | "export") => void
+  setPage: (page: "backtest" | "replay" | "export" | "scanner" | "calendar") => void
   setResultsTab: (tab: string) => void
   /**
    * Whether the backtest configuration panel is showing.
@@ -55,7 +55,7 @@ interface ConfigState {
   /** The header section last chosen, so the lit pill reflects intent.
    *  Null means "nothing chosen yet, derive it from the page and tab". */
   navSection: string | null
-  goTo: (page: "backtest" | "replay" | "export", tab?: string, section?: string) => void
+  goTo: (page: "backtest" | "replay" | "export" | "scanner" | "calendar", tab?: string, section?: string) => void
   setLastRunAt: (iso: string | null) => void
   getSnapshot: () => ConfigSnapshot
   loadSnapshot: (snapshot: ConfigSnapshot) => void

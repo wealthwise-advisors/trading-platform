@@ -39,12 +39,13 @@ export const SETTING_STORE_KEYS: Record<string, string> = {
   priceAlerts: "price-alerts",            // lib/priceAlerts.ts
   favourites: "instrument-favourites",    // components/InstrumentPicker.tsx
   journal: "trading-journal",             // components/tables/TradingPanels.tsx
+  scans: "saved-scans",                   // features/scanner/ScannerPage.tsx
 }
 
 /** The part of the settings a chart template carries, plus its studies. */
 export const TEMPLATE_SETTINGS = ["chartStyle", "vwapLevels", "volumeAvg", "volumeProfile", "deviationColors"] as const
 
-export type Studies = Partial<Record<"vwap" | "bb" | "swingLevels" | "volumeProfile" | "rsi2" | "stochrsi" | "rsi13" | "mfi", boolean>>
+export type Studies = Partial<Record<"vwap" | "bb" | "swingLevels" | "volumeProfile" | "rsi2" | "stochrsi" | "rsi13" | "mfi" | "events", boolean>>
 
 function read(key: string): string | null {
   try { return localStorage.getItem(key) } catch { return null }

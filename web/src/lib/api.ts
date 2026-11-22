@@ -1,3 +1,5 @@
+import type { EconEvent } from "@/lib/econCalendar"
+import type { ScanRow } from "@/features/scanner/scanText"
 import type { MonteCarloResult, ResearchJob, RunSummary } from "@/lib/research"
 import type { AlertEvent } from "@/lib/alertEvents"
 // Typed fetch client for the FastAPI backend. Always calls relative /api/...
@@ -263,7 +265,18 @@ export const api = {
     }),
 
   // ── strategy research (Feature 6) ──────────────────────────────────────
+  /** The futures scanner (Feature 7). One request per symbol on the server, 25 at most. */
+  runScan: (body: Record<string, unknown>) =>
+    request<{ rows: ScanRow[]; scanned_at: string }>("/scan", { method: "POST", body: JSON.stringify(body), timeoutMs: LONG_TIMEOUT_MS }),
   listBacktests: () => request<RunSummary[]>("/backtests"),
+  // -- economic calendar (Feature 8) --
+  calendar: (start: string, end: string, impact?: string) =>
+    request<{ events: EconEvent[]; sources: Record<string, { ok: boolean; events: number; fetched_at: string; error: string | null }> }>(
+      `/calendar?start=${start}&end=${end}${impact ? `&impact=${impact}` : ""}`),
+  addCalendarEvent: (body: { title: string; at: string; impact: string; note?: string }) =>
+    request<{ uid: string }>("/calendar", { method: "POST", body: JSON.stringify(body) }),
+  deleteCalendarEvent: (uid: string) =>
+    request<{ ok: boolean }>(`/calendar/${encodeURIComponent(uid)}`, { method: "DELETE" }),
   monteCarlo: (id: string, body: { runs: number; seed?: number; loss_threshold?: number }) =>
     request<MonteCarloResult>(`/backtests/${id}/monte-carlo`, { method: "POST", body: JSON.stringify(body) }),
   startWalkForward: (req: OptimizeRequest & { folds: number; train_blocks: number }) =>

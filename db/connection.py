@@ -42,7 +42,8 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: v12 added user_settings and chart_templates (settings and templates on the
 #: server, so every browser sees the same chart setup).
 #: v13 added alert_events (price alerts the server saw reached, each once).
-SCHEMA_VERSION = 13
+#: v14 added econ_events (the economic calendar).
+SCHEMA_VERSION = 14
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:

@@ -28,8 +28,9 @@ from importlib.metadata import version as _pkg_version, PackageNotFoundError as 
 
 from api.auth import PROTECTED
 from api import alerts, research
+from src.data import econ_calendar
 from api.routers import (auth as auth_router, meta, backtests, replay,
-                         schwab, optimize, data_export, account, quotes, live)
+                         schwab, optimize, data_export, account, quotes, live, scan, calendar)
 
 try:
     _version = _pkg_version("autotrader")
@@ -64,6 +65,7 @@ async def _lifespan(_app: FastAPI):
     """
     logger.info("Sign-in is disabled: every request runs as the workspace account.")
     alerts.start_checker()          # price alerts, checked on the server (Feature 4)
+    econ_calendar.start_daily_refresh()   # official release schedules (Feature 8)
     yield
 
 
@@ -162,6 +164,8 @@ app.include_router(data_export.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(account.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(alerts.router, prefix="/api", dependencies=[PROTECTED])
 app.include_router(research.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(scan.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(calendar.router, prefix="/api", dependencies=[PROTECTED])
 # Protected like every other data route: a quote is market data the account
 # is entitled to through ITS Schwab link, not a public feed.
 app.include_router(quotes.router, prefix="/api", dependencies=[PROTECTED])

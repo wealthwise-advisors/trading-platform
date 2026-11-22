@@ -17,12 +17,13 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   BarChart2, BarChart3, CandlestickChart, FileText, LineChart, Search, Settings, Zap,
+  ScanSearch, CalendarDays,
 } from "lucide-react"
 
 import { api, type Me } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
 
-type Page = "backtest" | "replay" | "export"
+type Page = "backtest" | "replay" | "export" | "scanner" | "calendar"
 
 interface NavItem {
   label: string
@@ -48,6 +49,10 @@ const NAV: NavItem[] = [
   // header; two pills with one name read as a mistake (user, 2026-11-22).
   { label: "Monthly Returns", icon: BarChart2, page: "backtest", tab: "monthly",
     title: "Monthly returns, month by month" },
+  { label: "Scanner", icon: ScanSearch, page: "scanner",
+    title: "Scan the futures list for conditions on their newest bar" },
+  { label: "Calendar", icon: CalendarDays, page: "calendar",
+    title: "Official US economic release dates: GDP, PCE, FOMC, CPI, jobs" },
   { label: "Reports", icon: FileText, page: "export",
     title: "Export raw bars, or download a full backtest report" },
 ]

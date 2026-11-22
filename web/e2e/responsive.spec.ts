@@ -82,7 +82,9 @@ test.describe("the backtest dashboard holds its shape", () => {
       expect(state.cards, "not eight KPI cards").toBe(8)
       expect(state.overlaps, "KPI cards are overlapping").toBe(0)
       expect(state.heights, "KPI cards differ in height").toHaveLength(1)
-      expect(state.navItems, "the nav lost a section").toBe(7)
+      // 9 since 2026-11-22: Scanner and Calendar joined the seven. It wraps, and the
+      // check below still fails if any of them is pushed out of reach.
+      expect(state.navItems, "the nav lost a section").toBe(9)
       expect(state.navHidden,
         "part of the nav is scrolled out of reach — it should wrap, not shrink").toBeLessThanOrEqual(2)
       expect(state.plotlyLogo, "a Plotly badge appeared").toBe(0)

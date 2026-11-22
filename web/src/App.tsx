@@ -15,6 +15,8 @@ import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 import { SettingsNotice } from "@/components/SettingsNotice"
 import { AlertNotifier } from "@/components/AlertNotifier"
+import { ScannerPage } from "@/features/scanner/ScannerPage"
+import { CalendarPage } from "@/features/calendar/CalendarPage"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
 import {
@@ -298,6 +300,8 @@ function App({ user }: { user: Me }) {
           {page === "backtest" && <ResultsPage />}
           {page === "replay" && <ReplayPage />}
           {page === "export" && <DataExportPage />}
+          {page === "scanner" && <ScannerPage />}
+          {page === "calendar" && <CalendarPage />}
         </div>
       </main>
       </div>

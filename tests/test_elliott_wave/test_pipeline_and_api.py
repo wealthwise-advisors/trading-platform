@@ -367,4 +367,7 @@ class TestExistingApiUnchanged:
         # +3 for strategy research (Feature 6): /api/backtests/{id}/monte-carlo,
         # /api/research/walk-forward and /api/research/jobs/{job_id}. The runs
         # list is GET on /api/backtests, a method on an existing path.
-        assert len(paths) == 48, sorted(paths)
+        # +1 for /api/scan (Feature 7, the futures scanner).
+        # +2 for the economic calendar (Feature 8): /api/calendar and
+        # /api/calendar/{uid} (manual events only).
+        assert len(paths) == 51, sorted(paths)

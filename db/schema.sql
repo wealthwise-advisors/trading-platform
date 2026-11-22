@@ -437,3 +437,16 @@ CREATE TABLE IF NOT EXISTS alert_events (
     UNIQUE (user_id, alert_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- v14: official economic release schedules (upgrade plan, Feature 8; src/data/econ_calendar.py).
+-- Not per account: a release date is the same for everyone. event_time is Eastern wall-clock.
+CREATE TABLE IF NOT EXISTS econ_events (
+    uid         TEXT PRIMARY KEY,
+    source      TEXT NOT NULL,          -- BEA | FOMC | BLS | manual
+    title       TEXT NOT NULL,
+    event_time  TEXT NOT NULL,
+    impact      TEXT NOT NULL,          -- high | medium | low
+    note        TEXT NOT NULL DEFAULT '',
+    fetched_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS econ_events_time ON econ_events (event_time);
