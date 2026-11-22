@@ -1363,6 +1363,9 @@ export function CandlestickChart({
   // Swing points sit on the DRAWN candle that holds them: with candles merged
   // for display, a point left at its own minute fell between two candles.
   const candleTimes = candleBars.map((b) => b.t)
+  // The swing numbers on the oscillator rows, pushed after those rows' lines so
+  // no line runs across a number (sir, 2026-11-23: "not visible enough").
+  const oscCircles: Data[] = []
   const onCandle = (pts: ZigZagPoint[]) => onDisplayCandle(pts.map((p) => p.t), candleTimes)
   // The 3 Leg line runs through the 10 Leg points too: drawn through the small
   // points alone it joined a small high to the next small high across the big
@@ -1724,12 +1727,12 @@ export function CandlestickChart({
     for (const name of oscillatorRows) {
       const suffix = suffixOf(name)
       const vals = panelValues[name]
-      data.push({
+      oscCircles.push({
         type: "scatter", mode: "text+markers",
         x: zz10.map((p) => p.t), y: zz10.map((p) => valueAt(vals, p.t)),
-        marker: { size: 18, color: BG, line: { color: "white", width: 1.4 } },
+        marker: { size: 24, color: BG, line: { color: "white", width: 2 } },
         text: zz10.map((p) => p.label), textposition: "middle center",
-        textfont: { size: 9, color: "white", family: "Arial" },
+        textfont: { size: 13, color: "white", family: "Arial Black, Arial" },
         showlegend: false, cliponaxis: false,
         hovertemplate: "<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
         xaxis: `x${suffix}`, yaxis: `y${suffix}`,
@@ -1851,6 +1854,7 @@ export function CandlestickChart({
       xaxis: `x${mfiSuffix}`, yaxis: `y${mfiSuffix}`,
     } as unknown as Data)
   }
+  data.push(...oscCircles)
 
   // VolumeAvg, per source bar like the oscillators above -- never the widened
   // display candles, or the 20 would change meaning every time the chart zooms.

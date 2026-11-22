@@ -427,10 +427,11 @@ def _candlestick_chart(results: BacktestResults, zz_deviation: float = 0.0010,
                 vals = row_y.reindex(zz.index)
                 fig.add_trace(go.Scatter(
                     x=zz.index, y=vals, mode="markers+text",
-                    marker=dict(size=22, color=_MARKER_BG,
-                                line=dict(color=border_colors, width=1.8)),
+                    # Same size as the live chart's (CandlestickChart.tsx): 8px was hard to read.
+                    marker=dict(size=24, color=_MARKER_BG,
+                                line=dict(color=border_colors, width=2)),
                     text=zz["label"], textposition="middle center",
-                    textfont=dict(size=8, color="white", family="Arial"),
+                    textfont=dict(size=13, color="white", family="Arial Black, Arial"),
                     showlegend=False,
                     hovertemplate="<b>Swing %{text}</b><br>%{y:.1f}<extra></extra>",
                 ), row=row_n, col=1)
