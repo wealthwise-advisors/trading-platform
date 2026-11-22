@@ -28,7 +28,9 @@ from datetime import datetime
 import pandas as pd
 from loguru import logger
 
-from ..broker.base_broker import BaseBroker, Order, OrderSide
+import uuid
+
+from ..broker.base_broker import BaseBroker, Order, OrderSide, OrderType
 from ..broker.order_guard import GuardLimits, OrderGuard, OrderRejected
 from ..strategies.base_strategy import BaseStrategy, SignalType
 
@@ -198,6 +200,67 @@ class PaperSession:
         self.guard.record(now=now)
         self._log("order", f"{side.value} {qty} {self.symbol} ({order.order_id})")
 
+    # ── the order ticket (upgrade plan, Feature 5) ────────────────────────
+    def place(self, side: OrderSide, quantity: int, order_type: OrderType,
+              limit_price: float | None = None, stop_price: float | None = None,
+              target_ticks: int | None = None, stop_ticks: int | None = None,
+              trail_ticks: int | None = None, now: datetime | None = None) -> list[Order]:
+        """A manual order, with an optional bracket (a target and a stop, one
+        cancelling the other, working once the entry fills) and an optional
+        trailing stop. Raises OrderRejected (the guard) or ValueError (the ticket).
+
+        Bracket distances are in ticks from the entry's own price: its limit, its
+        stop, or -- for a market order, whose fill is not known yet -- the last close.
+
+        Only the entry goes through the guard. The bracket legs can only reduce the
+        position the entry opens, and checking three orders at one instant would trip
+        the guard's one-order-a-second rule on the second leg.
+        """
+        now = now or datetime.now()
+        with self._lock:
+            if not self.running:
+                raise ValueError("the session is not running")
+            position = self.broker.get_position(self.symbol)
+            entry = Order(symbol=self.symbol, side=side, quantity=quantity, order_type=order_type,
+                          limit_price=limit_price, stop_price=stop_price, trail_ticks=trail_ticks,
+                          strategy_tag="ticket", created_at=now)
+            legs: list[Order] = []
+            if target_ticks or stop_ticks:
+                ref = {OrderType.LIMIT: limit_price, OrderType.STOP: stop_price,
+                       OrderType.STOP_LIMIT: limit_price}.get(order_type)
+                if ref is None and not self._bars.empty:
+                    ref = float(self._bars["close"].iloc[-1])
+                if ref is None:
+                    raise ValueError("no price yet to measure the bracket from; wait for the first bar")
+                tick = self.broker.tick_size
+                out = 1 if side is OrderSide.BUY else -1          # the profitable direction
+                exit_side = OrderSide.SELL if side is OrderSide.BUY else OrderSide.BUY
+                group = uuid.uuid4().hex[:8]
+                if target_ticks:
+                    legs.append(Order(symbol=self.symbol, side=exit_side, quantity=quantity,
+                                      order_type=OrderType.LIMIT, limit_price=ref + out * target_ticks * tick,
+                                      parent_id=entry.order_id, oco_group=group, strategy_tag="ticket", created_at=now))
+                if stop_ticks:
+                    legs.append(Order(symbol=self.symbol, side=exit_side, quantity=quantity,
+                                      order_type=OrderType.STOP, stop_price=ref - out * stop_ticks * tick,
+                                      parent_id=entry.order_id, oco_group=group, strategy_tag="ticket", created_at=now))
+            if any((o.limit_price or 1) <= 0 or (o.stop_price or 1) <= 0 for o in legs):
+                raise ValueError("the bracket would put a target or stop at a price that is not above zero")
+            self.guard.check(entry, current_position=position, now=now)
+            for o in (entry, *legs):
+                self.broker.submit_order(o)
+            self.guard.record(now=now)
+            self._log("order", f"ticket: {side.value} {quantity} {self.symbol} {order_type.value}"
+                               + (f" with {len(legs)}-leg bracket" if legs else "") + f" ({entry.order_id})")
+            return [entry, *legs]
+
+    def cancel(self, order_id: str) -> bool:
+        with self._lock:
+            done = self.broker.cancel_order(order_id)
+            if done:
+                self._log("order", f"cancelled {order_id} and its bracket")
+            return done
+
     # ── what the UI reads ─────────────────────────────────────────────────
     def status(self) -> dict:
         with self._lock:
@@ -220,6 +283,13 @@ class PaperSession:
                 "orders_remaining": self.guard.orders_remaining,
                 "halted": self.guard.halted,
                 "halt_reason": self.guard.halt_reason,
+                "working_orders": [
+                    {"id": o.order_id, "side": o.side.value, "quantity": o.quantity,
+                     "order_type": o.order_type.value, "limit_price": o.limit_price,
+                     "stop_price": o.stop_price, "trail_ticks": o.trail_ticks,
+                     "parent_id": o.parent_id, "oco_group": o.oco_group}
+                    for o in getattr(self.broker, "working_orders", list)()
+                ],
                 "events": [
                     {"at": e.at.isoformat(timespec="seconds"), "kind": e.kind, "text": e.text}
                     # Newest first, and capped: this is a status panel, not an

@@ -38,6 +38,14 @@ class Order:
     status: OrderStatus = OrderStatus.PENDING
     created_at: Optional[datetime] = None
     strategy_tag: str = ""         # which strategy generated this order
+    #: A bracket leg: inactive until this order fills (and cancelled with it).
+    parent_id: Optional[str] = None
+    #: One fill in the group cancels the rest (a bracket's target and stop).
+    oco_group: Optional[str] = None
+    #: A trailing stop: after each bar the stop follows the best price by this many ticks.
+    trail_ticks: Optional[int] = None
+    #: A STOP_LIMIT whose stop has been reached; it now works as a limit order.
+    triggered: bool = False
 
 
 @dataclass

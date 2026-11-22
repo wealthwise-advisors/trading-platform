@@ -71,6 +71,7 @@ def _bar(c, minute, close=4500.0):
     ("/api/live/bar", {"t": "2026-09-18T09:30:00", "o": 1, "h": 1, "l": 1, "c": 1}),
     ("/api/live/heartbeat", None),
     ("/api/live/stop", None),
+    ("/api/live/orders", {"side": "BUY", "quantity": 1}),
 ])
 def test_every_live_route_refuses_another_website(client, path, body):
     r = client.post(path, headers={"Origin": "https://evil.example"},
@@ -233,3 +234,96 @@ def test_a_second_visitor_sees_the_same_session(client):
         assert other.get("/api/live/status").json()["running"] is True
     finally:
         other.__exit__(None, None, None)
+
+
+# ── the order ticket (upgrade plan, Feature 5) ──────────────────────────────
+
+def _order(c, **kw):
+    body = {"side": "BUY", "quantity": 1, "order_type": "MARKET"}
+    body.update(kw)
+    return c.post("/api/live/orders", json=body)
+
+
+def test_a_market_order_with_a_bracket_fills_and_leaves_target_and_stop_working(client):
+    _start(client)
+    _bar(client, 0, close=4500.0)
+    r = _order(client, target_ticks=8, stop_ticks=8)
+    assert r.status_code == 200, r.text
+    work = r.json()["working_orders"]
+    assert [w["order_type"] for w in work] == ["MARKET", "LIMIT", "STOP"]
+    assert work[1]["limit_price"] == 4502.0 and work[2]["stop_price"] == 4498.0   # from the last close
+    assert work[1]["parent_id"] == work[0]["id"] and work[1]["oco_group"] == work[2]["oco_group"]
+    body = _bar(client, 1, close=4500.0).json()       # entry fills at the open; the bar stays clear of both legs
+    assert body["position"] == 1 and [w["order_type"] for w in body["working_orders"]] == ["LIMIT", "STOP"]
+
+
+def test_a_limit_bracket_is_measured_from_its_limit(client):
+    _start(client)
+    _bar(client, 0)
+    work = _order(client, order_type="LIMIT", limit_price=4490.0, target_ticks=4, stop_ticks=4).json()["working_orders"]
+    assert work[1]["limit_price"] == 4491.0 and work[2]["stop_price"] == 4489.0
+
+
+def test_a_short_bracket_goes_the_other_way(client):
+    _start(client)
+    _bar(client, 0, close=4500.0)
+    work = _order(client, side="SELL", target_ticks=8, stop_ticks=4).json()["working_orders"]
+    assert work[1]["side"] == "BUY" and work[1]["limit_price"] == 4498.0 and work[2]["stop_price"] == 4501.0
+
+
+def test_a_trailing_stop_order(client):
+    _start(client)
+    _bar(client, 0)
+    work = _order(client, side="SELL", order_type="STOP", stop_price=4490.0, trail_ticks=8).json()["working_orders"]
+    assert work[0]["trail_ticks"] == 8
+
+
+def test_the_guard_still_rules_the_ticket(client):
+    _start(client)                                    # 1 contract: the limit per order is 1
+    r = _order(client, quantity=5)
+    assert r.status_code == 400 and "per-order limit" in r.json()["detail"]
+    r = _order(client, order_type="LIMIT")
+    assert r.status_code == 400 and "no limit price" in r.json()["detail"]
+
+
+def test_a_bracket_needs_a_price_to_measure_from(client):
+    _start(client)                                    # no bar yet, a market order: no last close
+    r = _order(client, target_ticks=4)
+    assert r.status_code == 400 and "no price yet" in r.json()["detail"]
+
+
+def test_cancel_a_working_order_and_its_bracket(client):
+    _start(client)
+    _bar(client, 0)
+    work = _order(client, order_type="LIMIT", limit_price=4400.0, target_ticks=4, stop_ticks=4).json()["working_orders"]
+    r = client.delete(f"/api/live/orders/{work[0]['id']}")
+    assert r.status_code == 200 and r.json()["working_orders"] == []
+    assert client.delete("/api/live/orders/nope").status_code == 404
+
+
+def test_no_session_no_ticket(client):
+    assert _order(client).status_code == 404
+
+
+def test_the_paper_broker_uses_the_contracts_own_tick(client):
+    _start(client, symbol="NQ")
+    _bar(client, 0, close=20000.0)
+    work = _order(client, target_ticks=4, stop_ticks=4).json()["working_orders"]
+    assert work[1]["limit_price"] == 20001.0          # NQ ticks are 0.25 too, worth $5
+    from api.routers import live as lr
+    assert next(iter(lr._SESSIONS.values())).broker._tick_value == 5.0
+
+
+def test_another_website_cannot_cancel_an_order(client):
+    r = client.delete("/api/live/orders/x", headers={"Origin": "https://evil.example"})
+    assert r.status_code == 403
+
+
+def test_a_bracket_leg_below_zero_is_refused(client):
+    """The legs skip the guard (it would refuse them for coming in the same second), so
+    the ticket itself must refuse a price no market can have."""
+    _start(client)
+    _bar(client, 0)
+    r = _order(client, order_type="LIMIT", limit_price=1.0, stop_ticks=8)
+    assert r.status_code == 400 and "above zero" in r.json()["detail"]
+    assert client.get("/api/live/status").json()["working_orders"] == []

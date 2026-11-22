@@ -19,7 +19,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { ResultsTabStrip } from "@/features/backtest/ResultsTabStrip"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
-import {
+import { FlaskConical,
   TrendingUp, TrendingDown, Trophy, Gauge,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
@@ -34,6 +34,8 @@ import {
 } from "lucide-react"
 import { MultiChartGrid } from "@/features/backtest/MultiChartGrid"
 import { useFollowLive } from "@/features/backtest/useFollowLive"
+import { useLiveSession } from "@/features/live/useLiveSession"
+import { PaperTradingPanel } from "@/features/live/PaperTradingPanel"
 
 /**
  * The four Plotly charts are split out of the main bundle.
@@ -119,6 +121,9 @@ export function ResultsPage() {
   })
   // A run on live data whose date range includes today keeps moving.
   useFollowLive(backtestId, summaryQ.data?.data_source)
+  // The paper session is driven here, not in its tab, so it keeps getting closed bars
+  // whichever tab is open (a hidden tab unmounts, and a session without bars is reaped).
+  const live = useLiveSession(priceDataQ.data?.bars)
 
   const equityQ = useQuery({
     queryKey: ["backtest", backtestId, "equity-curve"],
@@ -475,6 +480,9 @@ export function ResultsPage() {
             <TabsContent value="multichart" className="mt-0">
               <MultiChartGrid />
             </TabsContent>
+            <TabsContent value="paper" className="mt-0">
+              <PaperTradingPanel live={live} />
+            </TabsContent>
             <TabsContent value="elliottwave" className="mt-0 h-[60vh] xl:h-auto xl:flex-1 flex flex-col min-h-0">
               <Card className="p-2 border border-[color:var(--hairline-soft)] w-full flex-1 flex flex-col min-h-0">
                 {priceDataQ.data && (
@@ -543,6 +551,7 @@ export function ResultsPage() {
               { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "elliottwave", label: "Elliott Wave", icon: <Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "multichart", label: "Multi-chart", icon: <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "paper", label: "Paper Trading", icon: <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
             ].map((t) => ({ ...t, content: <>{t.icon} {t.label}</> }))} />
           </div>
           </div>

@@ -362,4 +362,6 @@ class TestExistingApiUnchanged:
         # /templates/default, /templates/{name}, /templates/{name}/default. All
         # behind require_user; tests/test_account_settings.py covers them.
         # +1 for /api/alerts/events (Feature 4, server-side price alerts).
-        assert len(paths) == 43, sorted(paths)
+        # +2 for the paper order ticket (Feature 5): /api/live/orders and
+        # /api/live/orders/{order_id}; both behind require_user.
+        assert len(paths) == 45, sorted(paths)

@@ -5,7 +5,7 @@ import type { AlertEvent } from "@/lib/alertEvents"
 // frontend directly.
 
 import type {
-  StrategyMeta, DataSourceMeta, SymbolMeta, BacktestRequest, BacktestSummary,
+  StrategyMeta, DataSourceMeta, SymbolMeta, BacktestRequest, BacktestSummary, OrderTicket,
   TradeRecord, PriceDataResponse, EquityPoint, ZigZagResponse, WinLoss,
   CandlestickPatternRecord, ChartPatternRecord, MonthlyReturns,
   ReplayCreateRequest, ReplayCreateResponse, SchwabStatus,
@@ -143,6 +143,11 @@ export const api = {
   liveStart: (body: LiveStartRequest) =>
     request<LiveStatus>("/live/start", { method: "POST", body: JSON.stringify(body) }),
   liveStop: () => request<LiveStatus>("/live/stop", { method: "POST" }),
+  /** A manual paper order, with an optional bracket or trailing stop (Feature 5). */
+  livePlaceOrder: (t: OrderTicket) =>
+    request<LiveStatus>("/live/orders", { method: "POST", body: JSON.stringify(t) }),
+  liveCancelOrder: (id: string) =>
+    request<LiveStatus>(`/live/orders/${encodeURIComponent(id)}`, { method: "DELETE" }),
   liveHeartbeat: () => request<LiveStatus>("/live/heartbeat", { method: "POST" }),
   liveBar: (b: OHLCVRecord) =>
     request<LiveStatus>("/live/bar", {

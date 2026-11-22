@@ -24,7 +24,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api import auth
-from api.schemas.live import LiveBar, LiveStartRequest, LiveStatus
+from api.deps import get_contract_spec
+from api.schemas.live import LiveBar, LiveStartRequest, LiveStatus, OrderTicket
+from src.broker.base_broker import OrderSide, OrderType
+from src.broker.order_guard import OrderRejected
 from api.strategy_registry import build_strategy
 from src.broker.order_guard import OrderGuard
 from src.broker.paper_broker import PaperBroker
@@ -94,9 +97,13 @@ def start(req: LiveStartRequest, user=Depends(auth.require_user)):
 
         # PAPER. The broker is chosen here and nowhere else -- see the note at
         # the top of this file.
+        # The contract's own tick: the ES default priced every other symbol's P&L
+        # (and, now, its bracket distances) as if it were ES.
+        spec = get_contract_spec(req.symbol)
         broker = PaperBroker(
             initial_capital=req.initial_capital,
             commission_per_contract=req.commission,
+            tick_size=spec["tick_size"], tick_value=spec["tick_value"],
         )
         session = PaperSession(
             strategy=strategy,
@@ -175,4 +182,30 @@ def get_status(user=Depends(auth.require_user)):
                           bars_seen=0, position=0, cash=0.0, fills=0,
                           orders_sent=0, orders_remaining=0, halted=False,
                           halt_reason=None, events=[])
+    return session.status()
+
+
+@router.post("/orders", response_model=LiveStatus)
+def place_order(ticket: OrderTicket, user=Depends(auth.require_user)):
+    """A manual paper order, with an optional bracket or trailing stop. PAPER: the
+    session's broker is the PaperBroker built in start(), nothing else."""
+    session = _reap_if_stale(_session_for(user.id))
+    if session is None or not session.running:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No session is running.")
+    try:
+        session.place(OrderSide(ticket.side), ticket.quantity, OrderType(ticket.order_type),
+                      limit_price=ticket.limit_price, stop_price=ticket.stop_price,
+                      target_ticks=ticket.target_ticks, stop_ticks=ticket.stop_ticks,
+                      trail_ticks=ticket.trail_ticks)
+    except (OrderRejected, ValueError) as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return session.status()
+
+
+@router.delete("/orders/{order_id}", response_model=LiveStatus)
+def cancel_order(order_id: str, user=Depends(auth.require_user)):
+    """Cancel a working paper order, and its bracket legs with it."""
+    session = _session_for(user.id)
+    if session is None or not session.cancel(order_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such working order.")
     return session.status()

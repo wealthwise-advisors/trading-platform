@@ -589,6 +589,34 @@ export interface LiveStatus {
   duplicates_ignored: number
   last_bar_at: string | null
   events: LiveEvent[]
+  /** Orders waiting to fill, bracket legs included (Feature 5). */
+  working_orders?: WorkingOrder[]
+}
+
+export type PaperOrderType = "MARKET" | "LIMIT" | "STOP" | "STOP_LIMIT"
+
+export interface WorkingOrder {
+  id: string
+  side: "BUY" | "SELL"
+  quantity: number
+  order_type: PaperOrderType
+  limit_price: number | null
+  stop_price: number | null
+  trail_ticks: number | null
+  /** A bracket leg: waits for this entry to fill. */
+  parent_id: string | null
+  oco_group: string | null
+}
+
+export interface OrderTicket {
+  side: "BUY" | "SELL"
+  quantity: number
+  order_type: PaperOrderType
+  limit_price?: number
+  stop_price?: number
+  target_ticks?: number
+  stop_ticks?: number
+  trail_ticks?: number
 }
 
 /** A signal the run's strategy gave on a live bar after the backtest; t is the bar's time. */

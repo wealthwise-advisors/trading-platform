@@ -1,6 +1,6 @@
 """Shapes for the paper-trading endpoints."""
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -40,6 +40,32 @@ class LiveEvent(BaseModel):
     text: str
 
 
+class WorkingOrder(BaseModel):
+    id: str
+    side: str
+    quantity: int
+    order_type: str
+    limit_price: Optional[float]
+    stop_price: Optional[float]
+    trail_ticks: Optional[int]
+    parent_id: Optional[str]
+    oco_group: Optional[str]
+
+
+class OrderTicket(BaseModel):
+    """A manual paper order (upgrade plan, Feature 5)."""
+    side: Literal["BUY", "SELL"]
+    quantity: int = Field(ge=1, le=100)
+    order_type: Literal["MARKET", "LIMIT", "STOP", "STOP_LIMIT"] = "MARKET"
+    limit_price: Optional[float] = Field(default=None, gt=0)
+    stop_price: Optional[float] = Field(default=None, gt=0)
+    #: A bracket: target and stop in ticks from the entry's price, one cancelling the other.
+    target_ticks: Optional[int] = Field(default=None, ge=1, le=10_000)
+    stop_ticks: Optional[int] = Field(default=None, ge=1, le=10_000)
+    #: A trailing stop: the stop follows the best price by this many ticks.
+    trail_ticks: Optional[int] = Field(default=None, ge=1, le=10_000)
+
+
 class LiveStatus(BaseModel):
     running: bool
     #: "paper" today. A live mode would be a different value here, and the
@@ -58,6 +84,7 @@ class LiveStatus(BaseModel):
     orders_remaining: int
     halted: bool
     halt_reason: Optional[str]
+    working_orders: list[WorkingOrder] = []
     #: Bars the session refused because it had already decided about them.
     #: Surfaced so a feed that is re-sending is visible rather than silent.
     duplicates_ignored: int = 0
