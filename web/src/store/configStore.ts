@@ -198,7 +198,9 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       ? { page, resultsTab: tab, navSection: section ?? null }
       : { page, navSection: section ?? null }
     if (page === "backtest") {
-      if (tab === "price") next.configOpen = false
+      // Only once there is a chart: before the first run the Chart page says "configure in the
+      // sidebar", and closing it hid the only way to run anything (sir, 22 Nov 2026).
+      if (tab === "price") { if (get().backtestId) next.configOpen = false }
       else if (tab === undefined) next.configOpen = true
     }
     set(next)

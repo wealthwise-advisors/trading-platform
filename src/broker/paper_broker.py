@@ -22,6 +22,8 @@ class PaperBroker(BaseBroker):
         self._tick_size = tick_size
         self._tick_value = tick_value
         self._positions: dict[str, int] = {}      # symbol -> net contracts
+        self._avg_price: dict[str, float] = {}    # symbol -> average entry price of the open position
+        self._point_value = tick_value / tick_size if tick_size else 0.0
         self._open_orders: dict[str, Order] = {}
         self._fills: list[Fill] = []
         self._pending_orders: list[Order] = []
@@ -81,9 +83,8 @@ class PaperBroker(BaseBroker):
             self._fills.append(fill)
 
             sign = 1 if order.side == OrderSide.BUY else -1
+            self._realise(symbol, sign * order.quantity, fill_price)
             self._positions[symbol] = self._positions.get(symbol, 0) + sign * order.quantity
-
-            # Update cash: PnL on fill is zero at entry; subtract commission
             self._cash -= commission
 
             order.status = OrderStatus.FILLED
@@ -92,6 +93,26 @@ class PaperBroker(BaseBroker):
 
         for o in filled:
             self._pending_orders.remove(o)
+
+    def _realise(self, symbol: str, signed_qty: int, price: float) -> None:
+        """Book a fill against the open position: the part that closes it pays its profit
+        or loss into cash, the part that opens or adds to it moves the average entry.
+        Cash used to take only commissions, so a closed trade's result vanished from
+        every equity curve (2026-11-22)."""
+        pos = self._positions.get(symbol, 0)
+        avg = self._avg_price.get(symbol, price)
+        if pos and (pos > 0) != (signed_qty > 0):                  # reduces or flips the position
+            closed = min(abs(pos), abs(signed_qty))
+            direction = 1 if pos > 0 else -1
+            self._cash += (price - avg) * closed * direction * self._point_value
+            left = pos + signed_qty
+            if left == 0:
+                self._avg_price.pop(symbol, None)
+            elif (left > 0) != (pos > 0):                          # flipped: the rest opens at this price
+                self._avg_price[symbol] = price
+        else:                                                      # opens or adds
+            new = pos + signed_qty
+            self._avg_price[symbol] = (avg * abs(pos) + price * abs(signed_qty)) / abs(new)
 
     def _get_fill_price(self, order: Order, o: float, h: float, l: float, c: float) -> float | None:
         slippage = self._slippage_ticks * self._tick_size

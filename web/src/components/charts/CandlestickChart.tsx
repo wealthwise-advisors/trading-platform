@@ -24,6 +24,7 @@ import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagP
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
+import { innerTicks } from "@/lib/chartStyle"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
@@ -2154,6 +2155,10 @@ export function CandlestickChart({
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
       ...(name === "vol" ? { tickformat: ",.0f", nticks: 3 } : {}),
+      // Oscillator numbers INSIDE the row, never on its edges: 0 and 100 sat on the
+      // borders, so one row's "0" printed over the next row's "100" and the rows'
+      // numbers could not be read (user, 2026-11-22).
+      ...(!isPrice && name !== "vol" ? { tickvals: innerTicks(name === "rsi13" ? rsi13Range : [0, 100]), tickfont: { size: 10 } } : {}),
       // Log applies to the PRICE row only: an oscillator is already bounded
       // 0-100 and a log scale on it would be meaningless.
       ...(isPrice && logScale ? { type: "log" as const } : {}),

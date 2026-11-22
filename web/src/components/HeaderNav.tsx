@@ -44,14 +44,9 @@ const NAV: NavItem[] = [
     title: "Sweep a strategy's parameter grid and rank the runs" },
   { label: "Analytics", icon: LineChart, page: "backtest", tab: "pnl",
     title: "P&L distribution across the trades" },
-  // THE SECOND "Analytics". The reference header carries the name twice, with
-  // a line-chart icon and a bar-chart one, and this is the bar-chart half. It
-  // opens Monthly Returns -- a real tab that no other section named, and the
-  // one the bar-chart icon fits. The label is duplicated on purpose; the
-  // titles are what tell the two apart on hover, and `current` keys on the
-  // ITEM rather than on its label, so two items sharing a name cannot make
-  // two pills light at once.
-  { label: "Analytics", icon: BarChart2, page: "backtest", tab: "monthly",
+  // Named for what it opens. It was a second "Analytics", copied from the reference
+  // header; two pills with one name read as a mistake (user, 2026-11-22).
+  { label: "Monthly Returns", icon: BarChart2, page: "backtest", tab: "monthly",
     title: "Monthly returns, month by month" },
   { label: "Reports", icon: FileText, page: "export",
     title: "Export raw bars, or download a full backtest report" },

@@ -155,3 +155,10 @@ export function extendedHoursSpans(times: ReadonlyArray<string>, stepMs: number,
   if (start != null && prev != null) out.push([start, prev])
   return out
 }
+
+/** Three whole-number ticks at 20%, 50% and 80% of an axis range: off its edges, so
+ *  stacked rows cannot print over each other. [0, 100] gives 20, 50, 80. */
+export function innerTicks(range: [number, number] | number[]): number[] {
+  const [a, b] = range
+  return [0.2, 0.5, 0.8].map((f) => Math.round(a + (b - a) * f))
+}

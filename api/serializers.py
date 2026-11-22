@@ -368,7 +368,12 @@ def monthly_returns(results: BacktestResults) -> dict:
         return {"years": [], "months": [], "values": []}
 
     monthly_eq = eq.resample("ME").last()
-    monthly_ret = monthly_eq.pct_change() * 100
+    # Each month against the close of the month before; the FIRST month against the
+    # starting capital. pct_change alone left every first month empty, so a run
+    # inside one month showed no return at all (2026-11-22).
+    before = monthly_eq.shift(1)
+    before.iloc[0] = results.initial_capital
+    monthly_ret = (monthly_eq / before - 1) * 100
     monthly_ret.index = monthly_ret.index.to_period("M")
 
     years = sorted(set(p.year for p in monthly_ret.index))

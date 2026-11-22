@@ -29,6 +29,11 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
   const t = points.map((p) => p.t)
   const equity = points.map((p) => p.equity)
   const drawdown = points.map((p) => p.drawdown_pct)
+  // Fitted to the account's own range: the shading runs to zero, which pinned the
+  // scale at $0 and drew a $100k -> $122k run as a flat line (2026-11-22).
+  const lo = Math.min(...equity), hi = Math.max(...equity)
+  const pad = Math.max((hi - lo) * 0.08, hi * 0.002, 1)
+  const equityRange: [number, number] | undefined = equity.length ? [lo - pad, hi + pad] : undefined
 
   const data: Data[] = [
     {
@@ -56,7 +61,7 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
       line: { color: "gray", dash: "dash", width: 1 },
     }],
     xaxis: { gridcolor: GRID, showgrid: true, domain: [0, 1], anchor: "y", showticklabels: false },
-    yaxis: { gridcolor: GRID, showgrid: true, title: { text: "Portfolio Value ($)" },
+    yaxis: { gridcolor: GRID, showgrid: true, title: { text: "Portfolio Value ($)" }, range: equityRange,
              domain: [0.4, 1], anchor: "x", fixedrange: false },
     xaxis2: { gridcolor: GRID, showgrid: true, matches: "x", domain: [0, 1], anchor: "y2",
               automargin: true, tickfont: { size: 11 } },

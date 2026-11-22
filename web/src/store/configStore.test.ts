@@ -72,3 +72,17 @@ describe("1-Leg Deviation (2026-11-14)", () => {
     expect(useConfigStore.getState().zigzagDev1).toBe(0)
   })
 })
+
+describe("Chart keeps the config panel until there is a chart to give the room to", async () => {
+  const { useConfigStore } = await import("./configStore")
+  it("before any run, Chart leaves the panel open: its page says 'configure in the sidebar'", () => {
+    useConfigStore.setState({ backtestId: null, configOpen: true })
+    useConfigStore.getState().goTo("backtest", "price", "Chart-price")
+    expect(useConfigStore.getState().configOpen).toBe(true)
+  })
+  it("after a run, Chart still gives the chart the full width", () => {
+    useConfigStore.setState({ backtestId: "AT-1", configOpen: true })
+    useConfigStore.getState().goTo("backtest", "price", "Chart-price")
+    expect(useConfigStore.getState().configOpen).toBe(false)
+  })
+})

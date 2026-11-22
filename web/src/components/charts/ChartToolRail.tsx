@@ -91,7 +91,7 @@ export const TOOLS: ToolSpec[] = [
   // last drawing only, which read as "the eraser does not work" (2026-11-13);
   // undo stays on the toolbar's arrow.
   { id: "erase", label: "Eraser", icon: <Eraser className={I} aria-hidden />,
-    place: true, hint: "Eraser — click a drawing to remove it",
+    place: true, hint: "Eraser — click a drawing on the price chart to remove it",
     howTo: "Click a drawing to remove it (Esc to stop)" },
   { id: "clear", label: "Clear all", icon: <Trash2 className={I} aria-hidden />,
     hint: "Remove every drawing on this chart" },
@@ -122,18 +122,20 @@ export function ChartToolRail({ active, onPick, hasDrawings = true }: {
             {(t.id === "erase" || t.id === "clear") && i > 0 && (
               <span className="my-0.5 h-px w-5 bg-[color:var(--hairline-soft)]" aria-hidden />
             )}
+            {/* aria-disabled, not disabled: a disabled button shows no tooltip, so an
+                idle eraser looked broken with nothing saying why (user, 2026-11-22). */}
             <button
               type="button"
-              title={t.hint}
+              title={idle ? `${t.label} — nothing to remove yet: draw on the price chart first` : t.hint}
               aria-label={t.label}
               aria-pressed={t.mode || t.place ? on : undefined}
-              disabled={idle}
-              onClick={() => onPick(t)}
+              aria-disabled={idle || undefined}
+              onClick={() => { if (!idle) onPick(t) }}
               className={`flex h-7 w-7 items-center justify-center rounded transition-colors
                           ${on
                             ? "bg-[color:var(--raise-4)] text-[#38bdf8]"
                             : "text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"}
-                          disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed`}
+                          aria-disabled:opacity-35 aria-disabled:hover:bg-transparent aria-disabled:cursor-not-allowed`}
             >
               {t.icon}
             </button>
