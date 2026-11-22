@@ -126,3 +126,12 @@ def test_only_national_gdp_and_pce_are_high_impact():
     assert cal.impact_of("Personal Income and Outlays, October 2026") == "high"
     assert cal.impact_of("GDP by County and Personal Income by County, 2025") == "low"
     assert cal.impact_of("Gross Domestic Product by State and Personal Income by State, 2nd Quarter 2025") == "low"
+
+
+def test_bls_feed_with_its_us_eastern_zone_name():
+    """BLS labels its times TZID=US-Eastern, which is not an IANA zone name."""
+    ev = cal.parse_ics((FIX / "bls_schedule.ics").read_text(encoding="utf-8"), source="BLS")
+    cpi = next(e for e in ev if e["title"] == "Consumer Price Index")
+    assert cpi["at"] == datetime(2025, 1, 15, 8, 30) and cpi["impact"] == "high"
+    assert any(e["title"] == "Employment Situation" and e["impact"] == "high" for e in ev)
+    assert not any(e["title"].startswith("BLS.gov") for e in ev)       # the calendar's own name

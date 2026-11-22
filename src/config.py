@@ -60,6 +60,9 @@ def load_config(
         # Merge credentials into rithmic section
         if "rithmic" in cred_data:
             config.setdefault("rithmic", {}).update(cred_data["rithmic"])
+        # The BLS contact address (src/data/econ_calendar.py) is personal: kept here, out of git.
+        if "calendar" in cred_data:
+            config.setdefault("calendar", {}).update(cred_data["calendar"])
 
     return config
 

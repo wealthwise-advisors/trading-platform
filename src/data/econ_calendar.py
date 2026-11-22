@@ -5,7 +5,7 @@
          2:00 PM ET on each meeting's last day ("*" meetings also publish projections)
   BLS    www.bls.gov/schedule/news_release/bls.ics -- CPI, the jobs report, PPI. BLS refuses
          automated requests that do not identify themselves, so it is fetched only when
-         config/settings.yaml sets calendar.bls_contact (an address BLS may write to);
+         config/credentials.yaml (git-ignored) sets calendar.bls_contact (an address BLS may write to);
          without one the calendar says BLS was skipped and why.
   manual anything else, added by hand
 
@@ -80,6 +80,10 @@ def parse_ics(text: str, source: str) -> list[dict]:
     return events
 
 
+#: Zone names feeds use that are not IANA names (BLS writes TZID=US-Eastern).
+_TZ_ALIASES = {"US-Eastern": "America/New_York", "US/Eastern": "America/New_York"}
+
+
 def _ics_time(val: str, params: list[str]) -> datetime:
     if len(val) == 8:                                                   # a whole day
         return datetime.strptime(val, "%Y%m%d")
@@ -88,7 +92,8 @@ def _ics_time(val: str, params: list[str]) -> datetime:
     if val.endswith("Z"):
         return t.replace(tzinfo=timezone.utc).astimezone(ET).replace(tzinfo=None)
     if tz:
-        return t.replace(tzinfo=ZoneInfo(tz)).astimezone(ET).replace(tzinfo=None)
+        zone = _TZ_ALIASES.get(tz, tz)
+        return t.replace(tzinfo=ZoneInfo(zone)).astimezone(ET).replace(tzinfo=None)
     return t
 
 
@@ -149,7 +154,7 @@ def default_fetchers() -> dict[str, Callable[[], str]]:
         contact = bls_contact()
         if not contact:
             raise ValueError("skipped: BLS requires a contact address; set calendar.bls_contact in "
-                             "config/settings.yaml to include CPI, the jobs report and PPI")
+                             "config/credentials.yaml to include CPI, the jobs report and PPI")
         return _get(BLS_URL, f"{USER_AGENT} ({contact})")
     return {"BEA": lambda: _get(BEA_URL), "FOMC": lambda: _get(FOMC_URL), "BLS": bls}
 
