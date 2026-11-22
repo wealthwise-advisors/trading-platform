@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { FOLLOW_POLL_MS, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll, followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind, lagNote, canReceiveNewBars, type FollowState, isLostSession, waitForServer } from "./followLive"
+import { FOLLOW_POLL_MS, STREAM_POLL_MS, nextChartPollMs, IDLE_FOLLOW, shouldResumeAfterExtend, shouldPoll, followLabel, applyExtendReply, liveEdgeLabel, shouldAutoFollow, minutesBehind, lagNote, canReceiveNewBars, type FollowState, isLostSession, waitForServer } from "./followLive"
 
 const reply = (over: Partial<Parameters<typeof applyExtendReply>[1]> = {}) => ({
   added: 0, reason: null, is_done: true, data_time: null, ...over,
@@ -433,5 +433,22 @@ describe("waitForServer — rebuild only once the server answers again", () => {
     const ok = await waitForServer(async () => false, { ...c, intervalMs: 2000, timeoutMs: 10_000 })
     expect(ok).toBe(false)
     expect(c.now()).toBeGreaterThanOrEqual(10_000)
+  })
+})
+
+describe("how soon to ask again (chart, upgrade plan Feature 3)", () => {
+  it("every 2 s while the server streams and the chart redraws quickly", () => {
+    expect(nextChartPollMs({ stream: true }, 50)).toBe(STREAM_POLL_MS)
+    expect(STREAM_POLL_MS).toBe(2000)
+  })
+  it("slower when each redraw is heavy, so the chart keeps most of the main thread", () => {
+    expect(nextChartPollMs({ stream: true }, 600)).toBe(4800)
+  })
+  it("never slower than polling", () => {
+    expect(nextChartPollMs({ stream: true }, 5000)).toBe(FOLLOW_POLL_MS)
+  })
+  it("every 15 s when the stream is down and the server asks Schwab each time", () => {
+    expect(nextChartPollMs({ stream: false }, 10)).toBe(FOLLOW_POLL_MS)
+    expect(nextChartPollMs({}, 10)).toBe(FOLLOW_POLL_MS)
   })
 })

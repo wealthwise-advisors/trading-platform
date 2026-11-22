@@ -12,7 +12,8 @@ from loguru import logger
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
-from src.data.resample import ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, is_daily_or_longer
+from src.data.resample import ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, bar_anchor, is_daily_or_longer, resample_ohlcv
+from src.data.stream_hub import hub as stream_hub
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
@@ -277,9 +278,9 @@ def live_refresh(backtest_id: str, user=PROTECTED):
     stored = _get_or_404(backtest_id, user)
     r = stored.results
 
-    def respond(live: bool) -> dict:
+    def respond(live: bool, stream: bool = False) -> dict:
         return {**serializers.price_data_to_response(r.price_data, stored.session_start, r.volume_context),
-                "live": live}
+                "live": live, "stream": stream}
 
     from api.routers.replay import _apply_session  # replay imports this module
 
@@ -288,22 +289,32 @@ def live_refresh(backtest_id: str, user=PROTECTED):
         return respond(False)
 
     last = r.price_data.index.max().to_pydatetime()
-    try:
-        provider = _build_provider(stored.data_source, r.symbol, r.timeframe, last.date(), now.date(),
-                                   get_contract_spec(r.symbol), session_start=stored.session_start)
-        fresh = _apply_session(provider.load(r.symbol, last, now, r.timeframe),
-                               stored.session_start, stored.session_end)
-    except Exception as exc:
-        # An expired token or a dropped connection: keep showing what we have.
-        logger.warning(f"live refresh failed for {backtest_id}: {exc}")
-        return respond(True)
+    # The server's one Schwab stream, when it can vouch for every minute since `last`:
+    # no Schwab call at all. Daily and longer bars are whole sessions, kept on REST.
+    fresh, streamed = None, False
+    if not is_daily_or_longer(r.timeframe):
+        stream_hub.watch(r.symbol)
+        minutes = stream_hub.bars_1m(r.symbol, last)
+        if minutes is not None:
+            built = minutes if r.timeframe == "1m" or minutes.empty else resample_ohlcv(minutes, r.timeframe, bar_anchor(r.symbol))
+            fresh, streamed = _apply_session(built, stored.session_start, stored.session_end), True
+    if not streamed:
+        try:
+            provider = _build_provider(stored.data_source, r.symbol, r.timeframe, last.date(), now.date(),
+                                       get_contract_spec(r.symbol), session_start=stored.session_start)
+            fresh = _apply_session(provider.load(r.symbol, last, now, r.timeframe),
+                                   stored.session_start, stored.session_end)
+        except Exception as exc:
+            # An expired token or a dropped connection: keep showing what we have.
+            logger.warning(f"live refresh failed for {backtest_id}: {exc}")
+            return respond(True)
     if fresh is not None and not fresh.empty:
         fresh = fresh[fresh.index >= last]
     if fresh is not None and not fresh.empty:
         # >= so the newest bar, still forming at the last poll, is replaced.
         kept = r.price_data[r.price_data.index < fresh.index.min()]
         r.price_data = pd.concat([kept, fresh[r.price_data.columns]])
-    return respond(True)
+    return respond(True, streamed)
 
 
 @router.get("/{backtest_id}/compare")

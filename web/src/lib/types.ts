@@ -190,6 +190,9 @@ export interface VolumeProfile {
 }
 
 export interface PriceDataResponse {
+  /** Set by /live-refresh: the run still follows live data, and whether from the stream. */
+  live?: boolean
+  stream?: boolean
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
   volume_profile?: VolumeProfile

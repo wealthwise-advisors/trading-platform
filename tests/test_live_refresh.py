@@ -111,3 +111,50 @@ def test_bars_outside_the_session_are_not_added(run, monkeypatch):
 
 def test_an_unknown_run_is_a_404():
     assert client.post("/api/backtests/nope/live-refresh").status_code == 404
+
+
+# ── from the stream hub (upgrade plan, Feature 3) ───────────────────────────
+
+def test_with_the_stream_up_bars_come_from_it_and_schwab_is_not_asked(run, monkeypatch):
+    bid, stored = run
+    last = stored.results.price_data.index[-1]
+    streamed = _bars(last, 3)
+    streamed.loc[last, "close"] = 77.0
+    monkeypatch.setattr(backtests.stream_hub, "bars_1m", lambda root, since: streamed)
+    calls = _provider(monkeypatch, lambda *a: _bars(last, 1))
+    body = client.post(f"/api/backtests/{bid}/live-refresh").json()
+    assert calls == []
+    assert body["stream"] is True and body["live"] is True
+    assert len(body["bars"]) == 5 and body["bars"][2]["c"] == 77.0
+
+
+def test_streamed_minutes_are_built_up_to_the_runs_timeframe(run, monkeypatch):
+    bid, stored = run
+    stored.results.timeframe = "5m"
+    last = pd.Timestamp(datetime.now().replace(second=0, microsecond=0)).floor("5min") - pd.Timedelta(minutes=5)
+    stored.results.price_data = _bars(last - pd.Timedelta(minutes=10), 3).set_axis(
+        pd.date_range(last - pd.Timedelta(minutes=10), periods=3, freq="5min"))
+    monkeypatch.setattr(backtests.stream_hub, "bars_1m", lambda root, since: _bars(since, 7))
+    _provider(monkeypatch, lambda *a: _bars(last, 1))
+    body = client.post(f"/api/backtests/{bid}/live-refresh").json()
+    assert body["stream"] is True
+    assert [b["t"][11:16] for b in body["bars"]][-2:] == [last.strftime("%H:%M"), (last + pd.Timedelta(minutes=5)).strftime("%H:%M")]
+    assert body["bars"][-2]["v"] == 25.0          # five 1-minute bars of 5
+
+
+def test_without_the_stream_it_polls_schwab_as_before(run, monkeypatch):
+    bid, stored = run
+    monkeypatch.setattr(backtests.stream_hub, "bars_1m", lambda root, since: None)
+    calls = _provider(monkeypatch, lambda *a: _bars(stored.results.price_data.index[-1], 2))
+    body = client.post(f"/api/backtests/{bid}/live-refresh").json()
+    assert len(calls) == 1 and body["stream"] is False
+
+
+def test_daily_charts_never_use_the_stream(run, monkeypatch):
+    bid, stored = run
+    stored.results.timeframe = "1d"
+    asked = []
+    monkeypatch.setattr(backtests.stream_hub, "bars_1m", lambda root, since: asked.append(1))
+    _provider(monkeypatch, lambda *a: _bars("2020-01-01", 0))
+    assert client.post(f"/api/backtests/{bid}/live-refresh").json()["stream"] is False
+    assert asked == []

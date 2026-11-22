@@ -64,6 +64,7 @@ const child = spawn(
       AUTOTRADER_DB_PATH: dbPath,
       AUTOTRADER_CONFIG_DIR: resolve(tmpDir, "config"),
       AUTOTRADER_INSECURE_COOKIE: "1",
+      AUTOTRADER_STREAM: "0",          // never dial Schwab's stream from a test run
       AUTOTRADER_DEV_MAIL_SINK: "1",
     },
   },

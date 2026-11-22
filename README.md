@@ -766,7 +766,7 @@ A React 19 single-page application over the FastAPI backend.
 - ➜ **Swing levels on the chart** — every swing gets a thin breakeven line (green = buyers in control, red = sellers) over a light band to its 50% Equilibrium, and a small box: the swing's range per level (Range - 10 Leg (1-4) | 3 Leg (i-vii) | 1 Leg (a-b)), Buyers / Sellers %, Volume Breakeven, 50% Equilibrium; hovering a swing point shows only that point's own leg; the title's Dominant % uses the same Buyer Control rule; "Swing levels" checkbox turns it off
 - ➜ **Swing levels in the Market Grid** — Live state shows each timeframe's newest swing: Swing, Swing High, Swing Low, Swing Volume, Volume Breakeven, 50% Equilibrium, Buyer Control
 - ➜ **Tools** — five chart types, Fibonacci and drawing tools, Compare, four-chart layout
-- ➜ **Live** — updates every 15 s on Schwab data
+- ➜ **Live** — on Schwab data the server holds one Schwab stream (1-minute bars plus quotes for the forming minute) and the chart reads it, from every 2 s, slower only when a big chart is heavy to redraw; LIVE · STREAMING beside the instrument; if the stream drops, the app goes back to asking Schwab every 15 s by itself and says LIVE · POLLING
 
 <br>
 

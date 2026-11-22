@@ -20,7 +20,12 @@ database -- the workspace account itself, onboarding, the cross-origin check,
 a restored backup. They are listed in _REAL_WORKSPACE_SUITES below.
 """
 
+import os
+
 import pytest
+
+# No test may dial Schwab's stream: the hub stays off (src/data/stream_hub.py).
+os.environ["AUTOTRADER_STREAM"] = "0"
 
 from api import auth as auth_mod
 from api.auth import require_user

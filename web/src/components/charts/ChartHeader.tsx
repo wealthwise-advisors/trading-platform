@@ -54,10 +54,12 @@ interface ChartHeaderProps {
    * learning anything about the other.
    */
   actions?: React.ReactNode
+  /** Live data: from the server's Schwab stream, or polled every 15 s when it is down. */
+  live?: "streaming" | "polling"
 }
 
 export function ChartHeader({
-  symbol, description, exchange, interval, bars, actions,
+  symbol, description, exchange, interval, bars, actions, live,
 }: ChartHeaderProps) {
   const last = bars.length ? bars[bars.length - 1] : null
   const prev = bars.length > 1 ? bars[bars.length - 2] : null
@@ -117,6 +119,16 @@ export function ChartHeader({
               <span className="text-muted-foreground/60" aria-hidden>&bull;</span>
               <span className="text-[13px] text-muted-foreground">{exchange}</span>
             </>
+          )}
+          {live && (
+            <span data-testid="chart-live" title={live === "streaming"
+                    ? "Bars arrive from Schwab's live stream as they print"
+                    : "Schwab's stream is not available; new bars are fetched every 15 seconds"}
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ring-1 ${
+                    live === "streaming" ? "bg-emerald-500/12 text-emerald-700 ring-emerald-400/30 dark:text-emerald-300"
+                                         : "bg-amber-500/12 text-amber-700 ring-amber-400/30 dark:text-amber-300"}`}>
+              Live &middot; {live}
+            </span>
           )}
 
           {/* The quote, on the same line. tabular-nums so the figures do not

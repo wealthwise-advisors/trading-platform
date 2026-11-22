@@ -89,6 +89,8 @@ const SWING_COLORS = ["#ffd23f", "#c77dff", "#4cc9f0", "#7ee787"]
 
 interface CandlestickChartProps {
   symbol: string
+  /** Live data, shown beside the instrument: streaming, or polled when the stream is down. */
+  live?: "streaming" | "polling"
   strategyName: string
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
@@ -304,7 +306,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
+  symbol, live, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -1011,11 +1013,14 @@ export function CandlestickChart({
     const cb = drawnCandleAt.get(onDisplayCandle([pt.t], drawnTimes)[0])
     return pt.type === "H" ? Math.max(pt.price, cb?.h ?? pt.price) : Math.min(pt.price, cb?.l ?? pt.price)
   }
+  // Once per render: barStepMs reads only the first 60 bars, but mapping every candle on
+  // each call made the tags and swing titles quadratic in the bar count.
+  const candleStepMs = Math.max(1, barStepMs(candleBars.slice(0, 60).map((b) => b.t)))
   const screenFraction = (ms: number, win: [number, number] | undefined): number | null => {
     if (!win || !drawnMs.length) return null
     const a = candlesBefore(win[0])
     const lastInWin = candlesBefore(win[1] + 1) - 1
-    const padBars = win[1] > drawnMs[drawnMs.length - 1] ? Math.round((win[1] - drawnMs[drawnMs.length - 1]) / Math.max(1, barStepMs(candleBars.map((b) => b.t)))) : 0
+    const padBars = win[1] > drawnMs[drawnMs.length - 1] ? Math.round((win[1] - drawnMs[drawnMs.length - 1]) / candleStepMs) : 0
     const span = Math.max(1, lastInWin - a + padBars + 0.5)
     return (candlesBefore(ms) - a + 0.25) / span
   }
@@ -2893,7 +2898,7 @@ export function CandlestickChart({
           ride here moved down to the toolbar row, where the reference keeps
           every control together -- this line is the quote now, nothing else. */}
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
-                   interval={interval} bars={bars} />
+                   interval={interval} bars={bars} live={live} />
       {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
           line, as the reference draws them. They were two stacked rows,
           which cost the plot a strip of height to say nothing the one row

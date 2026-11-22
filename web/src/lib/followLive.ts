@@ -2,13 +2,12 @@
  * "Follow live": once the replay has caught up to the newest bar, keep asking
  * the server for bars that have printed since, and play them as they arrive.
  *
- * WHY POLLING AND NOT A STREAM
- * ----------------------------
- * The provider has no working stream -- SchwabProvider.stream() raises
- * NotImplementedError. It does not need one. The finest bar the app shows is one
- * minute, so a bar can only appear once a minute, and one request per minute is
- * the entire requirement. A stream would deliver ticks this app has nowhere to
- * put.
+ * WHY THE BROWSER POLLS
+ * ---------------------
+ * The browser always polls the app's own server. Since 2026-11-22 the server
+ * holds one Schwab stream (src/data/stream_hub.py) and the Chart tab's poll reads
+ * it without a Schwab call, so it can run much faster -- see nextChartPollMs at
+ * the bottom. Live Replay's poll below still has the server ask Schwab each time.
  *
  * The decisions live here rather than in the component so they can be tested
  * without a socket, a timer or a browser. What is left in the component is the
@@ -322,4 +321,22 @@ export async function waitForServer(
     if (now() - start >= timeoutMs) return false
     await sleep(intervalMs)
   }
+}
+
+/**
+ * The chart's poll while the server's Schwab stream is up (upgrade plan, Feature 3).
+ * A poll then costs no Schwab request -- the server builds the bars from the
+ * minutes it already holds -- so the reasons above for not going below fifteen
+ * seconds no longer apply, and the forming bar can move every two.
+ *
+ * But every update redraws the whole chart (Plotly recomputes on any data change;
+ * a 1m chart of a week took ~600 ms in a dev build). So the pace follows the last
+ * redraw: at most about an eighth of the main thread goes to live updates, and the
+ * chart stays as responsive to zoom and hover as it is without them.
+ */
+export const STREAM_POLL_MS = 2_000
+
+export function nextChartPollMs(reply: { stream?: boolean }, redrawMs: number): number {
+  if (!reply.stream) return FOLLOW_POLL_MS
+  return Math.min(FOLLOW_POLL_MS, Math.max(STREAM_POLL_MS, Math.round(redrawMs * 8)))
 }
