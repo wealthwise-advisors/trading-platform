@@ -570,7 +570,7 @@ export function AlertsPanel({ bars }: { bars: Array<{ h: number; l: number }> })
         })}
       </ul>
       <p className="mt-1.5 text-[10px] text-muted-foreground/80">
-        Checked against the bars on screen. Nothing watches the market while this is closed.
+        Ticked against the bars on screen. The server also watches them on the live price, with the app closed too.
       </p>
     </Panel>
     </div>

@@ -361,4 +361,5 @@ class TestExistingApiUnchanged:
         # Feature 10, 2026-11-22): /api/account/settings, /api/account/templates,
         # /templates/default, /templates/{name}, /templates/{name}/default. All
         # behind require_user; tests/test_account_settings.py covers them.
-        assert len(paths) == 42, sorted(paths)
+        # +1 for /api/alerts/events (Feature 4, server-side price alerts).
+        assert len(paths) == 43, sorted(paths)

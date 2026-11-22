@@ -161,3 +161,11 @@ def test_only_futures_are_streamed(monkeypatch):
     assert "AAPL" not in h._roots and h._thread is None
     h.watch("es")
     assert "ES" in h._roots
+
+
+def test_last_price_only_while_the_hub_is_healthy(hub):
+    assert hub.last_price("ES") is None                          # never quoted
+    hub.on_message(quote("2026-11-23T05:00:01", last=6910.25, total=1))
+    assert hub.last_price("es") == 6910.25
+    hub.clock["now"] += timedelta(seconds=31)
+    assert hub.last_price("ES") is None

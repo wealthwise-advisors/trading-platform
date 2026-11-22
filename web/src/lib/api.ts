@@ -1,3 +1,4 @@
+import type { AlertEvent } from "@/lib/alertEvents"
 // Typed fetch client for the FastAPI backend. Always calls relative /api/...
 // paths — Vite's dev server proxies these to uvicorn (see vite.config.ts);
 // in production the same relative paths work if FastAPI serves the built
@@ -236,6 +237,8 @@ export const api = {
   // ── settings document and chart templates (upgrade plan, Feature 10) ───────
   // Saving the settings goes through lib/accountSettings.ts, which needs the 409
   // status to tell "changed elsewhere" apart from a failure.
+  /** Price alerts the server saw reached, after event `after` (Feature 4). */
+  getAlertEvents: (after = 0) => request<AlertEvent[]>(`/alerts/events?after=${after}`),
   getSettings: () =>
     request<{ settings: Record<string, unknown>; version: number; updated_at: string | null }>("/account/settings"),
   listTemplates: () => request<ChartTemplate[]>("/account/templates"),

@@ -13,6 +13,7 @@ still clears any rows they hold so a closed account leaves nothing behind.
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 from db.connection import connect
@@ -435,3 +436,43 @@ def is_onboarded(user_id: int, db: Path | None = None) -> bool:
     finally:
         conn.close()
     return bool(r and r["onboarded_at"])
+
+
+# ── alert events (v13) ──────────────────────────────────────────────────────
+
+def record_alert_event(user_id: int, alert: dict, price: float, db: Path | None = None) -> bool:
+    """Record that `alert` was reached at `price`. False if it already had been."""
+    conn = connect(db)
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO alert_events (user_id, alert_id, symbol, direction, level, note, price, fired_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (user_id, alert["id"], alert["symbol"], alert["direction"], float(alert["price"]),
+                 str(alert.get("note") or ""), float(price),
+                 # Eastern, with its offset: shown as ET, and an exact instant on any server clock.
+                 datetime.now(ZoneInfo("America/New_York")).isoformat(timespec="seconds")))
+        return cur.rowcount == 1
+    finally:
+        conn.close()
+
+
+def fired_alert_ids(user_id: int, db: Path | None = None) -> set[str]:
+    conn = connect(db)
+    try:
+        return {r["alert_id"] for r in conn.execute("SELECT alert_id FROM alert_events WHERE user_id = ?", (user_id,))}
+    finally:
+        conn.close()
+
+
+def alert_events(user_id: int, after: int = 0, db: Path | None = None) -> list[dict]:
+    conn = connect(db)
+    try:
+        # The NEWEST 200 after `after`, oldest first: a browser on its first visit (after=0)
+        # must see recent alerts, not the account's first 200.
+        return [dict(r) for r in conn.execute(
+            "SELECT * FROM (SELECT id, alert_id, symbol, direction, level, note, price, fired_at "
+            "FROM alert_events WHERE user_id = ? AND id > ? ORDER BY id DESC LIMIT 200) ORDER BY id",
+            (user_id, after))]
+    finally:
+        conn.close()

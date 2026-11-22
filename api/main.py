@@ -27,6 +27,7 @@ from loguru import logger
 from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PkgNotFound
 
 from api.auth import PROTECTED
+from api import alerts
 from api.routers import (auth as auth_router, meta, backtests, replay,
                          schwab, optimize, data_export, account, quotes, live)
 
@@ -62,6 +63,7 @@ async def _lifespan(_app: FastAPI):
     2026-10-16; what is worth saying at startup now is that the app is open.
     """
     logger.info("Sign-in is disabled: every request runs as the workspace account.")
+    alerts.start_checker()          # price alerts, checked on the server (Feature 4)
     yield
 
 
@@ -158,6 +160,7 @@ app.include_router(data_export.router, prefix="/api", dependencies=[PROTECTED])
 # The account's own saved configurations. Under PROTECTED like the rest, and
 # every handler additionally scopes its query by the resolved user's id.
 app.include_router(account.router, prefix="/api", dependencies=[PROTECTED])
+app.include_router(alerts.router, prefix="/api", dependencies=[PROTECTED])
 # Protected like every other data route: a quote is market data the account
 # is entitled to through ITS Schwab link, not a public feed.
 app.include_router(quotes.router, prefix="/api", dependencies=[PROTECTED])

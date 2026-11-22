@@ -229,8 +229,8 @@ export function ChartToolbar({
               </button>
             </div>
             <p className="mt-2 text-[10px] text-muted-foreground/80">
-              Marked on the chart and listed under Alerts. Checked against the
-              bars on screen — nothing watches the market while this is closed.
+              Marked on the chart and listed under Alerts. The server also watches
+              the live price, with the app closed too, and tells you here when it is reached.
             </p>
           </div>
         )}

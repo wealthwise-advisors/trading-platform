@@ -419,3 +419,21 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 
 CREATE INDEX IF NOT EXISTS idx_login_attempts_blocked
     ON login_attempts(blocked_until);
+
+-- v13: price alerts the server saw reached (upgrade plan, Feature 4). One row per
+-- alert: UNIQUE is what makes an alert fire once, across restarts too. The alert's
+-- level and note are copied in, so the event still reads right after it is deleted.
+CREATE TABLE IF NOT EXISTS alert_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    alert_id    TEXT    NOT NULL,
+    symbol      TEXT    NOT NULL,
+    direction   TEXT    NOT NULL,
+    level       REAL    NOT NULL,
+    note        TEXT    NOT NULL DEFAULT '',
+    price       REAL    NOT NULL,
+    fired_at    TEXT    NOT NULL,
+
+    UNIQUE (user_id, alert_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

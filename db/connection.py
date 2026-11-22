@@ -41,7 +41,8 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: be stored in the NOT NULL column beside it.
 #: v12 added user_settings and chart_templates (settings and templates on the
 #: server, so every browser sees the same chart setup).
-SCHEMA_VERSION = 12
+#: v13 added alert_events (price alerts the server saw reached, each once).
+SCHEMA_VERSION = 13
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:

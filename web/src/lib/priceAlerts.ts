@@ -1,15 +1,10 @@
 /**
  * Price alerts: a level on an instrument that the user wants to be told about.
  *
- * WHY THESE LIVE IN THE BROWSER. An alert that fires while the app is closed
- * needs a server watching a live feed and a way to reach the user -- a push
- * subscription or an email. None of that exists here, and an alert that
- * silently never fires is worse than no alert at all. So these are explicitly
- * CHART alerts: a level you mark, see drawn on the chart, and that reports
- * whether the loaded bars have crossed it. That is a real, honest answer to
- * "tell me when ES reaches 4600" for a platform that backtests and replays.
- *
- * Stored per browser, like the watchlist and the interval favourites.
+ * Marked on the chart and ticked against the bars on screen (alertTriggered).
+ * Since 2026-11-22 they are also kept on the server (lib/accountSettings.ts) and
+ * checked there against the live price, app open or closed (api/alerts.py);
+ * components/AlertNotifier.tsx announces what the server saw reached.
  */
 
 export interface PriceAlert {

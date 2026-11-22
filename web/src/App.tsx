@@ -14,6 +14,7 @@ import { AlertsBell } from "@/components/panels/MarketPanels"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
 import { SettingsNotice } from "@/components/SettingsNotice"
+import { AlertNotifier } from "@/components/AlertNotifier"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
 import {
@@ -150,6 +151,7 @@ function App({ user }: { user: Me }) {
             nothing at all while the connection is fine. */}
         <div className="shrink-0"><OfflineBanner /></div>
         <div className="shrink-0"><SettingsNotice /></div>
+        <AlertNotifier />
         {/* THE HEADER, IN THREE GROUPS THAT WRAP AS UNITS.
             Identity, then the sections, then everything you can press --
             search, theme, account settings, the two exports, Deploy and the

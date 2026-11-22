@@ -151,6 +151,16 @@ class StreamHub:
         idx = pd.DatetimeIndex(sorted(rows), name="timestamp")
         return pd.DataFrame([rows[t] for t in idx], index=idx, columns=_COLS, dtype=float)
 
+    def last_price(self, root: str) -> float | None:
+        """The newest traded price from the stream, or None when the hub cannot vouch
+        for it (not connected, silent for 30 s, never quoted)."""
+        root = root.upper()
+        with self._lock:
+            healthy = (self.connected and self._last_message is not None
+                       and self._now() - self._last_message <= STALE_AFTER)
+            q = self._quote.get(root, {})
+            return q.get("3") if healthy else None
+
     # ── the connection ───────────────────────────────────────────────────────
 
     def watch(self, root: str) -> None:
