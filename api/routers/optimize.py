@@ -50,29 +50,28 @@ def _strategy_spec(strategy_id: str) -> dict:
     raise HTTPException(400, f"Unknown strategy id: {strategy_id!r}")
 
 
-@router.post("", response_model=OptimizeResponse)
-def run_optimizer(req: OptimizeRequest, user=PROTECTED):
-    if req.metric not in _METRICS:
-        raise HTTPException(400, f"metric must be one of {sorted(_METRICS)}")
-
+def sweep(req, start_dt: datetime, end_dt: datetime, provider=None, contract_spec=None,
+          progress=None, cancelled=None) -> list[tuple[float, dict, object]]:
+    """Every combination of the strategy's grid through the real engine over
+    [start_dt, end_dt]: (metric value, params, results) for each run that worked.
+    Shared by the optimizer and walk-forward, so a window is optimised exactly as the
+    Strategy Optimizer would optimise it. `progress()` is called after each run;
+    `cancelled()` returning True stops the sweep."""
     spec = _strategy_spec(req.strategy_id)
     param_names = [p["name"] for p in spec["params"]]
     grid_size = _grid_size_for(len(param_names))
     grids = [_param_grid(p, grid_size) for p in spec["params"]]
-
     combos = [dict(zip(param_names, values)) for values in itertools.product(*grids)] if grids else [{}]
     combos = combos[:MAX_COMBOS]
 
-    contract_spec = get_contract_spec(req.symbol)
-    provider = _build_provider(req.data_source, req.symbol, req.timeframe,
-                               req.start_date, req.end_date, contract_spec,
-                               session_start=req.session_start)
-    start_dt = datetime.combine(req.start_date, time_type(0, 0))
-    end_dt = datetime.combine(req.end_date, time_type(23, 59))
-
-    results_list = []
-    best = None  # (metric_value, params, results_object)
+    contract_spec = contract_spec or get_contract_spec(req.symbol)
+    provider = provider or _build_provider(req.data_source, req.symbol, req.timeframe,
+                                           start_dt.date(), end_dt.date(), contract_spec,
+                                           session_start=req.session_start)
+    out = []
     for params in combos:
+        if cancelled and cancelled():
+            break
         strategy = build_strategy(req.strategy_id, params)
         engine = BacktestEngine(
             data_provider=provider, strategy=strategy, symbol=req.symbol, timeframe=req.timeframe,
@@ -84,8 +83,32 @@ def run_optimizer(req: OptimizeRequest, user=PROTECTED):
             results = engine.run(start=start_dt, end=end_dt)
         except (ValueError, ImportError, RuntimeError):
             continue
+        finally:
+            if progress:
+                progress()
+        out.append((getattr(results, req.metric) or 0.0, params, results))
+    return out
 
-        metric_value = getattr(results, req.metric) or 0.0
+
+def combo_count(strategy_id: str) -> int:
+    spec = _strategy_spec(strategy_id)
+    grids = [_param_grid(p, _grid_size_for(len(spec["params"]))) for p in spec["params"]]
+    n = 1
+    for g in grids:
+        n *= len(g)
+    return min(n, MAX_COMBOS)
+
+
+@router.post("", response_model=OptimizeResponse)
+def run_optimizer(req: OptimizeRequest, user=PROTECTED):
+    if req.metric not in _METRICS:
+        raise HTTPException(400, f"metric must be one of {sorted(_METRICS)}")
+    start_dt = datetime.combine(req.start_date, time_type(0, 0))
+    end_dt = datetime.combine(req.end_date, time_type(23, 59))
+
+    results_list = []
+    best = None  # (metric_value, params, results_object)
+    for metric_value, params, results in sweep(req, start_dt, end_dt):
         results_list.append((metric_value, OptimizeCombo(
             params=params,
             total_return_pct=serializers._safe(results.total_return_pct) or 0.0,

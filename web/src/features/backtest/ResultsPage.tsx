@@ -19,7 +19,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { ResultsTabStrip } from "@/features/backtest/ResultsTabStrip"
 import { Card } from "@/components/ui/card"
 import { LoadingBlock } from "@/components/ui/loader"
-import { FlaskConical,
+import { FlaskConical, FlaskRound,
   TrendingUp, TrendingDown, Trophy, Gauge,
   // The page already imports a CandlestickChart component; alias the icon.
   CandlestickChart as CandlestickIcon,
@@ -36,6 +36,7 @@ import { MultiChartGrid } from "@/features/backtest/MultiChartGrid"
 import { useFollowLive } from "@/features/backtest/useFollowLive"
 import { useLiveSession } from "@/features/live/useLiveSession"
 import { PaperTradingPanel } from "@/features/live/PaperTradingPanel"
+import { ResearchPanel } from "@/features/backtest/ResearchPanel"
 
 /**
  * The four Plotly charts are split out of the main bundle.
@@ -480,6 +481,11 @@ export function ResultsPage() {
             <TabsContent value="multichart" className="mt-0">
               <MultiChartGrid />
             </TabsContent>
+            <TabsContent value="research" className="mt-0">
+              <Card className="p-4 border border-[color:var(--hairline-soft)] w-full">
+                <ResearchPanel backtestId={backtestId} />
+              </Card>
+            </TabsContent>
             <TabsContent value="paper" className="mt-0">
               <PaperTradingPanel live={live} />
             </TabsContent>
@@ -551,6 +557,7 @@ export function ResultsPage() {
               { value: "optimizer", label: "Strategy Optimizer", icon: <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "elliottwave", label: "Elliott Wave", icon: <Waves className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "multichart", label: "Multi-chart", icon: <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
+              { value: "research", label: "Research", icon: <FlaskRound className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
               { value: "paper", label: "Paper Trading", icon: <FlaskConical className="h-3.5 w-3.5 shrink-0" aria-hidden /> },
             ].map((t) => ({ ...t, content: <>{t.icon} {t.label}</> }))} />
           </div>

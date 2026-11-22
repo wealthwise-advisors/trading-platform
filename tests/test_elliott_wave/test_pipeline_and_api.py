@@ -364,4 +364,7 @@ class TestExistingApiUnchanged:
         # +1 for /api/alerts/events (Feature 4, server-side price alerts).
         # +2 for the paper order ticket (Feature 5): /api/live/orders and
         # /api/live/orders/{order_id}; both behind require_user.
-        assert len(paths) == 45, sorted(paths)
+        # +3 for strategy research (Feature 6): /api/backtests/{id}/monte-carlo,
+        # /api/research/walk-forward and /api/research/jobs/{job_id}. The runs
+        # list is GET on /api/backtests, a method on an existing path.
+        assert len(paths) == 48, sorted(paths)

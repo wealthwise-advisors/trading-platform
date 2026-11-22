@@ -1,3 +1,4 @@
+import type { MonteCarloResult, ResearchJob, RunSummary } from "@/lib/research"
 import type { AlertEvent } from "@/lib/alertEvents"
 // Typed fetch client for the FastAPI backend. Always calls relative /api/...
 // paths — Vite's dev server proxies these to uvicorn (see vite.config.ts);
@@ -260,6 +261,15 @@ export const api = {
     request<OptimizeResponse>("/optimize", {
       method: "POST", body: JSON.stringify(req), timeoutMs: LONG_TIMEOUT_MS,
     }),
+
+  // ── strategy research (Feature 6) ──────────────────────────────────────
+  listBacktests: () => request<RunSummary[]>("/backtests"),
+  monteCarlo: (id: string, body: { runs: number; seed?: number; loss_threshold?: number }) =>
+    request<MonteCarloResult>(`/backtests/${id}/monte-carlo`, { method: "POST", body: JSON.stringify(body) }),
+  startWalkForward: (req: OptimizeRequest & { folds: number; train_blocks: number }) =>
+    request<{ job_id: string }>("/research/walk-forward", { method: "POST", body: JSON.stringify(req) }),
+  researchJob: (id: string) => request<ResearchJob>(`/research/jobs/${id}`),
+  cancelResearchJob: (id: string) => request<ResearchJob>(`/research/jobs/${id}`, { method: "DELETE" }),
 }
 
 /** A named chart setup saved on the server (Save menu -> Templates). */

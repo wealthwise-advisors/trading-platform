@@ -17,6 +17,7 @@ from src.data.stream_hub import hub as stream_hub
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
 from src.backtesting.live_signals import LiveSignalRunner
+from src.backtesting.monte_carlo import monte_carlo
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
 from src.analysis.elliott_wave import (
@@ -33,7 +34,7 @@ from api import store, serializers
 from api.schemas.backtest import BacktestRequest
 from api.schemas.chart_settings import ChartSettings
 from api.schemas.elliott_wave import ElliottWaveResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 try:
     from src.data.external_csv_provider import ExternalCSVProvider
@@ -261,6 +262,32 @@ def _get_or_404(backtest_id: str, user) -> store.StoredBacktest:
         raise HTTPException(404, f"Backtest {backtest_id!r} not found — it may have expired "
                                  "(results are held in memory) or the id is wrong.")
     return stored
+
+
+@router.get("")
+def list_backtests(user=PROTECTED):
+    """This account's saved runs, newest first: what the Compare tab picks from."""
+    from db import backtests as runs_repo
+    return runs_repo.summaries(user.id, limit=100)
+
+
+class MonteCarloRequest(BaseModel):
+    runs: int = Field(default=1000, ge=100, le=20_000)
+    seed: int = 0
+    #: Also report the chance of losing more than this many dollars.
+    loss_threshold: float | None = Field(default=None, gt=0)
+
+
+@router.post("/{backtest_id}/monte-carlo")
+def run_monte_carlo(backtest_id: str, req: MonteCarloRequest | None = None, user=PROTECTED):
+    """Reshuffle and resample this run's trades (src/backtesting/monte_carlo.py)."""
+    req = req or MonteCarloRequest()            # no body: the defaults
+    r = _get_or_404(backtest_id, user).results
+    try:
+        return monte_carlo([t.pnl for t in r.trades], r.initial_capital, runs=req.runs,
+                           seed=req.seed, loss_threshold=req.loss_threshold)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @router.get("/{backtest_id}")

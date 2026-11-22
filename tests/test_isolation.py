@@ -112,6 +112,10 @@ def test_every_backtest_route_serves_the_workspaces_own_result(client, workspace
     for method, path in _owned_routes():
         url = path.replace("{backtest_id}", workspace_backtest) + required.get(path, "")
         r = client.request(method, url)
+        # Monte Carlo found the run and answered: the fixture has no trades to resample.
+        # A wrong owner would be a 404, which is what this sweep exists to catch.
+        if path.endswith("/monte-carlo") and r.status_code == 400 and "at least 2 trades" in r.text:
+            continue
         if r.status_code != 200:
             broken.append(f"{method} {path} -> {r.status_code}")
     assert not broken, "the workspace cannot read its own result:\n  " + "\n  ".join(broken)
@@ -120,11 +124,9 @@ def test_every_backtest_route_serves_the_workspaces_own_result(client, workspace
 # ── listing, summarising, deleting ───────────────────────────────────────────
 
 
-#: There is currently no collection route -- no GET /api/backtests listing and
-#: no DELETE. store.list_ids / summaries / delete exist and are unused by HTTP.
-#: They are tested at the store layer instead of through a route that does not
-#: exist, because that is the layer any future listing endpoint would call, so
-#: the isolation is already in place on the day someone adds one.
+#: GET /api/backtests (the Research tab's Compare list, 2026-11-22) calls
+#: summaries(user.id); there is still no DELETE. The isolation is tested here at
+#: the store layer, which is what that route and any future one call.
 def _seed(user_id: int, bid: str) -> str:
     from tests._isolation_helpers import tiny_results
     bt_repo.insert(bid, tiny_results(), "synthetic", _t("09:30"), _t("16:00"), user_id=user_id)
