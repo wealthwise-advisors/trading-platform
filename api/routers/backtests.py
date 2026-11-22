@@ -16,6 +16,7 @@ from src.data.resample import ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, bar_anchor, 
 from src.data.stream_hub import hub as stream_hub
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
+from src.backtesting.live_signals import LiveSignalRunner
 from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
 from src.analysis.elliott_wave import (
@@ -241,6 +242,8 @@ def run_backtest(req: BacktestRequest, user=PROTECTED):
 
     backtest_id = store.save(results, req.data_source, req.session_start,
                              req.session_end, user_id=user.id)
+    saved = store.get(backtest_id, user_id=user.id)
+    saved.strategy_id, saved.params, saved.contracts = req.strategy_id, dict(req.params), req.contracts_per_trade
     return serializers.results_to_summary(backtest_id, results, req.data_source,
                                           req.session_start, req.session_end)
 
@@ -279,8 +282,12 @@ def live_refresh(backtest_id: str, user=PROTECTED):
     r = stored.results
 
     def respond(live: bool, stream: bool = False) -> dict:
+        runner = stored.live_runner
+        signals = runner.signals if isinstance(runner, LiveSignalRunner) and not runner.failed else []
         return {**serializers.price_data_to_response(r.price_data, stored.session_start, r.volume_context),
-                "live": live, "stream": stream}
+                "live": live, "stream": stream,
+                "live_signals": [{"t": x["time"].isoformat(), "side": x["side"], "price": x["price"],
+                                  "reason": x["reason"]} for x in signals]}
 
     from api.routers.replay import _apply_session  # replay imports this module
 
@@ -289,6 +296,15 @@ def live_refresh(backtest_id: str, user=PROTECTED):
         return respond(False)
 
     last = r.price_data.index.max().to_pydatetime()
+    if stored.live_runner is None and stored.strategy_id:
+        # Signals from here on are live; everything before is the backtest's own.
+        try:
+            stored.live_runner = LiveSignalRunner(build_strategy(stored.strategy_id, stored.params or {}),
+                                                  r.symbol, r.timeframe, stored.contracts, edge=last)
+            stored.live_runner.catch_up_in_background(r.price_data.copy())
+        except Exception as exc:
+            logger.warning(f"live signals off for {backtest_id}: {exc}")
+            stored.live_runner = False             # tried once; the chart still moves
     # The server's one Schwab stream, when it can vouch for every minute since `last`:
     # no Schwab call at all. Daily and longer bars are whole sessions, kept on REST.
     fresh, streamed = None, False
@@ -314,6 +330,12 @@ def live_refresh(backtest_id: str, user=PROTECTED):
         # >= so the newest bar, still forming at the last poll, is replaced.
         kept = r.price_data[r.price_data.index < fresh.index.min()]
         r.price_data = pd.concat([kept, fresh[r.price_data.columns]])
+    if isinstance(stored.live_runner, LiveSignalRunner):
+        try:
+            stored.live_runner.try_feed(r.price_data)
+        except Exception as exc:
+            logger.warning(f"live signals stopped for {backtest_id}: {exc}")
+            stored.live_runner = False
     return respond(True, streamed)
 
 

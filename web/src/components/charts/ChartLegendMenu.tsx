@@ -31,7 +31,7 @@ export interface LegendEntry {
   color: string
   kind: LegendKind
   /** Marker shape, for kind "marker". Matches the Plotly symbol names used. */
-  symbol?: "triangle-up" | "x" | "circle"
+  symbol?: "triangle-up" | "x" | "circle" | "diamond"
   /**
    * The series' latest reading, where it has one. Omitted entirely rather
    * than zeroed when a series has no value yet -- see the em dash in the
@@ -65,6 +65,9 @@ function Swatch({ e }: { e: LegendEntry }) {
           <line x1="7" y1="1" x2="15" y2="9" {...common} />
           <line x1="15" y1="1" x2="7" y2="9" {...common} />
         </>
+      )}
+      {e.kind === "marker" && e.symbol === "diamond" && (
+        <polygon points="11,0.5 15.5,5 11,9.5 6.5,5" fill={e.color} stroke="#22c55e" strokeWidth="1.6" />
       )}
       {e.kind === "marker" && e.symbol === "circle" && (
         <circle cx="11" cy="5" r="4" fill="none" stroke={e.color} strokeWidth="1.8" />

@@ -21,7 +21,7 @@
  */
 
 import { intervalName } from "@/lib/chartSetup"
-import type { OHLCVRecord } from "@/lib/types"
+import type { LiveSignal, OHLCVRecord } from "@/lib/types"
 
 /** "5m" -> "5"; "1h", "1d", "1w" unchanged. */
 function intervalLabel(interval: string): string {
@@ -56,10 +56,12 @@ interface ChartHeaderProps {
   actions?: React.ReactNode
   /** Live data: from the server's Schwab stream, or polled every 15 s when it is down. */
   live?: "streaming" | "polling"
+  /** The strategy's newest live signal, named beside the chip. */
+  lastSignal?: LiveSignal
 }
 
 export function ChartHeader({
-  symbol, description, exchange, interval, bars, actions, live,
+  symbol, description, exchange, interval, bars, actions, live, lastSignal,
 }: ChartHeaderProps) {
   const last = bars.length ? bars[bars.length - 1] : null
   const prev = bars.length > 1 ? bars[bars.length - 2] : null
@@ -128,6 +130,13 @@ export function ChartHeader({
                     live === "streaming" ? "bg-emerald-500/12 text-emerald-700 ring-emerald-400/30 dark:text-emerald-300"
                                          : "bg-amber-500/12 text-amber-700 ring-amber-400/30 dark:text-amber-300"}`}>
               Live &middot; {live}
+            </span>
+          )}
+          {live && lastSignal && (
+            <span data-testid="chart-last-signal" title={lastSignal.reason || undefined}
+                  className="text-[12px] font-semibold tabular-nums"
+                  style={{ color: lastSignal.side === "BUY" ? "var(--gain)" : lastSignal.side === "SELL" ? "var(--loss)" : undefined }}>
+              Live signal: {lastSignal.side} {lastSignal.price.toFixed(2)} at {lastSignal.t.slice(11, 16)}
             </span>
           )}
 

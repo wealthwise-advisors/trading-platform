@@ -58,6 +58,12 @@ class StoredBacktest:
     data_source: str
     session_start: time_type
     session_end: time_type
+    #: What made the run, so a live run's strategy can keep going on new bars
+    #: (upgrade plan, Feature 2). None for runs loaded back from the database.
+    strategy_id: str | None = None
+    params: dict | None = None
+    contracts: int = 1
+    live_runner: object | None = None
 
 
 #: Keyed by (user_id, backtest_id). See the note in the module docstring.

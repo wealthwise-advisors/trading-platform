@@ -193,6 +193,8 @@ export interface PriceDataResponse {
   /** Set by /live-refresh: the run still follows live data, and whether from the stream. */
   live?: boolean
   stream?: boolean
+  /** The strategy's signals on bars that closed after the run (upgrade plan, Feature 2). */
+  live_signals?: LiveSignal[]
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
   volume_profile?: VolumeProfile
@@ -587,4 +589,12 @@ export interface LiveStatus {
   duplicates_ignored: number
   last_bar_at: string | null
   events: LiveEvent[]
+}
+
+/** A signal the run's strategy gave on a live bar after the backtest; t is the bar's time. */
+export interface LiveSignal {
+  t: string
+  side: "BUY" | "SELL" | "CLOSE"
+  price: number
+  reason: string
 }

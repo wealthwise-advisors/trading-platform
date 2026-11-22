@@ -20,7 +20,7 @@ type DragMode =
   | "drawline" | "drawrect" | "drawcircle" | "drawopenpath"
 import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout, Shape, Annotations, PlotRelayoutEvent } from "plotly.js"
-import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint } from "@/lib/types"
+import type { OHLCVRecord, IndicatorSeries, ZigZagResponse, TradeRecord, ZigZagPoint, LiveSignal } from "@/lib/types"
 import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
@@ -91,6 +91,8 @@ interface CandlestickChartProps {
   symbol: string
   /** Live data, shown beside the instrument: streaming, or polled when the stream is down. */
   live?: "streaming" | "polling"
+  /** The strategy's signals on bars that closed after the run. */
+  liveSignals?: LiveSignal[]
   strategyName: string
   bars: OHLCVRecord[]
   indicators: IndicatorSeries
@@ -287,6 +289,7 @@ export function ZonedCandlestickChart(props: CandlestickChartProps) {
   const volumeContext = useMemo(() => shiftTimes(props.volumeContext, off), [props.volumeContext, off])
   const zigzag = useMemo(() => shiftTimes(props.zigzag, off), [props.zigzag, off])
   const trades = useMemo(() => shiftTimes(props.trades, off), [props.trades, off])
+  const liveSignals = useMemo(() => shiftTimes(props.liveSignals, off), [props.liveSignals, off])
   const { fetchCompare } = props
   const compare = useMemo(() => fetchCompare && ((sym: string) => fetchCompare(sym).then((r) => shiftTimes(r, off))),
                           [fetchCompare, off])
@@ -294,7 +297,7 @@ export function ZonedCandlestickChart(props: CandlestickChartProps) {
   // every setting from storage, exactly as it does when it first opens.
   const epoch = useChartTemplateEpoch((s) => s.epoch)
   return <CandlestickChart key={epoch} {...props} bars={bars} indicators={indicators} volumeContext={volumeContext}
-                           zigzag={zigzag} trades={trades} fetchCompare={compare} zoneOffset={off} />
+                           zigzag={zigzag} trades={trades} liveSignals={liveSignals} fetchCompare={compare} zoneOffset={off} />
 }
 
 export function CandlestickChart({
@@ -306,7 +309,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, live, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
+  symbol, live, liveSignals = [], bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -1742,6 +1745,24 @@ export function CandlestickChart({
       xaxis: "x", yaxis: "y",
     } as unknown as Data)
   }
+  // Live signals: the strategy on bars that closed after the run. Theme ink with the
+  // side's colour as a thick ring and the words LIVE BUY / LIVE SELL beside it, so
+  // they never pass for the backtest's filled triangles -- by shape, fill or word.
+  const liveShown = liveSignals.filter((s) => barTimes.has(s.t))
+  if (liveShown.length) {
+    const ring = liveShown.map((s) => (s.side === "BUY" ? GREEN : s.side === "SELL" ? RED : INK_DIM))
+    data.push({
+      type: "scatter", mode: "markers+text",
+      x: liveShown.map((s) => s.t), y: liveShown.map((s) => s.price),
+      name: "Live signal", text: liveShown.map((s) => `LIVE ${s.side}`),
+      textposition: liveShown.map((s) => (s.side === "SELL" ? "top center" : "bottom center")),
+      textfont: { color: INK, size: 11, family: "Arial Black, Arial" },
+      marker: { symbol: "diamond", size: 14, color: INK, line: { color: ring, width: 3 } },
+      customdata: liveShown.map((s) => s.reason || "-"),
+      hovertemplate: "<b>%{text}</b><br>%{x}<br>@ %{y:.2f}<br>%{customdata}<extra></extra>",
+      xaxis: "x", yaxis: "y", cliponaxis: false,
+    } as unknown as Data)
+  }
   if (exits.length) {
     const exitColors = exits.map((tr) => (tr.pnl >= 0 ? GREEN : RED))
     data.push({
@@ -2698,6 +2719,10 @@ export function CandlestickChart({
         note: "numbered circle at the low" },
     )
   }
+  if (liveSignals.length) {
+    legendEntries.push({ label: "Live signal", color: INK, kind: "marker", symbol: "diamond",
+                         note: "the strategy on bars after the run; ringed green to buy, red to sell" })
+  }
   if (trades.length) {
     legendEntries.push(
       { label: "Long Entry", color: GREEN, kind: "marker", symbol: "triangle-up" },
@@ -2898,7 +2923,7 @@ export function CandlestickChart({
           ride here moved down to the toolbar row, where the reference keeps
           every control together -- this line is the quote now, nothing else. */}
       <ChartHeader symbol={symbol} description={description} exchange={exchange}
-                   interval={interval} bars={bars} live={live} />
+                   interval={interval} bars={bars} live={live} lastSignal={liveSignals[liveSignals.length - 1]} />
       {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
           line, as the reference draws them. They were two stacked rows,
           which cost the plot a strip of height to say nothing the one row

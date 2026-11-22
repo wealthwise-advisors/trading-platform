@@ -391,6 +391,7 @@ export function ResultsPage() {
                         interval={s.timeframe}
                         bars={priceDataQ.data.bars}
                         live={priceDataQ.data.live ? (priceDataQ.data.stream ? "streaming" : "polling") : undefined}
+                        liveSignals={priceDataQ.data.live_signals}
                         indicators={priceDataQ.data.indicators}
                         volumeContext={priceDataQ.data.volume_context}
                         fetchCompare={(sym) => api.compareSymbol(backtestId!, sym)}

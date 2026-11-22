@@ -158,3 +158,68 @@ def test_daily_charts_never_use_the_stream(run, monkeypatch):
     _provider(monkeypatch, lambda *a: _bars("2020-01-01", 0))
     assert client.post(f"/api/backtests/{bid}/live-refresh").json()["stream"] is False
     assert asked == []
+
+
+# ── live strategy signals (upgrade plan, Feature 2) ─────────────────────────
+
+def test_the_strategy_runs_on_new_closed_bars_and_reports_live_signals(run, monkeypatch):
+    bid, stored = run
+    assert stored.strategy_id == "rsi_divergence" and stored.contracts >= 1
+    from src.strategies.base_strategy import Signal, SignalType
+    seen = []
+    last = stored.results.price_data.index[-1]
+
+    class Always:
+        name = "always"
+        def reset(self): pass
+        def on_bar(self, df, bar, pos):
+            seen.append(bar.timestamp)
+            if bar.timestamp < last:                      # quiet through the backtest's bars
+                return None
+            return Signal(SignalType.BUY, "always", bar.timestamp, bar.close, "test")
+    monkeypatch.setattr(backtests, "build_strategy", lambda sid, params: Always())
+    _provider(monkeypatch, lambda *a: _bars(last, 3))       # last bar replaced, two new
+    client.post(f"/api/backtests/{bid}/live-refresh")          # starts the catch-up off the request
+    stored.live_runner.feed(stored.results.price_data.iloc[:0])  # waits for it (feed takes the lock)
+    body = client.post(f"/api/backtests/{bid}/live-refresh").json()
+    # Bars now: b0 b1 last last+1 last+2(forming). Closed from the edge on: last, last+1.
+    # The first BUY acts (flat -> long); the second does not (already long).
+    assert body["live_signals"] == [{"t": last.isoformat(), "side": "BUY", "price": 11.0, "reason": "test"}]
+    assert pd.Timestamp(seen[-1]) == last + pd.Timedelta(minutes=1)   # the forming bar never fed
+
+
+def test_a_broken_strategy_never_breaks_the_live_chart(run, monkeypatch):
+    bid, stored = run
+    def boom(*a):
+        raise RuntimeError("strategy blew up")
+    monkeypatch.setattr(backtests, "build_strategy", boom)
+    _provider(monkeypatch, lambda *a: _bars(stored.results.price_data.index[-1], 2))
+    r = client.post(f"/api/backtests/{bid}/live-refresh")
+    assert r.status_code == 200 and len(r.json()["bars"]) == 4 and r.json()["live_signals"] == []
+
+
+def test_a_finished_run_reports_no_live_signals(run, monkeypatch):
+    bid, stored = run
+    stored.results.end_date = datetime(2020, 1, 1)
+    assert client.post(f"/api/backtests/{bid}/live-refresh").json()["live_signals"] == []
+
+
+def test_the_catch_up_never_holds_up_the_chart(run, monkeypatch):
+    """A long catch-up runs off the request: the poll answers at once, signals follow."""
+    import threading
+    bid, stored = run
+    gate = threading.Event()
+
+    class Slow:
+        name = "slow"
+        def reset(self): pass
+        def on_bar(self, df, bar, pos):
+            gate.wait(5)
+            return None
+    monkeypatch.setattr(backtests, "build_strategy", lambda sid, params: Slow())
+    _provider(monkeypatch, lambda *a: _bars(stored.results.price_data.index[-1], 2))
+    import time
+    t0 = time.time()
+    r = client.post(f"/api/backtests/{bid}/live-refresh")
+    assert r.status_code == 200 and time.time() - t0 < 3
+    gate.set()
