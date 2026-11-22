@@ -23,6 +23,14 @@ describe("which alert events to announce", () => {
   })
 })
 
+describe("a scanner condition alert", () => {
+  it("says what matched, where it closed and when", () => {
+    expect(alertText(ev(1, "2026-11-23T10:42:05-05:00", { direction: "condition", level: 0, price: 6912.5,
+                                                          note: "RSI dip on 5m, bar 10:35" })))
+      .toBe("ES: RSI dip on 5m, bar 10:35. Close 6,912.50 at 10:42.")
+  })
+})
+
 describe("what the notice says", () => {
   it("level, direction, the price that reached it, the time and the note", () => {
     expect(alertText(ev(1, "2026-11-23T10:42:05-05:00", { note: "breakout" })))

@@ -40,6 +40,7 @@ export const SETTING_STORE_KEYS: Record<string, string> = {
   favourites: "instrument-favourites",    // components/InstrumentPicker.tsx
   journal: "trading-journal",             // components/tables/TradingPanels.tsx
   scans: "saved-scans",                   // features/scanner/ScannerPage.tsx
+  conditionAlerts: "condition-alerts",    // features/scanner/ScannerPage.tsx (Alert me)
 }
 
 /** The part of the settings a chart template carries, plus its studies. */

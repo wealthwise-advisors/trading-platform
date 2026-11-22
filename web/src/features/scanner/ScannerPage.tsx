@@ -12,7 +12,8 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
-import { describe, loadScans, saveScans, type SavedScan, type ScanCondition } from "./scanText"
+import { describe, loadConditionAlerts, loadScans, saveConditionAlerts, saveScans,
+         type ConditionAlert, type SavedScan, type ScanCondition } from "./scanText"
 
 const TIMEFRAMES = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1d"]
 const DEFAULT: ScanCondition = { kind: "indicator", name: "rsi2", op: "below", value: 10 }
@@ -71,14 +72,24 @@ export function ScannerPage() {
   const goTo = useConfigStore((s) => s.goTo)
   const symbolsQ = useQuery({ queryKey: ["symbols", dataSource], queryFn: () => api.symbols(dataSource) })
   const all = useMemo(() => (symbolsQ.data ?? []).map((s) => s.symbol), [symbolsQ.data])
-  const [symbols, setSymbols] = useState<string[]>([])
-  useEffect(() => { if (all.length && !symbols.length) setSymbols(all.slice(0, 25)) }, [all, symbols.length])
+  // null until the user picks: the first 25 by default. Refilling whenever the list was
+  // empty made it impossible to untick everything and pick one symbol.
+  const [picked, setSymbols] = useState<string[] | null>(null)
+  const symbols = useMemo(() => picked ?? all.slice(0, 25), [picked, all])
   const [timeframe, setTimeframe] = useState("5m")
   const [combine, setCombine] = useState<"all" | "any">("all")
   const [conditions, setConditions] = useState<ScanCondition[]>([DEFAULT])
   const [every, setEvery] = useState(0)
   const [saved, setSaved] = useState<SavedScan[]>(loadScans)
   const [name, setName] = useState("")
+  const [condAlerts, setCondAlerts] = useState<ConditionAlert[]>(loadConditionAlerts)
+  const [repeat, setRepeat] = useState(false)
+  const keepAlerts = (list: ConditionAlert[]) => { setCondAlerts(list); saveConditionAlerts(list) }
+  const addAlert = () => keepAlerts([...condAlerts, {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: name.trim() || conditions.map(describe).join(combine === "all" ? " and " : " or "),
+    timeframe, combine, symbols, conditions, repeat, data_source: dataSource,
+  }])
 
   const scan = useMutation({
     mutationFn: () => api.runScan({ data_source: dataSource, timeframe, symbols, conditions, combine }),
@@ -133,7 +144,7 @@ export function ScannerPage() {
             {all.map((s) => (
               <label key={s} className="flex items-center gap-1">
                 <input type="checkbox" checked={symbols.includes(s)} disabled={!symbols.includes(s) && symbols.length >= 25}
-                       onChange={() => setSymbols((l) => (l.includes(s) ? l.filter((x) => x !== s) : [...l, s]))} />{s}
+                       onChange={() => setSymbols(symbols.includes(s) ? symbols.filter((x) => x !== s) : [...symbols, s])} />{s}
               </label>))}
           </div>
         </details>
@@ -150,6 +161,34 @@ export function ScannerPage() {
                       onClick={() => keep(saved.filter((x) => x.name !== s.name))}>x</button>
             </span>))}
         </div>
+      </Card>
+
+      <Card className="p-3 border border-[color:var(--hairline-soft)]">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Alerts on these conditions</div>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <select className={sel} value={repeat ? "every" : "once"} onChange={(e) => setRepeat(e.target.value === "every")} aria-label="Alert how often">
+            <option value="once">once per symbol</option><option value="every">on every bar it holds</option>
+          </select>
+          <Button size="sm" variant="secondary" disabled={!conditions.length || !symbols.length || symbols.length > 10}
+                  onClick={addAlert} title="The server checks it every minute on each symbol's newest closed bar, app open or closed">
+            Alert me when this matches
+          </Button>
+          {symbols.length > 10 && <span className="text-muted-foreground">Pick 10 symbols or fewer for an alert.</span>}
+        </div>
+        {condAlerts.length > 0 && (
+          <ul className="mt-2 space-y-1 text-xs" aria-label="Condition alerts">
+            {condAlerts.map((a) => (
+              <li key={a.id} className="flex items-center gap-2">
+                <span className="flex-1"><b>{a.name}</b> on {a.timeframe}: {a.symbols.join(", ")} ({a.repeat ? "every bar" : "once each"})</span>
+                <button type="button" className="underline" aria-label={`Delete alert ${a.name}`}
+                        onClick={() => keepAlerts(condAlerts.filter((x) => x.id !== a.id))}>Delete</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Checked by the server every minute on each symbol's newest closed bar, with the app closed too; you are told in the corner, with a tone.
+        </p>
       </Card>
 
       {scan.error && <p role="alert" className="text-sm text-[var(--loss)]">{(scan.error as Error).message}</p>}

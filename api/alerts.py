@@ -8,8 +8,10 @@ than every 15 s -- and records each alert reached, once (alert_events is UNIQUE 
 alert, so a restart cannot fire it again). The app asks for events it has not shown and
 announces them, including ones that fired while no browser was open.
 
-shortcut: price levels only. RSI / StochRSI / MFI crossings and VWAP-band touches (in the
-plan) need an indicator pass per timeframe; add them as further condition kinds in due().
+CONDITION ALERTS (check_conditions): a scan -- RSI / StochRSI / MFI levels and crossings,
+price change, unusual volume, breakouts, VWAP bands -- on a few symbols, made with the
+Scanner page's "Alert me" and kept in the settings document as conditionAlerts. Judged once
+a minute on the newest closed bar with the scanner's own code.
 """
 from __future__ import annotations
 
@@ -84,6 +86,65 @@ def check_once(user_id: int, prices: Callable[[set[str]], dict[str, float]]) -> 
     return n
 
 
+# ── condition alerts: a scan on a few symbols (RSI / StochRSI / MFI, VWAP bands, ...) ──
+
+CONDITIONS_EVERY = 60    # seconds: a condition is judged on a closed bar, at most one a minute
+MAX_CONDITION_SYMBOLS = 40   # across all condition alerts, so one minute is one bounded set of requests
+
+
+def _condition_alerts(user_id: int) -> list:
+    row = repo.get_settings(user_id)
+    try:
+        doc = json.loads(row["payload"]) if row else {}
+        lst = json.loads(doc.get("conditionAlerts") or "[]")
+        return lst if isinstance(lst, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
+def check_conditions(user_id: int, bars_for: Callable) -> int:
+    """One pass over the condition alerts. Each is validated with the scan endpoint's own
+    schema and judged with the scanner's own code on the newest CLOSED bar (the forming
+    one is dropped, so a match cannot appear and vanish within the bar). A symbol fires
+    once, or -- in "every bar" mode -- once per bar the condition holds on."""
+    from api.routers.scan import ScanRequest
+    from src.analysis import scanner
+    fired, n, budget = repo.fired_alert_ids(user_id), 0, MAX_CONDITION_SYMBOLS
+    for raw in _condition_alerts(user_id):
+        try:
+            req = ScanRequest(data_source=raw.get("data_source", "schwab"), timeframe=raw["timeframe"],
+                              symbols=raw["symbols"], conditions=raw["conditions"], combine=raw.get("combine", "all"))
+            aid, repeat = str(raw["id"]), bool(raw.get("repeat"))
+        except Exception:
+            continue                                   # a malformed entry is skipped, never fatal
+        conds = [c.model_dump() for c in req.conditions]
+        for sym in req.symbols:
+            sym = sym.upper()
+            if (not repeat and f"{aid}:{sym}" in fired) or budget <= 0:
+                continue
+            budget -= 1
+            try:
+                closed = bars_for(req, sym).iloc[:-1]
+                if len(closed) < 2 or not scanner.evaluate(closed, conds, req.combine)["matched"]:
+                    continue
+            except Exception as exc:
+                log.warning("condition alert %s on %s: %s", aid, sym, exc)
+                continue
+            bar_time = closed.index[-1].isoformat()
+            event_id = f"{aid}:{sym}:{bar_time}" if repeat else f"{aid}:{sym}"
+            note = f"{raw.get('name') or 'Condition alert'} on {req.timeframe}, bar {bar_time[11:16]}"
+            if repo.record_alert_event(user_id, {"id": event_id, "symbol": sym, "direction": "condition",
+                                                 "price": 0.0, "note": note}, float(closed["close"].iloc[-1])):
+                n += 1
+                log.info("condition alert %s fired on %s at %s", aid, sym, bar_time)
+    return n
+
+
+def _scan_bars(req, symbol: str):
+    from api.routers.scan import _bars
+    return _bars(req, symbol)
+
+
 class _LivePrices:
     """Stream first; REST quotes for the rest, at most every REST_EVERY seconds."""
 
@@ -116,9 +177,14 @@ def start_checker() -> None:
     prices = _LivePrices()
 
     def loop():
+        last_conditions = 0.0
         while True:
             try:
-                check_once(repo.workspace_user().id, prices)
+                uid = repo.workspace_user().id
+                check_once(uid, prices)
+                if time.monotonic() - last_conditions >= CONDITIONS_EVERY:
+                    last_conditions = time.monotonic()
+                    check_conditions(uid, _scan_bars)
             except Exception:
                 log.exception("alert checker")
             time.sleep(CHECK_EVERY)

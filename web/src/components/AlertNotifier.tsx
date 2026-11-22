@@ -39,7 +39,7 @@ export function AlertNotifier() {
         setShown((s) => [...s, ...fresh].slice(-5))
         tone()
         if (canNotify() && Notification.permission === "granted") {
-          for (const e of fresh) new Notification("Price alert", { body: alertText(e), tag: `alert-${e.id}` })
+          for (const e of fresh) new Notification(e.direction === "condition" ? "Condition alert" : "Price alert", { body: alertText(e), tag: `alert-${e.id}` })
         }
       } catch { /* server unreachable: try again next time */ }
     }
@@ -56,7 +56,8 @@ export function AlertNotifier() {
              className="rounded-lg border border-amber-400/50 bg-[var(--surface-1)] px-3 py-2 text-sm shadow-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-amber-600 dark:text-amber-300">Price alert</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-amber-600 dark:text-amber-300">
+                {e.direction === "condition" ? "Condition alert" : "Price alert"}</div>
               <div className="mt-0.5 text-foreground">{alertText(e)}</div>
             </div>
             <button type="button" aria-label="Dismiss alert" className="text-muted-foreground hover:text-foreground"

@@ -28,6 +28,18 @@ export function describe(c: ScanCondition): string {
   }
 }
 
+/** A scan the server watches (api/alerts.py check_conditions), once or on every bar. */
+export interface ConditionAlert extends SavedScan { id: string; repeat: boolean; data_source: string }
+
+const ALERTS_KEY = "condition-alerts"
+export function loadConditionAlerts(): ConditionAlert[] {
+  try { const v = JSON.parse(localStorage.getItem(ALERTS_KEY) ?? "[]"); return Array.isArray(v) ? v : [] } catch { return [] }
+}
+/** Browser storage, carried to the server by the settings sync; the server checks them. */
+export function saveConditionAlerts(list: ConditionAlert[]) {
+  try { localStorage.setItem(ALERTS_KEY, JSON.stringify(list)) } catch { /* private mode */ }
+}
+
 const KEY = "saved-scans"
 export function loadScans(): SavedScan[] {
   try { const v = JSON.parse(localStorage.getItem(KEY) ?? "[]"); return Array.isArray(v) ? v : [] } catch { return [] }

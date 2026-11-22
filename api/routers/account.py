@@ -116,7 +116,7 @@ def delete_config(name: str, user=Depends(auth.require_user)):
 #: The settings document's keys. Every one is an existing browser setting.
 SETTING_KEYS = {
     "chartStyle", "vwapLevels", "volumeAvg", "volumeProfile", "deviationColors",
-    "zone", "watchlist", "priceAlerts", "favourites", "journal", "scans",
+    "zone", "watchlist", "priceAlerts", "favourites", "journal", "scans", "conditionAlerts",
 }
 #: A chart template's keys: the chart's settings plus which studies are on.
 TEMPLATE_KEYS = {"chartStyle", "vwapLevels", "volumeAvg", "volumeProfile", "deviationColors", "studies"}

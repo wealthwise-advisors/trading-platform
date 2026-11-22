@@ -10,7 +10,8 @@ export interface AlertEvent {
   id: number
   alert_id: string
   symbol: string
-  direction: "above" | "below"
+  /** "condition" for a scanner alert: then `note` says what matched and `price` is the close. */
+  direction: "above" | "below" | "condition"
   level: number
   note: string
   price: number
@@ -42,5 +43,6 @@ const money = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 
 
 export function alertText(e: AlertEvent): string {
   const at = e.fired_at.slice(11, 16)
+  if (e.direction === "condition") return `${e.symbol}: ${e.note}. Close ${money(e.price)} at ${at}.`
   return `${e.symbol} reached ${money(e.level)} (${e.direction}): traded ${money(e.price)} at ${at}.${e.note ? ` ${e.note}` : ""}`
 }

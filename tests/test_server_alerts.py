@@ -103,3 +103,71 @@ def test_a_long_history_still_returns_the_newest(db):
         repo.record_alert_event(db, alert(f"a{i}", "ES", 1, "above"), 2.0)
     got = repo.alert_events(db, after=0)
     assert len(got) == 200 and got[-1]["alert_id"] == "a204" and got[0]["id"] < got[-1]["id"]
+
+
+# ── condition alerts: a scan on a few symbols, checked on closed bars ──────
+
+import pandas as pd  # noqa: E402
+
+
+def frame(closes):
+    idx = pd.date_range("2026-11-23 09:30", periods=len(closes), freq="5min")
+    c = pd.Series(closes, index=idx, dtype=float)
+    return pd.DataFrame({"open": c, "high": c + 0.5, "low": c - 0.5, "close": c, "volume": 100.0}, index=idx)
+
+
+BREAKOUT = {"kind": "breakout", "bars": 10, "direction": "high"}
+
+
+def cond_alert(id_="c1", repeat=False, symbols=("ES",), conditions=(BREAKOUT,)):
+    return {"id": id_, "name": "ES breakout", "symbols": list(symbols), "timeframe": "5m",
+            "conditions": list(conditions), "combine": "all", "repeat": repeat, "data_source": "synthetic"}
+
+
+def save_conditions(uid, lst):
+    row = repo.get_settings(uid)
+    doc = json.loads(row["payload"]) if row else {}
+    doc["conditionAlerts"] = json.dumps(lst)
+    repo.put_settings(uid, json.dumps(doc), (row or {"version": 0})["version"])
+
+
+def test_a_condition_on_the_newest_closed_bar_fires_once(db):
+    save_conditions(db, [cond_alert()])
+    bars = frame([100] * 20 + [103, 103.25])            # the bar before the forming one broke out
+    assert alerts.check_conditions(db, lambda a, s: bars) == 1
+    assert alerts.check_conditions(db, lambda a, s: bars) == 0
+    ev = repo.alert_events(db)[-1]
+    assert ev["symbol"] == "ES" and ev["direction"] == "condition" and ev["price"] == 103.0
+    assert "ES breakout" in ev["note"] and "5m" in ev["note"]
+
+
+def test_the_forming_bar_never_triggers(db):
+    save_conditions(db, [cond_alert()])
+    assert alerts.check_conditions(db, lambda a, s: frame([100] * 20 + [103])) == 0
+
+
+def test_every_bar_mode_fires_again_on_a_new_bar_only(db):
+    save_conditions(db, [cond_alert(repeat=True)])
+    a = frame([100] * 20 + [103, 104])
+    b = frame([100] * 20 + [103, 104, 105])
+    assert alerts.check_conditions(db, lambda x, s: a) == 1
+    assert alerts.check_conditions(db, lambda x, s: a) == 0
+    assert alerts.check_conditions(db, lambda x, s: b) == 1
+
+
+def test_each_symbol_fires_on_its_own(db):
+    save_conditions(db, [cond_alert(symbols=("ES", "NQ"))])
+    data = {"ES": frame([100] * 20 + [103, 103]), "NQ": frame([100] * 22)}
+    assert alerts.check_conditions(db, lambda a, s: data[s]) == 1
+    assert [e["symbol"] for e in repo.alert_events(db)] == ["ES"]
+
+
+def test_invalid_alerts_and_failing_symbols_are_skipped(db):
+    save_conditions(db, [cond_alert("bad", conditions=({"kind": "astrology"},)), {"junk": 1},
+                         cond_alert("ok", symbols=("ES", "NQ"))])
+
+    def bars(a, s):
+        if s == "NQ":
+            raise ValueError("no data")
+        return frame([100] * 20 + [103, 103])
+    assert alerts.check_conditions(db, bars) == 1
