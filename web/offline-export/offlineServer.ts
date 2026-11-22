@@ -184,5 +184,6 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     if (bare === "/api/symbols") return reply(200, REC.get["/api/symbols?data_source=schwab"])
     if (bare in REC.get) return reply(200, REC.get[bare])
   }
-  return reply(400, { detail: LIVE_ONLY + "Running the Market Grid replay, the optimiser and saving need the live app." })
+  return reply(400, { detail: LIVE_ONLY + "The Market Grid replay, Scanner, Calendar, Research, Paper Trading, "
+                                        + "the optimiser, alerts and saving need the live app." })
 }

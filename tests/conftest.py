@@ -73,7 +73,7 @@ def _workspace_for_the_session():
 _REAL_WORKSPACE_SUITES = {"test_isolation", "test_backup_restore",
                           "test_account_deletion", "test_account_data",
                           "test_live_sessions", "test_account_settings",
-                          "test_server_alerts"}
+                          "test_server_alerts", "test_research"}
 
 
 @pytest.fixture(autouse=True)

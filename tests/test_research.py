@@ -13,6 +13,18 @@ from api.schemas.optimize import OptimizeRequest
 
 client = TestClient(app)
 
+
+@pytest.fixture(scope="module", autouse=True)
+def scratch_db(tmp_path_factory):
+    """Its own database, with the real workspace account in it. It used to write runs into
+    the developer's dev database -- and passed only because that one had the account; CI's
+    had none, so the saved-runs list came back empty there (2026-11-22)."""
+    from db import connection
+    old = connection.DB_PATH
+    connection.DB_PATH = tmp_path_factory.mktemp("research") / "research.db"
+    yield
+    connection.DB_PATH = old
+
 BASE = {"data_source": "synthetic", "symbol": "ES", "timeframe": "15m", "strategy_id": "ma_crossover",
         "metric": "total_return_pct", "session_start": "00:00:00", "session_end": "23:59:00"}
 
