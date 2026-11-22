@@ -218,7 +218,7 @@ export function ElliottWaveChart({
         },
         marker: {
           symbol: undecided ? "circle-open" : "diamond",
-          size: depth === 0 ? 9 : 6,
+          size: depth === 0 ? 11 : 8,
           color: undecided ? color : BG,
           line: { color, width: 1.5 },
         },
@@ -242,10 +242,12 @@ export function ElliottWaveChart({
           x: leg.end_t, y: leg.end_price, xref: "x", yref: "y",
           text: `<b>${text}</b>`,
           showarrow: true, arrowhead: 0, arrowsize: 1, arrowwidth: 1,
-          arrowcolor: color, opacity: undecided ? 0.55 : 1,
-          ax: 0, ay: up ? -(26 - depth * 6) : (26 - depth * 6),
-          font: { color, size: depth === 0 ? 12 : 10, family: "Arial" },
-          bgcolor: HOVER, borderpad: 1,
+          // Readable at a glance: the wave numbers were 12px / 10px and half
+          // transparent when undecidable, so they read as noise (2026-11-22).
+          arrowcolor: color, opacity: undecided ? 0.85 : 1,
+          ax: 0, ay: up ? -(30 - depth * 8) : (30 - depth * 8),
+          font: { color, size: depth === 0 ? 15 : 12, family: "Arial" },
+          bgcolor: HOVER, borderpad: 2, bordercolor: color, borderwidth: 1,
         })
         labelled++
 
@@ -266,8 +268,8 @@ export function ElliottWaveChart({
           text: `<b>${parentLabel}</b>`,
           showarrow: true, arrowhead: 0, arrowwidth: 1, arrowcolor: C_PARENT,
           ax: 22, ay: 0,
-          font: { color: C_PARENT, size: 11, family: "Arial" },
-          bgcolor: HOVER, borderpad: 1,
+          font: { color: C_PARENT, size: 12, family: "Arial" },
+          bgcolor: HOVER, borderpad: 2,
         })
       }
     }
@@ -310,14 +312,18 @@ export function ElliottWaveChart({
   }
 
   const layout: Partial<Layout> = {
+    // Short and on its own line above the range buttons: the long centred title ran
+    // underneath 1D / 5D / 1M / All and the toolbar icons (2026-11-22). Strategy and
+    // engine version are in the panel beside the chart.
     title: {
-      text: `${symbol} — ${strategyName} · Elliott Wave (engine ${data.engine_version})`,
+      text: `${symbol} · Elliott Wave`,
       font: { size: 14, color: INK },
+      x: 0, xref: "paper", xanchor: "left", y: 0.985, yref: "container", yanchor: "top",
     },
     paper_bgcolor: BG, plot_bgcolor: BG,
     font: { color: INK, size: 11 },
     dragmode: "pan", hovermode: "closest",
-    margin: { l: 58, r: 12, t: 44, b: 40 },
+    margin: { l: 58, r: 12, t: 78, b: 40 },
     annotations: built.annotations,
     xaxis: {
       gridcolor: GRID, rangeslider: { visible: false }, type: "date",
@@ -474,6 +480,9 @@ export function ElliottWaveChart({
           </div>
         </dl>
 
+        <p className="text-muted-foreground text-xs">
+          {strategyName} · engine {data.engine_version}
+        </p>
         <p className="text-muted-foreground leading-relaxed">
           Partial by design — <b className="text-foreground">{data.counts.blocked_rule_ids}</b>{" "}
           reference rules can’t be evaluated, so some structures stay undecidable.
