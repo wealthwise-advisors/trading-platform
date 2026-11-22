@@ -67,7 +67,7 @@ def _workspace_for_the_session():
 #: by accident.
 _REAL_WORKSPACE_SUITES = {"test_isolation", "test_backup_restore",
                           "test_account_deletion", "test_account_data",
-                          "test_live_sessions"}
+                          "test_live_sessions", "test_account_settings"}
 
 
 @pytest.fixture(autouse=True)

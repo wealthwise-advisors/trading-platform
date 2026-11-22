@@ -365,6 +365,37 @@ CREATE TABLE IF NOT EXISTS user_configs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- ── settings and chart templates (schema v12) ───────────────────────────────
+--
+-- Chart style, VWAP levels, Volume Avg, Volume Profile defaults, colours, the time
+-- zone, the watchlist and price alerts lived in each browser's storage, so they
+-- differed between the two people using the app. One settings document per account
+-- makes them the same everywhere; `version` lets a save made against an older copy
+-- be refused instead of silently overwriting (two tabs, two devices).
+--
+-- Chart templates are named snapshots of every chart setting and which studies are
+-- on, saved like backtest configurations. At most one per account is the default.
+-- Both payloads are opaque JSON for the same reason as user_configs'. CASCADE for the
+-- same reason too: nothing here outlives its owner.
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id     INTEGER PRIMARY KEY,
+    payload     TEXT    NOT NULL,
+    version     INTEGER NOT NULL,
+    updated_at  TEXT    NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chart_templates (
+    user_id     INTEGER NOT NULL,
+    name        TEXT    NOT NULL,
+    payload     TEXT    NOT NULL,
+    is_default  INTEGER NOT NULL DEFAULT 0,
+    saved_at    TEXT    NOT NULL,
+
+    PRIMARY KEY (user_id, name),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- ── login throttle state (schema v8) ────────────────────────────────────────
 --
 -- The throttle counted failures in a process-local dict, so a restart handed

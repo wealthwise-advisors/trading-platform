@@ -357,4 +357,8 @@ class TestExistingApiUnchanged:
         # +1 for /api/backtests/{id}/live-refresh, the Chart's live polling
         # (2026-11-10), a separate declared change. +1 for
         # /api/backtests/{id}/compare, the chart's Compare overlay (same day).
-        assert len(paths) == 37, sorted(paths)
+        # +5 for server-side settings and chart templates (upgrade plan,
+        # Feature 10, 2026-11-22): /api/account/settings, /api/account/templates,
+        # /templates/default, /templates/{name}, /templates/{name}/default. All
+        # behind require_user; tests/test_account_settings.py covers them.
+        assert len(paths) == 42, sorted(paths)

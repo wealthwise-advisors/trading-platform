@@ -25,6 +25,8 @@ import { computeRangebreaks } from "@/lib/rangebreaks"
 import { ALL_CHART_TIMEFRAMES, rangeLabel } from "@/lib/chartSetup"
 import { useConfigStore } from "@/store/configStore"
 import { innerTicks } from "@/lib/chartStyle"
+import { applyTemplate, captureTemplate, loadStudies, useChartTemplateEpoch, type Studies } from "@/lib/accountSettings"
+import { api, type ChartTemplate } from "@/lib/api"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
 import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
@@ -286,7 +288,10 @@ export function ZonedCandlestickChart(props: CandlestickChartProps) {
   const { fetchCompare } = props
   const compare = useMemo(() => fetchCompare && ((sym: string) => fetchCompare(sym).then((r) => shiftTimes(r, off))),
                           [fetchCompare, off])
-  return <CandlestickChart {...props} bars={bars} indicators={indicators} volumeContext={volumeContext}
+  // A template applied from the Save menu bumps this: the chart remounts and re-reads
+  // every setting from storage, exactly as it does when it first opens.
+  const epoch = useChartTemplateEpoch((s) => s.epoch)
+  return <CandlestickChart key={epoch} {...props} bars={bars} indicators={indicators} volumeContext={volumeContext}
                            zigzag={zigzag} trades={trades} fetchCompare={compare} zoneOffset={off} />
 }
 
@@ -341,13 +346,15 @@ export function CandlestickChart({
   // multiplier. Verified exact against a server-side recomputation at 3σ:
   // maximum difference 0.0000000000. So the redraw is instant, needs no round
   // trip, and does not fork the VWAP maths into TypeScript.
-  const [vwapOn, setVwapOn] = useState(showVwap)
+  // Which studies are on: the applied (or default) template's choice when there is one.
+  const [studies0] = useState(loadStudies)
+  const [vwapOn, setVwapOn] = useState(studies0.vwap ?? showVwap)
   // Bollinger Bands (20, 2). Off by default: the price panel already carries
   // VWAP and its bands, and stacking a second envelope on top of that without
   // being asked makes the candles harder to read, not easier.
-  const [bbOn, setBbOn] = useState(false)
+  const [bbOn, setBbOn] = useState(studies0.bb ?? false)
   // Sir's swing levels drawn across every swing (2026-11-17); on by default so they show without hunting.
-  const [swingLevelsOn, setSwingLevelsOn] = useState(true)
+  const [swingLevelsOn, setSwingLevelsOn] = useState(studies0.swingLevels ?? true)
   const [vwapPanelOpen, setVwapPanelOpen] = useState(false)
   /**
    * Whether Plotly's own legend is drawn beside the plot.
@@ -413,7 +420,7 @@ export function CandlestickChart({
   // ── Volume Profile settings (session-only) ─────────────────────────────
   // Computed locally rather than refetched: bins re-bucket from raw bars, which
   // the delivered histogram cannot reconstruct. See lib/volumeProfile.ts.
-  const [vpOn, setVpOn] = useState(showVolumeProfile)
+  const [vpOn, setVpOn] = useState(studies0.volumeProfile ?? showVolumeProfile)
   const [vpPanelOpen, setVpPanelOpen] = useState(false)
   // The Volume Profile dialog's day-range table is a picker as well as a
   // reference: clicking a row selects that interval, exactly as the toolbar
@@ -440,7 +447,10 @@ export function CandlestickChart({
   // fourth looked like it did not exist. It is a real study with real data
   // (lib/oscillatorStudies.ts marks it available); there was no reason for it
   // to be the one that hides.
-  const [osc, setOsc] = useState<OscToggles>({ rsi2: true, stochrsi: showStochRsi, rsi13: true, mfi: true })
+  const [osc, setOsc] = useState<OscToggles>({
+    rsi2: studies0.rsi2 ?? true, stochrsi: studies0.stochrsi ?? showStochRsi,
+    rsi13: studies0.rsi13 ?? true, mfi: studies0.mfi ?? true,
+  })
   const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   // VolumeAvg (20), on by default as sir asked (2026-11-09). The bottom row.
   const [volOn, setVolOn] = useState(() => loadVolumeAvgSettings().on)
@@ -541,15 +551,38 @@ export function CandlestickChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const vpPayload = () => ({
+    bins: vpBins, valueArea: vpValueArea, opacity: vpOpacity,
+    rowMode: vpRowMode, rowHeight: vpRowHeight, timePer: vpTimePer,
+    multiplier: vpMultiplier, maxProfiles: vpMaxProfiles,
+    onExpansion: vpOnExpansion, plots: vpPlots, showStudy: vpShowStudy,
+    showPlotNames: vpShowPlotNames, showInputNames: vpShowInputNames,
+    leftAxis: vpLeftAxis,
+  })
+
+  // -- Chart templates (upgrade plan, Feature 10): named setups saved on the server --
+  const [templates, setTemplates] = useState<ChartTemplate[] | null>(null)
+  const [templateName, setTemplateName] = useState("")
+  const [templateNote, setTemplateNote] = useState("")
+  const loadTemplates = () => api.listTemplates().then(setTemplates).catch(() => setTemplates([]))
+  const studiesNow = (): Studies => ({
+    vwap: vwapOn, bb: bbOn, swingLevels: swingLevelsOn, volumeProfile: vpOn,
+    rsi2: osc.rsi2, stochrsi: osc.stochrsi, rsi13: osc.rsi13, mfi: osc.mfi,
+  })
+  const templateAction = async (what: string, run: () => Promise<unknown>) => {
+    try { await run(); setTemplateNote(what); await loadTemplates() }
+    catch (e) { setTemplateNote((e as Error).message) }
+    setTimeout(() => setTemplateNote(""), 3500)
+  }
+  const saveTemplate = () => {
+    const name = templateName.trim()
+    if (!name) { setTemplateNote("Type a name for the template first."); return }
+    void templateAction(`Saved "${name}".`, () => api.saveTemplate(name, captureTemplate(studiesNow(), vpPayload())))
+    setTemplateName("")
+  }
+
   const saveVpDefaults = () => {
-    const payload = {
-      bins: vpBins, valueArea: vpValueArea, opacity: vpOpacity,
-      rowMode: vpRowMode, rowHeight: vpRowHeight, timePer: vpTimePer,
-      multiplier: vpMultiplier, maxProfiles: vpMaxProfiles,
-      onExpansion: vpOnExpansion, plots: vpPlots, showStudy: vpShowStudy,
-      showPlotNames: vpShowPlotNames, showInputNames: vpShowInputNames,
-      leftAxis: vpLeftAxis,
-    }
+    const payload = vpPayload()
     try {
       localStorage.setItem(VP_STORE_KEY, JSON.stringify(payload))
       setVpSavedNote("Saved — these settings will load next time.")
@@ -2728,14 +2761,14 @@ export function CandlestickChart({
             <span className="relative">
               <button type="button"
                       aria-haspopup="menu" aria-expanded={saveMenu}
-                      onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false) }}
+                      onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false); void loadTemplates() }}
                       className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
                                  bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
                 <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
               </button>
               {saveMenu && (
                 <div role="menu" aria-label="Save"
-                     className="absolute right-0 top-7 z-30 w-56 rounded-lg border border-[color:var(--hairline-mid)]
+                     className="absolute right-0 top-7 z-30 w-72 rounded-lg border border-[color:var(--hairline-mid)]
                                 bg-[var(--surface-1)] py-1 shadow-xl">
                   <MenuHeader title="Save" onClose={() => setSaveMenu(false)} />
                   <button type="button" role="menuitem"
@@ -2748,6 +2781,47 @@ export function CandlestickChart({
                           className="block w-full px-3 py-1.5 text-left hover:bg-[color:var(--raise-3)]">
                     Download chart as PNG
                   </button>
+                  {/* Templates: the whole chart setup (style, VWAP levels, Volume Profile,
+                      Volume Avg, colours, which studies are on) under a name, on the server,
+                      so it is the same in every browser. The default opens with the app. */}
+                  <div className="mt-1 border-t border-[color:var(--hairline-soft)] px-3 pt-2 pb-1"
+                       onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Templates</div>
+                    <div className="flex gap-1.5">
+                      <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} maxLength={80}
+                             onKeyDown={(e) => { if (e.key === "Enter") saveTemplate() }}
+                             placeholder="Name this chart setup" aria-label="Template name"
+                             className="min-w-0 flex-1 rounded border border-[color:var(--hairline-mid)] bg-[var(--surface-2)] px-2 py-1 text-xs" />
+                      <button type="button" onClick={saveTemplate}
+                              className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 text-xs hover:bg-[color:var(--raise-4)]">
+                        Save
+                      </button>
+                    </div>
+                    {templateNote && <div role="status" className="mt-1.5 text-[11px] text-muted-foreground">{templateNote}</div>}
+                    <ul className="mt-1.5 max-h-48 overflow-y-auto" aria-label="Saved templates">
+                      {templates === null && <li className="py-1 text-xs text-muted-foreground">Loading...</li>}
+                      {templates?.length === 0 && <li className="py-1 text-xs text-muted-foreground">No templates yet.</li>}
+                      {templates?.map((t) => (
+                        <li key={t.name} className="flex items-center gap-1 py-0.5 text-xs">
+                          <span className="min-w-0 flex-1 truncate" title={t.name}>
+                            {t.name}{t.is_default && <span className="ml-1 text-[10px] text-[#38bdf8]">default</span>}
+                          </span>
+                          <button type="button" aria-label={`Apply ${t.name}`} title="Put this setup on the chart"
+                                  onClick={() => { applyTemplate(t); setSaveMenu(false) }}
+                                  className="rounded px-1.5 py-0.5 hover:bg-[color:var(--raise-3)]">Apply</button>
+                          <button type="button" aria-label={t.is_default ? `Stop opening with ${t.name}` : `Open with ${t.name}`}
+                                  title={t.is_default ? "Stop opening the chart with this setup" : "Open the chart with this setup"}
+                                  onClick={() => void templateAction(t.is_default ? "Default cleared." : `"${t.name}" is now the default.`,
+                                    () => t.is_default ? api.clearDefaultTemplate() : api.setDefaultTemplate(t.name))}
+                                  className={`rounded px-1.5 py-0.5 hover:bg-[color:var(--raise-3)] ${t.is_default ? "text-[#38bdf8]" : ""}`}>
+                            {t.is_default ? "\u2605" : "\u2606"}</button>
+                          <button type="button" aria-label={`Delete ${t.name}`} title="Delete this template"
+                                  onClick={() => void templateAction(`Deleted "${t.name}".`, () => api.deleteTemplate(t.name))}
+                                  className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground">x</button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               )}
             </span>

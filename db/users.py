@@ -329,6 +329,85 @@ def delete_config(user_id: int, name: str, db: Path | None = None) -> bool:
         conn.close()
 
 
+# ── settings document and chart templates (v12) ─────────────────────────────
+
+def get_settings(user_id: int, db: Path | None = None) -> dict | None:
+    """The account's settings row, or None if it has never saved any."""
+    conn = connect(db)
+    try:
+        r = conn.execute("SELECT payload, version, updated_at FROM user_settings WHERE user_id = ?",
+                         (user_id,)).fetchone()
+        return dict(r) if r else None
+    finally:
+        conn.close()
+
+
+def put_settings(user_id: int, payload: str, expected_version: int,
+                 db: Path | None = None) -> tuple[int, str] | None:
+    """Replace the settings if they are still at `expected_version`; returns the new
+    (version, updated_at), or None when someone saved in between (the caller says so
+    rather than overwriting their change). One statement each way, so the check and
+    the write cannot be split by another save."""
+    now = _now()
+    conn = connect(db)
+    try:
+        if expected_version == 0:
+            cur = conn.execute("INSERT OR IGNORE INTO user_settings (user_id, payload, version, updated_at) "
+                               "VALUES (?, ?, 1, ?)", (user_id, payload, now))
+        else:
+            cur = conn.execute("UPDATE user_settings SET payload = ?, version = version + 1, updated_at = ? "
+                               "WHERE user_id = ? AND version = ?", (payload, now, user_id, expected_version))
+        return (expected_version + 1, now) if cur.rowcount == 1 else None
+    finally:
+        conn.close()
+
+
+def list_templates(user_id: int, db: Path | None = None) -> list[dict]:
+    conn = connect(db)
+    try:
+        return [dict(r) for r in conn.execute(
+            "SELECT name, payload, is_default, saved_at FROM chart_templates "
+            "WHERE user_id = ? ORDER BY name COLLATE NOCASE", (user_id,))]
+    finally:
+        conn.close()
+
+
+def save_template(user_id: int, name: str, payload: str, db: Path | None = None) -> str:
+    """Create or replace one named template, keeping whether it is the default."""
+    now = _now()
+    conn = connect(db)
+    try:
+        conn.execute("INSERT INTO chart_templates (user_id, name, payload, saved_at) VALUES (?,?,?,?) "
+                     "ON CONFLICT(user_id, name) DO UPDATE SET payload = excluded.payload, saved_at = excluded.saved_at",
+                     (user_id, name, payload, now))
+        return now
+    finally:
+        conn.close()
+
+
+def delete_template(user_id: int, name: str, db: Path | None = None) -> bool:
+    conn = connect(db)
+    try:
+        return conn.execute("DELETE FROM chart_templates WHERE user_id = ? AND name = ?",
+                            (user_id, name)).rowcount > 0
+    finally:
+        conn.close()
+
+
+def set_default_template(user_id: int, name: str | None, db: Path | None = None) -> bool:
+    """Make `name` the only default (None clears it). False if the account has no such template."""
+    conn = connect(db)
+    try:
+        with conn:
+            if name is not None and not conn.execute(
+                    "SELECT 1 FROM chart_templates WHERE user_id = ? AND name = ?", (user_id, name)).fetchone():
+                return False
+            conn.execute("UPDATE chart_templates SET is_default = COALESCE(name = ?, 0) WHERE user_id = ?", (name, user_id))
+        return True
+    finally:
+        conn.close()
+
+
 # ── onboarding (v8) ──────────────────────────────────────────────────────────
 
 def mark_onboarded(user_id: int, db: Path | None = None) -> bool:

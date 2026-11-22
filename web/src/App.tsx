@@ -13,6 +13,7 @@ import { HeaderNav, SymbolSearch, WorkspaceBadge } from "@/components/HeaderNav"
 import { AlertsBell } from "@/components/panels/MarketPanels"
 import { StatusBar } from "@/components/StatusBar"
 import { OfflineBanner } from "@/components/OfflineBanner"
+import { SettingsNotice } from "@/components/SettingsNotice"
 // Drawn, not typed: an emoji brings its own colour from the system font
 // and cannot be themed. These are strokes in currentColor.
 import {
@@ -148,6 +149,7 @@ function App({ user }: { user: Me }) {
             down by one strip rather than covering any of it. It renders
             nothing at all while the connection is fine. */}
         <div className="shrink-0"><OfflineBanner /></div>
+        <div className="shrink-0"><SettingsNotice /></div>
         {/* THE HEADER, IN THREE GROUPS THAT WRAP AS UNITS.
             Identity, then the sections, then everything you can press --
             search, theme, account settings, the two exports, Deploy and the

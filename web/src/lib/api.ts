@@ -233,8 +233,31 @@ export const api = {
     request<{ ok: boolean }>(`/account/configs/${encodeURIComponent(name)}`,
       { method: "DELETE" }),
 
+  // ── settings document and chart templates (upgrade plan, Feature 10) ───────
+  // Saving the settings goes through lib/accountSettings.ts, which needs the 409
+  // status to tell "changed elsewhere" apart from a failure.
+  getSettings: () =>
+    request<{ settings: Record<string, unknown>; version: number; updated_at: string | null }>("/account/settings"),
+  listTemplates: () => request<ChartTemplate[]>("/account/templates"),
+  saveTemplate: (name: string, template: Record<string, unknown>) =>
+    request<ChartTemplate>(`/account/templates/${encodeURIComponent(name)}`,
+      { method: "PUT", body: JSON.stringify({ template }) }),
+  deleteTemplate: (name: string) =>
+    request<{ ok: boolean }>(`/account/templates/${encodeURIComponent(name)}`, { method: "DELETE" }),
+  setDefaultTemplate: (name: string) =>
+    request<{ ok: boolean }>(`/account/templates/${encodeURIComponent(name)}/default`, { method: "POST" }),
+  clearDefaultTemplate: () => request<{ ok: boolean }>("/account/templates/default", { method: "DELETE" }),
+
   runOptimizer: (req: OptimizeRequest) =>
     request<OptimizeResponse>("/optimize", {
       method: "POST", body: JSON.stringify(req), timeoutMs: LONG_TIMEOUT_MS,
     }),
+}
+
+/** A named chart setup saved on the server (Save menu -> Templates). */
+export interface ChartTemplate {
+  name: string
+  saved_at: string
+  is_default: boolean
+  template: Record<string, unknown>
 }

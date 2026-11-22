@@ -39,7 +39,9 @@ SCHEMA = Path(__file__).with_name("schema.sql")
 #: v11 added backtests.profit_factor_undefined, because NaN -- the float
 #: that means "no trades to divide" -- becomes NULL in SQLite and cannot
 #: be stored in the NOT NULL column beside it.
-SCHEMA_VERSION = 11
+#: v12 added user_settings and chart_templates (settings and templates on the
+#: server, so every browser sees the same chart setup).
+SCHEMA_VERSION = 12
 
 #: Columns added to tables that already existed, as (table, column, definition).
 #:

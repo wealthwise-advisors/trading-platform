@@ -13,7 +13,8 @@ interface WinLossDonutProps {
 // stays visually distinct without clashing with any of them.
 export function WinLossDonut({ wins, losses, winRate }: WinLossDonutProps) {
   const total = wins + losses
-  const lossRate = total > 0 ? 100 - winRate : 0
+  // What is left of the ROUNDED win share, so the pair adds to 100 (87.5 printed 88% / 13%).
+  const lossRate = total > 0 ? 100 - Number(winRate.toFixed(0)) : 0
   return (
     <div className="stat-card" style={{ ["--stat-accent" as string]: ACCENTS[4] }}>
       <span className="float-right -mt-0.5 -mr-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[0.65rem]"

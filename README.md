@@ -760,6 +760,7 @@ A React 19 single-page application over the FastAPI backend.
 - ➜ **Equity that adds up** — a closed trade's profit or loss now reaches the account's cash, so the Equity Curve ends at the reported balance and Max Drawdown, Sharpe, Balance History and the Market Grid's portfolio value are measured on it; Monthly Returns counts a run's first month from the starting capital (a run inside one month used to show nothing); the Equity Curve's scale fits the account instead of starting at $0
 - ➜ **Offline copy of the app** — one HTML file holding the whole app and a recorded date range (every chart and timeframe 1m–1h, Run Backtest for any dates inside it, every results tab), opening in Chrome with no server, login or internet; made with one command, `web/offline-export/make_offline.sh <start> <end> <out.html>`
 - ➜ **Elliott Wave readability** — the chart's title sits on its own line clear of the range buttons and toolbar; wave numbers are larger, boxed in their wave's colour and no longer faded when undecidable; strategy and engine version moved to the side panel
+- ➜ **Chart templates and settings on the server** — Save menu → Templates: name the whole chart setup (chart style, VWAP levels, Volume Profile, Volume Avg, colours, which studies are on), apply it in one click, star one to open every chart with it; chart settings, time zone, watchlist, price alerts, favourites and journal are kept on the server, so every browser with the link shows the same; a change saved in another tab is loaded, not overwritten, and the app says so
 - ➜ **Chart polish** — RSI / StochRSI / MFI rows print their numbers inside the row (20 · 50 · 80) so stacked rows no longer overprint; the Eraser says why it is idle until something is drawn; Chart keeps the settings sidebar open until the first run; the second Analytics menu item is now Monthly Returns
 - ➜ **Chart in your time zone** — the chart follows Session Hours' ET / CT / MT / PT: time axis, hover Date, swing points, trades and extended-hours shading; daily and longer candles keep their dates
 - ➜ **Swing levels on the chart** — every swing gets a thin breakeven line (green = buyers in control, red = sellers) over a light band to its 50% Equilibrium, and a small box: the swing's range per level (Range - 10 Leg (1-4) | 3 Leg (i-vii) | 1 Leg (a-b)), Buyers / Sellers %, Volume Breakeven, 50% Equilibrium; hovering a swing point shows only that point's own leg; the title's Dominant % uses the same Buyer Control rule; "Swing levels" checkbox turns it off
@@ -777,7 +778,7 @@ No sign-in. The link opens straight onto the dashboard.
 
 - **One workspace** — every request runs as a single account (`db.users.workspace_user`)
 - **The owner account, when there is one** — it holds the Schwab entitlement, so live data works from the link
-- **Shared state** — everyone with the link sees the same saved configurations, paper session and journal
+- **Shared state** — everyone with the link sees the same saved configurations, chart settings and templates, paper session and journal
 - **Sign-in removed 2026-10-16** — login, registration, password reset, Google / GitHub / LinkedIn / X sign-in, email and phone verification, CAPTCHA
 
 <details>

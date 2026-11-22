@@ -367,8 +367,10 @@ export function TradeStatsPanel({ s }: { s: BacktestSummary | null }) {
     // pairing is the point -- "27%" alone does not say how much of the rest
     // was a loss rather than a scratch -- so it is kept as one line rather
     // than left to be inferred from the two counts above.
+    // The loss share is what is left of the ROUNDED win share, so the pair adds to 100:
+    // 87.5 / 12.5 used to print 88% / 13% (2026-11-22).
     ["Win % / Loss %",
-      `${s.win_rate.toFixed(0)}% / ${(s.total_trades > 0 ? 100 - s.win_rate : 0).toFixed(0)}%`],
+      `${s.win_rate.toFixed(0)}% / ${s.total_trades > 0 ? 100 - Number(s.win_rate.toFixed(0)) : 0}%`],
     // The dollar figure is on the hover of each, so nothing is lost: it is
     // what the exported report carries and what the P&L is actually in.
     ["Avg Win", <span style={{ color: s.winning_trades ? GOOD : undefined }}

@@ -14,6 +14,8 @@
 import { useEffect, useState, type ReactNode } from "react"
 
 import { auth, type Me } from "@/lib/api"
+import { pullSettings, startSync } from "@/lib/accountSettings"
+import { loadZoneOffset, useZoneOffset } from "@/lib/sessionZone"
 import { Onboarding } from "@/components/Onboarding"
 
 type State =
@@ -29,6 +31,15 @@ export function WorkspaceLoader({ children }: { children: (user: Me) => ReactNod
     let alive = true
     auth
       .whoami()
+      // The account's settings (chart style, VWAP levels, zone ...) reach browser storage
+      // BEFORE anything renders, so every chart opens with the server's copy; then any
+      // change is saved back. Without the server the app runs on this browser's own copy.
+      .then(async (user) => {
+        await pullSettings()
+        useZoneOffset.setState({ offset: loadZoneOffset() })   // read once at import, so refresh it
+        startSync()
+        return user
+      })
       .then((user) => {
         if (!alive) return
         // ?tour=1 replays the introduction after it has been dismissed. The
