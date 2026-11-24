@@ -1,5 +1,5 @@
 """Shared multi-format export helpers -- turn one or more labeled DataFrames
-into CSV, Excel, PDF, or Word bytes. Used by both the raw OHLC data export
+into CSV, Excel, PDF, or Word bytes. Used by both the data export (bars + chart studies)
 endpoint and the backtest report export (metrics + trade log).
 """
 
@@ -37,6 +37,10 @@ def excel_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         for name, df in sheets.items():
             df.to_excel(writer, sheet_name=name[:31])
+            # Wide enough to read: Excel's default showed every time as "########".
+            for col in writer.sheets[name[:31]].columns:
+                longest = max((len(str(c.value)) for c in col if c.value is not None), default=0)
+                writer.sheets[name[:31]].column_dimensions[col[0].column_letter].width = min(max(longest + 2, 8), 40)
     return buf.getvalue()
 
 

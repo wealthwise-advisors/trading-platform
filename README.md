@@ -732,7 +732,7 @@ A React 19 single-page application over the FastAPI backend.
 | 🔲 [**Multi-chart**](web/src/features/backtest/MultiChartGrid.tsx) | Four timeframes side by side, each live |
 | ⚡ [**Live Replay**](web/src/features/replay) | Multi-timeframe grid, consolidated tape, playback controls, live following |
 | 📉 [**Backtest**](web/src/features/backtest) | Configure, run and read a scored result |
-| 📤 [**Export Data**](web/src/features/export) | Pull bars out for use elsewhere |
+| 📤 [**Export Data**](web/src/features/export) | Bars with every chart study (VWAP and all 8 band levels 0.5σ–5σ, Bollinger, EMA 9/20/50, RSI(2), StochRSI, RSI(13), MFI, VolumeAvg, buyers/sellers), the swing count (10 Leg / 3 Leg numbers and HH/HL tags), and Volume Profile levels (POC, VAH, VAL) for the whole range and each day. Uses the sidebar's session, swing settings and time zone. CSV, PDF, Word, or a styled dark Excel workbook in the chart's colours (Price & Studies, Swing Points, Levels, Key) |
 
 - ➜ **Charts** — candles with VWAP, deviation bands, volume profile and wave overlays
 - ➜ **Deviation colouring** — band values grouped by whole number, with disjoint palettes for upper and lower so the two can never be confused

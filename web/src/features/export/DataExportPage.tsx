@@ -1,10 +1,13 @@
-// Standalone raw-OHLC-data export tool -- pick a symbol, timeframe, date
-// range, and data source, then download it as CSV/Excel/PDF/Word. Doesn't
+// Standalone data export -- pick a symbol, timeframe, date range, and data
+// source, then download the bars with every study the chart draws and its swing
+// points as CSV/Excel/PDF/Word. Doesn't
 // run a backtest; hits GET /api/data/export directly (api/routers/data_export.py).
 
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { useConfigStore } from "@/store/configStore"
+import { useZoneOffset } from "@/lib/sessionZone"
 import { ALL_CHART_TIMEFRAMES } from "@/lib/chartSetup"
 import { CopyButton } from "@/components/ui/copy-button"
 import { Button } from "@/components/ui/button"
@@ -48,6 +51,14 @@ export function DataExportPage() {
   const [startDate, setStartDate] = useState(start)
   const [endDate, setEndDate] = useState(end)
   const [dataSource, setDataSource] = useState("synthetic")
+  // The sidebar's session hours, swing settings and "Times in" zone, so the file matches the chart.
+  const session24h = useConfigStore((s) => s.session24h)
+  const sessionStart = useConfigStore((s) => s.sessionStart)
+  const sessionEnd = useConfigStore((s) => s.sessionEnd)
+  const dev3 = useConfigStore((s) => s.zigzagDev3)
+  const dev10 = useConfigStore((s) => s.zigzagDev10)
+  const tzOffset = useZoneOffset((s) => s.offset)
+  const chart = { sessionStart: session24h ? null : sessionStart, sessionEnd: session24h ? null : sessionEnd, dev3, dev10, tzOffset }
 
   const { data: dataSources } = useQuery({ queryKey: ["data-sources"], queryFn: api.dataSources })
   const { data: symbols } = useQuery({
@@ -64,7 +75,7 @@ export function DataExportPage() {
 
   const url = api.dataExportUrl({
     symbol, timeframe, start: startDate, end: endDate, dataSource, format: "csv",
-  })
+  }, chart)
   const valid = !!(symbol && timeframe && startDate && endDate)
 
   return (
@@ -73,7 +84,7 @@ export function DataExportPage() {
         <h2 className="text-lg font-bold flex items-center gap-2">
           <Download className="h-4 w-4" aria-hidden /> Export Data</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Download raw OHLC price data for any symbol and date range — no backtest needed.
+          Download price data for any symbol and date range, with every study on the chart (VWAP and all its bands, Bollinger, EMAs, RSI, StochRSI, MFI, volume, buyers and sellers), the swing points and the Volume Profile levels — no backtest needed. Uses the sidebar's session hours, swing settings and time zone.
         </p>
       </div>
 
@@ -162,7 +173,7 @@ export function DataExportPage() {
               ) : (
                 <Button key={f.id} asChild variant="secondary">
                   <a
-                    href={api.dataExportUrl({ symbol, timeframe, start: startDate, end: endDate, dataSource, format: f.id })}
+                    href={api.dataExportUrl({ symbol, timeframe, start: startDate, end: endDate, dataSource, format: f.id }, chart)}
                     download
                   >
                     {f.icon} {f.label}

@@ -26,7 +26,7 @@
    App.tsx
      ├──► backtest/   configure a run, read its results
      ├──► replay/     Market Grid, live and replayed bars
-     └──► export/     raw OHLC download
+     └──► export/     bars + chart studies + swing points download
 
    these are tabs within ONE document, not routes.
    ╳ anything used by two of them belongs in components/

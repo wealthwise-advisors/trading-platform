@@ -269,7 +269,7 @@ function App({ user }: { user: Me }) {
               </Button>
             )}
             <Button size="sm" variant={page === "export" ? "default" : "secondary"}
-                    onClick={() => setPage("export")} title="Export raw OHLC bars">
+                    onClick={() => setPage("export")} title="Export the bars with every chart study and the swing points">
               <Upload className="h-3.5 w-3.5" aria-hidden /> Export Data
             </Button>
             {backtestId && <ExportReportButton backtestId={backtestId} chartSettings={chartSettings} />}

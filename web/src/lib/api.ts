@@ -210,8 +210,13 @@ export const api = {
   reportUrl: (id: string, format: string = "html", chart?: ChartExportSettings) =>
     `${BASE}/backtests/${id}/report?format=${format}`
     + (chart ? `&chart=${encodeURIComponent(JSON.stringify(chart))}` : ""),
-  dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string }) =>
-    `${BASE}/data/export?symbol=${params.symbol}&timeframe=${params.timeframe}&start=${params.start}&end=${params.end}&data_source=${params.dataSource}&format=${params.format}`,
+  /** `chart`: the app's session hours and swing settings, and "Times in" zone, so the
+   *  file's VWAP, swing points and clock are the chart's (null session = 24 hours). */
+  dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string },
+                  chart?: { sessionStart: string | null; sessionEnd: string | null; dev3: number; dev10: number; tzOffset: number }) =>
+    `${BASE}/data/export?symbol=${params.symbol}&timeframe=${params.timeframe}&start=${params.start}&end=${params.end}&data_source=${params.dataSource}&format=${params.format}`
+    + (chart ? (chart.sessionStart ? `&session_start=${chart.sessionStart}&session_end=${chart.sessionEnd}` : "")
+      + `&dev_3=${chart.dev3 / 100}&dev_10=${chart.dev10 / 100}&tz_offset=${chart.tzOffset}` : ""),
 
   createReplay: (req: ReplayCreateRequest) =>
     request<ReplayCreateResponse>("/replay", {
