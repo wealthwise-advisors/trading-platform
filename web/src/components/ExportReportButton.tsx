@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import type { ChartExportSettings } from "@/lib/chartExportSettings"
+import { useZoneOffset } from "@/lib/sessionZone"
 import { ChevronDown, Download } from "lucide-react"
 
 const REPORT_FORMATS = [
@@ -31,6 +32,8 @@ export function ExportReportButton({
 }: { backtestId: string; chartSettings: ChartExportSettings }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
+  // The report prints its times in the same zone as the chart.
+  const tz = useZoneOffset((z) => z.offset)
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
@@ -45,7 +48,7 @@ export function ExportReportButton({
       {/* The default. HTML is the full report with the charts drawn in it, and
           it is what the other four are variations on. */}
       <Button asChild size="sm" variant="default" className="rounded-r-none">
-        <a href={api.reportUrl(backtestId, "html", chartSettings)} download>
+        <a href={api.reportUrl(backtestId, "html", chartSettings, tz)} download>
           <Download className="h-3.5 w-3.5" aria-hidden /> Export Report
         </a>
       </Button>
@@ -70,7 +73,7 @@ export function ExportReportButton({
             <a
               key={f.id}
               role="menuitem"
-              href={api.reportUrl(backtestId, f.id, chartSettings)}
+              href={api.reportUrl(backtestId, f.id, chartSettings, tz)}
               download
               onClick={() => setOpen(false)}
               className="block px-3 py-1.5 text-xs text-foreground hover:bg-[color:var(--raise-3)]"

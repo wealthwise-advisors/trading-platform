@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from api import serializers
-from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN, get_contract_spec
+from api.deps import SYMBOL_PATTERN, TIMEFRAME_PATTERN, ZONES, get_contract_spec
 from api.export import formats
 from api.export.data_workbook import ExportMeta, workbook_bytes
 from api.routers.backtests import _build_provider
@@ -30,8 +30,6 @@ _FORMATS = {"csv", "xlsx", "pdf", "docx"}
 
 #: The VWAP band levels the chart offers (web/src/lib/vwapLevels.ts ALL_VWAP_LEVELS).
 VWAP_LEVELS = (0.5, 1, 1.5, 2, 2.5, 3, 4, 5)
-#: The sidebar's "Times in" choices (web/src/lib/sessionZone.ts): minutes added to Eastern.
-ZONES = {0: "ET", -60: "CT", -120: "MT", -180: "PT"}
 
 
 def band_name(side: str, level: float) -> str:

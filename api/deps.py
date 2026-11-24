@@ -44,6 +44,8 @@ BASE_PRICES = {
 #: legitimate is refused.
 SYMBOL_PATTERN = r"^[A-Za-z0-9]{1,16}$"
 TIMEFRAME_PATTERN = r"^[A-Za-z0-9]{1,8}$"
+#: The sidebar's "Times in" choices (web/src/lib/sessionZone.ts): minutes added to Eastern.
+ZONES = {0: "ET", -60: "CT", -120: "MT", -180: "PT"}
 
 
 @lru_cache

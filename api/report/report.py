@@ -10,8 +10,10 @@ The output file:
 """
 
 from src.analysis.swing_count import calc_swing_count, swing_name
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+import re
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -35,6 +37,49 @@ from src.analysis.candlestick_patterns import detect_candlestick_patterns
 from src.analysis.chart_patterns import find_chart_patterns
 
 _SWING_COLORS = ["#f0c040", "#bb86fc", "#42a5f5", "#66bb6a"]
+
+_CLOCK = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}")
+
+
+def shift_figure_times(fig: go.Figure, minutes: int) -> go.Figure:
+    """Move every time on a finished figure by `minutes` -- the printed clock only.
+
+    The figure is built on Eastern bars (VWAP anchors, sessions, swings); the live
+    chart shifts its times after the fact too (ZonedCandlestickChart). Anything
+    that is not a time (prices, volumes, month names) is left as it is.
+    """
+    if not minutes:
+        return fig
+    d = timedelta(minutes=minutes)
+
+    def one(v):
+        if isinstance(v, (datetime, np.datetime64)):
+            return pd.Timestamp(v) + d
+        if isinstance(v, str) and _CLOCK.match(v):
+            return str(pd.Timestamp(v) + d)
+        return v
+
+    def many(xs):
+        if xs is None:
+            return None
+        if isinstance(xs, np.ndarray) and xs.dtype.kind == "M":
+            return xs + np.timedelta64(minutes, "m")
+        return [one(v) for v in xs]
+
+    for tr in fig.data:
+        if getattr(tr, "x", None) is not None:
+            tr.x = many(tr.x)
+    for s in fig.layout.shapes or ():
+        s.x0, s.x1 = one(s.x0), one(s.x1)
+    for a in fig.layout.annotations or ():
+        a.x = one(a.x)
+    for ax in fig.select_xaxes():
+        if ax.range is not None:
+            ax.range = many(ax.range)
+        if ax.rangebreaks:
+            ax.rangebreaks = [{**rb.to_plotly_json(), "bounds": many(rb.bounds)} if rb.bounds else rb
+                              for rb in ax.rangebreaks]
+    return fig
 
 
 _G      = "#3fb950"
@@ -811,7 +856,8 @@ def _direction_color(direction: str) -> str:
     return _TEXT
 
 
-def _candlestick_patterns_table(results: BacktestResults, min_confidence: float = 70.0) -> str:
+def _candlestick_patterns_table(results: BacktestResults, min_confidence: float = 70.0,
+                                shift: timedelta = timedelta(0)) -> str:
     patterns = [p for p in detect_candlestick_patterns(results.price_data) if p.confidence >= min_confidence]
     patterns.sort(key=lambda p: p.confidence, reverse=True)
     if not patterns:
@@ -820,7 +866,7 @@ def _candlestick_patterns_table(results: BacktestResults, min_confidence: float 
     for p in patterns:
         color = _direction_color(p.direction)
         rows.append(
-            f"<tr><td>{p.timestamp.strftime('%Y-%m-%d %H:%M')}</td>"
+            f"<tr><td>{(p.timestamp + shift).strftime('%Y-%m-%d %H:%M')}</td>"
             f"<td>{_CANDLE_PATTERN_LABELS.get(p.pattern, p.pattern)}</td>"
             f"<td style='color:{color}'>{p.direction}</td>"
             f"<td style='text-align:right'>{p.confidence:.0f}%</td></tr>"
@@ -835,7 +881,7 @@ def _candlestick_patterns_table(results: BacktestResults, min_confidence: float 
     )
 
 
-def _chart_patterns_table(results: BacktestResults) -> str:
+def _chart_patterns_table(results: BacktestResults, shift: timedelta = timedelta(0)) -> str:
     df = results.price_data
     patterns = find_chart_patterns(df, left=2, right=2, min_move=0.0)
     if not patterns:
@@ -847,8 +893,8 @@ def _chart_patterns_table(results: BacktestResults) -> str:
         rows.append(
             f"<tr><td>{_CHART_PATTERN_LABELS.get(p.pattern, p.pattern)}</td>"
             f"<td style='color:{color}'>{p.direction}</td>"
-            f"<td>{df.index[p.start_index].strftime('%Y-%m-%d %H:%M')}</td>"
-            f"<td>{df.index[p.end_index].strftime('%Y-%m-%d %H:%M')}</td>"
+            f"<td>{(df.index[p.start_index] + shift).strftime('%Y-%m-%d %H:%M')}</td>"
+            f"<td>{(df.index[p.end_index] + shift).strftime('%Y-%m-%d %H:%M')}</td>"
             f"<td style='text-align:right'>{p.neckline:.2f}</td>"
             f"<td style='color:#8b949e;font-size:0.8rem'>{metrics}</td></tr>"
         )
@@ -1012,6 +1058,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
     <span class="badge">Symbol <b>{symbol}</b></span>
     <span class="badge">Timeframe <b>{timeframe}</b></span>
     <span class="badge">{start} → {end}</span>
+    <span class="badge">Times in {zone}</span>
     <span class="badge">Generated {generated}</span>
   </p>
 </header>
@@ -1114,8 +1161,12 @@ def _fig_to_div(fig: go.Figure, first: bool = False) -> str:
 def generate_html_report(results: BacktestResults, output_path: str | None = None,
                          zz_deviation: float = 0.0010, zz_deviation_3: float = 0.0005,
                          session_start: time_type | None = None,
-                         chart_settings: ChartSettings | None = None) -> str:
+                         chart_settings: ChartSettings | None = None,
+                         tz_offset: int = 0, zone: str = "ET") -> str:
     """
+    `tz_offset` (minutes added to Eastern) and `zone` are the sidebar's "Times in"
+    choice: only the printed times move. Daily bars stay put, as on the chart.
+
     Build a self-contained HTML report from BacktestResults. Defaults match
     the live chart's own hardcoded query (ResultsPage.tsx's api.getZigZag
     call) -- previously 0.015/0.003 here vs 0.003/0.003 live, so a report
@@ -1125,6 +1176,9 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
     Returns the HTML string. Optionally writes it to output_path.
     """
     r = results
+    if bars_are_daily_or_longer(r.price_data.index):
+        tz_offset, zone = 0, "ET"
+    shift = timedelta(minutes=tz_offset)
 
     cards = [
         _metric_card("Total Return",  f"{r.total_return_pct:+.1f}%",  r.total_return_pct >= 0),
@@ -1149,12 +1203,12 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         dir_cls = "dir-long" if t.direction == "LONG" else "dir-short"
         dur = f"{t.duration_minutes:.0f}m" if t.duration_minutes else "—"
         exit_price_str = f"{t.exit_price:.2f}" if t.exit_price is not None else "—"
-        exit_time_str  = t.exit_time.strftime("%Y-%m-%d %H:%M") if t.exit_time else "—"
+        exit_time_str  = (t.exit_time + shift).strftime("%Y-%m-%d %H:%M") if t.exit_time else "—"
         trade_rows.append(
             f"<tr>"
             f"<td>{i}</td>"
             f"<td class='{dir_cls}'>{t.direction}</td>"
-            f"<td>{t.entry_time.strftime('%Y-%m-%d %H:%M')}</td>"
+            f"<td>{(t.entry_time + shift).strftime('%Y-%m-%d %H:%M')}</td>"
             f"<td>{t.entry_price:.2f}</td>"
             f"<td>{exit_time_str}</td>"
             f"<td>{exit_price_str}</td>"
@@ -1164,19 +1218,19 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         )
 
     # First chart bundles Plotly.js from CDN; subsequent charts reuse it.
-    chart_candle  = _fig_to_div(_candlestick_chart(
+    chart_candle  = _fig_to_div(shift_figure_times(_candlestick_chart(
         r, zz_deviation=zz_deviation, zz_deviation_3=zz_deviation_3,
         session_start=session_start, chart_settings=chart_settings,
-    ), first=True)
-    chart_equity  = _fig_to_div(_equity_chart(r))
+    ), tz_offset), first=True)
+    chart_equity  = _fig_to_div(shift_figure_times(_equity_chart(r), tz_offset))
     chart_pnl     = _fig_to_div(_pnl_hist(r))
     chart_monthly = _fig_to_div(_monthly_heatmap(r))
 
     # Everything the live app's remaining tabs show, added here so the
     # exported file is a complete standalone copy of the whole dashboard,
     # not just the original 4 charts + trade log.
-    candlestick_patterns_table = _candlestick_patterns_table(r)
-    chart_patterns_table = _chart_patterns_table(r)
+    candlestick_patterns_table = _candlestick_patterns_table(r, shift=shift)
+    chart_patterns_table = _chart_patterns_table(r, shift=shift)
 
     # Elliott Wave. Uses the SAME serializer the live endpoint calls, so the
     # report can never disagree with the live tab about what was classified
@@ -1190,7 +1244,7 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         _ew = _serializers.elliott_wave_to_records(
             r.price_data, DEFAULT_THETA_BASE, DEFAULT_RATIO, DEFAULT_SCALES,
         )
-        chart_elliott = _fig_to_div(_elliott_wave_chart(r, _ew))
+        chart_elliott = _fig_to_div(shift_figure_times(_elliott_wave_chart(r, _ew), tz_offset))
         elliott_panel = _elliott_wave_panel(_ew)
         _c = _ew["counts"]
         ew_tag = (f"{_c['structures']} structures · "
@@ -1213,6 +1267,7 @@ def generate_html_report(results: BacktestResults, output_path: str | None = Non
         start=r.start_date.strftime("%Y-%m-%d"),
         end=r.end_date.strftime("%Y-%m-%d"),
         generated=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        zone=zone,
         metric_cards="\n".join(cards),
         chart_candle=chart_candle,
         chart_equity=chart_equity,

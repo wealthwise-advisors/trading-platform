@@ -62,4 +62,9 @@ describe("api.reportUrl", () => {
     expect(url.searchParams.get("format")).toBe("html")
     expect(JSON.parse(url.searchParams.get("chart")!)).toEqual(s)
   })
+
+  it("carries the chart's time zone, and leaves Eastern off the URL", () => {
+    expect(new URL(api.reportUrl("abc", "html", undefined, -60), "http://x").searchParams.get("tz_offset")).toBe("-60")
+    expect(api.reportUrl("abc", "html", undefined, 0)).toBe("/api/backtests/abc/report?format=html")
+  })
 })

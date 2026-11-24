@@ -255,12 +255,13 @@ class TestExistingApiUnchanged:
         since, by `chart`: the live chart's display settings, so the exported
         report draws the oscillator rows and Volume Profile the chart shows
         (api/schemas/chart_settings.py). A separate, declared change -- not
-        Elliott Wave scope creep.
+        Elliott Wave scope creep. And once by `tz_offset` (2026-11-24): the
+        sidebar's "Times in" zone, so the report's clock is the chart's.
         """
         from api.main import app
         params = app.openapi()["paths"]["/api/backtests/{backtest_id}/report"]["get"]
         names = [p["name"] for p in params.get("parameters", [])]
-        assert names == ["backtest_id", "zz_dev", "zz_dev_3", "format", "chart"]
+        assert names == ["backtest_id", "zz_dev", "zz_dev_3", "format", "chart", "tz_offset"]
 
     def test_only_one_new_path_added(self):
         """The Elliott Wave phase was allowed exactly one new route.

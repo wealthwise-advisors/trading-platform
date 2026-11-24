@@ -12,7 +12,8 @@ from loguru import logger
 
 from src.data.csv_provider import CSVDataProvider
 from src.data.sample_data import generate_sample_data
-from src.data.resample import ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, bar_anchor, is_daily_or_longer, resample_ohlcv
+from src.data.resample import (ALL_TIMEFRAMES, BAR_DAYS, TF_MINUTES, bar_anchor, bars_are_daily_or_longer,
+                               is_daily_or_longer, resample_ohlcv)
 from src.data.stream_hub import hub as stream_hub
 from src.backtesting.engine import BacktestEngine
 from src.backtesting.trade_quality import score_trades
@@ -28,7 +29,7 @@ from src.analysis.elliott_wave import (
 from api.report.report import generate_html_report
 
 from api.auth import PROTECTED
-from api.deps import get_contract_spec, BASE_PRICES
+from api.deps import get_contract_spec, BASE_PRICES, ZONES
 from api.strategy_registry import build_strategy
 from api import store, serializers
 from api.schemas.backtest import BacktestRequest
@@ -493,6 +494,8 @@ def get_chart_patterns(backtest_id: str, user=PROTECTED):
 def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float = Query(0.0005),
                format: str = Query("html"),
                chart: str | None = Query(None, max_length=16_000),
+               # The sidebar's "Times in" zone, minutes added to Eastern. Only printed times move.
+               tz_offset: int = Query(0),
     user=PROTECTED,
 ):
     """Backtest report, downloadable as HTML (full charts, via
@@ -511,6 +514,8 @@ def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float 
         first = exc.errors()[0]
         where = ".".join(str(p) for p in first.get("loc", ())) or "chart"
         raise HTTPException(400, f"chart settings are not valid: {where}: {first.get('msg')}")
+    if tz_offset not in ZONES:
+        raise HTTPException(400, f"tz_offset must be one of {sorted(ZONES)}")
 
     stored = _get_or_404(backtest_id, user)
     r = stored.results
@@ -519,7 +524,8 @@ def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float 
     if format == "html":
         html = generate_html_report(r, zz_deviation=zz_dev, zz_deviation_3=zz_dev_3,
                                     session_start=stored.session_start,
-                                    chart_settings=chart_settings)
+                                    chart_settings=chart_settings,
+                                    tz_offset=tz_offset, zone=ZONES[tz_offset])
         return Response(
             content=html, media_type="text/html",
             headers={"Content-Disposition": f'attachment; filename="{base_name}.html"'},
@@ -533,6 +539,11 @@ def get_report(backtest_id: str, zz_dev: float = Query(0.0010), zz_dev_3: float 
 
     metrics_df = build_metrics_df(r)
     trades_df = build_trades_df(r)
+    if tz_offset and not bars_are_daily_or_longer(r.price_data.index):
+        for col in ("Entry Time", "Exit Time"):
+            trades_df[col] = pd.to_datetime(trades_df[col]) + pd.Timedelta(minutes=tz_offset)
+        trades_df = trades_df.rename(columns={"Entry Time": f"Entry Time ({ZONES[tz_offset]})",
+                                              "Exit Time": f"Exit Time ({ZONES[tz_offset]})"})
     title = f"{r.symbol} — {r.strategy_name}"
     subtitle = f"{r.start_date.date()} to {r.end_date.date()} · {r.timeframe}"
     filename = f"{base_name}.{format}"

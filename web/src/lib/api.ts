@@ -206,10 +206,12 @@ export const api = {
     request<ChartPatternRecord[]>(`/backtests/${id}/chart-patterns`),
   getMonthlyReturns: (id: string) =>
     request<MonthlyReturns>(`/backtests/${id}/monthly-returns`),
-  /** `chart`: the price chart's current settings, so the report is drawn the same way. */
-  reportUrl: (id: string, format: string = "html", chart?: ChartExportSettings) =>
+  /** `chart`: the price chart's current settings, so the report is drawn the same way.
+   *  `tzOffset`: the sidebar's "Times in" zone, so the report's clock is the chart's. */
+  reportUrl: (id: string, format: string = "html", chart?: ChartExportSettings, tzOffset = 0) =>
     `${BASE}/backtests/${id}/report?format=${format}`
-    + (chart ? `&chart=${encodeURIComponent(JSON.stringify(chart))}` : ""),
+    + (chart ? `&chart=${encodeURIComponent(JSON.stringify(chart))}` : "")
+    + (tzOffset ? `&tz_offset=${tzOffset}` : ""),
   /** `chart`: the app's session hours and swing settings, and "Times in" zone, so the
    *  file's VWAP, swing points and clock are the chart's (null session = 24 hours). */
   dataExportUrl: (params: { symbol: string; timeframe: string; start: string; end: string; dataSource: string; format: string },
