@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  xWindowMs,
+  xWindowMs, followLiveEdge,
   DEFAULT_WINDOW_BARS, DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs,
 } from "./chartWindow"
 
@@ -119,5 +119,30 @@ describe("xWindowMs", () => {
     const width = 20 * 60_000
     const view = { start: ms(t[0]) - 3 * 3_600_000, end: ms(t[0]) - 3 * 3_600_000 + width }
     expect(xWindowMs(t, view, 60 * 60_000, 3)).toEqual([ms(t[0]), ms(t[0]) + width])
+  })
+})
+
+// Sir, 2026-11-24: zoomed in on a live 1m chart, no new candle after 8:49 while the
+// server had every minute -- the zoomed view kept its old end, new bars landed off-screen.
+describe("followLiveEdge", () => {
+  const min = 60_000
+  const last = Date.parse("2026-11-24T09:49:00"), next = last + 3 * min
+
+  it("a view that reaches the newest candle slides with new candles, keeping its width", () => {
+    expect(followLiveEdge({ start: last - 30 * min, end: last + 5 * min }, last, next))
+      .toEqual({ start: next - 30 * min, end: next + 5 * min })
+    expect(followLiveEdge({ start: last - 30 * min, end: last }, last, next))
+      .toEqual({ start: next - 30 * min, end: next })
+  })
+
+  it("a view panned back into the past stays where it was left", () => {
+    const past = { start: last - 90 * min, end: last - 40 * min }
+    expect(followLiveEdge(past, last, next)).toBe(past)
+  })
+
+  it("no hand-set view, or no new candle: nothing changes", () => {
+    expect(followLiveEdge(null, last, next)).toBeNull()
+    const v = { start: last - 30 * min, end: last }
+    expect(followLiveEdge(v, last, last)).toBe(v)
   })
 })

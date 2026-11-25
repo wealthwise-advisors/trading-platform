@@ -66,6 +66,20 @@ export function chartRunKey(bars: ReadonlyArray<{ t: string }>, interval?: strin
  * 7601. The step is the bars' own interval (barStepMs), not the average gap,
  * which overnight breaks inflated.
  */
+/**
+ * A hand-set view when a live chart gets a new candle. One that reached the newest
+ * candle slides with it, keeping its width, as a live chart should; one panned
+ * back into the past stays put. Without this a zoomed live chart froze at the
+ * moment of the zoom while new candles landed off-screen (sir, 2026-11-24).
+ */
+export function followLiveEdge<V extends { start: number; end: number }>(
+  view: V | null, prevLast: number, newLast: number,
+): V | null {
+  if (!view || newLast <= prevLast || view.end < prevLast) return view
+  const d = newLast - prevLast
+  return { ...view, start: view.start + d, end: view.end + d }
+}
+
 export function xWindowMs(
   t: readonly string[],
   view: { start: number; end: number } | null,

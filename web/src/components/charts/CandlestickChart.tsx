@@ -43,7 +43,7 @@ const markScale = (rowPx: number) => Math.max(0.75, Math.min(1, rowPx / 420))
 const TAG_MIN_ROW_PX = 220
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
-import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs, xWindowMs } from "@/lib/chartWindow"
+import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs, followLiveEdge, xWindowMs } from "@/lib/chartWindow"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
@@ -660,6 +660,14 @@ export function CandlestickChart({
   // chart back to its default window under anyone who had panned or zoomed.
   const runKey = chartRunKey(bars, interval)
   useEffect(() => setVisibleRange(null), [runKey])
+  // A zoomed view at the newest candle follows new candles (lib/chartWindow followLiveEdge).
+  const lastBarMs = bars.length ? new Date(bars[bars.length - 1].t).getTime() : 0
+  const prevLastBarMs = useRef(lastBarMs)
+  useEffect(() => {
+    const prev = prevLastBarMs.current
+    prevLastBarMs.current = lastBarMs
+    setVisibleRange((v) => followLiveEdge(v, prev, lastBarMs))
+  }, [lastBarMs])
   /** The last display candle size, for displayBucketMinutes' dead band. */
   const lastBucketRef = useRef<number | undefined>(undefined)
   // Each wheel notch is its own relayout; rebuilding the chart for every one froze it
