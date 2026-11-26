@@ -60,6 +60,8 @@ def _with_studies(df: pd.DataFrame, session_start: time_type | None,
     out["BB 20 2 basis"], out["BB Upper"], out["BB Lower"] = s["bb_middle"], s["bb_upper"], s["bb_lower"]
     out["RSI(2)"], out["FullK"], out["FullD"] = s["rsi2"], s["stochrsi_k"], s["stochrsi_d"]
     out["RSI(13)"], out["MFI"] = s["rsi13"], s["mfi"]
+    # Sir's order-flow studies (2026-11-26): the chart's Volume Delta and CVD rows.
+    out["Volume Delta"], out["Delta %"], out["CVD"] = s["delta"], s["delta_pct"], s["cvd"]
     out = out.round(2)
 
     zz = serializers.zigzag_to_records(df, dev_3=dev_3, dev_10=dev_10)
@@ -113,6 +115,7 @@ def _sections(table: pd.DataFrame, swings: pd.DataFrame, levels: pd.DataFrame,
               ("VWAP and bands 0.5 to 2", ["VWAP"] + bands[:8]),
               ("VWAP bands 2.5 to 5", bands[8:]),
               ("Oscillators", ["RSI(2)", "FullK", "FullD", "RSI(13)", "MFI"]),
+              ("Volume Delta and CVD", ["Volume Delta", "Delta %", "CVD"]),
               ("Swing count", ["Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag"])]
     t = table.rename_axis(time_col)
     out = [(name, t[[c for c in cols if c in t]]) for name, cols in groups]

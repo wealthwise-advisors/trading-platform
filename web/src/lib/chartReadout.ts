@@ -98,7 +98,8 @@ export function seriesByAxis(traces: ReadonlyArray<TraceLike>, times: ReadonlyAr
     const axis = d.yaxis ?? "y"
     const list = out.get(axis) ?? []
     list.push({
-      label: d.name, values: d.y as (number | null)[], digits: d.name === "Vol" ? 0 : 2,
+      label: d.name, values: d.y as (number | null)[],
+      digits: d.name === "Vol" || d.name === "Delta" || d.name === "CVD" ? 0 : 2,
       color: typeof d.line?.color === "string" ? d.line.color : undefined,
     })
     out.set(axis, list)

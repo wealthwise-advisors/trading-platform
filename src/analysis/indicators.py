@@ -81,6 +81,30 @@ def calc_volume_split(high: pd.Series, low: pd.Series, close: pd.Series,
     return pct, buyers, volume - buyers
 
 
+def calc_volume_delta(high: pd.Series, low: pd.Series, close: pd.Series,
+                      volume: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """(delta, delta %) per bar, sir's Volume Delta (email 2026-11-26).
+
+    His formula is Ask Vol - Bid Vol. Schwab sells minute bars, not trades, so the
+    ask/bid split is sir's own buyers/sellers split (calc_volume_split): an estimate
+    from where the bar closed in its range. Delta % = delta / volume x 100.
+    """
+    _, buyers, sellers = calc_volume_split(high, low, close, volume)
+    delta = buyers - sellers
+    return delta, (delta / volume.where(volume > 0) * 100).fillna(0.0)
+
+
+def calc_cvd(delta: pd.Series) -> pd.Series:
+    """Cumulative Volume Delta: the running total of delta, restarting each of sir's
+    three sessions (Eastern): 6 PM - midnight, midnight - 8 AM, 8 AM to the next 6 PM
+    (4-5 PM still trades and stays in the day session)."""
+    idx = delta.index
+    h = idx.hour
+    start_hour = np.where(h >= 18, 18, np.where(h < 8, 0, 8))
+    session = idx.normalize() + pd.to_timedelta(start_hour, unit="h")
+    return delta.groupby(session).cumsum()
+
+
 def calc_mfi(high: pd.Series, low: pd.Series, close: pd.Series,
              volume: pd.Series | None, length: int = 9) -> pd.Series:
     """

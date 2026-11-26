@@ -33,6 +33,9 @@ BUYERS, SELLERS = "26A69A", "EF5350"
 EMA9, EMA20, EMA50 = "FFAB40", "A3E635", "C4B5FD"
 VWAP = "E879F9"                                                # vwapStyle.vwap
 BB_BASIS, BB_BAND = "6B7FA8", "8B9DC3"
+CVD = "22D3EE"                                                 # CandlestickChart.tsx CVD_LINE
+#: Volume Delta bars (CandlestickChart.tsx): green / red, blue / orange past ±60 %.
+DELTA_UP, DELTA_DOWN, DELTA_BIG_UP, DELTA_BIG_DOWN = "00C853", "FF5252", "2979FF", "FF9100"
 OSC_LINE, STOCH_K, STOCH_D, MFI_LINE = "FFFFFF", "FF6B6B", "E040FB", "E0A800"
 ZONE_ABOVE, ZONE_BELOW = "FF5252", "00C853"                    # past overbought / oversold
 HIGH_TAG, LOW_TAG = "22C55E", "EF4444"                         # HH/LH and HL/LL tags
@@ -73,7 +76,9 @@ def _column_style(name: str, vwap_levels) -> tuple[str, str]:
              "EMA 20": (EMA20, PRICE_FMT), "EMA 50": (EMA50, PRICE_FMT), "VWAP": (VWAP, PRICE_FMT),
              "BB 20 2 basis": (BB_BASIS, PRICE_FMT), "BB Upper": (BB_BAND, PRICE_FMT),
              "BB Lower": (BB_BAND, PRICE_FMT), "RSI(2)": (OSC_LINE, OSC_FMT), "FullK": (STOCH_K, OSC_FMT),
-             "FullD": (STOCH_D, OSC_FMT), "RSI(13)": (OSC_LINE, OSC_FMT), "MFI": (MFI_LINE, OSC_FMT)}
+             "FullD": (STOCH_D, OSC_FMT), "RSI(13)": (OSC_LINE, OSC_FMT), "MFI": (MFI_LINE, OSC_FMT),
+             "Volume Delta": (TEXT, '+#,##0;-#,##0;0'), "Delta %": (TEXT, '+0.0"%";-0.0"%";0.0"%"'),
+             "CVD": (CVD, '+#,##0;-#,##0;0')}
     if name in fixed:
         return fixed[name]
     for lv in vwap_levels:
@@ -146,6 +151,13 @@ def _bars_sheet(ws, table: pd.DataFrame, meta: ExportMeta, vwap_levels) -> None:
         if "Volume" in col:
             vc = VOL_FLAT if k == 0 or closes[k] == closes[k - 1] else VOL_UP if closes[k] > closes[k - 1] else VOL_DOWN
             ws[f"{col['Volume']}{r}"].font = Font(name=MONO, size=10, color=vc)
+        if "Volume Delta" in col:
+            # The chart's Delta bar colours: green / red, blue / orange past ±60 %.
+            d, p = table["Volume Delta"].iloc[k], table["Delta %"].iloc[k]
+            if pd.notna(d):
+                dc = (DELTA_BIG_UP if p > 60 else DELTA_UP) if d >= 0 else (DELTA_BIG_DOWN if p < -60 else DELTA_DOWN)
+                for c in ("Volume Delta", "Delta %"):
+                    ws[f"{col[c]}{r}"].font = Font(name=MONO, size=10, bold=abs(p) > 60, color=dc)
         for tag in ("10 Leg Tag", "3 Leg Tag"):
             v = ws[f"{col[tag]}{r}"].value
             if v in ("HH", "LH", "H", "EH"):
@@ -201,6 +213,10 @@ def _key_sheet(ws, meta: ExportMeta, columns: list[str], vwap_levels) -> None:
         "RSI(2), RSI(13)": "RSI, Wilder's. Red at or above overbought (94 / 55), green at or below oversold (5 / 45).",
         "FullK / FullD": "StochRSI(14, 14, 3, 1). Red at or above 80, green at or below 20.",
         "MFI": "Money Flow Index(9), as thinkorswim. Red at or above 80, green at or below 20.",
+        "Volume Delta / Delta %": "Buyers minus sellers on the candle (estimated from where it closed in its range: "
+                                  "Schwab gives no bid/ask volume), and that as % of its volume. Green / red; "
+                                  "blue / orange past ±60 %.",
+        "CVD": "Cumulative Volume Delta: the running total of Volume Delta, restarting at 6 PM, midnight and 8 AM ET.",
         "Swing": "The swing letter (A, B, C ...) on the candle of each big swing point.",
         "10 Leg / 10 Leg Tag": "Big swing number (starts again at 1 each swing) and its tag: HH / LH on green, HL / LL on red.",
         "3 Leg / 3 Leg Tag": "Small swing numeral (i, ii, iii ...), counted inside each big move, and its tag.",

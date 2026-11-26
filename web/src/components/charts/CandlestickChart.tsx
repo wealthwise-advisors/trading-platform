@@ -34,6 +34,7 @@ import { toNaiveString } from "@/lib/isoTime"
 import { shiftTimes, useZoneOffset, zoneShort } from "@/lib/sessionZone"
 import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
 import { swingStatus } from "@/lib/swingStatus"
+import { cvdDivergences } from "@/lib/cvdDivergence"
 
 /** Swing circles and tags shrink with a short price row: at full size on a
  *  ~150px row they took the room the candles needed, and the price scale blew
@@ -286,6 +287,19 @@ function MenuToggle({
  * offset (2026-11-20: sir's thinkorswim reads Central, the chart read Eastern).
  * Daily and longer candles are stamped at midnight and keep their date.
  */
+const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd"
+function readFlag(key: string): boolean {
+  try { return localStorage.getItem(key) === "1" } catch { return false }
+}
+function writeFlag(key: string, on: boolean): void {
+  try { localStorage.setItem(key, on ? "1" : "0") } catch { /* storage unavailable: the switch still works */ }
+}
+// Delta bars: green / red, and a clearly different hue past sir's ±60% filter
+// (sir tells colours apart by hue, not shade). CVD line and divergence colours.
+const DELTA_UP = "#00C853", DELTA_DOWN = "#FF5252", DELTA_BIG_UP = "#2979FF", DELTA_BIG_DOWN = "#FF9100"
+const CVD_LINE = "#22D3EE", DIV_BULL = "#22c55e", DIV_BEAR = "#ef4444"
+const DELTA_FILTER = 60
+
 export function ZonedCandlestickChart(props: CandlestickChartProps) {
   const zone = useZoneOffset((z) => z.offset)
   const off = /^(1d|1w|1mo)$/i.test(props.interval) ? 0 : zone
@@ -469,6 +483,11 @@ export function CandlestickChart({
   const [volLength, setVolLength] = useState(() => loadVolumeAvgSettings().length)
   useEffect(() => { saveVolumeAvgSettings({ on: volOn, length: volLength }) }, [volOn, volLength])
   const [volPanel, setVolPanel] = useState(false)
+  // Volume Delta and CVD rows (sir, 2026-11-26): off until switched on, remembered per browser.
+  const [deltaOn, setDeltaOn] = useState(() => readFlag(DELTA_KEY))
+  const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
+  useEffect(() => writeFlag(DELTA_KEY, deltaOn), [deltaOn])
+  useEffect(() => writeFlag(CVD_KEY, cvdOn), [cvdOn])
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
   const [vpRowHeight, setVpRowHeight] = useState(1)
   const [vpTimePer, setVpTimePer] = useState<TimePerProfile>("CHART")
@@ -1050,9 +1069,14 @@ export function CandlestickChart({
   const oscillatorRows = activeOscillatorRows(osc)
   // A dataset with no volume gets no row: there would be nothing to draw in it.
   const volRow = volOn && bars.some((b) => (b.v ?? 0) > 0)
-  const indicatorRows: (OscRowKey | "vol")[] = volRow ? [...oscillatorRows, "vol"] : oscillatorRows
+  const deltaRow = deltaOn && (indicators.delta ?? []).some((v) => v != null)
+  const cvdRow = cvdOn && (indicators.cvd ?? []).some((v) => v != null)
+  const indicatorRows: (OscRowKey | "vol" | "delta" | "cvd")[] = [
+    ...oscillatorRows, ...(volRow ? ["vol" as const] : []),
+    ...(deltaRow ? ["delta" as const] : []), ...(cvdRow ? ["cvd" as const] : []),
+  ]
   const totalRows = 1 + indicatorRows.length
-  const axisSuffix = ["", "2", "3", "4", "5", "6"].slice(0, totalRows)
+  const axisSuffix = ["", "2", "3", "4", "5", "6", "7", "8"].slice(0, totalRows)
   const rowIndexOf = (name: (typeof indicatorRows)[number]) => 1 + indicatorRows.indexOf(name)
   const suffixOf = (name: (typeof indicatorRows)[number]) => axisSuffix[rowIndexOf(name)]
 
@@ -1883,6 +1907,51 @@ export function CandlestickChart({
     )
   }
 
+  // Volume Delta: one bar per candle around 0 (sir, 2026-11-26). Past ±60% of the
+  // candle's volume -- his filter -- the bar takes a different hue.
+  const deltaPct = indicators.delta_pct ?? []
+  if (deltaRow) {
+    const s = suffixOf("delta")
+    data.push(
+      { type: "bar", x: t, y: indicators.delta, name: "Delta", showlegend: false,
+        marker: { line: { width: 0 }, color: (indicators.delta ?? []).map((v, i) => {
+          const p = deltaPct[i] ?? 0
+          return (v ?? 0) >= 0 ? (p > DELTA_FILTER ? DELTA_BIG_UP : DELTA_UP) : (p < -DELTA_FILTER ? DELTA_BIG_DOWN : DELTA_DOWN)
+        }) },
+        width: barStepMs(t) * 0.55 || undefined, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data,
+      // In the readout beside Delta; draws nothing.
+      { type: "scatter", mode: "none", x: t, y: deltaPct, name: "Delta %", showlegend: false,
+        hoverinfo: "skip", xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data,
+    )
+    shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
+                  line: { color: LEVEL_LINE, width: 1 } })
+  }
+  // CVD: the running total of Delta, restarting at 6 PM, midnight and 8 AM ET.
+  if (cvdRow) {
+    const s = suffixOf("cvd")
+    data.push({ type: "scatter", mode: "lines", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
+                line: { color: CVD_LINE, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+    shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
+                  line: { color: LEVEL_LINE, width: 1, dash: "dot" } })
+    // Divergences between consecutive 10 Leg swing highs / lows (lib/cvdDivergence.ts):
+    // a line joining the two points on the CVD row and on price, named at the second.
+    for (const d of cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset)) {
+      const color = d.kind.endsWith("Bullish") ? DIV_BULL : DIV_BEAR
+      const text = `${d.kind} ${d.strength.toFixed(1)}${d.strong ? " strong" : ""}`
+      data.push(
+        { type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo],
+          line: { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }, marker: { size: 6, color },
+          hoverinfo: "skip", showlegend: false, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data,
+        { type: "scatter", mode: "lines", x: onCandle([d.from, d.to]), y: [d.from, d.to].map(drawnEdge),
+          line: { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }, hoverinfo: "skip", showlegend: false,
+          xaxis: "x", yaxis: "y" } as unknown as Data,
+      )
+      annotations.push({ x: d.to.t, y: d.cvdTo, xref: `x${s}` as Annotations["xref"], yref: `y${s}` as Annotations["yref"],
+                         text: `<b>${text}</b>`, showarrow: false, yanchor: d.to.type === "H" ? "bottom" : "top",
+                         font: { size: 10, color }, bgcolor: "rgba(10,14,22,0.85)", borderpad: 2 } as Partial<Annotations>)
+    }
+  }
+
   // Overbought/oversold reference lines, for the rows being drawn. The values
   // live in lib/oscillatorStudies.ts, which the settings panels read too, so
   // what a panel says and what the chart draws cannot disagree.
@@ -1897,6 +1966,29 @@ export function CandlestickChart({
   const axisEndMs = visibleRange ? visibleRange.end : (bars.length ? new Date(bars[bars.length - 1].t).getTime() : 0)
   const axisStartMs = visibleRange ? visibleRange.start : axisEndMs - defaultWindow
   const volAxisTop = bars.length ? volumeAxisMax(bars, volAvg, axisStartMs, axisEndMs) : 1
+  // Delta and CVD have no fixed scale: fitted to what is on screen. CVD is fitted to
+  // the line alone, not forced to show 0, so its swings read (forcing 0 flattened it).
+  const tMs = t.map((x) => new Date(x).getTime())
+  const visibleExtent = (vals: readonly (number | null)[] | undefined): [number, number] => {
+    let lo = Infinity, hi = -Infinity
+    vals?.forEach((v, i) => {
+      if (v == null || tMs[i] < axisStartMs || tMs[i] > axisEndMs) return
+      lo = Math.min(lo, v); hi = Math.max(hi, v)
+    })
+    return Number.isFinite(lo) ? [lo, hi] : [0, 1]
+  }
+  // Delta: fitted to the 98th percentile of the bars on screen, so one closing-bell
+  // spike (+32,553 on 24 Nov 1m) does not flatten every other bar; a spike runs off the top.
+  const visibleAbs = (indicators.delta ?? []).flatMap((v, i) =>
+    v == null || tMs[i] < axisStartMs || tMs[i] > axisEndMs ? [] : [Math.abs(v)]).sort((a, b) => a - b)
+  const deltaTop = Math.max(visibleAbs[Math.floor((visibleAbs.length - 1) * 0.98)] ?? 0, 1) * 1.15
+  const cvdExt = visibleExtent(indicators.cvd)
+  const cvdPad = Math.max((cvdExt[1] - cvdExt[0]) * 0.12, 1)
+  /** Each indicator row's y range. */
+  const rowRange = (name: string): [number, number] =>
+    name === "vol" ? [0, volAxisTop] : name === "delta" ? [-deltaTop, deltaTop]
+      : name === "cvd" ? [cvdExt[0] - cvdPad, cvdExt[1] + cvdPad] : name === "rsi13" ? rsi13Range : [0, 100]
+  const freeScale = (name: string) => name === "vol" || name === "delta" || name === "cvd"
   // The fit always includes both level lines, as thinkorswim's does.
   const rsi13Fit = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
   const rsi13Levels = OSC_STUDIES.rsi13.levels!
@@ -2110,7 +2202,7 @@ export function CandlestickChart({
   const rowTitles: Record<string, string> = {
     // Only the price row keeps a right-hand axis title; the oscillator rows'
     // vertical "RSI(2)" / "MFI" titles repeated the label on the left.
-    price: "Price", rsi2: "", stochrsi: "", rsi13: "", mfi: "", vol: "",
+    price: "Price", rsi2: "", stochrsi: "", rsi13: "", mfi: "", vol: "", delta: "", cvd: "",
   }
   /** Each oscillator row's label, and the colour of the line it names. */
   const rowLabel: Record<string, { text: string; color: string }> = {
@@ -2119,6 +2211,8 @@ export function CandlestickChart({
     rsi13: { text: "RSI (13)", color: OSC_LINE },
     mfi: { text: "MFI", color: MFI_LINE },
     vol: { text: `VolumeAvg (${volLength})`, color: VOLUME_AVG_COLOR },
+    delta: { text: "Volume Delta", color: DELTA_UP },
+    cvd: { text: "CVD (Cumulative Volume Delta)", color: CVD_LINE },
   }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
@@ -2243,11 +2337,11 @@ export function CandlestickChart({
       title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
-      ...(name === "vol" ? { tickformat: ",.0f", nticks: 3 } : {}),
+      ...(freeScale(name) ? { tickformat: ",.0f", nticks: 3 } : {}),
       // Oscillator numbers INSIDE the row, never on its edges: 0 and 100 sat on the
       // borders, so one row's "0" printed over the next row's "100" and the rows'
       // numbers could not be read (user, 2026-11-22).
-      ...(!isPrice && name !== "vol" ? { tickvals: innerTicks(name === "rsi13" ? rsi13Range : [0, 100]), tickfont: { size: 10 } } : {}),
+      ...(!isPrice && !freeScale(name) ? { tickvals: innerTicks(name === "rsi13" ? rsi13Range : [0, 100]), tickfont: { size: 10 } } : {}),
       // Log applies to the PRICE row only: an oscillator is already bounded
       // 0-100 and a log scale on it would be meaningless.
       ...(isPrice && logScale ? { type: "log" as const } : {}),
@@ -2257,7 +2351,7 @@ export function CandlestickChart({
         ? (manualY && !logScale ? manualY : logScale && priceYRange
             ? [Math.log10(Math.max(1e-9, priceYRange[0])), Math.log10(Math.max(1e-9, priceYRange[1]))]
             : priceYRange)
-        : name === "vol" ? [0, volAxisTop] : name === "rsi13" ? rsi13Range : [0, 100],
+        : rowRange(name),
     }
 
     // THE ROW'S CURRENT READING, as the reference draws it: horizontal, at the
@@ -2513,10 +2607,12 @@ export function CandlestickChart({
   if (lastBar) pushTag(lastBar.c, lastBar.c >= lastBar.o ? GREEN : RED, "y", 2, priceYRange)
   for (const name of indicatorRows) {
     const axis = `y${suffixOf(name)}`
-    const range: readonly [number, number] =
-      name === "vol" ? [0, volAxisTop] : name === "rsi13" ? rsi13Range : [0, 100]
+    const range = rowRange(name)
     for (const s of drawnSeries.get(axis) ?? []) {
-      const color = s.color ?? (name === "vol" ? volumeBarColors(bars.map((b) => b.c)).at(-1)! : "#e5e7eb")
+      if (s.label === "Delta %") continue                 // a percentage, not on this row's scale
+      const lastDelta = (indicators.delta ?? []).at(-1) ?? 0
+      const color = s.color ?? (name === "vol" ? volumeBarColors(bars.map((b) => b.c)).at(-1)!
+        : name === "delta" ? (lastDelta >= 0 ? DELTA_UP : DELTA_DOWN) : "#e5e7eb")
       pushTag(lastReading(s.values as (number | null)[]), color, axis, s.digits, range)
     }
   }
@@ -2926,9 +3022,9 @@ export function CandlestickChart({
       })) },
     ...indicatorRows.map((name): ReadoutRow => {
       const axis = `y${suffixOf(name)}`
-      const levels = name === "vol" ? null : OSC_STUDIES[name].levels
+      const levels = freeScale(name) ? null : OSC_STUDIES[name as OscKey].levels
       return {
-        axis, title: name === "vol" ? rowLabel.vol.text : OSC_STUDIES[name].tosTitle,
+        axis, title: freeScale(name) ? rowLabel[name].text : OSC_STUDIES[name as OscKey].tosTitle,
         series: drawnSeries.get(axis) ?? [],
         // One line: on two, a short row's box runs into the next row's.
         fixed: levels ? [{ label: "OverSold", value: String(levels.oversold) },
@@ -3071,6 +3167,25 @@ export function CandlestickChart({
             </label>
             <StudyGear label="VolumeAvg settings" title="VolumeAvg settings"
                        onClick={() => { setVolOn(true); setOscPanel(null); setVolPanel(true) }} />
+          </div>
+
+          {/* Sir's order-flow studies (2026-11-26). No settings: the ±60% filter and the
+              three CVD sessions are his fixed definitions. */}
+          <div className={STUDY_CHIP}>
+            <label className="flex items-center gap-1.5 cursor-pointer"
+                   title="Volume Delta per candle: buyers minus sellers. Blue / orange past ±60% of the candle's volume.">
+              <input type="checkbox" checked={deltaOn} aria-label="Show Volume Delta"
+                     onChange={(e) => setDeltaOn(e.target.checked)} />
+              <span>Volume Delta</span>
+            </label>
+          </div>
+          <div className={STUDY_CHIP}>
+            <label className="flex items-center gap-1.5 cursor-pointer"
+                   title="Cumulative Volume Delta, restarting 6 PM, midnight and 8 AM ET, with divergences at the 10 Leg swings.">
+              <input type="checkbox" checked={cvdOn} aria-label="Show CVD"
+                     onChange={(e) => setCvdOn(e.target.checked)} />
+              <span>CVD</span>
+            </label>
           </div>
 
         </>}

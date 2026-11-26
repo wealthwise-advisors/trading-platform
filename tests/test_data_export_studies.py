@@ -28,6 +28,7 @@ BANDS = [f"VWAP {s} {'+' if s == 'Upper' else '-'}{lv:.1f}σ" for lv in LEVELS f
 COLUMNS = (["Open", "High", "Low", "Close", "Volume", "VolumeAvg (20)", "Buyers %", "Buyers", "Sellers",
             "EMA 9", "EMA 20", "EMA 50", "VWAP"] + BANDS
            + ["BB 20 2 basis", "BB Upper", "BB Lower", "RSI(2)", "FullK", "FullD", "RSI(13)", "MFI",
+              "Volume Delta", "Delta %", "CVD",
               "Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag"])
 
 
@@ -62,7 +63,8 @@ def test_studies_equal_the_charts_series(table, bars):
     ind = serializers.price_data_to_response(bars, pd.Timestamp("09:30").time())["indicators"]
     for col, key in [("RSI(2)", "rsi2"), ("RSI(13)", "rsi13"), ("FullK", "stochrsi_k"), ("FullD", "stochrsi_d"),
                      ("MFI", "mfi"), ("VWAP", "vwap"), ("VWAP Upper +2.0σ", "vwap_upper"),
-                     ("VWAP Lower -2.0σ", "vwap_lower"), ("BB Upper", "bb_upper"), ("EMA 9", "ema9")]:
+                     ("VWAP Lower -2.0σ", "vwap_lower"), ("BB Upper", "bb_upper"), ("EMA 9", "ema9"),
+                     ("Volume Delta", "delta"), ("Delta %", "delta_pct"), ("CVD", "cvd")]:
         chart = np.array([np.nan if v is None else v for v in ind[key]], dtype=float)
         got = table[col].to_numpy(dtype=float)
         assert np.array_equal(np.isnan(chart), np.isnan(got)), col

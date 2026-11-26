@@ -173,6 +173,11 @@ export interface IndicatorSeries {
   bb_middle?: (number | null)[]
   bb_upper?: (number | null)[]
   bb_lower?: (number | null)[]
+  /** Volume Delta per bar, its % of the bar's volume, and the session's running
+   *  total (CVD) -- sir's order-flow studies, 2026-11-26. */
+  delta?: (number | null)[]
+  delta_pct?: (number | null)[]
+  cvd?: (number | null)[]
 }
 
 /** Volume traded at each price level, with the point of control and the
