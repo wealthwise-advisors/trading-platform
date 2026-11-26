@@ -1914,9 +1914,11 @@ export function CandlestickChart({
   // CVD Divergence, sir's third study, its own switch: between consecutive 10 Leg swing
   // highs / lows (lib/cvdDivergence.ts), a dashed line joining the two points on price
   // -- and on the CVD row when that is on -- named at the second point.
-  if (divOn && (indicators.cvd ?? []).some((v) => v != null)) {
+  const divergences = divOn && (indicators.cvd ?? []).some((v) => v != null)
+    ? cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset) : []
+  if (divOn) {
     const s = cvdRow ? suffixOf("cvd") : null
-    for (const d of cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset)) {
+    for (const d of divergences) {
       const color = d.kind.endsWith("Bullish") ? DIV_BULL : DIV_BEAR
       const text = `${d.kind} ${d.strength.toFixed(1)}${d.strong ? " strong" : ""}`
       const line = { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }
@@ -1973,6 +1975,20 @@ export function CandlestickChart({
     name === "vol" ? [0, volAxisTop] : name === "delta" ? [-deltaTop, deltaTop]
       : name === "cvd" ? [cvdExt[0] - cvdPad, cvdExt[1] + cvdPad] : name === "rsi13" ? rsi13Range : [0, 100]
   const freeScale = (name: string) => name === "vol" || name === "delta" || name === "cvd"
+  // CVD Divergence on but none on screen: say so, so an empty chart is not read as
+  // the study not working (user, 2026-11-27) -- and point at the newest one off screen.
+  if (divOn && !divergences.some((d) => { const ms = new Date(d.to.t).getTime(); return ms >= axisStartMs && ms <= axisEndMs })) {
+    const last = divergences.at(-1)
+    annotations.push({
+      // Bottom centre: the bottom-left corner holds the Swing key button.
+      xref: "x domain" as Annotations["xref"], yref: "y domain" as Annotations["yref"], x: 0.5, y: 0.02,
+      xanchor: "center", yanchor: "bottom", showarrow: false, align: "center",
+      text: last
+        ? `CVD Divergence: none in view · ${divergences.length} on this chart, newest <b>${last.kind}</b> at ${last.to.t.slice(5, 16).replace("T", " ")}`
+        : "CVD Divergence: none on this chart (needs strength 1.5 or more)",
+      font: { size: 10, color: "#9ca3af" }, bgcolor: "rgba(10,14,22,0.85)", borderpad: 3,
+    } as Partial<Annotations>)
+  }
   // The fit always includes both level lines, as thinkorswim's does.
   const rsi13Fit = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
   const rsi13Levels = OSC_STUDIES.rsi13.levels!
