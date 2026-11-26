@@ -708,6 +708,21 @@ class TestSwingStretches:
             assert closed.index[0].isoformat() <= st["from"] <= st["to"] <= closed.index[-1].isoformat()
             assert st["name"] and isinstance(st["up"], bool)
 
+    def test_it_carries_the_recent_10_leg_points_for_cvd_divergence(self):
+        # The Market Grid's CVD Divergence column compares consecutive swing highs / lows
+        # (sir, 2026-11-26), so each pane's newest points travel with its stretch.
+        s = self._wavy(["1m"])
+        while not s.is_done:
+            s.tick()
+        pts = s.swing_stretches()["1m"]["points"]
+        closed = s.panes["1m"].df.iloc[:s.panes["1m"].cursor]
+        assert 2 <= len(pts) <= 12
+        assert [p["t"] for p in pts] == sorted(p["t"] for p in pts)
+        for p in pts:
+            assert p["type"] in ("H", "L") and p["t"] <= closed.index[-1].isoformat()
+            bar = closed.loc[pd.Timestamp(p["t"])]
+            assert p["price"] == (bar["high"] if p["type"] == "H" else bar["low"])
+
     def test_nothing_before_a_pane_has_bars(self):
         assert _session(["5m"]).swing_stretches() == {}
 

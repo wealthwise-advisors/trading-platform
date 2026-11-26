@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cvdDivergences, cvdSession } from "./cvdDivergence"
+import { cvdDivergences, cvdSession, deltaAndCvd, orderFlowNow } from "./cvdDivergence"
 import type { ZigZagPoint } from "./types"
 
 const pt = (t: string, price: number, type: "H" | "L"): ZigZagPoint =>
@@ -61,3 +61,35 @@ describe("cvdSession", () => {
     expect(cvdSession("2026-11-24T07:00:00", -60)).toBe(cvdSession("2026-11-24T08:00:00"))
   })
 })
+
+describe("deltaAndCvd / orderFlowNow — the Market Grid's numbers", () => {
+  const bar = (t: string, h: number, l: number, c: number, v: number) => ({ t, o: c, h, l, c, v })
+
+  it("match the server (tests/test_volume_delta.py): 640 / -400 / 0, CVD 640, 240, 240", () => {
+    const bars = [bar("2026-11-24T09:30:00", 10, 0, 8.2, 1000), bar("2026-11-24T09:31:00", 10, 0, 1, 500),
+                  bar("2026-11-24T09:32:00", 10, 0, 5, 200)]
+    const { delta, pct, cvd } = deltaAndCvd(bars)
+    expect(delta).toEqual([640, -400, 0])
+    expect(pct).toEqual([64, -80, 0])
+    expect(cvd).toEqual([640, 240, 240])
+  })
+
+  it("CVD starts again at 8 AM Eastern", () => {
+    const { cvd } = deltaAndCvd([bar("2026-11-24T07:59:00", 10, 0, 10, 100), bar("2026-11-24T08:00:00", 10, 0, 10, 50)])
+    expect(cvd).toEqual([100, 50])
+  })
+
+  it("reports the newest bar and the newest divergence", () => {
+    // Lows at 10:00 (7210) and 10:20 (7214.5); heavy selling in between drags CVD down.
+    const bars = Array.from({ length: 30 }, (_, i) => {
+      const t = `2026-11-24T10:${String(i).padStart(2, "0")}:00`
+      return i > 0 && i <= 20 ? bar(t, 7220, 7210, 7210, 400) : bar(t, 7220, 7210, 7215, 400)
+    })
+    const now = orderFlowNow(bars, [{ t: "2026-11-24T10:00:00", price: 7210, type: "L" as const },
+                                    { t: "2026-11-24T10:20:00", price: 7214.5, type: "L" as const }])
+    expect(now!.delta).toBe(0)
+    expect(now!.divergence?.kind).toBe("Hidden Bullish")
+    expect(now!.divergence?.dCvd).toBe(-8000)
+  })
+})
+

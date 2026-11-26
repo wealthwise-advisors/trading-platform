@@ -84,6 +84,7 @@ import {
 } from "@/lib/followLive"
 import { delta as signed, price } from "@/lib/priceFormat"
 import { buyerControl, swingBreakeven } from "@/lib/swingStrength"
+import { orderFlowNow } from "@/lib/cvdDivergence"
 import type { SwingStretch } from "@/lib/types"
 
 type Status = "idle" | "loading" | "ready" | "playing" | "paused" | "done"
@@ -1402,6 +1403,17 @@ export function ReplayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shownTfKey, panes, swings])
 
+  /** Sir's order flow per timeframe (2026-11-26): the newest bar's Volume Delta and
+   *  CVD, and the newest CVD divergence between its recent 10 Leg points. */
+  const orderFlow = useMemo(() => {
+    const out = new Map<string, ReturnType<typeof orderFlowNow>>()
+    for (const tf of shownTimeframes) {
+      if (panes[tf]) out.set(tf, orderFlowNow(panes[tf].bars, swings[tf]?.points ?? [], volCtx[tf], volLength))
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownTfKey, panes, swings, volCtx, volLength])
+
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
   // ── POC Match / POC vs Avg on the Consolidated tape ────────────────
   /*
@@ -2678,7 +2690,7 @@ export function ReplayPage() {
                 <table className="w-full text-sm grid-table table-sticky">
                   <thead className="grid-thead">
                     {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"], ["Trade", 3, "grp-trade"]],
-                             [["Swing", 7, "grp-swing"], ["Signal", 1, "grp-sig"]])}
+                             [["Swing", 7, "grp-swing"], ["Order flow", 4, "grp-flow"], ["Signal", 1, "grp-sig"]])}
                     <tr>
                       <th className="text-left p-2 font-medium">TF</th>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
@@ -2747,6 +2759,14 @@ export function ReplayPage() {
                           title="(Swing High + Swing Low) ÷ 2">50% Equilibrium</th>
                       <th className="text-right p-2 font-medium whitespace-nowrap"
                           title="Buyer volume of every candle in the swing, added up, and its share of the swing's volume">Buyer Control</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="The newest candle's buyers minus sellers (estimated from where it closed: Schwab gives no bid/ask volume). Blue / orange past ±60 %">Volume Delta</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="Volume Delta as a share of the candle's volume">Delta %</th>
+                      <th className="text-right p-2 font-medium whitespace-nowrap"
+                          title="Cumulative Volume Delta: the running total, restarting at 6 PM, midnight and 8 AM ET">CVD</th>
+                      <th className="text-left p-2 font-medium whitespace-nowrap"
+                          title="The newest divergence between two consecutive 10 Leg swing highs or lows and CVD, with its strength (|ΔCVD| ÷ VolumeAvg 20; under 1.5 not shown, over 3 strong)">CVD Divergence</th>
                       <th className="text-left p-2 font-medium">Last signal</th>
                     </tr>
                   </thead>
@@ -2877,6 +2897,35 @@ export function ReplayPage() {
                                 <td className="p-2 text-right font-mono whitespace-nowrap"
                                     style={bc && bc.side !== "even" ? { color: bc.side === "buyers" ? GOOD : CRITICAL } : undefined}>
                                   {bc?.text ?? "—"}
+                                </td>
+                              </>
+                            )
+                          })()}
+                          {(() => {
+                            const of = orderFlow.get(tf) ?? null
+                            const p = of?.pct ?? 0
+                            // The chart's Delta bar colours: green / red, blue / orange past ±60 %.
+                            const dc = of?.delta == null ? undefined
+                              : of.delta >= 0 ? (p > 60 ? "#2979FF" : GOOD) : (p < -60 ? "#FF9100" : CRITICAL)
+                            const dv = of?.divergence ?? null
+                            const sign = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n).toLocaleString()}`
+                            return (
+                              <>
+                                <td className="p-2 text-right font-mono" data-testid={`delta-${tf}`}
+                                    style={dc ? { color: dc, fontWeight: Math.abs(p) > 60 ? 700 : undefined } : undefined}>
+                                  {of?.delta != null ? sign(of.delta) : "—"}
+                                </td>
+                                <td className="p-2 text-right font-mono" style={dc ? { color: dc } : undefined}>
+                                  {of?.pct != null ? `${p > 0 ? "+" : ""}${p.toFixed(1)}%` : "—"}
+                                </td>
+                                <td className="p-2 text-right font-mono" data-testid={`cvd-${tf}`}
+                                    style={of?.cvd != null && of.cvd !== 0 ? { color: of.cvd > 0 ? GOOD : CRITICAL } : undefined}>
+                                  {of?.cvd != null ? sign(of.cvd) : "—"}
+                                </td>
+                                <td className="p-2 whitespace-nowrap font-semibold" data-testid={`cvddiv-${tf}`}
+                                    style={dv ? { color: dv.kind.endsWith("Bullish") ? GOOD : CRITICAL } : undefined}
+                                    title={dv ? `Price ${dv.dPrice > 0 ? "+" : ""}${dv.dPrice.toFixed(2)} vs CVD ${sign(dv.dCvd)}, ${inTz(dv.from.t)} → ${inTz(dv.to.t)}` : undefined}>
+                                  {dv ? `${dv.kind} ${dv.strength.toFixed(1)}${dv.strong ? " strong" : ""} · ${inTz(dv.to.t)}` : <span className="text-muted-foreground font-normal">—</span>}
                                 </td>
                               </>
                             )

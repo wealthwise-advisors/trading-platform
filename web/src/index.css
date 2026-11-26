@@ -2390,6 +2390,8 @@ table.grid-table thead tr.grp-row th.grp-trade { color: #fde68a; background: #46
 table.grid-table thead tr.grp-row th.grp-pz { color: #f5f5f5; background: #3f3f46; }
 table.grid-table thead tr.grp-row th.grp-swing { color: #99f6e4; background: #0f3d38; }
 table.grid-table thead tr.grp-row th.grp-sig { color: #fbcfe8; background: #4a1d3a; }
+/* Sir's order flow (Volume Delta, CVD, CVD Divergence), 2026-11-26: blue, unlike its neighbours. */
+table.grid-table thead tr.grp-row th.grp-flow { color: #93c5fd; background: #13294b; }
 table.grid-table thead tr.grp-row th.grp-res { color: #fbbf24; background: #4a3207; }
 table.grid-table thead tr.grp-row th.grp-brk { color: #c084fc; background: #2c2140; }
 table.grid-table thead tr.grp-row th.grp-core { color: #d1d5db; background: #262a33; }

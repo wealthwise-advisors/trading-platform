@@ -490,6 +490,8 @@ export interface SwingStretch {
   label: string
   from: string
   to: string
+  /** The newest 10 Leg points, for the CVD Divergence column (2026-11-26). */
+  points?: { t: string; price: number; type: "H" | "L"; label: string }[]
 }
 
 export type ReplayWsMessage =

@@ -674,6 +674,10 @@ class MultiReplaySession:
             zz10, _ = calc_swing_count(closed["high"], closed["low"], closed["close"], open_=closed["open"])
             stretch = current_swing_stretch(zz10, closed.index[-1])
             if stretch:
+                # The newest 10 Leg points, for the grid's CVD Divergence column (sir, 2026-11-26).
+                stretch["points"] = [{"t": pd.Timestamp(t).isoformat(), "price": float(r["price"]),
+                                      "type": r["type"], "label": r["label"]}
+                                     for t, r in zz10.tail(12).iterrows()]
                 out[tf] = stretch
         return out
 

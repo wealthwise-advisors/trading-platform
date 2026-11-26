@@ -14,14 +14,17 @@
  * skipped; above 3.0 is strong. CVD restarts every session, so two points in
  * different sessions are never compared.
  */
-import type { ZigZagPoint } from "./types"
+import type { OHLCVRecord, ZigZagPoint } from "./types"
+import { buyerSellerSplit, volumeAverageWithContext } from "./volumeAverage"
 
 export type DivergenceKind = "Hidden Bullish" | "Regular Bullish" | "Hidden Bearish" | "Regular Bearish"
+/** What a divergence needs of a swing point. */
+export type SwingPt = Pick<ZigZagPoint, "t" | "price" | "type">
 
-export interface CvdDivergence {
+export interface CvdDivergence<P extends SwingPt = ZigZagPoint> {
   kind: DivergenceKind
-  from: ZigZagPoint
-  to: ZigZagPoint
+  from: P
+  to: P
   cvdFrom: number
   cvdTo: number
   dPrice: number
@@ -51,12 +54,12 @@ function classify(type: "H" | "L", dPrice: number, dCvd: number): DivergenceKind
   return dPrice < 0 ? "Hidden Bearish" : "Regular Bearish"
 }
 
-export function cvdDivergences(
-  points: readonly ZigZagPoint[], times: readonly string[],
+export function cvdDivergences<P extends SwingPt>(
+  points: readonly P[], times: readonly string[],
   cvd: readonly (number | null)[], volAvg: readonly (number | null)[], zoneOffset = 0,
-): CvdDivergence[] {
+): CvdDivergence<P>[] {
   const at = new Map(times.map((t, i) => [t, i]))
-  const out: CvdDivergence[] = []
+  const out: CvdDivergence<P>[] = []
   for (const type of ["L", "H"] as const) {
     const pts = points.filter((p) => p.type === type && at.has(p.t))
     for (let k = 1; k < pts.length; k++) {
@@ -74,4 +77,37 @@ export function cvdDivergences(
     }
   }
   return out.sort((x, y) => x.to.t.localeCompare(y.to.t))
+}
+
+/** Delta per bar (buyers - sellers, sir's split) and CVD, restarting each session --
+ *  the same numbers as src/analysis/indicators.py calc_volume_delta / calc_cvd. */
+export function deltaAndCvd(bars: ReadonlyArray<Pick<OHLCVRecord, "t" | "h" | "l" | "c" | "v">>, zoneOffset = 0) {
+  const delta: (number | null)[] = [], pct: (number | null)[] = [], cvd: (number | null)[] = []
+  let run = 0, session = ""
+  for (const b of bars) {
+    const s = buyerSellerSplit(b)
+    const d = s ? s.buyers - s.sellers : 0
+    const key = cvdSession(b.t, zoneOffset)
+    if (key !== session) { session = key; run = 0 }
+    run += d
+    delta.push(s ? d : null)
+    pct.push(s && b.v ? (d / b.v) * 100 : s ? 0 : null)
+    cvd.push(run)
+  }
+  return { delta, pct, cvd }
+}
+
+/** One Market Grid row: the newest bar's Delta, Delta % and CVD, and the newest
+ *  divergence between the timeframe's recent 10 Leg points. */
+export function orderFlowNow<P extends SwingPt>(
+  bars: ReadonlyArray<OHLCVRecord>, points: readonly P[],
+  volContext?: { t: string[]; v: (number | null)[] }, volLength = 20,
+) {
+  if (!bars.length) return null
+  const { delta, pct, cvd } = deltaAndCvd(bars)
+  const n = bars.length - 1
+  const divs = points.length > 1
+    ? cvdDivergences(points, bars.map((b) => b.t), cvd, volumeAverageWithContext(bars, volContext, volLength))
+    : []
+  return { delta: delta[n], pct: pct[n], cvd: cvd[n], divergence: divs.at(-1) ?? null }
 }

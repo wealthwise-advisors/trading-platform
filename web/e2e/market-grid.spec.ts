@@ -575,6 +575,35 @@ test("Live state shows each timeframe's swing levels: breakeven, 50% equilibrium
   await page.close()
 })
 
+test("Live state shows sir's order flow: Volume Delta, Delta %, CVD and CVD Divergence", async ({ browser }) => {
+  // Sir, 2026-11-26: the three studies in the table, not only on the chart.
+  test.setTimeout(240_000)
+  const page = await browser.newPage({ viewport: { width: 2800, height: 1200 } })
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+  const table = page.locator("table.grid-table").first()
+  const headers = (await table.locator("thead tr:last-child th").allInnerTexts()).map((h) => h.trim().toUpperCase())
+  const at = ["BUYER CONTROL", "VOLUME DELTA", "DELTA %", "CVD", "CVD DIVERGENCE", "LAST SIGNAL"].map((h) => headers.indexOf(h))
+  expect(at.every((i, k) => i >= 0 && i === at[0] + k)).toBe(true)          // side by side, after Buyer Control
+  const groups = (await table.locator("thead tr.grp-row th").allInnerTexts()).map((g) => g.trim().toUpperCase())
+  expect(groups).toContain("ORDER FLOW")
+  const [, iD, iP, iC, iV] = at
+  const rows = await table.locator("tbody tr").evaluateAll((trs) =>
+    trs.map((tr) => [...tr.querySelectorAll("td")].map((td) => td.textContent!.trim())))
+  expect(rows.length).toBeGreaterThan(0)
+  for (const c of rows) {
+    expect(c[iD]).toMatch(/^([+-]?[\d,]+|—)$/)
+    expect(c[iP]).toMatch(/^([+-]?\d+\.\d%|—)$/)
+    expect(c[iC]).toMatch(/^([+-]?[\d,]+|—)$/)
+    expect(c[iV]).toMatch(/^((Hidden|Regular) (Bullish|Bearish) \d+\.\d( strong)? · .+|—)$/)
+    // Delta % is Delta over the candle's volume, so their signs agree.
+    if (c[iD] !== "—" && c[iD] !== "0") expect(c[iP].startsWith("-")).toBe(c[iD].startsWith("-"))
+  }
+  expect(rows.some((c) => c[iD] !== "—")).toBe(true)
+  await page.close()
+})
+
 test("Group headings over every column, sir's zones in price order, and the Price Zone column", async ({ browser }) => {
   // User and sir, 2026-11-20: a heading row above the column names; Resistance, Breakout,
   // Equilibrium core, Support floor; Price Zone says where each timeframe's price is.

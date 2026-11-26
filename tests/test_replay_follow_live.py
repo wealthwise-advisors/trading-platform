@@ -122,7 +122,8 @@ class TestTheExtendAction:
             reply = ws.receive_json()
         assert reply["type"] == "swings" and set(reply["swings"]) == {"5m", "15m"}
         for st in reply["swings"].values():
-            assert set(st) == {"swing", "name", "up", "label", "from", "to"} and st["from"] <= st["to"]
+            # `points`: the newest 10 Leg points, for the grid's CVD Divergence column (2026-11-26).
+            assert set(st) == {"swing", "name", "up", "label", "from", "to", "points"} and st["from"] <= st["to"]
 
     def test_the_socket_survives_repeated_extends(self):
         replay_id = _create()
