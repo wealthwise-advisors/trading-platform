@@ -166,13 +166,6 @@ export interface IndicatorSeries {
   vwap?: (number | null)[]
   vwap_upper?: (number | null)[]
   vwap_lower?: (number | null)[]
-  /** Bollinger Bands (20, 2) on the close: SMA with population-sigma bands.
-   *  A rolling window, unrelated to the session-anchored VWAP bands above --
-   *  they are separate indicators that happen to share the price panel.
-   *  Optional so a cached response from before they existed still type-checks. */
-  bb_middle?: (number | null)[]
-  bb_upper?: (number | null)[]
-  bb_lower?: (number | null)[]
   /** Volume Delta per bar, its % of the bar's volume, and the session's running
    *  total (CVD) -- sir's order-flow studies, 2026-11-26. */
   delta?: (number | null)[]

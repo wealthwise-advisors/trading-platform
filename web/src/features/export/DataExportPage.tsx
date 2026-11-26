@@ -84,7 +84,7 @@ export function DataExportPage() {
         <h2 className="text-lg font-bold flex items-center gap-2">
           <Download className="h-4 w-4" aria-hidden /> Export Data</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Download price data for any symbol and date range, with every study on the chart (VWAP and all its bands, Bollinger, EMAs, RSI, StochRSI, MFI, volume, buyers and sellers), the swing points and the Volume Profile levels — no backtest needed. Uses the sidebar's session hours, swing settings and time zone.
+          Download price data for any symbol and date range, with every study on the chart (VWAP and all its bands, EMAs, RSI, StochRSI, MFI, volume, buyers and sellers, Volume Delta, CVD), POC / VAH / VAL with their Match, the swing points with Volume Breakeven, 50% Equilibrium and Buyer Control, and the Volume Profile levels — no backtest needed. Uses the sidebar's session hours, swing settings and time zone.
         </p>
       </div>
 

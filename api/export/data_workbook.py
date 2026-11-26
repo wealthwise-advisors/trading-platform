@@ -32,10 +32,14 @@ VOLUME_AVG = "E040FB"                                          # VOLUME_AVG_COLO
 BUYERS, SELLERS = "26A69A", "EF5350"
 EMA9, EMA20, EMA50 = "FFAB40", "A3E635", "C4B5FD"
 VWAP = "E879F9"                                                # vwapStyle.vwap
-BB_BASIS, BB_BAND = "6B7FA8", "8B9DC3"
 CVD = "22D3EE"                                                 # CandlestickChart.tsx CVD_LINE
 #: Volume Delta bars (CandlestickChart.tsx): green / red, blue / orange past ±60 %.
 DELTA_UP, DELTA_DOWN, DELTA_BIG_UP, DELTA_BIG_DOWN = "00C853", "FF5252", "2979FF", "FF9100"
+#: Market Grid (ReplayPage.tsx, index.css): VAHigh / VALow text, Price Zone words, and the
+#: POC Match level palette (pocColumns.ts POC_LEVEL_PALETTE), coloured lowest level first.
+GRID_VAH, GRID_VAL = "FF3B30", "2F80FF"
+ZONE_COLORS = {"Buy / Reversal": "FBBF24", "Breakout": "C084FC", "No trade": "D1D5DB", "Short / Reversal": "5A9BFF"}
+LEVEL_PALETTE = ["56B4E9", "E69F00", "F2F2F2", "F0E442", "3D8BFF", "CC79A7", "9CA3AF", "B5835A"]
 OSC_LINE, STOCH_K, STOCH_D, MFI_LINE = "FFFFFF", "FF6B6B", "E040FB", "E0A800"
 ZONE_ABOVE, ZONE_BELOW = "FF5252", "00C853"                    # past overbought / oversold
 HIGH_TAG, LOW_TAG = "22C55E", "EF4444"                         # HH/LH and HL/LL tags
@@ -74,11 +78,15 @@ def _column_style(name: str, vwap_levels) -> tuple[str, str]:
     fixed = {"Volume": (TEXT, VOL_FMT), "VolumeAvg (20)": (VOLUME_AVG, "#,##0.0"), "Buyers %": (TEXT, PCT_FMT),
              "Buyers": (BUYERS, VOL_FMT), "Sellers": (SELLERS, VOL_FMT), "EMA 9": (EMA9, PRICE_FMT),
              "EMA 20": (EMA20, PRICE_FMT), "EMA 50": (EMA50, PRICE_FMT), "VWAP": (VWAP, PRICE_FMT),
-             "BB 20 2 basis": (BB_BASIS, PRICE_FMT), "BB Upper": (BB_BAND, PRICE_FMT),
-             "BB Lower": (BB_BAND, PRICE_FMT), "RSI(2)": (OSC_LINE, OSC_FMT), "FullK": (STOCH_K, OSC_FMT),
+             "RSI(2)": (OSC_LINE, OSC_FMT), "FullK": (STOCH_K, OSC_FMT),
              "FullD": (STOCH_D, OSC_FMT), "RSI(13)": (OSC_LINE, OSC_FMT), "MFI": (MFI_LINE, OSC_FMT),
              "Volume Delta": (TEXT, '+#,##0;-#,##0;0'), "Delta %": (TEXT, '+0.0"%";-0.0"%";0.0"%"'),
-             "CVD": (CVD, '+#,##0;-#,##0;0')}
+             "CVD": (CVD, '+#,##0;-#,##0;0'),
+             # The Market Grid's colours (ReplayPage.tsx): VAHigh red, POC white, VALow blue.
+             "VAHigh": (GRID_VAH, PRICE_FMT), "POC": ("FFFFFF", PRICE_FMT), "VALow": (GRID_VAL, PRICE_FMT),
+             "VAH Match": (TEXT, "0"), "POC Match": (TEXT, "0"), "VAL Match": (TEXT, "0"),
+             "Volume Breakeven": (GOLD, PRICE_FMT), "50% Equilibrium": (LILAC, PRICE_FMT),
+             "Buyer Control": (TEXT, VOL_FMT), "Buyer Control %": (TEXT, PCT_FMT)}
     if name in fixed:
         return fixed[name]
     for lv in vwap_levels:
@@ -144,6 +152,10 @@ def _bars_sheet(ws, table: pd.DataFrame, meta: ExportMeta, vwap_levels) -> None:
     col = {n: get_column_letter(i) for i, n in enumerate(names, start=1)}
     # Close in the candle's colour, Volume in its bar's colour (volumeBarColors: against the previous close).
     closes, opens = table["Close"].tolist(), table["Open"].tolist()
+    # One colour per whole-number level in each Match column, lowest level first, as the grid does.
+    level_colors = {m: {lv: LEVEL_PALETTE[i % len(LEVEL_PALETTE)]
+                        for i, lv in enumerate(sorted(table[m].dropna().unique()))}
+                    for m in ("VAH Match", "POC Match", "VAL Match") if m in table}
     for k in range(len(rows)):
         r = 5 + k
         ws[f"{col['Close']}{r}"].font = Font(name=MONO, size=10, bold=True,
@@ -151,6 +163,17 @@ def _bars_sheet(ws, table: pd.DataFrame, meta: ExportMeta, vwap_levels) -> None:
         if "Volume" in col:
             vc = VOL_FLAT if k == 0 or closes[k] == closes[k - 1] else VOL_UP if closes[k] > closes[k - 1] else VOL_DOWN
             ws[f"{col['Volume']}{r}"].font = Font(name=MONO, size=10, color=vc)
+        if "Price Zone" in col and ws[f"{col['Price Zone']}{r}"].value in ZONE_COLORS:
+            z = ws[f"{col['Price Zone']}{r}"]
+            z.font = Font(name=ARIAL, size=10, bold=True, color=ZONE_COLORS[z.value])
+        for m in ("VAH Match", "POC Match", "VAL Match"):
+            c = ws[f"{col[m]}{r}"] if m in col else None
+            if c is not None and c.value is not None and c.value in level_colors[m]:
+                c.font = Font(name=MONO, size=10, bold=True, color=level_colors[m][c.value])
+        if "Buyer Control %" in col:
+            c = ws[f"{col['Buyer Control %']}{r}"]
+            if isinstance(c.value, (int, float)) and c.value != 50:
+                c.font = Font(name=MONO, size=10, bold=True, color=CANDLE_UP if c.value > 50 else CANDLE_DOWN)
         if "Volume Delta" in col:
             # The chart's Delta bar colours: green / red, blue / orange past ±60 %.
             d, p = table["Volume Delta"].iloc[k], table["Delta %"].iloc[k]
@@ -176,7 +199,8 @@ def _bars_sheet(ws, table: pd.DataFrame, meta: ExportMeta, vwap_levels) -> None:
             ws.conditional_formatting.add(ref, CellIsRule(operator="lessThanOrEqual", formula=[str(os_)],
                                                           font=Font(color=ZONE_BELOW, bold=True)))
     # Room for the header and its filter arrow; VWAP band names wrap onto two lines instead.
-    _widths(ws, [27] + [12 if n.startswith("VWAP ") else max(10.5, len(n) + 4) for n in names[1:]])
+    _widths(ws, [27] + [12 if n.startswith("VWAP ") else 19 if n == "Price Zone"     # "Short / Reversal"
+                        else max(10.5, len(n) + 4) for n in names[1:]])
     ws.freeze_panes = "B5"
     ws.auto_filter.ref = f"A4:{get_column_letter(len(names))}{max(last, 5)}"
 
@@ -209,7 +233,6 @@ def _key_sheet(ws, meta: ExportMeta, columns: list[str], vwap_levels) -> None:
         "EMA 9 / 20 / 50": "Exponential moving averages of the close.",
         "VWAP": "Volume-weighted average price, starting again at each session open.",
         "VWAP Upper / Lower": "VWAP plus / minus that many standard deviations; every level the chart offers.",
-        "BB 20 2 basis / Upper / Lower": "Bollinger Bands: 20-candle average with a 2 standard deviation band.",
         "RSI(2), RSI(13)": "RSI, Wilder's. Red at or above overbought (94 / 55), green at or below oversold (5 / 45).",
         "FullK / FullD": "StochRSI(14, 14, 3, 1). Red at or above 80, green at or below 20.",
         "MFI": "Money Flow Index(9), as thinkorswim. Red at or above 80, green at or below 20.",
@@ -217,7 +240,15 @@ def _key_sheet(ws, meta: ExportMeta, columns: list[str], vwap_levels) -> None:
                                   "Schwab gives no bid/ask volume), and that as % of its volume. Green / red; "
                                   "blue / orange past ±60 %.",
         "CVD": "Cumulative Volume Delta: the running total of Volume Delta, restarting at 6 PM, midnight and 8 AM ET.",
-        "Swing": "The swing letter (A, B, C ...) on the candle of each big swing point.",
+        "Price Zone": "Where the candle closed among its levels (Market Grid): at or above VAHigh Buy / Reversal, "
+                      "VWAP to VAHigh Breakout, below VWAP No trade, at or below VALow Short / Reversal.",
+        "VAHigh / POC / VALow": "Volume Profile as the Market Grid shows it on that candle: the candles up to it, "
+                                "over the timeframe's own days (1m and 5m: 2 days), 48 rows, 70 % value area.",
+        "VAH / POC / VAL Match": "The level's whole number. Candles in the same colour sit on the same level.",
+        "Swing": "The 10 Leg swing (A, B, C ...) the candle belongs to.",
+        "Volume Breakeven": "The swing's typical price (H+L+C)/3 x volume, added up, divided by its volume (sir's formula).",
+        "50% Equilibrium": "(The swing's highest high + lowest low) / 2.",
+        "Buyer Control / %": "The swing's buyer volume, added up, and its share of the swing's volume: green over 50 %, red under.",
         "10 Leg / 10 Leg Tag": "Big swing number (starts again at 1 each swing) and its tag: HH / LH on green, HL / LL on red.",
         "3 Leg / 3 Leg Tag": "Small swing numeral (i, ii, iii ...), counted inside each big move, and its tag.",
         "Swing Points sheet": "Every swing point in time order, with its price.",

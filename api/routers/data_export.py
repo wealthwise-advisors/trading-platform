@@ -37,8 +37,66 @@ def band_name(side: str, level: float) -> str:
     return f"VWAP {side} {'+' if side == 'Upper' else '-'}{level:.1f}σ"
 
 
+#: Each timeframe's Volume Profile window on the Market Grid, in calendar days
+#: (web/src/lib/chartSetup.ts SPECIFIED). A timeframe without one profiles everything loaded.
+GRID_PROFILE_DAYS = {"1m": 2, "5m": 2, "10m": 3, "15m": 4, "20m": 5, "30m": 15, "45m": 20,
+                     "1h": 25, "2h": 180, "4h": 180}
+
+
+def _grid_profile(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """VAHigh / POC / VALow per candle, as the Market Grid's tape shows them: the profile
+    of the candles up to and including this one, over the timeframe's own days
+    (web/src/lib/profileWindow.ts), 48 rows, 70 % value area."""
+    out = pd.DataFrame(index=df.index, columns=["VAHigh", "POC", "VALow"], dtype=float)
+    if "volume" not in df or df.empty:
+        return out
+    days = GRID_PROFILE_DAYS.get(timeframe)
+    dates = df.index.normalize()
+    rows = []
+    for i in range(len(df)):
+        start = 0 if days is None else int(dates.searchsorted(dates[i] - pd.Timedelta(days=days - 1)))
+        win = df.iloc[start:i + 1]
+        vp = calc_volume_profile(win["high"], win["low"], win["close"], win["volume"]) if len(win) >= 2 else {}
+        rows.append([vp.get("vah"), vp.get("poc"), vp.get("val")])
+    out[:] = np.array(rows, dtype=float)
+    return out
+
+
+def _price_zone(close: float, vah: float, val: float, vwap: float) -> str | None:
+    """web/src/lib/structureZones.ts priceZone: sir's four zones."""
+    if any(pd.isna(x) for x in (close, vah, val, vwap)):
+        return None
+    if close >= vah:
+        return "Buy / Reversal"
+    if close <= val:
+        return "Short / Reversal"
+    return "Breakout" if close >= vwap else "No trade"
+
+
+def _swing_levels(df: pd.DataFrame, zz10: list[dict]) -> dict[int, tuple[float, float, float, float]]:
+    """Sir's swing levels for every 10 Leg swing (web/src/lib/swingStrength.ts
+    swingBreakeven), over the same stretch the chart's swing box and the grid use
+    (current_swing_stretch): first point to last point, or from the previous swing's
+    last point when the swing has only one. Both end candles count.
+    Returns swing -> (breakeven, equilibrium, buyer control, buyer control %)."""
+    pct, _, _ = calc_volume_split(df["high"], df["low"], df["close"], df["volume"])
+    out, prev_last = {}, None
+    for swing in sorted({p["swing"] for p in zz10}):
+        pts = [p for p in zz10 if p["swing"] == swing]
+        start = pts[0]["t"] if len(pts) > 1 or prev_last is None else prev_last
+        end = pts[-1]["t"] if len(pts) > 1 or prev_last is not None else df.index[-1]
+        s = df.loc[pd.Timestamp(start):pd.Timestamp(end)]
+        vol = s["volume"].fillna(0)
+        if len(s) and vol.sum() > 0:
+            buyers = float((vol * pct.loc[s.index]).sum())
+            out[swing] = (float(((s["high"] + s["low"] + s["close"]) / 3 * vol).sum() / vol.sum()),
+                          float((s["high"].max() + s["low"].min()) / 2), buyers, buyers / float(vol.sum()) * 100)
+        prev_last = pts[-1]["t"]
+    return out
+
+
 def _with_studies(df: pd.DataFrame, session_start: time_type | None,
-                  dev_3: float, dev_10: float) -> tuple[pd.DataFrame, pd.DataFrame]:
+                  dev_3: float, dev_10: float, timeframe: str = "") -> tuple[pd.DataFrame, pd.DataFrame]:
     """The bars plus every study the chart draws, and the chart's swing points (Eastern times)."""
     ind = serializers.price_data_to_response(df, session_start)["indicators"]
     s = {k: pd.Series([np.nan if v is None else v for v in vals], index=df.index, dtype=float)
@@ -57,11 +115,17 @@ def _with_studies(df: pd.DataFrame, session_start: time_type | None,
     for lv in VWAP_LEVELS:
         out[band_name("Upper", lv)] = s["vwap"] + lv * sigma
         out[band_name("Lower", lv)] = s["vwap"] - lv * sigma
-    out["BB 20 2 basis"], out["BB Upper"], out["BB Lower"] = s["bb_middle"], s["bb_upper"], s["bb_lower"]
     out["RSI(2)"], out["FullK"], out["FullD"] = s["rsi2"], s["stochrsi_k"], s["stochrsi_d"]
     out["RSI(13)"], out["MFI"] = s["rsi13"], s["mfi"]
     # Sir's order-flow studies (2026-11-26): the chart's Volume Delta and CVD rows.
     out["Volume Delta"], out["Delta %"], out["CVD"] = s["delta"], s["delta_pct"], s["cvd"]
+    # The Market Grid's levels per candle (sir, 2026-11-26: "where is POC match, VAH, VAL").
+    # A Match column is the level's whole number, which the grid groups and colours by.
+    prof = _grid_profile(df, timeframe)
+    out["Price Zone"] = [_price_zone(c, h, lo, w) for c, h, lo, w in
+                         zip(df["close"], prof["VAHigh"], prof["VALow"], s["vwap"])]
+    for col, match in (("VAHigh", "VAH Match"), ("POC", "POC Match"), ("VALow", "VAL Match")):
+        out[col], out[match] = prof[col], np.trunc(prof[col])
     out = out.round(2)
 
     zz = serializers.zigzag_to_records(df, dev_3=dev_3, dev_10=dev_10)
@@ -78,6 +142,18 @@ def _with_studies(df: pd.DataFrame, session_start: time_type | None,
                          "High/Low": "High" if p["type"] == "H" else "Low", "Price": p["price"],
                          "Tag": p["structure"]})
     swings = pd.DataFrame(rows, columns=["Time", "Swing", "Level", "Number", "High/Low", "Price", "Tag"])
+
+    # Every candle belongs to a swing; each carries its swing's levels (Market Grid / swing box).
+    swing_no = pd.Series(np.nan, index=out.index)
+    for p in zz["zigzag_10"]:
+        swing_no[pd.Timestamp(p["t"])] = p["swing"]
+    swing_no = swing_no.ffill()
+    out["Swing"] = [swing_name(int(n)) if pd.notna(n) else None for n in swing_no]
+    levels = _swing_levels(df, zz["zigzag_10"]) if "volume" in df and zz["zigzag_10"] else {}
+    cols = ["Volume Breakeven", "50% Equilibrium", "Buyer Control", "Buyer Control %"]
+    vals = [levels.get(int(n)) if pd.notna(n) else None for n in swing_no]
+    for k, col in enumerate(cols):
+        out[col] = [round(v[k], 2) if v else None for v in vals]
     return out, swings.sort_values(["Time", "Level"]).reset_index(drop=True)
 
 
@@ -111,12 +187,16 @@ def _sections(table: pd.DataFrame, swings: pd.DataFrame, levels: pd.DataFrame,
     bands = [band_name(side, lv) for lv in VWAP_LEVELS for side in ("Upper", "Lower")]
     groups = [("Price and Volume", ["Open", "High", "Low", "Close", "Volume", "VolumeAvg (20)",
                                     "Buyers %", "Buyers", "Sellers"]),
-              ("EMAs and Bollinger Bands", ["EMA 9", "EMA 20", "EMA 50", "BB 20 2 basis", "BB Upper", "BB Lower"]),
+              ("EMAs", ["EMA 9", "EMA 20", "EMA 50"]),
               ("VWAP and bands 0.5 to 2", ["VWAP"] + bands[:8]),
               ("VWAP bands 2.5 to 5", bands[8:]),
               ("Oscillators", ["RSI(2)", "FullK", "FullD", "RSI(13)", "MFI"]),
               ("Volume Delta and CVD", ["Volume Delta", "Delta %", "CVD"]),
-              ("Swing count", ["Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag"])]
+              ("Price Zone, VAH, POC, VAL", ["Price Zone", "VAHigh", "VAH Match", "POC", "POC Match",
+                                             "VALow", "VAL Match"]),
+              ("Swing count", ["Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag"]),
+              ("Swing levels", ["Swing", "Volume Breakeven", "50% Equilibrium", "Buyer Control",
+                                "Buyer Control %"])]
     t = table.rename_axis(time_col)
     out = [(name, t[[c for c in cols if c in t]]) for name, cols in groups]
     return out + [("Swing Points", swings.set_index("Time").rename_axis(time_col)),
@@ -183,7 +263,7 @@ def export_data(
         raise HTTPException(400, f"No {symbol} data returned for {start} → {end} "
                                  f"from the {data_source} source.")
 
-    table, swings = _with_studies(df, session_start, dev_3, dev_10)
+    table, swings = _with_studies(df, session_start, dev_3, dev_10, timeframe)
     levels = _levels(df)
     # Everything is worked out on Eastern bars; only the printed clock moves to the chosen zone.
     zone, shift = ZONES[tz_offset], timedelta(minutes=tz_offset)

@@ -62,6 +62,7 @@ import {
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import { OrderFlowPanel } from "@/components/charts/OrderFlowPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
@@ -185,7 +186,7 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
  * THE BUG THE BORDER FIXES. These used to be bare labels and bare gear
  * buttons separated by a `|` that was `hidden wide:inline` -- so at any width
  * below `wide` the separators vanished and the row read
- * "VWAP (gear) BB(20,2) Volume Profile (gear) RSI(2) (gear)", with nothing
+ * "VWAP (gear) Volume Profile (gear) RSI(2) (gear)", with nothing
  * saying whether a gear belonged to the study on its left or its right. That
  * is exactly how the Volume Profile gear came to be reported as missing.
  * A box around each study answers it at every width, so the separators are
@@ -287,7 +288,7 @@ function MenuToggle({
  * offset (2026-11-20: sir's thinkorswim reads Central, the chart read Eastern).
  * Daily and longer candles are stamped at midnight and keep their date.
  */
-const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd"
+const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd", DIV_KEY = "autotrader.studies.cvddiv"
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === "1" } catch { return false }
 }
@@ -374,10 +375,6 @@ export function CandlestickChart({
   // Which studies are on: the applied (or default) template's choice when there is one.
   const [studies0] = useState(loadStudies)
   const [vwapOn, setVwapOn] = useState(studies0.vwap ?? showVwap)
-  // Bollinger Bands (20, 2). Off by default: the price panel already carries
-  // VWAP and its bands, and stacking a second envelope on top of that without
-  // being asked makes the candles harder to read, not easier.
-  const [bbOn, setBbOn] = useState(studies0.bb ?? false)
   const [eventsOn, setEventsOn] = useState(studies0.events ?? true)
   // Sir's swing levels drawn across every swing (2026-11-17); on by default so they show without hunting.
   const [swingLevelsOn, setSwingLevelsOn] = useState(studies0.swingLevels ?? true)
@@ -486,6 +483,9 @@ export function CandlestickChart({
   // Volume Delta and CVD rows (sir, 2026-11-26): off until switched on, remembered per browser.
   const [deltaOn, setDeltaOn] = useState(() => readFlag(DELTA_KEY))
   const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
+  const [divOn, setDivOn] = useState(() => readFlag(DIV_KEY))
+  const [flowPanel, setFlowPanel] = useState(false)
+  useEffect(() => writeFlag(DIV_KEY, divOn), [divOn])
   useEffect(() => writeFlag(DELTA_KEY, deltaOn), [deltaOn])
   useEffect(() => writeFlag(CVD_KEY, cvdOn), [cvdOn])
   const [vpRowMode, setVpRowMode] = useState<RowHeightMode>("AUTOMATIC")
@@ -597,7 +597,7 @@ export function CandlestickChart({
   const [templateNote, setTemplateNote] = useState("")
   const loadTemplates = () => api.listTemplates().then(setTemplates).catch(() => setTemplates([]))
   const studiesNow = (): Studies => ({
-    vwap: vwapOn, bb: bbOn, swingLevels: swingLevelsOn, volumeProfile: vpOn, events: eventsOn,
+    vwap: vwapOn, swingLevels: swingLevelsOn, volumeProfile: vpOn, events: eventsOn,
     rsi2: osc.rsi2, stochrsi: osc.stochrsi, rsi13: osc.rsi13, mfi: osc.mfi,
   })
   const templateAction = async (what: string, run: () => Promise<unknown>) => {
@@ -1251,30 +1251,7 @@ export function CandlestickChart({
     )
   }
 
-  // ── Bollinger Bands (20, 2) ───────────────────────────────────────────
-  // A REAL indicator, not the VWAP bands wearing a different name. These are
-  // a 20-bar simple moving average with population-sigma envelopes
-  // (src/analysis/indicators.py::calc_bollinger_bands); the VWAP bands above
-  // are volume-weighted and reset every session. They sit at different prices
-  // and they are labelled differently for that reason.
-  //
-  // Dashed and dimmer than VWAP so that with both on, the eye can still tell
-  // which envelope is which.
-  const bbHasData = (indicators.bb_middle ?? []).some((v) => v != null)
-  if (bbOn && bbHasData) {
-    const bbHover = (n: string) => `${n}: %{y:.2f}<extra></extra>`
-    data.push(
-      { type: "scatter", mode: "lines", x: t, y: indicators.bb_upper, name: "BB Upper",
-        line: { color: "#8b9dc3", width: 1, dash: "dash" }, hovertemplate: bbHover("BB Upper"),
-        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: indicators.bb_lower, name: "BB Lower",
-        line: { color: "#8b9dc3", width: 1, dash: "dash" }, hovertemplate: bbHover("BB Lower"),
-        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: indicators.bb_middle, name: "BB 20 2",
-        line: { color: "#6b7fa8", width: 1.2 }, hovertemplate: bbHover("BB Basis"),
-        legendgroup: "bb", xaxis: "x", yaxis: "y" } as unknown as Data,
-    )
-  }
+  // Bollinger Bands were here until 2026-11-27, removed at sir's request.
 
   // ── Volume Profile ────────────────────────────────────────────────────
   // Drawn on its own x-axis (xaxis9) that OVERLAYS the price row rather than
@@ -1933,20 +1910,27 @@ export function CandlestickChart({
                 line: { color: CVD_LINE, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
     shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
                   line: { color: LEVEL_LINE, width: 1, dash: "dot" } })
-    // Divergences between consecutive 10 Leg swing highs / lows (lib/cvdDivergence.ts):
-    // a line joining the two points on the CVD row and on price, named at the second.
+  }
+  // CVD Divergence, sir's third study, its own switch: between consecutive 10 Leg swing
+  // highs / lows (lib/cvdDivergence.ts), a dashed line joining the two points on price
+  // -- and on the CVD row when that is on -- named at the second point.
+  if (divOn && (indicators.cvd ?? []).some((v) => v != null)) {
+    const s = cvdRow ? suffixOf("cvd") : null
     for (const d of cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset)) {
       const color = d.kind.endsWith("Bullish") ? DIV_BULL : DIV_BEAR
       const text = `${d.kind} ${d.strength.toFixed(1)}${d.strong ? " strong" : ""}`
-      data.push(
-        { type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo],
-          line: { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }, marker: { size: 6, color },
-          hoverinfo: "skip", showlegend: false, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data,
-        { type: "scatter", mode: "lines", x: onCandle([d.from, d.to]), y: [d.from, d.to].map(drawnEdge),
-          line: { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }, hoverinfo: "skip", showlegend: false,
-          xaxis: "x", yaxis: "y" } as unknown as Data,
-      )
-      annotations.push({ x: d.to.t, y: d.cvdTo, xref: `x${s}` as Annotations["xref"], yref: `y${s}` as Annotations["yref"],
+      const line = { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }
+      const [x0, x1] = onCandle([d.from, d.to])
+      data.push({ type: "scatter", mode: "lines", x: [x0, x1], y: [d.from, d.to].map(drawnEdge), line,
+                  hoverinfo: "skip", showlegend: false, xaxis: "x", yaxis: "y" } as unknown as Data)
+      if (s) {
+        data.push({ type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo], line,
+                    marker: { size: 6, color }, hoverinfo: "skip", showlegend: false,
+                    xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+      }
+      // The name on the CVD row when it is shown, otherwise beside the price point.
+      annotations.push({ ...(s ? { x: d.to.t, y: d.cvdTo, xref: `x${s}`, yref: `y${s}` }
+                                 : { x: x1, y: drawnEdge(d.to), xref: "x", yref: "y" }),
                          text: `<b>${text}</b>`, showarrow: false, yanchor: d.to.type === "H" ? "bottom" : "top",
                          font: { size: 10, color }, bgcolor: "rgba(10,14,22,0.85)", borderpad: 2 } as Partial<Annotations>)
     }
@@ -2819,17 +2803,6 @@ export function CandlestickChart({
       ]),
     )
   }
-  if (bbOn) {
-    legendEntries.push(
-      { label: "BB 20 2 basis", color: "#6b7fa8", kind: "line",
-        note: "20-bar mean, 2 sigma envelope",
-        value: fmtPrice(lastReading(indicators.bb_middle)) },
-      { label: "BB Upper", color: "#8b9dc3", kind: "dash",
-        value: fmtPrice(lastReading(indicators.bb_upper)) },
-      { label: "BB Lower", color: "#8b9dc3", kind: "dash",
-        value: fmtPrice(lastReading(indicators.bb_lower)) },
-    )
-  }
   if (vpOn) {
     legendEntries.push({ label: "Volume Profile", color: "rgb(56,189,248)", kind: "band",
                          note: "value area darker than the rest" })
@@ -2895,7 +2868,6 @@ export function CandlestickChart({
                                 bg-[var(--surface-1)] py-1 shadow-xl">
                   <MenuHeader title="Indicators" onClose={() => setIndicatorMenu(false)} />
                   <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
-                  <MenuToggle label="Bollinger Bands (20, 2)" checked={bbOn} onChange={setBbOn} />
                   <MenuToggle label="Economic events" checked={eventsOn} onChange={setEventsOn} />
                   {showZigzag && <MenuToggle label="Swing levels" checked={swingLevelsOn} onChange={setSwingLevelsOn} />}
                   <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
@@ -3094,18 +3066,6 @@ export function CandlestickChart({
             />
           </div>
 
-          {/* Bollinger Bands has no settings panel, so no gear. The chip still
-              wraps it, so a study without a gear looks like a study rather than
-              like one that lost its button. */}
-          <div className={`${STUDY_CHIP} pr-2`}>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={bbOn}
-                     aria-label="Show Bollinger Bands"
-                     onChange={(e) => setBbOn(e.target.checked)} />
-              <span>BB(20,2)</span>
-            </label>
-          </div>
-
           {showZigzag && (
             <div className={`${STUDY_CHIP} pr-2`}>
               <label className="flex items-center gap-1.5 cursor-pointer"
@@ -3166,26 +3126,22 @@ export function CandlestickChart({
               <span>VolumeAvg</span>
             </label>
             <StudyGear label="VolumeAvg settings" title="VolumeAvg settings"
-                       onClick={() => { setVolOn(true); setOscPanel(null); setVolPanel(true) }} />
+                       onClick={() => { setVolOn(true); setOscPanel(null); setFlowPanel(false); setVolPanel(true) }} />
           </div>
 
           {/* Sir's order-flow studies (2026-11-26). No settings: the ±60% filter and the
               three CVD sessions are his fixed definitions. */}
+          {/* Sir's three order-flow studies in ONE chip (user, 2026-11-27): the box switches
+              all three, the gear picks them one by one. */}
           <div className={STUDY_CHIP}>
             <label className="flex items-center gap-1.5 cursor-pointer"
-                   title="Volume Delta per candle: buyers minus sellers. Blue / orange past ±60% of the candle's volume.">
-              <input type="checkbox" checked={deltaOn} aria-label="Show Volume Delta"
-                     onChange={(e) => setDeltaOn(e.target.checked)} />
-              <span>Volume Delta</span>
+                   title="Volume Delta, Cumulative Volume Delta and CVD Divergence. The gear picks which.">
+              <input type="checkbox" checked={deltaOn || cvdOn || divOn} aria-label="Show Order Flow"
+                     onChange={(e) => { const on = e.target.checked; setDeltaOn(on); setCvdOn(on); setDivOn(on) }} />
+              <span>Order Flow</span>
             </label>
-          </div>
-          <div className={STUDY_CHIP}>
-            <label className="flex items-center gap-1.5 cursor-pointer"
-                   title="Cumulative Volume Delta, restarting 6 PM, midnight and 8 AM ET, with divergences at the 10 Leg swings.">
-              <input type="checkbox" checked={cvdOn} aria-label="Show CVD"
-                     onChange={(e) => setCvdOn(e.target.checked)} />
-              <span>CVD</span>
-            </label>
+            <StudyGear label="Order Flow settings" title="Order Flow settings"
+                       onClick={() => { setVolPanel(false); setOscPanel(null); setFlowPanel(true) }} />
           </div>
 
         </>}
@@ -3504,6 +3460,11 @@ export function CandlestickChart({
         {volPanel && (
           <VolumeAvgPanel length={volLength} onLength={setVolLength} onClose={() => setVolPanel(false)}
                           className="absolute right-0 top-7 z-20" />
+        )}
+        {flowPanel && (
+          <OrderFlowPanel value={{ delta: deltaOn, cvd: cvdOn, divergence: divOn }}
+                          onChange={(v) => { setDeltaOn(v.delta); setCvdOn(v.cvd); setDivOn(v.divergence) }}
+                          onClose={() => setFlowPanel(false)} className="absolute right-0 top-7 z-20" />
         )}
       </div>
 

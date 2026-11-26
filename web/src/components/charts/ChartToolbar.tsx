@@ -99,7 +99,7 @@ export function ChartToolbar({
    *  every control on one row and leaves that line to the quote. */
   actions?: React.ReactNode
   /**
-   * The study chips -- VWAP, Bollinger, Volume Profile and the oscillators.
+   * The study chips -- VWAP, Volume Profile, the oscillators and Order Flow.
    *
    * They had a row of their own above this one. The reference puts the
    * studies and the chart's tools on a single line, and the second row was

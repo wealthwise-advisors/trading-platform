@@ -27,9 +27,11 @@ LEVELS = (0.5, 1, 1.5, 2, 2.5, 3, 4, 5)
 BANDS = [f"VWAP {s} {'+' if s == 'Upper' else '-'}{lv:.1f}σ" for lv in LEVELS for s in ("Upper", "Lower")]
 COLUMNS = (["Open", "High", "Low", "Close", "Volume", "VolumeAvg (20)", "Buyers %", "Buyers", "Sellers",
             "EMA 9", "EMA 20", "EMA 50", "VWAP"] + BANDS
-           + ["BB 20 2 basis", "BB Upper", "BB Lower", "RSI(2)", "FullK", "FullD", "RSI(13)", "MFI",
+           + ["RSI(2)", "FullK", "FullD", "RSI(13)", "MFI",
               "Volume Delta", "Delta %", "CVD",
-              "Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag"])
+              "Price Zone", "VAHigh", "VAH Match", "POC", "POC Match", "VALow", "VAL Match",
+              "Swing", "10 Leg", "10 Leg Tag", "3 Leg", "3 Leg Tag",
+              "Volume Breakeven", "50% Equilibrium", "Buyer Control", "Buyer Control %"])
 
 
 def _export(fmt="csv", **extra):
@@ -63,7 +65,7 @@ def test_studies_equal_the_charts_series(table, bars):
     ind = serializers.price_data_to_response(bars, pd.Timestamp("09:30").time())["indicators"]
     for col, key in [("RSI(2)", "rsi2"), ("RSI(13)", "rsi13"), ("FullK", "stochrsi_k"), ("FullD", "stochrsi_d"),
                      ("MFI", "mfi"), ("VWAP", "vwap"), ("VWAP Upper +2.0σ", "vwap_upper"),
-                     ("VWAP Lower -2.0σ", "vwap_lower"), ("BB Upper", "bb_upper"), ("EMA 9", "ema9"),
+                     ("VWAP Lower -2.0σ", "vwap_lower"), ("EMA 9", "ema9"),
                      ("Volume Delta", "delta"), ("Delta %", "delta_pct"), ("CVD", "cvd")]:
         chart = np.array([np.nan if v is None else v for v in ind[key]], dtype=float)
         got = table[col].to_numpy(dtype=float)
@@ -83,6 +85,46 @@ def test_swing_columns_equal_the_charts_swing_points(table, bars):
         want = {pd.Timestamp(p["t"]): (p["label"], p["structure"]) for p in zz[level]}
         got = {ts: (str(v), table.at[ts, f"{col} Tag"]) for ts, v in table[col].dropna().items()}
         assert want and got == want, col
+
+
+def test_poc_vah_val_are_the_market_grids_per_candle_profile(table, bars):
+    # Sir, 2026-11-26: "where is POC match, VAH, VAL". The Market Grid profiles each
+    # candle over its timeframe's own days (5m: 2 calendar days) up to and including it.
+    for i in (5, len(bars) // 2, len(bars) - 1):
+        ts = bars.index[i]
+        upto = bars.iloc[:i + 1]
+        win = upto[upto.index.normalize() >= ts.normalize() - pd.Timedelta(days=1)]
+        vp = calc_volume_profile(win["high"], win["low"], win["close"], win["volume"])
+        assert table["POC"].iloc[i] == round(vp["poc"], 2)
+        assert table["VAHigh"].iloc[i] == round(vp["vah"], 2) and table["VALow"].iloc[i] == round(vp["val"], 2)
+    for v, m in (("POC", "POC Match"), ("VAHigh", "VAH Match"), ("VALow", "VAL Match")):
+        ok = table[v].notna()
+        assert (table.loc[ok, m] == np.trunc(table.loc[ok, v])).all()   # the whole number, as POC Match groups
+
+
+def test_price_zone_follows_the_grids_rule(table):
+    for _, r in table.dropna(subset=["VAHigh", "VALow", "VWAP"]).iterrows():
+        want = ("Buy / Reversal" if r.Close >= r.VAHigh else "Short / Reversal" if r.Close <= r.VALow
+                else "Breakout" if r.Close >= r.VWAP else "No trade")
+        assert r["Price Zone"] == want
+
+
+def test_swing_levels_are_sirs_formulas_over_each_swing(table, bars):
+    # Volume Breakeven, 50% Equilibrium, Buyer Control: one value per 10 Leg swing,
+    # on every candle of that swing (web/src/lib/swingStrength.ts swingBreakeven).
+    tagged = table.dropna(subset=["Volume Breakeven"])
+    assert len(tagged) and tagged["Swing"].notna().all()
+    for name, g in tagged.groupby("Swing"):
+        assert g["Volume Breakeven"].nunique() == 1 and g["50% Equilibrium"].nunique() == 1
+    zz = serializers.zigzag_to_records(bars, dev_3=0.0005, dev_10=0.0010)["zigzag_10"]
+    pts = [p for p in zz if p["swing"] == zz[-1]["swing"]] or zz[-1:]
+    if len(pts) > 1:
+        s = bars.loc[pd.Timestamp(pts[0]["t"]):pd.Timestamp(pts[-1]["t"])]
+        tp = (s["high"] + s["low"] + s["close"]) / 3
+        row = table.loc[pd.Timestamp(pts[-1]["t"])]
+        assert row["Volume Breakeven"] == pytest.approx((tp * s["volume"]).sum() / s["volume"].sum(), abs=0.006)
+        assert row["50% Equilibrium"] == pytest.approx((s["high"].max() + s["low"].min()) / 2, abs=0.006)
+        assert 0 <= row["Buyer Control %"] <= 100
 
 
 def test_central_time_moves_only_the_clock(table):
