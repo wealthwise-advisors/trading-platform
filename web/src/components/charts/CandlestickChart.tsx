@@ -62,7 +62,7 @@ import {
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
-import { OrderFlowPanel } from "@/components/charts/OrderFlowPanel"
+import { OrderFlowPanel, type CvdStyle } from "@/components/charts/OrderFlowPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
@@ -289,6 +289,9 @@ function MenuToggle({
  * Daily and longer candles are stamped at midnight and keep their date.
  */
 const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd", DIV_KEY = "autotrader.studies.cvddiv"
+const CVD_STYLE_KEY = "autotrader.studies.cvdstyle"
+// CVD bars: cyan above zero, pink below; the divergence ("confluence") bars in gold.
+const CVD_UP = "#22D3EE", CVD_DOWN = "#F472B6", CVD_CONFLUENCE = "#FFD54F"
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === "1" } catch { return false }
 }
@@ -485,6 +488,11 @@ export function CandlestickChart({
   const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
   const [divOn, setDivOn] = useState(() => readFlag(DIV_KEY))
   const [flowPanel, setFlowPanel] = useState(false)
+  // CVD as bars by default (sir, 2026-11-27); the line stays one click away.
+  const [cvdStyle, setCvdStyle] = useState<CvdStyle>(() => {
+    try { return localStorage.getItem(CVD_STYLE_KEY) === "line" ? "line" : "bars" } catch { return "bars" }
+  })
+  useEffect(() => { try { localStorage.setItem(CVD_STYLE_KEY, cvdStyle) } catch { /* switch still works */ } }, [cvdStyle])
   useEffect(() => writeFlag(DIV_KEY, divOn), [divOn])
   useEffect(() => writeFlag(DELTA_KEY, deltaOn), [deltaOn])
   useEffect(() => writeFlag(CVD_KEY, cvdOn), [cvdOn])
@@ -1904,37 +1912,56 @@ export function CandlestickChart({
                   line: { color: LEVEL_LINE, width: 1 } })
   }
   // CVD: the running total of Delta, restarting at 6 PM, midnight and 8 AM ET.
-  if (cvdRow) {
-    const s = suffixOf("cvd")
-    data.push({ type: "scatter", mode: "lines", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
-                line: { color: CVD_LINE, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
-    shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
-                  line: { color: LEVEL_LINE, width: 1, dash: "dot" } })
-  }
   // CVD Divergence, sir's third study, its own switch: between consecutive 10 Leg swing
   // highs / lows (lib/cvdDivergence.ts), a dashed line joining the two points on price
   // -- and on the CVD row when that is on -- named at the second point.
   const divergences = divOn && (indicators.cvd ?? []).some((v) => v != null)
     ? cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset) : []
+  if (cvdRow) {
+    const s = suffixOf("cvd")
+    if (cvdStyle === "bars") {
+      // Bars (sir, 2026-11-27), each swing point of a divergence in gold: the confluence.
+      const confluence = new Set(divergences.flatMap((d) => [d.from.t, d.to.t]))
+      // A confluence bar is four bars wide, so one minute in gold is seen on a day-wide chart.
+      const step = barStepMs(t) || 60_000
+      data.push({ type: "bar", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
+                  marker: { line: { width: 0 }, color: (indicators.cvd ?? []).map((v, i) =>
+                    confluence.has(t[i]) ? CVD_CONFLUENCE : (v ?? 0) >= 0 ? CVD_UP : CVD_DOWN) },
+                  width: t.map((x) => (confluence.has(x) ? step * 4 : step * 0.55)),
+                  xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+    } else {
+      data.push({ type: "scatter", mode: "lines", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
+                  line: { color: CVD_LINE, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+    }
+    shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
+                  line: { color: LEVEL_LINE, width: 1, dash: "dot" } })
+  }
   if (divOn) {
     const s = cvdRow ? suffixOf("cvd") : null
     for (const d of divergences) {
       const color = d.kind.endsWith("Bullish") ? DIV_BULL : DIV_BEAR
-      const text = `${d.kind} ${d.strength.toFixed(1)}${d.strong ? " strong" : ""}`
-      const line = { color, width: d.strong ? 2.4 : 1.4, dash: "dash" }
+      const text = `CVD Divergence: ${d.kind} ${d.strength.toFixed(1)}${d.strong ? " (strong)" : ""}`
+      // Bold enough to read at a glance (user, 2026-11-27: the thin dashed line and
+      // small label went unseen): thick line, a dot on both swing points.
+      const line = { color, width: d.strong ? 3 : 2, dash: "dash" }
       const [x0, x1] = onCandle([d.from, d.to])
-      data.push({ type: "scatter", mode: "lines", x: [x0, x1], y: [d.from, d.to].map(drawnEdge), line,
+      data.push({ type: "scatter", mode: "lines+markers", x: [x0, x1], y: [d.from, d.to].map(drawnEdge), line,
+                  marker: { size: 10, color, line: { color: "#ffffff", width: 1.5 } },
                   hoverinfo: "skip", showlegend: false, xaxis: "x", yaxis: "y" } as unknown as Data)
       if (s) {
         data.push({ type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo], line,
-                    marker: { size: 6, color }, hoverinfo: "skip", showlegend: false,
-                    xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+                    marker: { size: 10, color, line: { color: "#ffffff", width: 1.5 } }, hoverinfo: "skip",
+                    showlegend: false, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
       }
-      // The name on the CVD row when it is shown, otherwise beside the price point.
-      annotations.push({ ...(s ? { x: d.to.t, y: d.cvdTo, xref: `x${s}`, yref: `y${s}` }
-                                 : { x: x1, y: drawnEdge(d.to), xref: "x", yref: "y" }),
-                         text: `<b>${text}</b>`, showarrow: false, yanchor: d.to.type === "H" ? "bottom" : "top",
-                         font: { size: 10, color }, bgcolor: "rgba(10,14,22,0.85)", borderpad: 2 } as Partial<Annotations>)
+      // A filled label with an arrow to the second swing point. On the CVD row when it is
+      // shown -- the price row's swing tags (LH, the circled number, "Swing H starts") sat
+      // under it there (user, 2026-11-27); on price only without that row, set well clear.
+      const up = d.to.type === "H"
+      const label = { text: `<b>${text}</b>`, showarrow: true, arrowhead: 2, arrowwidth: 2, arrowcolor: color,
+                      ax: 0, font: { size: 12, color: "#ffffff" },
+                      bgcolor: color, bordercolor: "#ffffff", borderwidth: 1, borderpad: 4 }
+      if (s) annotations.push({ ...label, x: d.to.t, y: d.cvdTo, xref: `x${s}`, yref: `y${s}`, ay: up ? -30 : 30 } as Partial<Annotations>)
+      else annotations.push({ ...label, x: x1, y: drawnEdge(d.to), xref: "x", yref: "y", ay: up ? -95 : 95 } as Partial<Annotations>)
     }
   }
 
@@ -1968,7 +1995,9 @@ export function CandlestickChart({
   const visibleAbs = (indicators.delta ?? []).flatMap((v, i) =>
     v == null || tMs[i] < axisStartMs || tMs[i] > axisEndMs ? [] : [Math.abs(v)]).sort((a, b) => a - b)
   const deltaTop = Math.max(visibleAbs[Math.floor((visibleAbs.length - 1) * 0.98)] ?? 0, 1) * 1.15
-  const cvdExt = visibleExtent(indicators.cvd)
+  const cvdFit = visibleExtent(indicators.cvd)
+  // Bars rise from 0, so their scale has to show 0; the line is fitted to itself.
+  const cvdExt: [number, number] = cvdStyle === "bars" ? [Math.min(0, cvdFit[0]), Math.max(0, cvdFit[1])] : cvdFit
   const cvdPad = Math.max((cvdExt[1] - cvdExt[0]) * 0.12, 1)
   /** Each indicator row's y range. */
   const rowRange = (name: string): [number, number] =>
@@ -3480,6 +3509,7 @@ export function CandlestickChart({
         {flowPanel && (
           <OrderFlowPanel value={{ delta: deltaOn, cvd: cvdOn, divergence: divOn }}
                           onChange={(v) => { setDeltaOn(v.delta); setCvdOn(v.cvd); setDivOn(v.divergence) }}
+                          cvdStyle={cvdStyle} onCvdStyle={setCvdStyle}
                           onClose={() => setFlowPanel(false)} className="absolute right-0 top-7 z-20" />
         )}
       </div>

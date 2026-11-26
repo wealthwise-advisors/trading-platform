@@ -3,6 +3,8 @@ import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 export interface OrderFlowToggles { delta: boolean; cvd: boolean; divergence: boolean }
+/** How the CVD row is drawn: bars (sir, 2026-11-27) or the original line. */
+export type CvdStyle = "bars" | "line"
 
 const ROWS: { key: keyof OrderFlowToggles; label: string; note: string }[] = [
   { key: "delta", label: "Volume Delta", note: "Buyers − sellers per candle. Blue / orange past ±60 %." },
@@ -11,9 +13,11 @@ const ROWS: { key: keyof OrderFlowToggles; label: string; note: string }[] = [
     note: "Price vs CVD at consecutive 10 Leg highs / lows. Under 1.5 not shown, over 3 strong." },
 ]
 
-export function OrderFlowPanel({ value, onChange, onClose, className }: {
+export function OrderFlowPanel({ value, onChange, cvdStyle, onCvdStyle, onClose, className }: {
   value: OrderFlowToggles
   onChange: (next: OrderFlowToggles) => void
+  cvdStyle: CvdStyle
+  onCvdStyle: (s: CvdStyle) => void
   onClose: () => void
   className?: string
 }) {
@@ -38,6 +42,20 @@ export function OrderFlowPanel({ value, onChange, onClose, className }: {
           </span>
         </label>
       ))}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm">CVD shown as</span>
+        <div className="flex gap-1" role="radiogroup" aria-label="CVD shown as">
+          {(["bars", "line"] as const).map((s) => (
+            <button key={s} type="button" role="radio" aria-checked={cvdStyle === s}
+                    onClick={() => onCvdStyle(s)}
+                    className={cn("rounded px-2.5 py-1 text-xs border",
+                      cvdStyle === s ? "border-sky-400 bg-sky-500/20 text-foreground"
+                                     : "border-[color:var(--hairline-mid)] text-muted-foreground")}>
+              {s === "bars" ? "Bars" : "Line"}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="text-[11px] text-muted-foreground">
         Estimated from where each candle closes in its range: Schwab gives no bid/ask volume.
       </p>
