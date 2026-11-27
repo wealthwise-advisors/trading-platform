@@ -1532,7 +1532,6 @@ export function CandlestickChart({
     // The window the x-axis draws, so titles can be kept inside it.
     const shownWin = xWindowMs(tShown, viewShown, defaultWindow, chartStyle.rightSpace)
     const placedTitles: PlacedTitle[] = []
-    const placedChips: PlacedTitle[] = []
     function placeHeaderLevel(xPx: number, html: string, onScreen: boolean): number {
       const widthPx = titleWidthPx(html)
       const level = titleLevel(placedTitles, xPx, widthPx)
@@ -1596,6 +1595,7 @@ export function CandlestickChart({
       // its 10 Leg stretch and drawn across the WHOLE swing -- over the stretch alone
       // they read as half lines (user, 2026-11-17).
       const marks = swingLevelsOn ? swingLevelMarks(bars, tenLeg.from, tenLeg.to) : null
+      let levelsInfo: SwingSpan["levels"] = null
       if (marks) {
         // Each swing: a light band from its 50% Equilibrium to its Volume Breakeven,
         // a thin breakeven line ending in a dot, and one small dark box. Kept small
@@ -1638,38 +1638,14 @@ export function CandlestickChart({
           const span = (pts: { label: string }[]) => (pts.length >= 2 ? `(${pts[0].label}-${pts[pts.length - 1].label})` : null)
           const range = [`10 Leg (${tenLeg.label.replace(" to ", "-")})`,
             span(minor) && `3 Leg ${span(minor)}`, span(fine) && `1 Leg ${span(fine)}`].filter(Boolean).join("  |  ")
-          const text = [
-            `•  Range - <b>${range}</b>`,
-            // Both sides, adding to 100: "Buyer Control: Sellers 60%" read as a contradiction (user, 2026-11-17).
-            `•  Buyers / Sellers   <span style="color:#00e676"><b>${marks.buyerPct}%</b></span>`
-              + ` / <span style="color:#ff5252"><b>${100 - marks.buyerPct}%</b></span>`,
-            `•  Volume Breakeven   <b>${fmtPrice(marks.breakeven)}</b>`,
-            `•  50% Equilibrium   <b>${fmtPrice(marks.equilibrium)}</b>`,
-          ].join("<br>")
-          // From the swing's first visible candle, so the box sits inside its dotted
-          // area; near the right edge it hangs back from the swing's last candle.
-          let first: string | null = null
-          for (const tt of t) { const ms = new Date(tt).getTime(); if (ms >= a && ms <= b) { first = tt; break } }
-          const widthPx = titleWidthPx(text) * 0.9
-          const startFrac = screenFraction(new Date(first ?? at).getTime(), shownWin) ?? 0
-          const fromRight = startFrac * plotAreaPx + widthPx > plotAreaPx
-          const xPx = fromRight ? plotAreaPx - widthPx / 2 : startFrac * plotAreaPx + widthPx / 2
-          const row = titleLevel(placedChips, xPx, widthPx)
-          placedChips.push({ xPx, widthPx, level: row })
-          levelBoxes.push({
-            ...(fromRight ? { x: 0.996, xref: "paper" as const, xanchor: "right" as const }
-              : { x: first ?? at, xref: "x" as const, xanchor: "left" as const, xshift: 4 }),
-            y: domains[0][1], yref: "paper", yanchor: "top", yshift: -6 - row * 64,
-            // No pop-up of its own: it opened over the swing hover box (user, 2026-11-17).
-            text, showarrow: false, align: "left",
-            font: { color: "#e5e7eb", size: 10, family: "Arial" },
-            bgcolor: "rgba(11,13,20,0.85)", bordercolor: "rgba(255,255,255,0.25)", borderwidth: 1, borderpad: 5,
-          })
+          // The figures go to the Data Window for the swing under the cursor, not into a
+          // box over the candles -- several stacked over the chart (user, 2026-11-27: "keep it clean").
+          levelsInfo = { range, buyerPct: marks.buyerPct, breakeven: marks.breakeven, equilibrium: marks.equilibrium }
         }
       }
       swingSpans.push({
         swing: swingNum, color, start: x0, end: x1,
-        tenLeg,
+        tenLeg, levels: levelsInfo,
         threeLeg: minor.length >= 2
           ? { from: minor[0].t, to: minor[minor.length - 1].t,
               label: `${minor[0].label} to ${minor[minor.length - 1].label}`,
@@ -2407,8 +2383,9 @@ export function CandlestickChart({
         x: 0.004, xanchor: "left",
         y: 0.97, yanchor: "top",
         showarrow: false, align: "left",
+        // One header style for every row (2026-11-27): a pill outlined in the row's colour.
         font: { size: 11, color: label.color, family: "Arial" },
-        bgcolor: "rgba(10,14,22,0.85)", borderpad: 2,
+        bgcolor: "rgba(10,14,22,0.92)", bordercolor: label.color, borderwidth: 1, borderpad: 3,
       })
     }
   })

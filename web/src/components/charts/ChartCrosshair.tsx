@@ -35,9 +35,13 @@ interface Reading {
   x: number
   top: number
   height: number
+  /** The Data Window's dock: px from the host's left (dock left) or right edge (dock right). */
+  dock: { side: "left" | "right"; inset: number }
   boxes: { axis: string; title: string; top: number; lines: ReadoutLine[]; onRight: boolean; titleColor?: string;
            width?: number; beside?: number }[]
 }
+/** Every section of the Data Window is one width, so it reads as one panel. */
+const PANEL_WIDTH = 268
 
 function layoutKey(axis: string) {
   return axis === "y" ? "yaxis" : `yaxis${axis.slice(1)}`
@@ -161,7 +165,29 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
         boxes.push({ axis: "swing", title: sw ? `Swing ${swingName(sw.swing)}` : "Swing point", top: first._offset + 1,
                      lines, ...swingSide(priceOnRight), titleColor: sw?.color, width: SWING_BOX_WIDTH })
       }
-      setReading({ x, top, height: bottom - top, boxes })
+      // The swing's levels (Swing levels box): in this window, not over the candles (2026-11-27).
+      if (sw?.levels) {
+        const lv = sw.levels
+        boxes.push({ axis: "levels", title: `Swing ${swingName(sw.swing)} levels`, top: first._offset + 1, onRight: flip,
+                     titleColor: sw.color, lines: [
+          // "10 Leg (1-4) | 3 Leg (i-cliv)" as one line per level: on one line it ran past the panel.
+          ...lv.range.split("|").map((part) => {
+            const m = /^\s*(.+?)\s*\((.+)\)\s*$/.exec(part)
+            return m ? { label: `${m[1]} range`, value: m[2] } : { label: part.trim(), value: "" }
+          }),
+          { label: "Buyers / Sellers", value: `${lv.buyerPct}% / ${100 - lv.buyerPct}%`,
+            valueColor: lv.buyerPct > 50 ? "#00e676" : lv.buyerPct < 50 ? "#ff5252" : undefined },
+          { label: "Volume Breakeven", value: lv.breakeven.toFixed(2) },
+          { label: "50% Equilibrium", value: lv.equilibrium.toFixed(2) },
+        ] })
+      }
+      // One docked Data Window (2026-11-27) on the half away from the cursor, so it never
+      // sits on the candle being read; it replaces a box floating beside each row.
+      const cursorLeft = x - xa._offset < xa._length / 2
+      const dock = cursorLeft
+        ? { side: "right" as const, inset: host.clientWidth - (xa._offset + xa._length) + 6 }
+        : { side: "left" as const, inset: xa._offset + 6 }
+      setReading({ x, top, height: bottom - top, dock, boxes })
     }
 
     host.addEventListener("mousemove", move)
@@ -177,16 +203,24 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
     <div className="absolute inset-0 z-10 overflow-hidden" style={{ pointerEvents: "none" }} data-testid="chart-crosshair">
       <div className="absolute" data-testid="chart-crosshair-line"
            style={{ left: reading.x, top: reading.top, height: reading.height, width: 1, background: "#a3a3c2" }} />
+      {/* The Data Window: every section stacked in one panel, wrapping into a second
+          column when the chart is short. Sections keep their own test ids. */}
+      <div data-testid="chart-data-window" className="absolute"
+           style={{
+             top: reading.top + 4, maxHeight: reading.height - 8,
+             [reading.dock.side]: reading.dock.inset,
+             display: "flex", flexDirection: "column", flexWrap: "wrap", gap: 6,
+             alignContent: reading.dock.side === "right" ? "flex-end" : "flex-start",
+           }}>
       {reading.boxes.map((box) => (
         <div key={box.axis} data-testid={`chart-readout-${box.axis}`}
-             className="absolute rounded-sm font-mono"
+             className="rounded-md font-mono"
              style={{
-               top: box.top, width: box.width ?? BOX_WIDTH,
-               left: box.onRight ? reading.x + 8 + (box.beside ?? 0)
-                                 : reading.x - (box.width ?? BOX_WIDTH) - 8 - (box.beside ?? 0),
-               padding: BOX_CHROME / 2, fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
+               width: PANEL_WIDTH,
+               padding: "5px 8px", fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                // Solid: at 96% the swing boxes behind showed through and read as merged text (2026-11-17).
-               background: "#0a0a10", border: "1px solid rgba(163,163,194,0.35)", color: "#e5e7eb",
+               background: "#0b0e16", border: "1px solid rgba(148,163,184,0.28)", color: "#e5e7eb",
+               boxShadow: "0 6px 18px rgba(2, 6, 18, 0.55)",
              }}>
           {/* A titled box with sections (the swing box) gets a solid rule
               under its title; the study boxes keep their compact form. */}
@@ -208,6 +242,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
             ))}
         </div>
       ))}
+      </div>
     </div>
   )
 }

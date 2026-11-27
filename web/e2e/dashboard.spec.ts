@@ -726,16 +726,26 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   await expect(swingBox).toContainText(/Volume Breakeven\s*\d+(\.\d+)?/)
   await expect(swingBox).toContainText(/50% Equilibrium\s*\d+(\.\d+)?/)
 
-  // Swing levels (2026-11-17): every swing carries its breakeven label; the checkbox takes them off.
-  const levelLabels = () => own.evaluate(() => {
+  // Swing levels (2026-11-17): the swing under the cursor shows its range, buyers / sellers,
+  // breakeven and equilibrium -- in the Data Window since 2026-11-27, no longer as boxes
+  // over the candles ("keep it clean"); the checkbox takes them off.
+  const levels = own.getByTestId("chart-readout-levels")
+  await expect(levels).toBeVisible()
+  await expect(levels).toContainText(/10 Leg range\s*\S+/)
+  await expect(levels).toContainText(/Buyers \/ Sellers\s*\d+% \/ \d+%/)
+  await expect(levels).toContainText(/Volume Breakeven\s*[\d.]+/)
+  await expect(levels).toContainText(/50% Equilibrium\s*[\d.]+/)
+  const boxesOverCandles = await own.evaluate(() => {
     const gd = document.querySelector(".js-plotly-plot") as unknown as { layout: { annotations?: { text?: string }[] } }
-    return (gd.layout.annotations ?? []).map((a) => a.text ?? "").map((t) => t.replace(/<br>/g, " | ").replace(/<[^>]*>/g, "")).filter((t) => /^•  Range - 10 Leg \([^)]+\).* \| •  Buyers \/ Sellers +\d+% \/ \d+% \| •  Volume Breakeven +[\d,.]+ \| •  50% Equilibrium +[\d,.]+$/.test(t))
+    return (gd.layout.annotations ?? []).filter((a) => /Range - 10 Leg/.test(a.text ?? "")).length
   })
-  expect((await levelLabels()).length).toBeGreaterThan(0)
-  expect((await levelLabels()).length).toBeLessThanOrEqual(titles.length)
+  expect(boxesOverCandles).toBe(0)
   if (process.env.LEVELS_SHOT) await own.screenshot({ path: process.env.LEVELS_SHOT })
   await own.getByRole("checkbox", { name: "Show swing levels" }).uncheck()
-  await expect.poll(levelLabels).toHaveLength(0)
+  await own.mouse.move(1, 1)
+  await own.mouse.move(bigX[bigX.length - 1], box.y + box.height * 0.3)
+  await expect(own.getByTestId("chart-data-window")).toBeVisible()
+  await expect(levels).toHaveCount(0)
   if (process.env.VOL_SHOT) await own.screenshot({ path: process.env.VOL_SHOT })
   await own.close()
 })

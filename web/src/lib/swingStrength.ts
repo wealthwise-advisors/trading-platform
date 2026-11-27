@@ -191,6 +191,9 @@ export interface SwingSpan {
   threeLeg: { from: string; to: string; label: string; fromPrice: number; toPrice: number } | null
   /** The 1 Leg points (a, b, c ...) inside the swing, when there are any. */
   oneLeg?: { from: string; to: string; label: string; fromPrice: number; toPrice: number } | null
+  /** The Swing levels figures, shown in the Data Window for the swing under the
+   *  cursor (they were boxes over the candles until 2026-11-27). */
+  levels?: { range: string; buyerPct: number; breakeven: number; equilibrium: number } | null
 }
 
 /** The swing whose region holds bar time `t`, or null. */

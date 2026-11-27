@@ -2359,9 +2359,26 @@ button, [role="button"] {
 /* ── Chart chrome, sized to the reference ─────────────────────────────────
    Larger, airier controls than the 22px compact set above. Real classes, not
    h-[30px]: arbitrary Tailwind values emit nothing in this project. */
-.chart-chip { height: 30px; }
+/* Study toggles as pills (2026-11-27): filled when on, outlined when off, one click.
+   The checkbox stays for keyboard and screen readers, drawn as nothing; the pill is
+   its state. Clearly different states for sir: blue fill + white text vs dim outline. */
+.chart-chip {
+  height: 30px; border-radius: 9999px !important; padding-left: 12px !important;
+  background: transparent !important; color: var(--muted-foreground, #9ca3af);
+  border: 1px solid rgba(148, 163, 184, 0.28) !important;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.chart-chip:hover { border-color: rgba(148, 163, 184, 0.55) !important; color: #e5e7eb; }
+.chart-chip:has(input[type="checkbox"]:checked) {
+  background: rgba(37, 99, 235, 0.22) !important; border-color: #3b82f6 !important; color: #ffffff;
+}
+.chart-chip:has(input[type="checkbox"]:focus-visible) { outline: 2px solid #60a5fa; outline-offset: 2px; }
+/* Laid invisibly over its whole label, so a click anywhere on the name IS a click on
+   the checkbox (keyboard, screen readers and tests reach the real control). No dot
+   or tick drawn in its place: fill and outline alone carry on / off (sir: no symbols). */
+.chart-chip label { position: relative; font-weight: 500; }
 .chart-chip input[type="checkbox"] {
-  width: 15px; height: 15px; accent-color: #2563eb; cursor: pointer;
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer;
 }
 /* Borderless toolbar icon, as the reference draws them -- the divider does
    the grouping instead of a box per icon. flex:none for the same reason the
