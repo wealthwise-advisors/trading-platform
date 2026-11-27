@@ -8,7 +8,7 @@
  */
 
 import { expect, test, type Page } from "@playwright/test"
-import { chartRangeStart, runBacktest, openApp, waitForChartSettled } from "./helpers"
+import { chartRangeStart, runBacktest, openApp, openStudies, waitForChartSettled } from "./helpers"
 
 test.describe.configure({ mode: "serial" })
 
@@ -166,6 +166,7 @@ test("VWAP starts with +/-1 and +/-2 drawn, and other levels are optional", asyn
   })
   const level = (d: number) => page.locator(`button[aria-label='deviation bands plus and minus ${d} sigma']`)
 
+  await openStudies(page)
   await page.locator("button[aria-label='VWAP settings']").first().click()
   for (const d of [0.5, 1, 1.5, 2, 2.5, 3, 4, 5]) await expect(level(d), `level +/-${d} is missing`).toHaveCount(1)
   await expect(level(1)).toHaveAttribute("aria-pressed", "true")
@@ -179,7 +180,7 @@ test("VWAP starts with +/-1 and +/-2 drawn, and other levels are optional", asyn
   // Put it back, so later tests see the shipped default.
   await level(0.5).click()
   await expect.poll(bands).toBe(4)
-  await page.locator("button[aria-label='VWAP settings']").first().click()
+  await page.keyboard.press("Escape")
 })
 
 /**
@@ -337,6 +338,7 @@ test("a Volume Profile day-range row switches the chart to that interval", async
 
   const shown = () => own.getByTestId("chart-interval").first().innerText()
   const before = await shown()
+  await openStudies(own)
   await own.locator("button[aria-label='Volume Profile settings']").first().click()
   const rows = own.getByRole("radiogroup", { name: "Bar interval and the history it loads" })
   // The current interval is the checked row, before anything is clicked.
@@ -472,6 +474,7 @@ test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in th
   await expect(hover).toContainText("Buyers")
   await expect(hover).toContainText("Sellers")
 
+  await openStudies(own)
   await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().uncheck()
   await expect.poll(traces).toEqual([])
 
@@ -480,6 +483,7 @@ test("VolumeAvg (20) is the bottom row by default, with buyers and sellers in th
   await openApp(own)
   await runBacktest(own)
   await waitForChartSettled(own)
+  await openStudies(own)
   await expect(own.getByRole("checkbox", { name: "Show VolumeAvg" }).first()).not.toBeChecked()
   await own.getByRole("checkbox", { name: "Show VolumeAvg" }).first().check()
   await own.close()
@@ -512,7 +516,9 @@ test("hovering any one row shows every row's values and one line through them al
   await expect(own.getByTestId("chart-readout-y6")).toContainText("Buyers")
 
   // Every level once, with the profile on.
+  await openStudies(own)
   await own.getByRole("checkbox", { name: /Volume Profile/ }).first().check()
+  await own.getByRole("button", { name: "Close studies" }).click()
   await waitForChartSettled(own)
   await own.mouse.move(1, 1)
   const again = (await own.locator(".draglayer .xy .nsewdrag").first().boundingBox())!
@@ -741,7 +747,9 @@ test("each swing is titled 10 Leg Dev, and its hover box says who pushed harder"
   })
   expect(boxesOverCandles).toBe(0)
   if (process.env.LEVELS_SHOT) await own.screenshot({ path: process.env.LEVELS_SHOT })
+  await openStudies(own)
   await own.getByRole("checkbox", { name: "Show swing levels" }).uncheck()
+  await own.getByRole("button", { name: "Close studies" }).click()
   await own.mouse.move(1, 1)
   await own.mouse.move(bigX[bigX.length - 1], box.y + box.height * 0.3)
   await expect(own.getByTestId("chart-data-window")).toBeVisible()

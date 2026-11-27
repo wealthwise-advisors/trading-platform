@@ -2359,27 +2359,48 @@ button, [role="button"] {
 /* ── Chart chrome, sized to the reference ─────────────────────────────────
    Larger, airier controls than the 22px compact set above. Real classes, not
    h-[30px]: arbitrary Tailwind values emit nothing in this project. */
-/* Study toggles as pills (2026-11-27): filled when on, outlined when off, one click.
-   The checkbox stays for keyboard and screen readers, drawn as nothing; the pill is
-   its state. Clearly different states for sir: blue fill + white text vs dim outline. */
-.chart-chip {
-  height: 30px; border-radius: 9999px !important; padding-left: 12px !important;
-  background: transparent !important; color: var(--muted-foreground, #9ca3af);
-  border: 1px solid rgba(148, 163, 184, 0.28) !important;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+/* ── Studies button and panel (2026-11-27) ─────────────────────────────── */
+.studies-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 12px;
+  border-radius: 9999px; border: 1px solid rgba(148, 163, 184, 0.35); color: #e5e7eb;
+  font-size: 13px; font-weight: 600; background: rgba(30, 41, 59, 0.55);
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
-.chart-chip:hover { border-color: rgba(148, 163, 184, 0.55) !important; color: #e5e7eb; }
-.chart-chip:has(input[type="checkbox"]:checked) {
-  background: rgba(37, 99, 235, 0.22) !important; border-color: #3b82f6 !important; color: #ffffff;
+.studies-btn:hover, .studies-btn-open { border-color: #3b82f6; background: rgba(37, 99, 235, 0.18); }
+.studies-btn:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.studies-count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 9999px; display: grid; place-items: center;
+  background: #2563eb; color: #fff; font-size: 11px; font-weight: 700;
 }
-.chart-chip:has(input[type="checkbox"]:focus-visible) { outline: 2px solid #60a5fa; outline-offset: 2px; }
-/* Laid invisibly over its whole label, so a click anywhere on the name IS a click on
-   the checkbox (keyboard, screen readers and tests reach the real control). No dot
-   or tick drawn in its place: fill and outline alone carry on / off (sir: no symbols). */
-.chart-chip label { position: relative; font-weight: 500; }
-.chart-chip input[type="checkbox"] {
-  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer;
+.studies-panel {
+  position: absolute; z-index: 30; width: 340px; border-radius: 14px;
+  background: rgba(13, 17, 27, 0.97); border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 18px 50px rgba(2, 6, 18, 0.6); backdrop-filter: blur(8px);
 }
+.study-group { border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+.study-group:last-child { border-bottom: none; }
+.study-group > summary {
+  display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none;
+  padding: 10px 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #93a4c3;
+}
+.study-group > summary::-webkit-details-marker { display: none; }
+.study-row { display: flex; align-items: center; gap: 6px; padding: 5px 4px; border-radius: 8px; font-size: 13px; }
+.study-row:hover { background: rgba(148, 163, 184, 0.08); }
+/* A real checkbox drawn as a switch: grey track off, blue track on -- two clearly different states. */
+.study-switch {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; cursor: pointer;
+  width: 30px; height: 17px; border-radius: 9999px; background: #334155; transition: background-color 150ms ease;
+}
+.study-switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 9999px;
+  background: #cbd5e1; transition: transform 150ms ease;
+}
+.study-switch:checked { background: #2563eb; }
+.study-switch:checked::after { transform: translateX(13px); background: #fff; }
+.study-switch:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.study-switch:disabled { cursor: not-allowed; }
+
 /* Borderless toolbar icon, as the reference draws them -- the divider does
    the grouping instead of a box per icon. flex:none for the same reason the
    clusters needed it: this row is a crowded overflow-x-auto flex container

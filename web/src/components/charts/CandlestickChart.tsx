@@ -29,7 +29,7 @@ import { innerTicks } from "@/lib/chartStyle"
 import { applyTemplate, captureTemplate, loadStudies, useChartTemplateEpoch, type Studies } from "@/lib/accountSettings"
 import { api, type ChartTemplate } from "@/lib/api"
 import { useSelectInterval } from "@/features/backtest/useSelectInterval"
-import { ChevronDown, Maximize, Minimize, Save, Settings, X } from "lucide-react"
+import { ChevronDown, Maximize, Minimize, Save, X } from "lucide-react"
 import { toNaiveString } from "@/lib/isoTime"
 import { shiftTimes, useZoneOffset, zoneShort } from "@/lib/sessionZone"
 import { resampleOHLC, displayBucketMinutes, onDisplayCandle } from "@/lib/resample"
@@ -63,6 +63,7 @@ import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { OrderFlowPanel, type CvdStyle } from "@/components/charts/OrderFlowPanel"
+import { StudiesButton, StudiesPanel, studiesOn, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
@@ -179,50 +180,6 @@ function rowDomains(heights: number[], spacing: number): [number, number][] {
   return domains
 }
 
-
-/**
- * One study'scontrol group on the row above the plot.
- *
- * THE BUG THE BORDER FIXES. These used to be bare labels and bare gear
- * buttons separated by a `|` that was `hidden wide:inline` -- so at any width
- * below `wide` the separators vanished and the row read
- * "VWAP (gear) Volume Profile (gear) RSI(2) (gear)", with nothing
- * saying whether a gear belonged to the study on its left or its right. That
- * is exactly how the Volume Profile gear came to be reported as missing.
- * A box around each study answers it at every width, so the separators are
- * gone rather than merely restyled.
- *
- * Fixed height, so the row stops being nine different control heights stacked
- * on one line.
- */
-const STUDY_CHIP =
-  "chart-chip flex items-center gap-2 rounded-lg border border-[color:var(--hairline-mid)] " +
-  "bg-[color:var(--raise-2)] pl-2.5 pr-1.5"
-
-/**
- * A study's settings gear, INSIDE its chip.
- *
- * No border of its own any more: it sits in a bordered chip, and a box inside
- * a box reads as two controls. Still a real button with the same aria-label
- * and the same "turn it on and open it" behaviour.
- */
-function StudyGear({ label, title, onClick }: {
-  label: string
-  title?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={title}
-      onClick={onClick}
-      className="grid h-6 w-6 shrink-0 place-items-center rounded-md
-                 text-muted-foreground transition-colors
-                 hover:bg-[color:var(--raise-4)] hover:text-foreground"
-    ><Settings className="h-3.5 w-3.5" aria-hidden /></button>
-  )
-}
 
 /** Price-row traces the hover box prints in its VWAP and VolumeProfile blocks. */
 const BOX_BLOCK_LABELS = new Set(["VWAP", "UpperBand", "LowerBand", "POC", "VAHigh", "VALow"])
@@ -488,6 +445,7 @@ export function CandlestickChart({
   const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
   const [divOn, setDivOn] = useState(() => readFlag(DIV_KEY))
   const [flowPanel, setFlowPanel] = useState(false)
+  const [studiesOpen, setStudiesOpen] = useState(false)
   // The swing count (numbers, HH/LL tags, zigzag lines) behind its own box, on by
   // default: unticked, the chart is the candles alone (user, 2026-11-27: "keep it clean").
   const [swingCountOn, setSwingCountOn] = useState(() => {
@@ -3007,6 +2965,70 @@ export function CandlestickChart({
       delete d.hovertemplate
     }
   }
+  // The Studies panel's tree (2026-11-27): groups → studies → a study's own settings.
+  const closeStudies = () => setStudiesOpen(false)
+  const oscItem = (key: OscKey): StudyItem => {
+    const info = OSC_STUDIES[key]
+    return {
+      key, label: info.label, aria: `Show ${info.label}`, checked: osc[key], disabled: !info.available,
+      title: info.available ? undefined : info.pending,
+      onChange: (on) => setOsc((o) => ({ ...o, [key]: on })),
+      gear: { label: `${info.label} settings`, onClick: () => {
+        if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
+        setVolPanel(false); setFlowPanel(false); setOscPanel(key); closeStudies()
+      } },
+    }
+  }
+  const studyGroups: StudyGroup[] = [
+    { title: "Price", items: [
+      { key: "vwap", label: "VWAP", aria: "Show VWAP", checked: vwapOn, onChange: setVwapOn,
+        title: `Deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`,
+        gear: { label: "VWAP settings", onClick: () => { setVwapOn(true); setVwapPanelOpen(true); closeStudies() } } },
+      { key: "vp", label: "Volume Profile", aria: "Show Volume Profile", checked: vpOn, onChange: setVpOn,
+        title: `${vpBins} rows, value area ${vpValueArea}%`,
+        gear: { label: "Volume Profile settings", onClick: () => { setVpOn(true); setVpPanelOpen(true); closeStudies() } } },
+    ] },
+    { title: "Swings", items: showZigzagProp ? [
+      { key: "count", label: "Swing count", aria: "Show swing count", checked: swingCountOn, onChange: setSwingCountOn,
+        title: "10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines" },
+      { key: "levels", label: "Swing levels", aria: "Show swing levels", checked: swingLevelsOn, onChange: setSwingLevelsOn,
+        disabled: !swingCountOn, title: "Each swing's band from its 50% Equilibrium to its Volume Breakeven" },
+    ] : [] },
+    { title: "Oscillators", items: [
+      { key: "rsi", label: "RSI", aria: "Show RSI", checked: osc.rsi2 || osc.rsi13,
+        onChange: (on) => setOsc((o) => ({ ...o, rsi2: on, rsi13: on })),
+        children: [oscItem("rsi2"), oscItem("rsi13")] },
+      oscItem("stochrsi"), oscItem("mfi"),
+    ] },
+    { title: "Volume", items: [
+      { key: "vol", label: "VolumeAvg", aria: "Show VolumeAvg", checked: volOn, onChange: setVolOn,
+        gear: { label: "VolumeAvg settings", onClick: () => {
+          setVolOn(true); setOscPanel(null); setFlowPanel(false); setVolPanel(true); closeStudies() } } },
+      { key: "flow", label: "Order Flow", aria: "Show Order Flow", checked: deltaOn || cvdOn || divOn,
+        onChange: (on) => { setDeltaOn(on); setCvdOn(on); setDivOn(on) },
+        children: [
+          { key: "delta", label: "Volume Delta", aria: "Show Volume Delta", checked: deltaOn, onChange: setDeltaOn,
+            title: "Buyers − sellers per candle; blue / orange past ±60%" },
+          { key: "cvd", label: "Cumulative Volume Delta", aria: "Show Cumulative Volume Delta", checked: cvdOn,
+            onChange: setCvdOn, title: "Running total; restarts 6 PM, midnight, 8 AM ET",
+            extra: (
+              <div className="flex gap-1" role="radiogroup" aria-label="CVD shown as">
+                {(["bars", "line"] as const).map((s) => (
+                  <button key={s} type="button" role="radio" aria-checked={cvdStyle === s} onClick={() => setCvdStyle(s)}
+                          className={`rounded px-2.5 py-0.5 text-xs border ${cvdStyle === s
+                            ? "border-sky-400 bg-sky-500/20 text-foreground" : "border-[color:var(--hairline-mid)] text-muted-foreground"}`}>
+                    {s === "bars" ? "Bars" : "Line"}
+                  </button>
+                ))}
+              </div>
+            ) },
+          { key: "div", label: "CVD Divergence", aria: "Show CVD Divergence", checked: divOn, onChange: setDivOn,
+            title: "Price vs CVD at consecutive 10 Leg highs / lows; under 1.5 not shown, over 3 strong",
+            note: divOn ? divStatus : null },
+        ] },
+    ] },
+  ]
+
   const readoutRows: ReadoutRow[] = [
     { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`,
       // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
@@ -3078,111 +3100,8 @@ export function CandlestickChart({
         onZoomOut={() => zoomBy(1 / 0.6)}
         onResetView={() => { setVisibleRange(null); setActiveRange(null); setManualY(null) }}
         actions={chartActions}
-        studies={<>
-          <div className={STUDY_CHIP}>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={vwapOn}
-                     onChange={(e) => setVwapOn(e.target.checked)} />
-              <span>VWAP</span>
-            </label>
-            <StudyGear
-              label="VWAP settings"
-              title={vwapOn ? `VWAP settings — deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`
-                            : "Turn VWAP on and open its settings"}
-              onClick={() => { if (!vwapOn) setVwapOn(true); setVwapPanelOpen(true) }}
-            />
-          </div>
-
-          {showZigzagProp && (
-            <div className={`${STUDY_CHIP} pr-2`}>
-              <label className="flex items-center gap-1.5 cursor-pointer"
-                     title="Sir's swing count: 10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines">
-                <input type="checkbox" checked={swingCountOn}
-                       aria-label="Show swing count"
-                       onChange={(e) => setSwingCountOn(e.target.checked)} />
-                <span>Swing count</span>
-              </label>
-            </div>
-          )}
-          {showZigzag && (
-            <div className={`${STUDY_CHIP} pr-2`}>
-              <label className="flex items-center gap-1.5 cursor-pointer"
-                     title="Each swing's zone from its 50% Equilibrium to its Volume Breakeven, and who controlled it">
-                <input type="checkbox" checked={swingLevelsOn}
-                       aria-label="Show swing levels"
-                       onChange={(e) => setSwingLevelsOn(e.target.checked)} />
-                <span>Swing levels</span>
-              </label>
-            </div>
-          )}
-
-          <div className={STUDY_CHIP}>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={vpOn}
-                     onChange={(e) => setVpOn(e.target.checked)} />
-              <span>Volume Profile</span>
-            </label>
-            <StudyGear
-              label="Volume Profile settings"
-              title={vpOn ? `Volume Profile settings — ${vpBins} rows, value area ${vpValueArea}%`
-                          : "Turn Volume Profile on and open its settings"}
-              onClick={() => { if (!vpOn) setVpOn(true); setVpPanelOpen(true) }}
-            />
-          </div>
-
-          {/* Oscillator panels, switched on and configured the same way as VWAP
-              and Volume Profile. Switching one off removes its row, handing the
-              space to price and the rest. */}
-          {OSC_ORDER.map((key) => {
-            const info = OSC_STUDIES[key]
-            return (
-              <div key={key} className={STUDY_CHIP}>
-                <label className={`flex items-center gap-1.5 ${info.available ? "cursor-pointer" : "opacity-60"}`}
-                       title={info.available ? undefined : info.pending}>
-                  <input type="checkbox" checked={osc[key]} disabled={!info.available}
-                         aria-label={`Show ${info.label}`}
-                         onChange={(e) => setOsc((o) => ({ ...o, [key]: e.target.checked }))} />
-                  <span>{info.label}</span>
-                </label>
-                <StudyGear
-                  label={`${info.label} settings`}
-                  title={info.available ? `${info.label} settings` : info.pending}
-                  onClick={() => {
-                    if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
-                    setVolPanel(false)
-                    setOscPanel(key)
-                  }}
-                />
-              </div>
-            )
-          })}
-
-          <div className={STUDY_CHIP}>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={volOn} aria-label="Show VolumeAvg"
-                     onChange={(e) => setVolOn(e.target.checked)} />
-              <span>VolumeAvg</span>
-            </label>
-            <StudyGear label="VolumeAvg settings" title="VolumeAvg settings"
-                       onClick={() => { setVolOn(true); setOscPanel(null); setFlowPanel(false); setVolPanel(true) }} />
-          </div>
-
-          {/* Sir's order-flow studies (2026-11-26). No settings: the ±60% filter and the
-              three CVD sessions are his fixed definitions. */}
-          {/* Sir's three order-flow studies in ONE chip (user, 2026-11-27): the box switches
-              all three, the gear picks them one by one. */}
-          <div className={STUDY_CHIP}>
-            <label className="flex items-center gap-1.5 cursor-pointer"
-                   title="Volume Delta, Cumulative Volume Delta and CVD Divergence. The gear picks which.">
-              <input type="checkbox" checked={deltaOn || cvdOn || divOn} aria-label="Show Order Flow"
-                     onChange={(e) => { const on = e.target.checked; setDeltaOn(on); setCvdOn(on); setDivOn(on) }} />
-              <span>Order Flow</span>
-            </label>
-            <StudyGear label="Order Flow settings" title="Order Flow settings"
-                       onClick={() => { setVolPanel(false); setOscPanel(null); setFlowPanel(true) }} />
-          </div>
-
-        </>}
+        studies={<StudiesButton open={studiesOpen} onClick={() => setStudiesOpen((o) => !o)}
+                                active={studiesOn(studyGroups)} />}
       />
 
       {/* The studies' settings popovers. Their own positioning context,
@@ -3190,6 +3109,9 @@ export function CandlestickChart({
           its own -- every child is absolutely positioned, so this costs
           the plot nothing when they are all closed. */}
       <div className="relative">
+        {studiesOpen && (
+          <StudiesPanel groups={studyGroups} onClose={() => setStudiesOpen(false)} className="right-2 top-1" />
+        )}
         {vpPanelOpen && vpOn && (
           <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]
                           bg-[var(--surface-1)] p-3 shadow-xl space-y-3">

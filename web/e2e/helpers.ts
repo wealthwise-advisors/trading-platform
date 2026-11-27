@@ -46,6 +46,17 @@ export async function runBacktest(page: Page) {
   await expect(page.locator(".js-plotly-plot").first()).toBeVisible({ timeout: 60_000 })
 }
 
+/**
+ * Open the chart's Studies panel (2026-11-27): every study's switch and gear sit in
+ * it now, not in a row of buttons over the chart. Does nothing when it is open.
+ */
+export async function openStudies(page: Page) {
+  const panel = page.getByRole("dialog", { name: "Studies" })
+  if (await panel.isVisible().catch(() => false)) return
+  await page.getByRole("button", { name: /^Studies/ }).first().click()
+  await expect(panel).toBeVisible()
+}
+
 export async function goToMarketGrid(page: Page) {
   await page.getByRole("button", { name: "Market Grid" }).first().click()
   await expect(page.getByText("Instrument & strategy", { exact: false }).first()).toBeVisible()
