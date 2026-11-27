@@ -62,6 +62,7 @@ import { FullscreenButton, PanelToolButton } from "@/components/PanelTools"
 import { usePanelFullscreen } from "@/lib/usePanelFullscreen"
 import { Settings2, Columns3 } from "lucide-react"
 import { StudiesPanel, type StudyItem } from "@/components/charts/StudiesPanel"
+import { useStudySettings } from "@/store/studySettingsStore"
 import { Layers, Wallet, Coins, ClipboardList, Target, ArrowUpRight,
          ArrowDownRight, TriangleAlert } from "lucide-react"
 import { StepSection } from "./StepSection"
@@ -1421,14 +1422,16 @@ export function ReplayPage() {
 
   /** Sir's order flow per timeframe (2026-11-26): the newest bar's Volume Delta and
    *  CVD, and the newest CVD divergence between its recent 10 Leg points. */
+  const divSet = useStudySettings((st) => st.s.div)
   const orderFlow = useMemo(() => {
     const out = new Map<string, ReturnType<typeof orderFlowNow>>()
     for (const tf of shownTimeframes) {
-      if (panes[tf]) out.set(tf, orderFlowNow(panes[tf].bars, swings[tf]?.points ?? [], volCtx[tf], volLength))
+      if (panes[tf]) out.set(tf, orderFlowNow(panes[tf].bars, swings[tf]?.points ?? [], volCtx[tf], volLength,
+        { weakBelow: divSet.minStrength, strongAbove: divSet.strongAbove, regular: divSet.regular, hidden: divSet.hidden }))
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shownTfKey, panes, swings, volCtx, volLength])
+  }, [shownTfKey, panes, swings, volCtx, volLength, divSet])
 
   /** POC Match and POC vs Avg, over exactly the timeframes on screen. */
   // ── POC Match / POC vs Avg on the Consolidated tape ────────────────

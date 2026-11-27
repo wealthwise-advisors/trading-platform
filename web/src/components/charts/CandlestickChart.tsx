@@ -56,12 +56,16 @@ import {
 } from "@/lib/chartExportSettings"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import {
-  OSC_STUDIES, activeOscillatorRows, fittedRange, levelLines, oscillatorRowHeights, zoneOverlays,
+  OSC_STUDIES, activeOscillatorRows, fittedRange, oscillatorRowHeights, zoneOverlays,
   type OscKey, type OscRowKey, type OscToggles,
 } from "@/lib/oscillatorStudies"
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import { DEFAULT_STUDY_SETTINGS, useStudySettings } from "@/store/studySettingsStore"
+import { mfi as calcMfi, rsi as calcRsi, stochRsi as calcStochRsi } from "@/lib/oscCalc"
+import { CvdSettings, DeltaSettings, DivergenceSettings } from "@/components/charts/OrderFlowSettings"
+import { EventsSettings, SwingCountSettings } from "@/components/charts/SwingEventSettings"
 import { StudiesButton, StudiesPanel, studiesOn, type CvdStyle, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
 import { useLayoutStore } from "@/store/layoutStore"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
@@ -189,12 +193,6 @@ const COMPARE_COLOR = "#f59e0b"
 const COMPARE_SYMBOLS = ["ES", "NQ", "YM", "RTY", "MES", "MNQ", "CL", "GC"]
 
 /** Indicator colours, read off sir's thinkorswim (2026-11-10). */
-const OSC_LINE = "#ffffff"
-const ZONE_ABOVE = "#ff5252"
-const ZONE_BELOW = "#00c853"
-const STOCH_K = "#ff6b6b"
-const STOCH_D = "#e040fb"
-const MFI_LINE = "#e0a800"
 const LEVEL_LINE = "#d8c9a0"
 const LEVEL_STOCH = "#22d3ee"
 
@@ -226,7 +224,6 @@ function MenuHeader({ title, onClose }: { title: string; onClose: () => void }) 
 const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd", DIV_KEY = "autotrader.studies.cvddiv"
 const CVD_STYLE_KEY = "autotrader.studies.cvdstyle", SWING_COUNT_KEY = "autotrader.studies.swingcount"
 // CVD bars: cyan above zero, pink below; the divergence ("confluence") bars in gold.
-const CVD_UP = "#22D3EE", CVD_DOWN = "#F472B6", CVD_CONFLUENCE = "#FFD54F"
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === "1" } catch { return false }
 }
@@ -235,9 +232,6 @@ function writeFlag(key: string, on: boolean): void {
 }
 // Delta bars: green / red, and a clearly different hue past sir's ±60% filter
 // (sir tells colours apart by hue, not shade). CVD line and divergence colours.
-const DELTA_UP = "#00C853", DELTA_DOWN = "#FF5252", DELTA_BIG_UP = "#2979FF", DELTA_BIG_DOWN = "#FF9100"
-const CVD_LINE = "#22D3EE", DIV_BULL = "#22c55e", DIV_BEAR = "#ef4444"
-const DELTA_FILTER = 60
 
 export function ZonedCandlestickChart(props: CandlestickChartProps) {
   const zone = useZoneOffset((z) => z.offset)
@@ -938,6 +932,30 @@ export function CandlestickChart({
   }
 
   const t = bars.map((b) => b.t)
+  // Each study's own settings (Studies panel, 2026-11-27). At the standard lengths the
+  // server's series is drawn; a changed length is worked out here (lib/oscCalc.ts).
+  const ss = useStudySettings((st) => st.s)
+  const D = DEFAULT_STUDY_SETTINGS
+  const osc2 = useMemo(() => {
+    const close = bars.map((b) => b.c)
+    const st = ss.stochrsi, sd = D.stochrsi
+    const stoch = st.rsiLength === sd.rsiLength && st.kPeriod === sd.kPeriod && st.dPeriod === sd.dPeriod && st.slowing === sd.slowing
+      ? { k: indicators.stochrsi_k, d: indicators.stochrsi_d }
+      : calcStochRsi(close, st.rsiLength, st.kPeriod, st.dPeriod, st.slowing)
+    return {
+      rsi2: ss.rsi2.length === D.rsi2.length ? indicators.rsi2 : calcRsi(close, ss.rsi2.length),
+      rsi13: ss.rsi13.length === D.rsi13.length ? indicators.rsi13 : calcRsi(close, ss.rsi13.length),
+      mfi: ss.mfi.length === D.mfi.length ? (indicators.mfi ?? [])
+        : (bars.some((b) => b.v) ? calcMfi(bars.map((b) => ({ ...b, v: b.v ?? 0 })), ss.mfi.length) : []),
+      stochK: stoch.k, stochD: stoch.d,
+    }
+  }, [bars, indicators, ss.rsi2.length, ss.rsi13.length, ss.mfi.length, ss.stochrsi]) // eslint-disable-line react-hooks/exhaustive-deps
+  const zzDev = { d10: useConfigStore((c) => c.zigzagDev10), d3: useConfigStore((c) => c.zigzagDev3), d1: useConfigStore((c) => c.zigzagDev1) }
+  const oscLevels = (row: OscKey) => ({ overbought: ss[row].overbought, oversold: ss[row].oversold })
+  const oscTitle = (row: OscKey) => row === "stochrsi"
+    ? `StochRSI (${ss.stochrsi.rsiLength}, ${ss.stochrsi.overbought}, ${ss.stochrsi.oversold}, WILDERS, CLOSE, ${ss.stochrsi.kPeriod}, ${ss.stochrsi.dPeriod}, ${ss.stochrsi.slowing}, SIMPLE)`
+    : row === "mfi" ? `MoneyFlowIndex (${ss.mfi.oversold}, ${ss.mfi.overbought}, ${ss.mfi.length}, 1)`
+    : `RSI (${ss[row].length}, ${ss[row].overbought}, ${ss[row].oversold}, CLOSE, WILDERS)`
   const defaultWindow = defaultWindowMs(t)
   // Display candles are aggregated to suit the VISIBLE window, not to a fixed
   // bucket. This used to be resampleOHLC(bars, 9), which is comfortable in the
@@ -1090,7 +1108,7 @@ export function CandlestickChart({
   // Economic releases (Feature 8): a dotted line at each high or medium event inside the
   // bars, labelled at the top. Amber for high, sky for medium: two clearly different hues.
   if (eventsOn && t.length > 1) {
-    for (const m of chartMarks(econEvents, t[0], t[t.length - 1])) {
+    for (const m of chartMarks(econEvents, t[0], t[t.length - 1]).filter((m) => m.impact === "high" || ss.events.medium)) {
       const color = m.impact === "high" ? "#f59e0b" : "#38bdf8"
       shapes.push({ type: "line", xref: "x", yref: "paper", x0: m.at, x1: m.at, y0: 0, y1: 1,
                     line: { color, width: 1.2, dash: "dot" }, layer: "below" } as Partial<Shape>)
@@ -1655,8 +1673,8 @@ export function CandlestickChart({
       return i === undefined ? null : vals[i] ?? null
     }
     const panelValues: Record<OscRowKey, (number | null)[]> = {
-      rsi2: indicators.rsi2, stochrsi: indicators.stochrsi_k, rsi13: indicators.rsi13,
-      mfi: indicators.mfi ?? [],
+      rsi2: osc2.rsi2, stochrsi: osc2.stochK, rsi13: osc2.rsi13,
+      mfi: osc2.mfi,
     }
     for (const name of oscillatorRows) {
       const suffix = suffixOf(name)
@@ -1734,10 +1752,9 @@ export function CandlestickChart({
   // Over the white RSI lines: red past overbought, green past oversold. Their
   // own x array, so the hover boxes do not read them as more studies.
   const pushZones = (values: (number | null)[], row: "rsi2" | "rsi13", suffix: string) => {
-    const lv = OSC_STUDIES[row].levels
-    if (!lv) return
+    const lv = oscLevels(row)
     const { above, below } = zoneOverlays(values, lv.overbought, lv.oversold)
-    for (const [y, color] of [[above, ZONE_ABOVE], [below, ZONE_BELOW]] as const) {
+    for (const [y, color] of [[above, ss.zones.above], [below, ss.zones.below]] as const) {
       data.push({ type: "scatter", mode: "lines", x: [...t], y, showlegend: false, hoverinfo: "skip",
                   line: { color, width: 2 }, xaxis: `x${suffix}`, yaxis: `y${suffix}` } as unknown as Data)
     }
@@ -1750,41 +1767,41 @@ export function CandlestickChart({
   if (indicatorRows.includes("rsi2")) {
     const rsi2Suffix = suffixOf("rsi2")
     data.push({
-      type: "scatter", mode: "lines", x: t, y: indicators.rsi2, name: "RSI(2)", showlegend: false,
-      line: { color: OSC_LINE, width: 1.8 }, hovertemplate: "RSI(2): %{y:.1f}<extra></extra>",
+      type: "scatter", mode: "lines", x: t, y: osc2.rsi2, name: "RSI(2)", showlegend: false,
+      line: { color: ss.rsi2.color, width: 1.8 }, hovertemplate: `RSI(${ss.rsi2.length}): %{y:.1f}<extra></extra>`,
       xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
     } as unknown as Data)
-    pushZones(indicators.rsi2, "rsi2", rsi2Suffix)
+    pushZones(osc2.rsi2, "rsi2", rsi2Suffix)
   }
   if (indicatorRows.includes("stochrsi")) {
     // StochRSI's two plots, named as the reference platform names them.
     const stochRsiSuffix = suffixOf("stochrsi")
     data.push(
-      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_k, name: "FullK", showlegend: false,
-        line: { color: STOCH_K, width: 1.5 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
+      { type: "scatter", mode: "lines", x: t, y: osc2.stochK, name: "FullK", showlegend: false,
+        line: { color: ss.stochrsi.kColor, width: 1.5 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
-      { type: "scatter", mode: "lines", x: t, y: indicators.stochrsi_d, name: "FullD", showlegend: false,
-        line: { color: STOCH_D, width: 1.5 }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
+      { type: "scatter", mode: "lines", x: t, y: osc2.stochD, name: "FullD", showlegend: false,
+        line: { color: ss.stochrsi.dColor, width: 1.5 }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
     )
   }
   if (indicatorRows.includes("rsi13")) {
     const rsi13Suffix = suffixOf("rsi13")
     data.push({
-      type: "scatter", mode: "lines", x: t, y: indicators.rsi13, name: "RSI(13)", showlegend: false,
-      line: { color: OSC_LINE, width: 1.8 }, hovertemplate: "RSI(13): %{y:.1f}<extra></extra>",
+      type: "scatter", mode: "lines", x: t, y: osc2.rsi13, name: "RSI(13)", showlegend: false,
+      line: { color: ss.rsi13.color, width: 1.8 }, hovertemplate: `RSI(${ss.rsi13.length}): %{y:.1f}<extra></extra>`,
       xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
     } as unknown as Data)
-    pushZones(indicators.rsi13, "rsi13", rsi13Suffix)
+    pushZones(osc2.rsi13, "rsi13", rsi13Suffix)
   }
   // Money Flow Index needs volume. Without it the series is all empty and, like
   // VWAP, no line is drawn -- the row keeps its 80/20 lines and nothing else.
-  const mfiHasData = (indicators.mfi ?? []).some((v) => v != null)
+  const mfiHasData = osc2.mfi.some((v) => v != null)
   if (indicatorRows.includes("mfi") && mfiHasData) {
     const mfiSuffix = suffixOf("mfi")
     data.push({
-      type: "scatter", mode: "lines", x: t, y: indicators.mfi, name: "MoneyFlowIndex",
-      line: { color: MFI_LINE, width: 1.6 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
+      type: "scatter", mode: "lines", x: t, y: osc2.mfi, name: "MoneyFlowIndex",
+      line: { color: ss.mfi.color, width: 1.6 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
       xaxis: `x${mfiSuffix}`, yaxis: `y${mfiSuffix}`,
     } as unknown as Data)
   }
@@ -1818,7 +1835,7 @@ export function CandlestickChart({
       { type: "bar", x: t, y: indicators.delta, name: "Delta", showlegend: false,
         marker: { line: { width: 0 }, color: (indicators.delta ?? []).map((v, i) => {
           const p = deltaPct[i] ?? 0
-          return (v ?? 0) >= 0 ? (p > DELTA_FILTER ? DELTA_BIG_UP : DELTA_UP) : (p < -DELTA_FILTER ? DELTA_BIG_DOWN : DELTA_DOWN)
+          return (v ?? 0) >= 0 ? (p > ss.delta.filter ? ss.delta.bigUp : ss.delta.up) : (p < -ss.delta.filter ? ss.delta.bigDown : ss.delta.down)
         }) },
         width: barStepMs(t) * 0.55 || undefined, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data,
       // In the readout beside Delta; draws nothing.
@@ -1834,7 +1851,10 @@ export function CandlestickChart({
   // only then on price -- one place, not two (user, 2026-11-27: "keep it clean").
   // From the swing points themselves, so hiding the swing count does not hide them.
   const divergences = divOn && (indicators.cvd ?? []).some((v) => v != null)
-    ? cvdDivergences(showZigzagProp ? zigzag.zigzag_10 : [], t, indicators.cvd ?? [], volAvg, zoneOffset) : []
+    ? cvdDivergences(showZigzagProp ? (ss.div.swings === "3" ? zigzag.zigzag_3 : zigzag.zigzag_10) : [], t,
+                     indicators.cvd ?? [], volAvg, zoneOffset, { weakBelow: ss.div.minStrength, strongAbove: ss.div.strongAbove })
+        .filter((d) => (d.kind.startsWith("Regular") ? ss.div.regular : ss.div.hidden))
+    : []
   if (cvdRow) {
     const s = suffixOf("cvd")
     if (cvdStyle === "bars") {
@@ -1844,12 +1864,12 @@ export function CandlestickChart({
       const step = barStepMs(t) || 60_000
       data.push({ type: "bar", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
                   marker: { line: { width: 0 }, color: (indicators.cvd ?? []).map((v, i) =>
-                    confluence.has(t[i]) ? CVD_CONFLUENCE : (v ?? 0) >= 0 ? CVD_UP : CVD_DOWN) },
+                    confluence.has(t[i]) ? ss.cvd.confluence : (v ?? 0) >= 0 ? ss.cvd.up : ss.cvd.down) },
                   width: t.map((x) => (confluence.has(x) ? step * 4 : step * 0.55)),
                   xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
     } else {
       data.push({ type: "scatter", mode: "lines", x: t, y: indicators.cvd, name: "CVD", showlegend: false,
-                  line: { color: CVD_LINE, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+                  line: { color: ss.cvd.line, width: 1.4 }, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
     }
     shapes.push({ type: "line", xref: "paper", yref: `y${s}` as Shape["yref"], x0: 0, x1: 1, y0: 0, y1: 0,
                   line: { color: LEVEL_LINE, width: 1, dash: "dot" } })
@@ -1857,7 +1877,7 @@ export function CandlestickChart({
   if (divOn) {
     const s = cvdRow ? suffixOf("cvd") : null
     for (const d of divergences) {
-      const color = d.kind.endsWith("Bullish") ? DIV_BULL : DIV_BEAR
+      const color = d.kind.endsWith("Bullish") ? ss.div.bull : ss.div.bear
       const text = `CVD Divergence: ${d.kind} ${d.strength.toFixed(1)}${d.strong ? " (strong)" : ""}`
       // Bold enough to read at a glance (user, 2026-11-27: the thin dashed line and
       // small label went unseen): thick line, a dot on both swing points.
@@ -1884,7 +1904,7 @@ export function CandlestickChart({
   // Overbought/oversold reference lines, for the rows being drawn. The values
   // live in lib/oscillatorStudies.ts, which the settings panels read too, so
   // what a panel says and what the chart draws cannot disagree.
-  for (const { row, value } of levelLines(oscillatorRows)) {
+  for (const { row, value } of oscillatorRows.flatMap((row) => [oscLevels(row).overbought, oscLevels(row).oversold].map((value) => ({ row, value })))) {
     shapes.push({
       type: "line", xref: "paper", yref: `y${suffixOf(row)}` as Shape["yref"],
       x0: 0, x1: 1, y0: value, y1: value,
@@ -1930,12 +1950,12 @@ export function CandlestickChart({
   // chart: a note over the candles was clutter (user, 2026-11-27: "keep it clean").
   const lastDiv = divergences.at(-1)
   const divStatus = !divOn ? null
-    : !lastDiv ? "None on this chart (needs strength 1.5 or more)."
+    : !lastDiv ? `None on this chart (needs strength ${ss.div.minStrength} or more).`
     : `${divergences.length} on this chart${divergences.some((d) => { const ms = new Date(d.to.t).getTime(); return ms >= axisStartMs && ms <= axisEndMs })
         ? "" : " (none in view)"}; newest ${lastDiv.kind} ${lastDiv.strength.toFixed(1)} at ${lastDiv.to.t.slice(5, 16).replace("T", " ")}.`
   // The fit always includes both level lines, as thinkorswim's does.
-  const rsi13Fit = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
-  const rsi13Levels = OSC_STUDIES.rsi13.levels!
+  const rsi13Fit = fittedRange(osc2.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
+  const rsi13Levels = oscLevels("rsi13")
   const rsi13Range: [number, number] = [
     Math.min(rsi13Fit[0], rsi13Levels.oversold - 3), Math.max(rsi13Fit[1], rsi13Levels.overbought + 3),
   ]
@@ -2149,13 +2169,13 @@ export function CandlestickChart({
   }
   /** Each oscillator row's label, and the colour of the line it names. */
   const rowLabel: Record<string, { text: string; color: string }> = {
-    rsi2: { text: "RSI (2)", color: OSC_LINE },
-    stochrsi: { text: "StochRSI", color: STOCH_K },
-    rsi13: { text: "RSI (13)", color: OSC_LINE },
-    mfi: { text: "MFI", color: MFI_LINE },
+    rsi2: { text: `RSI (${ss.rsi2.length})`, color: ss.rsi2.color },
+    stochrsi: { text: "StochRSI", color: ss.stochrsi.kColor },
+    rsi13: { text: `RSI (${ss.rsi13.length})`, color: ss.rsi13.color },
+    mfi: { text: "MFI", color: ss.mfi.color },
     vol: { text: `VolumeAvg (${volLength})`, color: VOLUME_AVG_COLOR },
-    delta: { text: "Volume Delta", color: DELTA_UP },
-    cvd: { text: "CVD (Cumulative Volume Delta)", color: CVD_LINE },
+    delta: { text: "Volume Delta", color: ss.delta.up },
+    cvd: { text: "CVD (Cumulative Volume Delta)", color: ss.cvd.line },
   }
   // Keyed on `bars`, not on `t` -- `t` is rebuilt every render, so memoising
   // against it would recompute every time and defeat the point.
@@ -2557,7 +2577,7 @@ export function CandlestickChart({
       if (s.label === "Delta %") continue                 // a percentage, not on this row's scale
       const lastDelta = (indicators.delta ?? []).at(-1) ?? 0
       const color = s.color ?? (name === "vol" ? volumeBarColors(bars.map((b) => b.c)).at(-1)!
-        : name === "delta" ? (lastDelta >= 0 ? DELTA_UP : DELTA_DOWN) : "#e5e7eb")
+        : name === "delta" ? (lastDelta >= 0 ? ss.delta.up : ss.delta.down) : "#e5e7eb")
       pushTag(lastReading(s.values as (number | null)[]), color, axis, s.digits, range)
     }
   }
@@ -3025,65 +3045,6 @@ export function CandlestickChart({
               </label>
             </div>
 
-            {/* INTERVAL DAY RANGE -- and the place to pick one.
-                How much history each bar interval loads. It is a property of
-                the profile -- how far back the volume being counted goes --
-                so it belongs in this dialog rather than inside a timeframe
-                menu, which is where it used to be printed as "2 D : 5m".
-
-                SELECTABLE. Each row is an option: clicking it switches the
-                chart to that interval and loads its range, the same action as
-                the toolbar's interval buttons (useSelectInterval). It was a
-                read-only list at first, and a list of intervals you cannot
-                pick from read as broken.
-
-                The NUMBERS stay read-only, and deliberately: they were
-                specified one by one, and an editable field would make them
-                look like preferences. 25m and 35m have no specified range and
-                show a dash -- picking one leaves the dates exactly as they
-                were. */}
-            <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
-              <div className="text-muted-foreground mb-1">Interval day range</div>
-              <div className="rounded border border-[color:var(--hairline-soft)]
-                              bg-[color:var(--raise-2)] overflow-hidden">
-                <div aria-hidden className="flex items-center justify-between px-2 py-1
-                                            border-b border-[color:var(--hairline-soft)]
-                                            text-[10px] uppercase tracking-wide text-muted-foreground">
-                  <span>Interval</span>
-                  <span>History</span>
-                </div>
-                <div role="radiogroup" aria-label="Bar interval and the history it loads"
-                     className="max-h-44 overflow-y-auto">
-                  {ALL_CHART_TIMEFRAMES.map((tf) => {
-                    const label = rangeLabel(tf)
-                    const on = selectedTf === tf
-                    return (
-                      <button key={tf} type="button" role="radio" aria-checked={on}
-                              disabled={intervalPending}
-                              aria-label={label
-                                ? `${tf}, loads ${label === "Max" ? "maximum history" : label.replace(" D", " days")}`
-                                : `${tf}, no specified range`}
-                              title={label
-                                ? `Switch the chart to ${tf} and load ${label === "Max" ? "all history" : label.replace(" D", " days")}`
-                                : `Switch the chart to ${tf} — no specified range, so the dates stay as they are`}
-                              onClick={() => { if (!on) selectInterval(tf) }}
-                              className={`flex w-full items-center justify-between px-2 py-1 text-left
-                                          transition-colors disabled:cursor-wait ${
-                                on
-                                  ? "bg-[#2563eb] text-white"
-                                  : "odd:bg-[color:var(--raise-1)] hover:bg-[color:var(--raise-4)]"}`}>
-                        <span className="font-mono tabular-nums">{tf}</span>
-                        <span className={`font-mono tabular-nums ${
-                          on ? "text-white" : label ? "text-foreground" : "text-muted-foreground/60"}`}>
-                          {label ?? "—"}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
             <div className="space-y-1 pt-2 border-t border-[color:var(--hairline-soft)]">
               <div className="text-muted-foreground mb-1">Options</div>
               {([
@@ -3204,6 +3165,70 @@ export function CandlestickChart({
             </p>
           </div>
   )
+  // Days per interval (user, 2026-11-27: "1 day for 5 minute, 5 days ..."): its own item,
+  // first in the Studies panel; it was at the bottom of Volume Profile's settings.
+  const intervalRange = (
+          <div>
+            {/* INTERVAL DAY RANGE -- and the place to pick one.
+                How much history each bar interval loads. It is a property of
+                the profile -- how far back the volume being counted goes --
+                so it belongs in this dialog rather than inside a timeframe
+                menu, which is where it used to be printed as "2 D : 5m".
+
+                SELECTABLE. Each row is an option: clicking it switches the
+                chart to that interval and loads its range, the same action as
+                the toolbar's interval buttons (useSelectInterval). It was a
+                read-only list at first, and a list of intervals you cannot
+                pick from read as broken.
+
+                The NUMBERS stay read-only, and deliberately: they were
+                specified one by one, and an editable field would make them
+                look like preferences. 25m and 35m have no specified range and
+                show a dash -- picking one leaves the dates exactly as they
+                were. */}
+            <div className="space-y-1">
+              <div className="text-[11px] text-muted-foreground mb-1">How much history each bar interval loads. Pick one to switch the chart to it.</div>
+              <div className="rounded border border-[color:var(--hairline-soft)]
+                              bg-[color:var(--raise-2)] overflow-hidden">
+                <div aria-hidden className="flex items-center justify-between px-2 py-1
+                                            border-b border-[color:var(--hairline-soft)]
+                                            text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span>Interval</span>
+                  <span>History</span>
+                </div>
+                <div role="radiogroup" aria-label="Bar interval and the history it loads"
+                     className="max-h-44 overflow-y-auto">
+                  {ALL_CHART_TIMEFRAMES.map((tf) => {
+                    const label = rangeLabel(tf)
+                    const on = selectedTf === tf
+                    return (
+                      <button key={tf} type="button" role="radio" aria-checked={on}
+                              disabled={intervalPending}
+                              aria-label={label
+                                ? `${tf}, loads ${label === "Max" ? "maximum history" : label.replace(" D", " days")}`
+                                : `${tf}, no specified range`}
+                              title={label
+                                ? `Switch the chart to ${tf} and load ${label === "Max" ? "all history" : label.replace(" D", " days")}`
+                                : `Switch the chart to ${tf} — no specified range, so the dates stay as they are`}
+                              onClick={() => { if (!on) selectInterval(tf) }}
+                              className={`flex w-full items-center justify-between px-2 py-1 text-left
+                                          transition-colors disabled:cursor-wait ${
+                                on
+                                  ? "bg-[#2563eb] text-white"
+                                  : "odd:bg-[color:var(--raise-1)] hover:bg-[color:var(--raise-4)]"}`}>
+                        <span className="font-mono tabular-nums">{tf}</span>
+                        <span className={`font-mono tabular-nums ${
+                          on ? "text-white" : label ? "text-foreground" : "text-muted-foreground/60"}`}>
+                          {label ?? "—"}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+  )
   // The Studies panel's tree (2026-11-27): groups → studies → a study's own settings.
   const oscItem = (key: OscKey): StudyItem => {
     const info = OSC_STUDIES[key]
@@ -3211,13 +3236,21 @@ export function CandlestickChart({
       key, label: info.label, aria: `Show ${info.label}`, checked: osc[key], disabled: !info.available,
       title: info.available ? undefined : info.pending,
       onChange: (on) => setOsc((o) => ({ ...o, [key]: on })),
-      summary: info.available ? info.inputs.map(([, v]) => v).join(" · ") : undefined,
-      settings: <OscillatorStudyPanel study={key} inline onClose={() => setStudyExpanded(null)} />,
+      summary: key === "stochrsi"
+        ? `${ss.stochrsi.rsiLength} · K ${ss.stochrsi.kPeriod} · D ${ss.stochrsi.dPeriod} · ${ss.stochrsi.overbought} / ${ss.stochrsi.oversold}`
+        : `length ${ss[key].length} · ${ss[key].overbought} / ${ss[key].oversold}`,
+      settings: <OscillatorStudyPanel study={key} />,
     }
   }
   const studyGroups: StudyGroup[] = [
+    { title: "Chart", items: [
+      { key: "range", label: "Days per interval", aria: "Days per interval", checked: true, onChange: () => {},
+        noSwitch: true, summary: `${selectedTf}: ${rangeLabel(selectedTf) ?? "dates as set"} · 1m–4h each have their own`,
+        settings: intervalRange, settingsLabel: "Days per interval settings" },
+    ] },
     { title: "Price", items: [
       { key: "events", label: "Economic events", aria: "Show economic events", checked: eventsOn, onChange: setEventsOn,
+        summary: ss.events.medium ? "High + medium impact" : "High impact only", settings: <EventsSettings />,
         title: "FOMC, CPI, NFP and the like, marked on the chart" },
       { key: "vwap", label: "VWAP", aria: "Show VWAP", checked: vwapOn, onChange: setVwapOn,
         title: `Deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`,
@@ -3230,6 +3263,7 @@ export function CandlestickChart({
     ] },
     { title: "Swings", items: showZigzagProp ? [
       { key: "count", label: "Swing count", aria: "Show swing count", checked: swingCountOn, onChange: setSwingCountOn,
+        summary: `Deviation 10 Leg ${zzDev.d10} · 3 Leg ${zzDev.d3} · 1 Leg ${zzDev.d1}`, settings: <SwingCountSettings />,
         title: "10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines" },
       { key: "levels", label: "Swing levels", aria: "Show swing levels", checked: swingLevelsOn, onChange: setSwingLevelsOn,
         disabled: !swingCountOn, title: "Each swing's band from its 50% Equilibrium to its Volume Breakeven" },
@@ -3249,22 +3283,16 @@ export function CandlestickChart({
         onChange: (on) => { setDeltaOn(on); setCvdOn(on); setDivOn(on) },
         children: [
           { key: "delta", label: "Volume Delta", aria: "Show Volume Delta", checked: deltaOn, onChange: setDeltaOn,
-            title: "Buyers − sellers per candle; blue / orange past ±60%" },
+            title: `Buyers − sellers per candle; strong past ±${ss.delta.filter}%`,
+            summary: `Strong past ±${ss.delta.filter}%`, settings: <DeltaSettings /> },
           { key: "cvd", label: "Cumulative Volume Delta", aria: "Show Cumulative Volume Delta", checked: cvdOn,
             onChange: setCvdOn, title: "Running total; restarts 6 PM, midnight, 8 AM ET",
-            extra: (
-              <div className="flex gap-1" role="radiogroup" aria-label="CVD shown as">
-                {(["bars", "line"] as const).map((s) => (
-                  <button key={s} type="button" role="radio" aria-checked={cvdStyle === s} onClick={() => setCvdStyle(s)}
-                          className={`rounded px-2.5 py-0.5 text-xs border ${cvdStyle === s
-                            ? "border-sky-400 bg-sky-500/20 text-foreground" : "border-[color:var(--hairline-mid)] text-muted-foreground"}`}>
-                    {s === "bars" ? "Bars" : "Line"}
-                  </button>
-                ))}
-              </div>
-            ) },
+            summary: `${cvdStyle === "bars" ? "Bars" : "Line"} · restarts 6 PM, 12 AM, 8 AM ET`,
+            settings: <CvdSettings style={cvdStyle} onStyle={setCvdStyle} /> },
           { key: "div", label: "CVD Divergence", aria: "Show CVD Divergence", checked: divOn, onChange: setDivOn,
-            title: "Price vs CVD at consecutive 10 Leg highs / lows; under 1.5 not shown, over 3 strong",
+            title: `Price vs CVD at consecutive ${ss.div.swings} Leg highs / lows; under ${ss.div.minStrength} not shown, over ${ss.div.strongAbove} strong`,
+            summary: `${ss.div.swings} Leg swings · min ${ss.div.minStrength} · strong > ${ss.div.strongAbove}`,
+            settings: <DivergenceSettings />,
             note: divOn ? divStatus : null },
         ] },
     ] },
@@ -3284,9 +3312,9 @@ export function CandlestickChart({
       })) },
     ...indicatorRows.map((name): ReadoutRow => {
       const axis = `y${suffixOf(name)}`
-      const levels = freeScale(name) ? null : OSC_STUDIES[name as OscKey].levels
+      const levels = freeScale(name) ? null : oscLevels(name as OscKey)
       return {
-        axis, title: freeScale(name) ? rowLabel[name].text : OSC_STUDIES[name as OscKey].tosTitle,
+        axis, title: freeScale(name) ? rowLabel[name].text : oscTitle(name as OscKey),
         series: drawnSeries.get(axis) ?? [],
         // One line: on two, a short row's box runs into the next row's.
         fixed: levels ? [{ label: "OverSold", value: String(levels.oversold) },

@@ -57,7 +57,9 @@ function classify(type: "H" | "L", dPrice: number, dCvd: number): DivergenceKind
 export function cvdDivergences<P extends SwingPt>(
   points: readonly P[], times: readonly string[],
   cvd: readonly (number | null)[], volAvg: readonly (number | null)[], zoneOffset = 0,
+  opts: { weakBelow?: number; strongAbove?: number } = {},
 ): CvdDivergence<P>[] {
+  const weakBelow = opts.weakBelow ?? WEAK_BELOW, strongAbove = opts.strongAbove ?? STRONG_ABOVE
   const at = new Map(times.map((t, i) => [t, i]))
   const out: CvdDivergence<P>[] = []
   for (const type of ["L", "H"] as const) {
@@ -72,8 +74,8 @@ export function cvdDivergences<P extends SwingPt>(
       const kind = classify(type, dPrice, dCvd)
       if (!kind) continue
       const strength = Math.abs(dCvd) / avg
-      if (strength < WEAK_BELOW) continue
-      out.push({ kind, from: a, to: b, cvdFrom: ca, cvdTo: cb, dPrice, dCvd, strength, strong: strength > STRONG_ABOVE })
+      if (strength < weakBelow) continue
+      out.push({ kind, from: a, to: b, cvdFrom: ca, cvdTo: cb, dPrice, dCvd, strength, strong: strength > strongAbove })
     }
   }
   return out.sort((x, y) => x.to.t.localeCompare(y.to.t))
@@ -102,12 +104,14 @@ export function deltaAndCvd(bars: ReadonlyArray<Pick<OHLCVRecord, "t" | "h" | "l
 export function orderFlowNow<P extends SwingPt>(
   bars: ReadonlyArray<OHLCVRecord>, points: readonly P[],
   volContext?: { t: string[]; v: (number | null)[] }, volLength = 20,
+  opts: { weakBelow?: number; strongAbove?: number; regular?: boolean; hidden?: boolean } = {},
 ) {
   if (!bars.length) return null
   const { delta, pct, cvd } = deltaAndCvd(bars)
   const n = bars.length - 1
   const divs = points.length > 1
-    ? cvdDivergences(points, bars.map((b) => b.t), cvd, volumeAverageWithContext(bars, volContext, volLength))
+    ? cvdDivergences(points, bars.map((b) => b.t), cvd, volumeAverageWithContext(bars, volContext, volLength), 0, opts)
+        .filter((d) => (d.kind.startsWith("Regular") ? opts.regular ?? true : opts.hidden ?? true))
     : []
   return { delta: delta[n], pct: pct[n], cvd: cvd[n], divergence: divs.at(-1) ?? null }
 }

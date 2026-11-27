@@ -339,7 +339,7 @@ test("a Volume Profile day-range row switches the chart to that interval", async
   const shown = () => own.getByTestId("chart-interval").first().innerText()
   const before = await shown()
   await openStudies(own)
-  await own.locator("button[aria-label='Volume Profile settings']").first().click()
+  await own.locator("button[aria-label='Days per interval settings']").first().click()
   const rows = own.getByRole("radiogroup", { name: "Bar interval and the history it loads" })
   // The current interval is the checked row, before anything is clicked.
   await expect(rows.locator("[aria-checked='true']")).toHaveCount(1)

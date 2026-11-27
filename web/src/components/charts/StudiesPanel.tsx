@@ -28,6 +28,8 @@ export interface StudyItem {
   extra?: React.ReactNode
   /** A short status line (how many divergences). */
   note?: string | null
+  /** A setting, not a study: no on/off switch, not counted as "on". */
+  noSwitch?: boolean
 }
 
 export interface StudyGroup { title: string; items: StudyItem[] }
@@ -35,7 +37,7 @@ export interface StudyGroup { title: string; items: StudyItem[] }
 export type CvdStyle = "bars" | "line"
 
 function countOn(items: StudyItem[]): number {
-  return items.reduce((n, i) => n + (i.children ? countOn(i.children) : i.checked ? 1 : 0), 0)
+  return items.reduce((n, i) => n + (i.children ? countOn(i.children) : i.checked && !i.noSwitch ? 1 : 0), 0)
 }
 
 function Row({ item, depth, expanded, onExpand }: {
@@ -48,8 +50,10 @@ function Row({ item, depth, expanded, onExpand }: {
       <div className={cn("study-row", open && "study-row-open")}>
         <label className={cn("flex min-w-0 flex-1 items-center gap-2.5", item.disabled ? "opacity-50" : "cursor-pointer")}
                title={item.title}>
-          <input type="checkbox" className="study-switch" checked={item.checked} disabled={item.disabled}
-                 aria-label={item.aria} onChange={(e) => item.onChange(e.target.checked)} />
+          {!item.noSwitch && (
+            <input type="checkbox" className="study-switch" checked={item.checked} disabled={item.disabled}
+                   aria-label={item.aria} onChange={(e) => item.onChange(e.target.checked)} />
+          )}
           <span className="min-w-0">
             <span className={cn("block truncate", parent ? "font-semibold" : "font-medium")}>{item.label}</span>
             {item.summary && <span className="block truncate text-[11px] text-muted-foreground">{item.summary}</span>}
@@ -134,7 +138,9 @@ export function StudiesPanel({ groups, expanded, onExpand, onClose, className, t
           <section key={g.title} className="study-group" aria-label={g.title}>
             <div className="study-group-head">
               <span>{g.title}</span>
-              <span className="text-[11px] font-normal normal-case tracking-normal text-muted-foreground">{countOn(g.items)} on</span>
+              {g.items.some((i) => !i.noSwitch) && (
+                <span className="text-[11px] font-normal normal-case tracking-normal text-muted-foreground">{countOn(g.items)} on</span>
+              )}
             </div>
             <div className="pb-2">
               {g.items.map((i) => <Row key={i.key} item={i} depth={0} expanded={expanded} onExpand={onExpand} />)}

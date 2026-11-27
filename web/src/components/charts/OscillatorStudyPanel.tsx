@@ -1,65 +1,66 @@
-// The settings panel behind each oscillator's gear.
-//
-// Read-only, and says so: it lists the inputs and level lines the chart
-// actually draws. An unbuilt study says plainly that it is not built. A panel
-// of dead inputs would suggest otherwise.
+// An oscillator's settings, inside the Studies panel: its inputs, its two level lines
+// and its colours, all editable (user, 2026-11-27: "MFI settings ... I told you").
+// The chart works the oscillator out again in the browser when a length changes
+// (lib/oscCalc.ts); the Export Data workbook keeps the server's standard lengths.
+import { useStudySettings } from "@/store/studySettingsStore"
+import type { OscKey } from "@/lib/oscillatorStudies"
+import { ColorField, FieldGroup, NumberField, ResetRow } from "./StudyFields"
 
-import { useEffect, useRef } from "react"
-import { OSC_STUDIES, type OscKey } from "@/lib/oscillatorStudies"
-import { cn } from "@/lib/utils"
+export function OscillatorStudyPanel({ study }: { study: OscKey }) {
+  const s = useStudySettings((st) => st.s)
+  const update = useStudySettings((st) => st.update)
+  const reset = useStudySettings((st) => st.reset)
 
-export function OscillatorStudyPanel({
-  study, onClose, className, inline = false,
-}: {
-  study: OscKey
-  onClose: () => void
-  className?: string
-  /** Inside the Studies panel (2026-11-27): the content alone, no frame or close button. */
-  inline?: boolean
-}) {
-  const info = OSC_STUDIES[study]
-  const closeRef = useRef<HTMLButtonElement>(null)
+  const levels = (ob: number, os: number, set: (p: { overbought?: number; oversold?: number }) => void) => (
+    <FieldGroup title="Levels">
+      <NumberField label="overbought" value={ob} min={1} max={100} onChange={(v) => set({ overbought: v })} />
+      <NumberField label="oversold" value={os} min={0} max={99} onChange={(v) => set({ oversold: v })} />
+    </FieldGroup>
+  )
 
-  // Focus the panel's own control on open, so a keyboard user who pressed the
-  // gear lands inside the thing they opened.
-  useEffect(() => { if (!inline) closeRef.current?.focus() }, [study, inline])
+  if (study === "stochrsi") {
+    const v = s.stochrsi
+    const set = (p: Partial<typeof v>) => update("stochrsi", p)
+    return (
+      <div className="space-y-2">
+        <FieldGroup title="Inputs">
+          <NumberField label="RSI length" value={v.rsiLength} min={2} max={100} onChange={(n) => set({ rsiLength: n })} />
+          <NumberField label="K period" value={v.kPeriod} min={1} max={100} onChange={(n) => set({ kPeriod: n })} />
+          <NumberField label="D period" value={v.dPeriod} min={1} max={50} onChange={(n) => set({ dPeriod: n })} />
+          <NumberField label="slowing period" value={v.slowing} min={1} max={50} onChange={(n) => set({ slowing: n })} />
+        </FieldGroup>
+        {levels(v.overbought, v.oversold, set)}
+        <FieldGroup title="Colours">
+          <ColorField label="FullK" value={v.kColor} onChange={(c) => set({ kColor: c })} />
+          <ColorField label="FullD" value={v.dColor} onChange={(c) => set({ dColor: c })} />
+        </FieldGroup>
+        <ResetRow onReset={() => reset("stochrsi")} note="Wilder's RSI, simple K / D" />
+      </div>
+    )
+  }
 
-  const body = info.available ? (
-    <>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-        {info.inputs.map(([k, v]) => (
-          <div key={k} className="contents">
-            <dt className="text-muted-foreground">{k}</dt>
-            <dd className="tabular-nums">{v}</dd>
-          </div>
-        ))}
-        {info.levels && (
+  const v = s[study]
+  const set = (p: Partial<typeof v>) => update(study, p)
+  const rsiRow = study !== "mfi"
+  return (
+    <div className="space-y-2">
+      <FieldGroup title="Inputs">
+        <NumberField label="length" value={v.length} min={rsiRow ? 2 : 1} max={200} onChange={(n) => set({ length: n })}
+                     aria={`${study === "mfi" ? "MFI" : study === "rsi2" ? "RSI(2)" : "RSI(13)"} length`} />
+        <div className="sf-row"><span className="sf-label">price</span>
+          <span className="text-[12px]">{rsiRow ? "CLOSE · Wilder's" : "(H+L+C)/3 · needs volume"}</span></div>
+      </FieldGroup>
+      {levels(v.overbought, v.oversold, set)}
+      <FieldGroup title="Colours">
+        <ColorField label="line" value={v.color} onChange={(c) => set({ color: c })} />
+        {rsiRow && (
           <>
-            <div className="contents"><dt className="text-muted-foreground">overbought</dt>
-              <dd className="tabular-nums">{info.levels.overbought}</dd></div>
-            <div className="contents"><dt className="text-muted-foreground">oversold</dt>
-              <dd className="tabular-nums">{info.levels.oversold}</dd></div>
+            <ColorField label="past overbought" value={s.zones.above} onChange={(c) => update("zones", { above: c })} />
+            <ColorField label="past oversold" value={s.zones.below} onChange={(c) => update("zones", { below: c })} />
           </>
         )}
-      </dl>
-      <p className="mt-2 text-[11px] text-muted-foreground">These are the values drawn on the chart.</p>
-    </>
-  ) : <p className="text-muted-foreground">{info.pending}</p>
-  if (inline) return body
-
-  return (
-    <div
-      role="dialog"
-      aria-label={`${info.label} settings`}
-      onKeyDown={(e) => { if (e.key === "Escape") onClose() }}
-      className={cn("w-64 rounded-lg border border-[color:var(--hairline-mid)] bg-[var(--surface-1)] p-3 shadow-xl space-y-3", className)}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-sm">{info.label} settings</span>
-        <button ref={closeRef} type="button" onClick={onClose} aria-label="Close"
-                className="text-muted-foreground hover:text-foreground">✕</button>
-      </div>
-      {body}
+      </FieldGroup>
+      <ResetRow onReset={() => { reset(study); if (rsiRow) reset("zones") }} />
     </div>
   )
 }

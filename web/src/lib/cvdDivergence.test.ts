@@ -43,6 +43,13 @@ describe("cvdDivergences — sir's four kinds", () => {
     expect(mid.strong).toBe(false)
   })
 
+  it("the thresholds come from the settings: minimum strength and 'strong' level", () => {
+    const pts = [pt(T[1], 7210, "L"), pt(T[3], 7214, "L")]
+    const cvd = [0, 0, 0, -600, 0]                                                   // strength 1.0
+    expect(cvdDivergences(pts, T, cvd, AVG, 0, { weakBelow: 0.5 }).map((d) => d.strength)).toEqual([1])
+    expect(cvdDivergences(pts, T, cvd, AVG, 0, { weakBelow: 0.5, strongAbove: 0.8 })[0].strong).toBe(true)
+  })
+
   it("two points in different CVD sessions are not compared", () => {
     const t = ["2026-11-24T07:50:00", "2026-11-24T08:10:00"]
     expect(cvdDivergences([pt(t[0], 7210, "L"), pt(t[1], 7214, "L")], t, [3000, -3000], [600, 600])).toEqual([])
