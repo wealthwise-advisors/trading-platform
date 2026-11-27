@@ -4,9 +4,9 @@
 //
 // The checkboxes keep their "Show …" names and the gears their "… settings" names, so
 // keyboard users, screen readers and the tests find the same controls as before.
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown, ChevronRight, X } from "lucide-react"
+import { ChevronDown, ChevronRight, Download, RotateCcw, Search, Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface StudyItem {
@@ -186,14 +186,34 @@ function WindowRow({ item, depth, selected, onSelect }: {
   )
 }
 
-export function SettingsWindow({ title, groups, selected, onSelect, onClose, descriptions = {} }: {
+/** The items whose name (or a child's) contains the search text; their children filtered the same way. */
+function matching(items: StudyItem[], q: string): StudyItem[] {
+  if (!q) return items
+  return items.flatMap((i) => {
+    if (i.label.toLowerCase().includes(q)) return [i]
+    const kids = matching(i.children ?? [], q)
+    return kids.length ? [{ ...i, children: kids }] : []
+  })
+}
+
+export function SettingsWindow({ title, groups, selected, onSelect, onClose, descriptions = {},
+                                 onResetAll, exportData, onImport, fileName = "autotrader-settings.json" }: {
   title: string
   groups: StudyGroup[]
   selected: string | null
   onSelect: (key: string | null) => void
   onClose: () => void
   descriptions?: Record<string, string>
+  /** Footer actions; each shows only when given. */
+  onResetAll?: () => void
+  exportData?: () => unknown
+  onImport?: (data: unknown) => void
+  fileName?: string
 }) {
+  const [q, setQ] = useState("")
+  const [note, setNote] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const shown = groups.map((g) => ({ ...g, items: matching(g.items, q.trim().toLowerCase()) }))
   const all = groups.flatMap((g) => flatten(g.items))
   const current = all.find((i) => i.key === selected) ?? all.find((i) => i.settings) ?? all[0]
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -203,7 +223,10 @@ export function SettingsWindow({ title, groups, selected, onSelect, onClose, des
   return createPortal(
     <div className="sw-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div role="dialog" aria-modal="true" aria-label={title} className="sw-window"
-           onKeyDown={(e) => { if (e.key === "Escape") onClose() }}>
+           onKeyDown={(e) => {
+             // An open ⓘ takes the first Escape for itself.
+             if (e.key === "Escape" && !(e.currentTarget as HTMLElement).querySelector('[aria-expanded="true"]')) onClose()
+           }}>
         <header className="sw-head">
           <div>
             <div className="text-[15px] font-semibold">{title}</div>
@@ -215,7 +238,12 @@ export function SettingsWindow({ title, groups, selected, onSelect, onClose, des
         </header>
         <div className="sw-body">
           <nav className="sw-list" aria-label={`${title} list`}>
-            {groups.filter((g) => g.items.length).map((g) => (
+            <label className="sw-search">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label={`Search ${title.toLowerCase()}`} />
+            </label>
+            {shown.every((g) => !g.items.length) && <p className="px-3 py-4 text-[12px] text-muted-foreground">Nothing matches “{q}”.</p>}
+            {shown.filter((g) => g.items.length).map((g) => (
               <section key={g.title} aria-label={g.title}>
                 <div className="sw-group">
                   <span>{g.title}</span>
@@ -249,6 +277,39 @@ export function SettingsWindow({ title, groups, selected, onSelect, onClose, des
           )}
         </div>
         <footer className="sw-foot">
+          <div className="flex items-center gap-2">
+            {onResetAll && (
+              <button type="button" className="ui-link-btn gap-1.5"
+                      onClick={() => { if (window.confirm("Put every setting here back to its default?")) { onResetAll(); setNote("Every setting is back to its default.") } }}>
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Reset all
+              </button>
+            )}
+            {exportData && (
+              <button type="button" className="ui-link-btn gap-1.5" onClick={() => {
+                const url = URL.createObjectURL(new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" }))
+                const a = Object.assign(document.createElement("a"), { href: url, download: fileName })
+                a.click(); URL.revokeObjectURL(url); setNote(`Saved as ${fileName}.`)
+              }}>
+                <Download className="h-3.5 w-3.5" aria-hidden /> Export
+              </button>
+            )}
+            {onImport && (
+              <>
+                <button type="button" className="ui-link-btn gap-1.5" onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" aria-hidden /> Import
+                </button>
+                <input ref={fileRef} type="file" accept="application/json,.json" hidden aria-label="Settings file to import"
+                       onChange={async (e) => {
+                         const f = e.target.files?.[0]
+                         e.target.value = ""
+                         if (!f) return
+                         try { onImport(JSON.parse(await f.text())); setNote(`Loaded ${f.name}.`) }
+                         catch { setNote(`${f.name} is not a settings file.`) }
+                       }} />
+              </>
+            )}
+            {note && <span role="status" className="text-[12px] text-muted-foreground">{note}</span>}
+          </div>
           <button type="button" className="btn-solid sw-done" onClick={onClose}>Done</button>
         </footer>
       </div>

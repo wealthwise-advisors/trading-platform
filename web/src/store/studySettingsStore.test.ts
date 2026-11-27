@@ -15,4 +15,12 @@ describe("study settings", () => {
     useStudySettings.getState().reset("delta")
     expect(useStudySettings.getState().s.delta).toEqual(DEFAULT_STUDY_SETTINGS.delta)
   })
+  it("an imported file only sets values of the right type; Reset all puts every study back", () => {
+    useStudySettings.getState().importAll({ mfi: { length: "9; drop", overbought: 85, color: 12 }, rsi2: { length: Infinity } })
+    const m = useStudySettings.getState().s
+    expect(m.mfi).toEqual({ ...DEFAULT_STUDY_SETTINGS.mfi, overbought: 85 })
+    expect(m.rsi2.length).toBe(2)
+    useStudySettings.getState().resetAll()
+    expect(useStudySettings.getState().s).toEqual(DEFAULT_STUDY_SETTINGS)
+  })
 })

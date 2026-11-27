@@ -13,7 +13,8 @@ export function DeltaSettings() {
     <div className="space-y-2">
       <FieldGroup title="Inputs">
         <NumberField label="strong past ±%" value={v.filter} min={1} max={100} aria="Delta filter percent"
-                     onChange={(n) => set({ filter: n })} />
+                     onChange={(n) => set({ filter: n })}
+                     help="Delta % is Delta / Volume x 100. A bar beyond this either way is one-sided, and is drawn in the strong colour. Sir's value is 60." />
       </FieldGroup>
       <FieldGroup title="Colours">
         <ColorField label="buyers ahead" value={v.up} onChange={(c) => set({ up: c })} />
@@ -60,15 +61,20 @@ export function DivergenceSettings() {
   return (
     <div className="space-y-2">
       <FieldGroup title="Inputs">
-        <ChoiceField label="swings" value={v.swings} options={[["10", "10 Leg"], ["3", "3 Leg"]]} onChange={(s) => set({ swings: s })} />
+        <ChoiceField label="swings" value={v.swings} options={[["10", "10 Leg"], ["3", "3 Leg"]]} onChange={(s) => set({ swings: s })}
+                     help="Which swing points are compared: the big 10 Leg swings (sir's rule), or the smaller 3 Leg moves, which find more, smaller divergences." />
         <NumberField label="minimum strength" value={v.minStrength} min={0} max={20} step={0.1}
-                     onChange={(n) => set({ minStrength: n })} />
+                     onChange={(n) => set({ minStrength: n })}
+                     help="Strength = |CVD change| / VolumeAvg. Divergences weaker than this are not shown. Sir's value is 1.5." />
         <NumberField label="strong above" value={v.strongAbove} min={0} max={50} step={0.1}
-                     onChange={(n) => set({ strongAbove: n })} />
+                     onChange={(n) => set({ strongAbove: n })}
+                     help="Above this strength a divergence is marked strong and drawn with a thicker line. Sir's value is 3." />
       </FieldGroup>
       <FieldGroup title="Kinds">
-        <ToggleField label="Regular" checked={v.regular} onChange={(on) => set({ regular: on })} aria="Show Regular divergences" />
-        <ToggleField label="Hidden" checked={v.hidden} onChange={(on) => set({ hidden: on })} aria="Show Hidden divergences" />
+        <ToggleField label="Regular" checked={v.regular} onChange={(on) => set({ regular: on })} aria="Show Regular divergences"
+                     help="Price makes a new extreme that CVD does not confirm: a possible reversal." />
+        <ToggleField label="Hidden" checked={v.hidden} onChange={(on) => set({ hidden: on })} aria="Show Hidden divergences"
+                     help="CVD makes a new extreme that price does not: the trend is likely to continue." />
       </FieldGroup>
       <FieldGroup title="Colours">
         <ColorField label="bullish" value={v.bull} onChange={(c) => set({ bull: c })} />

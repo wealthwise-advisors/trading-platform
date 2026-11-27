@@ -699,7 +699,7 @@ test("Market Grid settings: every column group with its own settings, shared wit
   await panel.getByRole("button", { name: "Volume Profile settings", exact: true }).click()
   await expect(panel.getByText("Profile days per timeframe")).toBeVisible()
   await panel.getByRole("button", { name: "CVD Divergence settings", exact: true }).click()
-  await expect(panel.getByLabel("minimum strength")).toHaveValue("1.5")
+  await expect(panel.getByLabel("minimum strength", { exact: true })).toHaveValue("1.5")
   // The switch beside a group hides its columns, the same state as the Columns panel.
   await panel.getByRole("checkbox", { name: "Show Order flow columns" }).uncheck()
   await expect(page.locator("table.grid-live thead th", { hasText: "CVD Divergence" })).toBeHidden()

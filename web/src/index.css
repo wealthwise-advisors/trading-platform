@@ -2762,3 +2762,9 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
   .sw-body { grid-template-columns: 1fr; grid-template-rows: 40% 60%; }
   .sw-list { border-right: none; border-bottom: 1px solid var(--hairline-soft); }
 }
+
+.sw-search { display: flex; align-items: center; gap: 8px; margin: 4px 4px 2px; padding: 0 10px; height: 34px;
+             border-radius: 9px; border: 1px solid var(--hairline-mid); background: var(--raise-2); }
+.sw-search:focus-within { border-color: var(--sel-ring); }
+.sw-search input { flex: 1; min-width: 0; background: transparent; outline: none; font-size: 13px; color: var(--foreground); }
+.sw-foot { justify-content: space-between !important; gap: 12px; }

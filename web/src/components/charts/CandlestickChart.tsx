@@ -1769,7 +1769,7 @@ export function CandlestickChart({
     const rsi2Suffix = suffixOf("rsi2")
     data.push({
       type: "scatter", mode: "lines", x: t, y: osc2.rsi2, name: "RSI(2)", showlegend: false,
-      line: { color: ss.rsi2.color, width: 1.8 }, hovertemplate: `RSI(${ss.rsi2.length}): %{y:.1f}<extra></extra>`,
+      line: { color: ss.rsi2.color, width: ss.rsi2.width, dash: ss.rsi2.dash }, hovertemplate: `RSI(${ss.rsi2.length}): %{y:.1f}<extra></extra>`,
       xaxis: `x${rsi2Suffix}`, yaxis: `y${rsi2Suffix}`,
     } as unknown as Data)
     pushZones(osc2.rsi2, "rsi2", rsi2Suffix)
@@ -1779,10 +1779,10 @@ export function CandlestickChart({
     const stochRsiSuffix = suffixOf("stochrsi")
     data.push(
       { type: "scatter", mode: "lines", x: t, y: osc2.stochK, name: "FullK", showlegend: false,
-        line: { color: ss.stochrsi.kColor, width: 1.5 }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
+        line: { color: ss.stochrsi.kColor, width: ss.stochrsi.width, dash: ss.stochrsi.dash }, hovertemplate: "FullK: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
       { type: "scatter", mode: "lines", x: t, y: osc2.stochD, name: "FullD", showlegend: false,
-        line: { color: ss.stochrsi.dColor, width: 1.5 }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
+        line: { color: ss.stochrsi.dColor, width: ss.stochrsi.width, dash: ss.stochrsi.dash }, hovertemplate: "FullD: %{y:.1f}<extra></extra>",
         xaxis: `x${stochRsiSuffix}`, yaxis: `y${stochRsiSuffix}` } as unknown as Data,
     )
   }
@@ -1790,7 +1790,7 @@ export function CandlestickChart({
     const rsi13Suffix = suffixOf("rsi13")
     data.push({
       type: "scatter", mode: "lines", x: t, y: osc2.rsi13, name: "RSI(13)", showlegend: false,
-      line: { color: ss.rsi13.color, width: 1.8 }, hovertemplate: `RSI(${ss.rsi13.length}): %{y:.1f}<extra></extra>`,
+      line: { color: ss.rsi13.color, width: ss.rsi13.width, dash: ss.rsi13.dash }, hovertemplate: `RSI(${ss.rsi13.length}): %{y:.1f}<extra></extra>`,
       xaxis: `x${rsi13Suffix}`, yaxis: `y${rsi13Suffix}`,
     } as unknown as Data)
     pushZones(osc2.rsi13, "rsi13", rsi13Suffix)
@@ -1802,7 +1802,7 @@ export function CandlestickChart({
     const mfiSuffix = suffixOf("mfi")
     data.push({
       type: "scatter", mode: "lines", x: t, y: osc2.mfi, name: "MoneyFlowIndex",
-      line: { color: ss.mfi.color, width: 1.6 }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
+      line: { color: ss.mfi.color, width: ss.mfi.width, dash: ss.mfi.dash }, hovertemplate: "MoneyFlowIndex: %{y:.1f}<extra></extra>",
       xaxis: `x${mfiSuffix}`, yaxis: `y${mfiSuffix}`,
     } as unknown as Data)
   }
@@ -3381,7 +3381,11 @@ export function CandlestickChart({
       <div className="relative">
         {studiesOpen && (
           <SettingsWindow title="Studies" groups={studyGroups} selected={studyExpanded} onSelect={setStudyExpanded}
-                          onClose={() => setStudiesOpen(false)} descriptions={STUDY_DESCRIPTIONS} />
+                          onClose={() => setStudiesOpen(false)} descriptions={STUDY_DESCRIPTIONS}
+                          onResetAll={() => useStudySettings.getState().resetAll()}
+                          exportData={() => ({ app: "AutoTrader", kind: "study settings", saved: new Date().toISOString(), settings: useStudySettings.getState().s })}
+                          onImport={(d) => useStudySettings.getState().importAll((d as { settings?: unknown })?.settings ?? d)}
+                          fileName="autotrader-study-settings.json" />
         )}
         {stylePanel && (
           <ChartStylePanel style={chartStyle} onChange={setChartStyle} onClose={() => setStylePanel(false)}
