@@ -62,8 +62,7 @@ import {
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
-import { OrderFlowPanel, type CvdStyle } from "@/components/charts/OrderFlowPanel"
-import { StudiesButton, StudiesPanel, studiesOn, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
+import { StudiesButton, StudiesPanel, studiesOn, type CvdStyle, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
 import { useLayoutStore } from "@/store/layoutStore"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
@@ -317,7 +316,6 @@ export function CandlestickChart({
   const [eventsOn, setEventsOn] = useState(studies0.events ?? true)
   // Sir's swing levels drawn across every swing (2026-11-17); on by default so they show without hunting.
   const [swingLevelsOn, setSwingLevelsOn] = useState(studies0.swingLevels ?? true)
-  const [vwapPanelOpen, setVwapPanelOpen] = useState(false)
   /**
    * Whether Plotly's own legend is drawn beside the plot.
    *
@@ -383,7 +381,6 @@ export function CandlestickChart({
   // Computed locally rather than refetched: bins re-bucket from raw bars, which
   // the delivered histogram cannot reconstruct. See lib/volumeProfile.ts.
   const [vpOn, setVpOn] = useState(studies0.volumeProfile ?? showVolumeProfile)
-  const [vpPanelOpen, setVpPanelOpen] = useState(false)
   // The Volume Profile dialog's day-range table is a picker as well as a
   // reference: clicking a row selects that interval, exactly as the toolbar
   // buttons do. The lit row follows the store, as the toolbar's does.
@@ -413,17 +410,16 @@ export function CandlestickChart({
     rsi2: studies0.rsi2 ?? true, stochrsi: studies0.stochrsi ?? showStochRsi,
     rsi13: studies0.rsi13 ?? true, mfi: studies0.mfi ?? true,
   })
-  const [oscPanel, setOscPanel] = useState<OscKey | null>(null)
   // VolumeAvg (20), on by default as sir asked (2026-11-09). The bottom row.
   const [volOn, setVolOn] = useState(() => loadVolumeAvgSettings().on)
   const [volLength, setVolLength] = useState(() => loadVolumeAvgSettings().length)
   useEffect(() => { saveVolumeAvgSettings({ on: volOn, length: volLength }) }, [volOn, volLength])
-  const [volPanel, setVolPanel] = useState(false)
   // Volume Delta and CVD rows (sir, 2026-11-26): off until switched on, remembered per browser.
   const [deltaOn, setDeltaOn] = useState(() => readFlag(DELTA_KEY))
   const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
   const [divOn, setDivOn] = useState(() => readFlag(DIV_KEY))
-  const [flowPanel, setFlowPanel] = useState(false)
+  // Which study's settings are open inside the Studies panel (one at a time).
+  const [studyExpanded, setStudyExpanded] = useState<string | null>(null)
   const [studiesOpen, setStudiesOpen] = useState(false)
   // The swing count (numbers, HH/LL tags, zigzag lines) behind its own box, on by
   // default: unticked, the chart is the candles alone (user, 2026-11-27: "keep it clean").
@@ -2924,163 +2920,10 @@ export function CandlestickChart({
       delete d.hovertemplate
     }
   }
-  // The Studies panel's tree (2026-11-27): groups → studies → a study's own settings.
-  const closeStudies = () => setStudiesOpen(false)
-  const oscItem = (key: OscKey): StudyItem => {
-    const info = OSC_STUDIES[key]
-    return {
-      key, label: info.label, aria: `Show ${info.label}`, checked: osc[key], disabled: !info.available,
-      title: info.available ? undefined : info.pending,
-      onChange: (on) => setOsc((o) => ({ ...o, [key]: on })),
-      gear: { label: `${info.label} settings`, onClick: () => {
-        if (info.available && !osc[key]) setOsc((o) => ({ ...o, [key]: true }))
-        setVolPanel(false); setFlowPanel(false); setOscPanel(key); closeStudies()
-      } },
-    }
-  }
-  const studyGroups: StudyGroup[] = [
-    { title: "Price", items: [
-      { key: "events", label: "Economic events", aria: "Show economic events", checked: eventsOn, onChange: setEventsOn,
-        title: "FOMC, CPI, NFP and the like, marked on the chart" },
-      { key: "vwap", label: "VWAP", aria: "Show VWAP", checked: vwapOn, onChange: setVwapOn,
-        title: `Deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`,
-        gear: { label: "VWAP settings", onClick: () => { setVwapOn(true); setVwapPanelOpen(true); closeStudies() } } },
-      { key: "vp", label: "Volume Profile", aria: "Show Volume Profile", checked: vpOn, onChange: setVpOn,
-        title: `${vpBins} rows, value area ${vpValueArea}%`,
-        gear: { label: "Volume Profile settings", onClick: () => { setVpOn(true); setVpPanelOpen(true); closeStudies() } } },
-    ] },
-    { title: "Swings", items: showZigzagProp ? [
-      { key: "count", label: "Swing count", aria: "Show swing count", checked: swingCountOn, onChange: setSwingCountOn,
-        title: "10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines" },
-      { key: "levels", label: "Swing levels", aria: "Show swing levels", checked: swingLevelsOn, onChange: setSwingLevelsOn,
-        disabled: !swingCountOn, title: "Each swing's band from its 50% Equilibrium to its Volume Breakeven" },
-    ] : [] },
-    { title: "Oscillators", items: [
-      { key: "rsi", label: "RSI", aria: "Show RSI", checked: osc.rsi2 || osc.rsi13,
-        onChange: (on) => setOsc((o) => ({ ...o, rsi2: on, rsi13: on })),
-        children: [oscItem("rsi2"), oscItem("rsi13")] },
-      oscItem("stochrsi"), oscItem("mfi"),
-    ] },
-    { title: "Volume", items: [
-      { key: "vol", label: "VolumeAvg", aria: "Show VolumeAvg", checked: volOn, onChange: setVolOn,
-        gear: { label: "VolumeAvg settings", onClick: () => {
-          setVolOn(true); setOscPanel(null); setFlowPanel(false); setVolPanel(true); closeStudies() } } },
-      { key: "flow", label: "Order Flow", aria: "Show Order Flow", checked: deltaOn || cvdOn || divOn,
-        onChange: (on) => { setDeltaOn(on); setCvdOn(on); setDivOn(on) },
-        children: [
-          { key: "delta", label: "Volume Delta", aria: "Show Volume Delta", checked: deltaOn, onChange: setDeltaOn,
-            title: "Buyers − sellers per candle; blue / orange past ±60%" },
-          { key: "cvd", label: "Cumulative Volume Delta", aria: "Show Cumulative Volume Delta", checked: cvdOn,
-            onChange: setCvdOn, title: "Running total; restarts 6 PM, midnight, 8 AM ET",
-            extra: (
-              <div className="flex gap-1" role="radiogroup" aria-label="CVD shown as">
-                {(["bars", "line"] as const).map((s) => (
-                  <button key={s} type="button" role="radio" aria-checked={cvdStyle === s} onClick={() => setCvdStyle(s)}
-                          className={`rounded px-2.5 py-0.5 text-xs border ${cvdStyle === s
-                            ? "border-sky-400 bg-sky-500/20 text-foreground" : "border-[color:var(--hairline-mid)] text-muted-foreground"}`}>
-                    {s === "bars" ? "Bars" : "Line"}
-                  </button>
-                ))}
-              </div>
-            ) },
-          { key: "div", label: "CVD Divergence", aria: "Show CVD Divergence", checked: divOn, onChange: setDivOn,
-            title: "Price vs CVD at consecutive 10 Leg highs / lows; under 1.5 not shown, over 3 strong",
-            note: divOn ? divStatus : null },
-        ] },
-    ] },
-  ]
-
-  const readoutRows: ReadoutRow[] = [
-    { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`,
-      // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
-      series: (drawnSeries.get("y") ?? []).filter((s) => !BOX_BLOCK_LABELS.has(s.label)),
-      fixed: [],
-      vwap: vwapOn && vwapHasData
-        ? { mid: indicators.vwap ?? [], upper2: indicators.vwap_upper ?? [], levels: vwapLevels }
-        : undefined,
-      profile: (["poc", "vah", "val"] as const).map((key) => ({
-        label: PLOT_LABEL[key], color: vpPlots[key].color,
-        value: vpVisible ? formatReadoutNumber(vpValues[key]) : "N/A",
-      })) },
-    ...indicatorRows.map((name): ReadoutRow => {
-      const axis = `y${suffixOf(name)}`
-      const levels = freeScale(name) ? null : OSC_STUDIES[name as OscKey].levels
-      return {
-        axis, title: freeScale(name) ? rowLabel[name].text : OSC_STUDIES[name as OscKey].tosTitle,
-        series: drawnSeries.get(axis) ?? [],
-        // One line: on two, a short row's box runs into the next row's.
-        fixed: levels ? [{ label: "OverSold", value: String(levels.oversold) },
-                         { label: "OverBought", value: String(levels.overbought) }] : [],
-      }
-    }),
-  ]
-
-  return (
-    // Real height comes from ResultsPage's flex-1 min-h-0 chain (hero row ->
-    // Tabs -> App.tsx's viewport-bound scroll div). minHeight must stay a
-    // true floor, not a target -- raising it to 620 broke RSI(2)/RSI(13)
-    // entirely: whenever the real flex-computed height came in under 620px,
-    // this div was forced taller than its parent Card's actual box, and
-    // since Card clips overflow, everything past the bottom of that box
-    // (i.e. the two indicator rows, which render last) got sliced off
-    // instead of just being small. 420 is low enough to only kick in on
-    // genuinely tiny viewports.
-    <div ref={containerRef}
-         style={{ width: "100%", height: "100%", minHeight: chartMinHeight,
-                  display: "flex", flexDirection: "column" }}>
-      {/* The instrument line and the OHLC quote. The controls that used to
-          ride here moved down to the toolbar row, where the reference keeps
-          every control together -- this line is the quote now, nothing else. */}
-      <ChartHeader symbol={symbol} description={description} exchange={exchange}
-                   interval={interval} bars={bars} live={live} lastSignal={liveSignals[liveSignals.length - 1]} nextEvent={nextEvent} />
-      {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
-          line, as the reference draws them. They were two stacked rows,
-          which cost the plot a strip of height to say nothing the one row
-          does not.
-
-          One bordered chip per study, each holding its own toggle and its
-          own gear -- see STUDY_CHIP for why the box is load bearing rather
-          than decoration. The `|` separators that used to group them were
-          hidden below the `wide` breakpoint, which is where the ambiguity
-          was worst.
-
-          The gear is deliberately NOT disabled when its study is off. A
-          gear greyed to 40% beside a bright one reads as missing rather
-          than as unavailable, and clicking it did nothing at all. Clicking
-          now switches the study on and opens its panel. */}
-      <ChartToolbar
-        symbol={symbol}
-        lastPrice={bars.length ? bars[bars.length - 1].c : null}
-        canUndo={userShapes.length > 0 || userNotes.length > 0}
-        canRedo={redoStack.length > 0}
-        onUndo={undoDrawing}
-        onRedo={redoDrawing}
-        onSnapshot={downloadPng}
-        onAlertsChanged={() => setAlertTick((n) => n + 1)}
-        onZoomIn={() => zoomBy(0.6)}
-        onZoomOut={() => zoomBy(1 / 0.6)}
-        onResetView={() => { setVisibleRange(null); setActiveRange(null); setManualY(null) }}
-        actions={chartActions}
-        studies={<StudiesButton open={studiesOpen} onClick={() => setStudiesOpen((o) => !o)}
-                                active={studiesOn(studyGroups)} />}
-      />
-
-      {/* The studies' settings popovers. Their own positioning context,
-          directly under the row whose gears open them, and zero height of
-          its own -- every child is absolutely positioned, so this costs
-          the plot nothing when they are all closed. */}
-      <div className="relative">
-        {studiesOpen && (
-          <StudiesPanel groups={studyGroups} onClose={() => setStudiesOpen(false)} className="right-2 top-1" />
-        )}
-        {vpPanelOpen && vpOn && (
-          <div className="absolute left-52 top-7 z-20 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-[color:var(--hairline-mid)]
-                          bg-[var(--surface-1)] p-3 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm">VolumeProfile Customizing</span>
-              <button type="button" className="text-muted-foreground hover:text-foreground"
-                      onClick={() => setVpPanelOpen(false)} aria-label="Close">✕</button>
-            </div>
+  // Each study's settings, shown INSIDE the Studies panel under the study (user,
+  // 2026-11-27: "settings inside settings, step by step"), not in a pop-up of its own.
+  const vpSettings = (
+          <div className="space-y-3">
             <div className="flex gap-2 border-b border-[color:var(--hairline-soft)] pb-2">
               <button type="button" onClick={saveVpDefaults} aria-label="Save as default"
                       className="rounded border border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] px-2 py-1
@@ -3267,17 +3110,9 @@ export function CandlestickChart({
               redraws immediately.
             </p>
           </div>
-        )}
-
-        {vwapPanelOpen && vwapOn && (
-          <div className="absolute left-0 top-7 z-20 w-72 rounded-lg border border-[color:var(--hairline-mid)]
-                          bg-[var(--surface-1)] p-3 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm">VWAP settings</span>
-              <button type="button" className="text-muted-foreground hover:text-foreground"
-                      onClick={() => setVwapPanelOpen(false)} aria-label="Close">✕</button>
-            </div>
-
+  )
+  const vwapSettings = (
+          <div className="space-y-3">
             {/* Any number of bands at once, the same levels Market Grid offers.
                 +/-1 and +/-2 start selected; see lib/vwapLevels.ts. Sigma is
                 recovered from the shipped 2-sigma payload, so every level is
@@ -3368,25 +3203,161 @@ export function CandlestickChart({
               range, so changes redraw immediately.
             </p>
           </div>
-        )}
-        {oscPanel && (
-          <OscillatorStudyPanel study={oscPanel} onClose={() => setOscPanel(null)}
-                                className="absolute right-0 top-7 z-20" />
+  )
+  // The Studies panel's tree (2026-11-27): groups → studies → a study's own settings.
+  const oscItem = (key: OscKey): StudyItem => {
+    const info = OSC_STUDIES[key]
+    return {
+      key, label: info.label, aria: `Show ${info.label}`, checked: osc[key], disabled: !info.available,
+      title: info.available ? undefined : info.pending,
+      onChange: (on) => setOsc((o) => ({ ...o, [key]: on })),
+      summary: info.available ? info.inputs.map(([, v]) => v).join(" · ") : undefined,
+      settings: <OscillatorStudyPanel study={key} inline onClose={() => setStudyExpanded(null)} />,
+    }
+  }
+  const studyGroups: StudyGroup[] = [
+    { title: "Price", items: [
+      { key: "events", label: "Economic events", aria: "Show economic events", checked: eventsOn, onChange: setEventsOn,
+        title: "FOMC, CPI, NFP and the like, marked on the chart" },
+      { key: "vwap", label: "VWAP", aria: "Show VWAP", checked: vwapOn, onChange: setVwapOn,
+        title: `Deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`,
+        summary: `Bands ${vwapLevels.map((l) => `±${l}`).join(" ") || "none"} · resets each session`,
+        settings: vwapSettings, settingsLabel: "VWAP settings" },
+      { key: "vp", label: "Volume Profile", aria: "Show Volume Profile", checked: vpOn, onChange: setVpOn,
+        title: `${vpBins} rows, value area ${vpValueArea}%`,
+        summary: `${vpBins} rows · value area ${vpValueArea}% · per ${vpTimePer.toLowerCase()}`,
+        settings: vpSettings, settingsLabel: "Volume Profile settings" },
+    ] },
+    { title: "Swings", items: showZigzagProp ? [
+      { key: "count", label: "Swing count", aria: "Show swing count", checked: swingCountOn, onChange: setSwingCountOn,
+        title: "10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines" },
+      { key: "levels", label: "Swing levels", aria: "Show swing levels", checked: swingLevelsOn, onChange: setSwingLevelsOn,
+        disabled: !swingCountOn, title: "Each swing's band from its 50% Equilibrium to its Volume Breakeven" },
+    ] : [] },
+    { title: "Oscillators", items: [
+      { key: "rsi", label: "RSI", aria: "Show RSI", checked: osc.rsi2 || osc.rsi13,
+        onChange: (on) => setOsc((o) => ({ ...o, rsi2: on, rsi13: on })),
+        children: [oscItem("rsi2"), oscItem("rsi13")] },
+      oscItem("stochrsi"), oscItem("mfi"),
+    ] },
+    { title: "Volume", items: [
+      { key: "vol", label: "VolumeAvg", aria: "Show VolumeAvg", checked: volOn, onChange: setVolOn,
+        summary: `Length ${volLength} · buyers / sellers in the hover`,
+        settings: <VolumeAvgPanel length={volLength} onLength={setVolLength} inline onClose={() => setStudyExpanded(null)} />,
+        settingsLabel: "VolumeAvg settings" },
+      { key: "flow", label: "Order Flow", aria: "Show Order Flow", checked: deltaOn || cvdOn || divOn,
+        onChange: (on) => { setDeltaOn(on); setCvdOn(on); setDivOn(on) },
+        children: [
+          { key: "delta", label: "Volume Delta", aria: "Show Volume Delta", checked: deltaOn, onChange: setDeltaOn,
+            title: "Buyers − sellers per candle; blue / orange past ±60%" },
+          { key: "cvd", label: "Cumulative Volume Delta", aria: "Show Cumulative Volume Delta", checked: cvdOn,
+            onChange: setCvdOn, title: "Running total; restarts 6 PM, midnight, 8 AM ET",
+            extra: (
+              <div className="flex gap-1" role="radiogroup" aria-label="CVD shown as">
+                {(["bars", "line"] as const).map((s) => (
+                  <button key={s} type="button" role="radio" aria-checked={cvdStyle === s} onClick={() => setCvdStyle(s)}
+                          className={`rounded px-2.5 py-0.5 text-xs border ${cvdStyle === s
+                            ? "border-sky-400 bg-sky-500/20 text-foreground" : "border-[color:var(--hairline-mid)] text-muted-foreground"}`}>
+                    {s === "bars" ? "Bars" : "Line"}
+                  </button>
+                ))}
+              </div>
+            ) },
+          { key: "div", label: "CVD Divergence", aria: "Show CVD Divergence", checked: divOn, onChange: setDivOn,
+            title: "Price vs CVD at consecutive 10 Leg highs / lows; under 1.5 not shown, over 3 strong",
+            note: divOn ? divStatus : null },
+        ] },
+    ] },
+  ]
+
+  const readoutRows: ReadoutRow[] = [
+    { axis: "y", title: `${symbol}${interval ? ` ${interval}` : ""}`,
+      // VWAP, its bands and the profile levels have their own blocks, as on thinkorswim.
+      series: (drawnSeries.get("y") ?? []).filter((s) => !BOX_BLOCK_LABELS.has(s.label)),
+      fixed: [],
+      vwap: vwapOn && vwapHasData
+        ? { mid: indicators.vwap ?? [], upper2: indicators.vwap_upper ?? [], levels: vwapLevels }
+        : undefined,
+      profile: (["poc", "vah", "val"] as const).map((key) => ({
+        label: PLOT_LABEL[key], color: vpPlots[key].color,
+        value: vpVisible ? formatReadoutNumber(vpValues[key]) : "N/A",
+      })) },
+    ...indicatorRows.map((name): ReadoutRow => {
+      const axis = `y${suffixOf(name)}`
+      const levels = freeScale(name) ? null : OSC_STUDIES[name as OscKey].levels
+      return {
+        axis, title: freeScale(name) ? rowLabel[name].text : OSC_STUDIES[name as OscKey].tosTitle,
+        series: drawnSeries.get(axis) ?? [],
+        // One line: on two, a short row's box runs into the next row's.
+        fixed: levels ? [{ label: "OverSold", value: String(levels.oversold) },
+                         { label: "OverBought", value: String(levels.overbought) }] : [],
+      }
+    }),
+  ]
+
+  return (
+    // Real height comes from ResultsPage's flex-1 min-h-0 chain (hero row ->
+    // Tabs -> App.tsx's viewport-bound scroll div). minHeight must stay a
+    // true floor, not a target -- raising it to 620 broke RSI(2)/RSI(13)
+    // entirely: whenever the real flex-computed height came in under 620px,
+    // this div was forced taller than its parent Card's actual box, and
+    // since Card clips overflow, everything past the bottom of that box
+    // (i.e. the two indicator rows, which render last) got sliced off
+    // instead of just being small. 420 is low enough to only kick in on
+    // genuinely tiny viewports.
+    <div ref={containerRef}
+         style={{ width: "100%", height: "100%", minHeight: chartMinHeight,
+                  display: "flex", flexDirection: "column" }}>
+      {/* The instrument line and the OHLC quote. The controls that used to
+          ride here moved down to the toolbar row, where the reference keeps
+          every control together -- this line is the quote now, nothing else. */}
+      <ChartHeader symbol={symbol} description={description} exchange={exchange}
+                   interval={interval} bars={bars} live={live} lastSignal={liveSignals[liveSignals.length - 1]} nextEvent={nextEvent} />
+      {/* THE CONTROL ROW: the studies and the chart's own tools on ONE
+          line, as the reference draws them. They were two stacked rows,
+          which cost the plot a strip of height to say nothing the one row
+          does not.
+
+          One bordered chip per study, each holding its own toggle and its
+          own gear -- see STUDY_CHIP for why the box is load bearing rather
+          than decoration. The `|` separators that used to group them were
+          hidden below the `wide` breakpoint, which is where the ambiguity
+          was worst.
+
+          The gear is deliberately NOT disabled when its study is off. A
+          gear greyed to 40% beside a bright one reads as missing rather
+          than as unavailable, and clicking it did nothing at all. Clicking
+          now switches the study on and opens its panel. */}
+      <ChartToolbar
+        symbol={symbol}
+        lastPrice={bars.length ? bars[bars.length - 1].c : null}
+        canUndo={userShapes.length > 0 || userNotes.length > 0}
+        canRedo={redoStack.length > 0}
+        onUndo={undoDrawing}
+        onRedo={redoDrawing}
+        onSnapshot={downloadPng}
+        onAlertsChanged={() => setAlertTick((n) => n + 1)}
+        onZoomIn={() => zoomBy(0.6)}
+        onZoomOut={() => zoomBy(1 / 0.6)}
+        onResetView={() => { setVisibleRange(null); setActiveRange(null); setManualY(null) }}
+        actions={chartActions}
+        studies={<StudiesButton open={studiesOpen} onClick={() => setStudiesOpen((o) => !o)}
+                                active={studiesOn(studyGroups)} />}
+      />
+
+      {/* The studies' settings popovers. Their own positioning context,
+          directly under the row whose gears open them, and zero height of
+          its own -- every child is absolutely positioned, so this costs
+          the plot nothing when they are all closed. */}
+      <div className="relative">
+        {studiesOpen && (
+          <StudiesPanel groups={studyGroups} expanded={studyExpanded} onExpand={setStudyExpanded}
+                        onClose={() => setStudiesOpen(false)} className="right-2 top-1" />
         )}
         {stylePanel && (
           <ChartStylePanel style={chartStyle} onChange={setChartStyle} onClose={() => setStylePanel(false)}
                            symbols={COMPARE_SYMBOLS} currentSymbol={symbol.toUpperCase().replace(/^\//, "")}
                            className="absolute right-0 top-7 z-20" />
-        )}
-        {volPanel && (
-          <VolumeAvgPanel length={volLength} onLength={setVolLength} onClose={() => setVolPanel(false)}
-                          className="absolute right-0 top-7 z-20" />
-        )}
-        {flowPanel && (
-          <OrderFlowPanel value={{ delta: deltaOn, cvd: cvdOn, divergence: divOn }}
-                          onChange={(v) => { setDeltaOn(v.delta); setCvdOn(v.cvd); setDivOn(v.divergence) }}
-                          cvdStyle={cvdStyle} onCvdStyle={setCvdStyle} divergenceStatus={divStatus}
-                          onClose={() => setFlowPanel(false)} className="absolute right-0 top-7 z-20" />
         )}
       </div>
 

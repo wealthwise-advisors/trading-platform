@@ -9,18 +9,43 @@ import { OSC_STUDIES, type OscKey } from "@/lib/oscillatorStudies"
 import { cn } from "@/lib/utils"
 
 export function OscillatorStudyPanel({
-  study, onClose, className,
+  study, onClose, className, inline = false,
 }: {
   study: OscKey
   onClose: () => void
   className?: string
+  /** Inside the Studies panel (2026-11-27): the content alone, no frame or close button. */
+  inline?: boolean
 }) {
   const info = OSC_STUDIES[study]
   const closeRef = useRef<HTMLButtonElement>(null)
 
   // Focus the panel's own control on open, so a keyboard user who pressed the
   // gear lands inside the thing they opened.
-  useEffect(() => { closeRef.current?.focus() }, [study])
+  useEffect(() => { if (!inline) closeRef.current?.focus() }, [study, inline])
+
+  const body = info.available ? (
+    <>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        {info.inputs.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-muted-foreground">{k}</dt>
+            <dd className="tabular-nums">{v}</dd>
+          </div>
+        ))}
+        {info.levels && (
+          <>
+            <div className="contents"><dt className="text-muted-foreground">overbought</dt>
+              <dd className="tabular-nums">{info.levels.overbought}</dd></div>
+            <div className="contents"><dt className="text-muted-foreground">oversold</dt>
+              <dd className="tabular-nums">{info.levels.oversold}</dd></div>
+          </>
+        )}
+      </dl>
+      <p className="mt-2 text-[11px] text-muted-foreground">These are the values drawn on the chart.</p>
+    </>
+  ) : <p className="text-muted-foreground">{info.pending}</p>
+  if (inline) return body
 
   return (
     <div
@@ -34,36 +59,7 @@ export function OscillatorStudyPanel({
         <button ref={closeRef} type="button" onClick={onClose} aria-label="Close"
                 className="text-muted-foreground hover:text-foreground">✕</button>
       </div>
-
-      {info.available ? (
-        <>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-            {info.inputs.map(([k, v]) => (
-              <div key={k} className="contents">
-                <dt className="text-muted-foreground">{k}</dt>
-                <dd className="tabular-nums">{v}</dd>
-              </div>
-            ))}
-            {info.levels && (
-              <>
-                <div className="contents">
-                  <dt className="text-muted-foreground">overbought</dt>
-                  <dd className="tabular-nums">{info.levels.overbought}</dd>
-                </div>
-                <div className="contents">
-                  <dt className="text-muted-foreground">oversold</dt>
-                  <dd className="tabular-nums">{info.levels.oversold}</dd>
-                </div>
-              </>
-            )}
-          </dl>
-          <p className="text-[11px] text-muted-foreground">
-            These are the values drawn on the chart.
-          </p>
-        </>
-      ) : (
-        <p className="text-muted-foreground">{info.pending}</p>
-      )}
+      {body}
     </div>
   )
 }
