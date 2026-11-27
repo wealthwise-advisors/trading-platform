@@ -32,7 +32,7 @@ export function StepSection({
 
   return (
     <Reveal delay={delay}>
-      <section className="rounded-2xl border border-[color:var(--hairline-soft)] bg-[var(--surface-deep)] overflow-hidden">
+      <section className="step-section rounded-2xl border border-[color:var(--hairline-soft)] bg-[var(--surface-deep)] overflow-hidden">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2
                            border-b border-[color:var(--hairline-soft)] bg-[var(--grid-head)]">
           {Icon ? (

@@ -571,10 +571,9 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               ))}
             </div>
           </div>
-          {/* --primary here is Session Hours' restrained orange: the AM / PM
-              toggle and the hover border inside TimeField draw in primary. */}
+          {/* The AM / PM toggle and TimeField's hover border draw in --primary: the app's selection teal. */}
           <div className={`grid grid-cols-2 lg:grid-cols-1 gap-2 ${cfg.session24h ? "opacity-40" : ""}`}
-               style={{ "--primary": "#e9a26b" } as React.CSSProperties}>
+               style={{ "--primary": "var(--sel-ring)" } as React.CSSProperties}>
             <div className="space-y-1">
               <Label className="text-xs">From</Label>
               <TimeField value={toZone(cfg.sessionStart, zoneOffset)} disabled={cfg.session24h}

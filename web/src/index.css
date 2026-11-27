@@ -2768,3 +2768,88 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 .sw-search:focus-within { border-color: var(--sel-ring); }
 .sw-search input { flex: 1; min-width: 0; background: transparent; outline: none; font-size: 13px; color: var(--foreground); }
 .sw-foot { justify-content: space-between !important; gap: 12px; }
+
+/* ══ TERMINAL LOOK 2026-11-28 ═══════════════════════════════════════════════
+   User: "make the interface look futuristic and more advanced". A trading
+   terminal, not a website: a deep ground with a faint engineering grid, glass
+   panels lit along their top edge, numbers in a terminal face, small-caps
+   labels, and one teal light line under the header. Nothing moves; the only
+   glow sits under the one action and the active tab. */
+:root {
+  --mono: "Cascadia Mono", "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, ui-monospace, monospace;
+}
+.dark {
+  --background: #06080b;
+  --page-ground-from: #05070a;
+  --page-ground-to: #080b0f;
+  --panel-from: rgba(18, 24, 31, 0.80);
+  --panel-to: rgba(9, 12, 16, 0.80);
+  --panel-edge: rgba(140, 190, 205, 0.11);
+  --panel-lit: rgba(160, 235, 228, 0.16);
+  --light-line: linear-gradient(90deg, transparent 0%, rgba(45, 212, 191, 0.55) 25%, rgba(56, 189, 248, 0.45) 70%, transparent 100%);
+}
+
+/* Ground: a 32 px engineering grid, barely there, fixed behind every page. */
+.dark .app-shell {
+  background:
+    linear-gradient(rgba(110, 180, 200, 0.07) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(110, 180, 200, 0.07) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(ellipse 70% 45% at 55% -12%, rgba(45, 212, 191, 0.08), transparent 65%),
+    linear-gradient(180deg, var(--page-ground-from), var(--page-ground-to));
+  background-attachment: fixed;
+}
+
+/* Panels: dark glass, a cool hairline, and a lit top edge. */
+.dark [data-slot="card"],
+.dark .cfg-section,
+.dark .step-section,
+.dark .rail-card,
+.dark .stat-tile {
+  background: linear-gradient(180deg, var(--panel-from), var(--panel-to)) !important;
+  border-color: var(--panel-edge) !important;
+  --tw-ring-color: var(--panel-edge);
+  box-shadow: inset 0 1px 0 var(--panel-lit), 0 14px 32px -22px rgba(0, 0, 0, 0.9) !important;
+}
+.dark .stat-tile:hover { border-color: rgba(45, 212, 191, 0.35) !important; }
+
+/* Header: one light line instead of a grey rule. */
+.dark .app-header {
+  border-bottom-color: transparent;
+  background: var(--light-line) bottom / 100% 1px no-repeat;
+}
+/* Sidebars: a darker glass column with a hairline edge. */
+.dark .app-shell aside { background: rgba(5, 7, 10, 0.55); border-color: var(--panel-edge) !important; }
+
+/* Tabs: the active one carries a lit underline. */
+.dark .nav-track { background: rgba(6, 9, 12, 0.7); border-color: var(--panel-edge); }
+.dark .nav-pill-on, .dark .nav-pill-on:hover { background: var(--sel-fill) !important; }
+.dark .nav-pill-on::after { height: 2px; box-shadow: 0 0 10px 1px rgba(45, 212, 191, 0.65); }
+
+/* The one action on a screen glows from underneath. */
+.dark .btn-solid,
+.dark [data-slot="button"][data-variant="default"] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 24px -10px rgba(45, 212, 191, 0.65) !important;
+}
+
+/* Labels as instrument captions; values in the terminal face. */
+.stat-label { text-transform: uppercase; letter-spacing: 0.09em; font-size: 10.5px; font-weight: 600; }
+.stat-value { font-family: var(--mono); font-weight: 600; letter-spacing: -0.02em; }
+.status-bar, .status-bar * { font-family: var(--mono); font-size: 11px; }
+.sf-input, .cfg-step { font-family: var(--mono); }
+.dark .status-bar { background: rgba(5, 7, 10, 0.9); border-top: 1px solid var(--panel-edge); }
+
+/* Settings window: same glass, lit edge. */
+.dark .sw-window { background: linear-gradient(180deg, #11161c, #0a0d11); border-color: var(--panel-edge);
+                   box-shadow: inset 0 1px 0 var(--panel-lit), 0 30px 80px rgba(0, 0, 0, 0.6); }
+.dark .sw-head { background: var(--light-line) bottom / 100% 1px no-repeat; border-bottom-color: transparent; }
+
+/* Panel titles as instrument captions, like the KPI labels; panel numbers in the terminal face. */
+.dark [data-slot="card-title"], .dark .rail-card > header h2 { text-transform: uppercase; letter-spacing: 0.1em; font-size: 11.5px !important; }
+[data-slot="card"] td.tabular-nums, [data-slot="card"] span.tabular-nums,
+[data-slot="card"] td[class*="text-right"], .rail-card td[class*="text-right"], .rail-card .tabular-nums { font-family: var(--mono); font-size: 12px; }
+/* A lit corner on each panel: the one HUD mark, top-left, static. */
+.dark [data-slot="card"], .dark .step-section, .dark .stat-tile, .dark .rail-card { position: relative; }
+.dark [data-slot="card"]::after, .dark .step-section::after, .dark .stat-tile::after, .dark .rail-card::after {
+  content: ""; position: absolute; top: 5px; left: 5px; width: 9px; height: 9px; pointer-events: none;
+  border-top: 1.5px solid var(--sel-ring); border-left: 1.5px solid var(--sel-ring); opacity: 0.9;
+}

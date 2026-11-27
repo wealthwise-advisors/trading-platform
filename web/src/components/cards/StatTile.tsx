@@ -124,7 +124,7 @@ export function StatTile({
         : "text-foreground"
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-[color:var(--hairline-soft)]
+    <div className="stat-tile group relative overflow-hidden rounded-xl border border-[color:var(--hairline-soft)]
                     bg-[var(--grid-head)] px-3.5 py-3 transition-colors duration-200
                     hover:border-[color:var(--hairline-firm)]">
       {/* hairline of the tile's own colour along the top */}
@@ -142,9 +142,9 @@ export function StatTile({
                 <Icon size={11} strokeWidth={2.4} />
               </span>
             )}
-            <div className="text-[11px] font-medium text-muted-foreground truncate">{label}</div>
+            <div className="stat-label text-[11px] font-medium text-muted-foreground truncate">{label}</div>
           </div>
-          <div className={cn("mt-1 text-[22px] font-bold leading-none tabular-nums tracking-tight",
+          <div className={cn("stat-value mt-1 text-[22px] font-bold leading-none tabular-nums tracking-tight",
                              valueColor)}>
             {value}
           </div>
