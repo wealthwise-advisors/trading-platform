@@ -2557,3 +2557,39 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
   border-radius: 2px;
   background: var(--nav-active);
 }
+
+/* ── Page controls (redesign 2026-11-27): Scanner, Calendar ────────────────
+   One dropdown look in place of the browser's default, and small ghost
+   buttons in place of underlined text links. */
+.ui-select {
+  height: 2rem;
+  padding: 0 1.9rem 0 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--hairline-mid);
+  background-color: var(--raise-2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%238b90a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.ui-select:hover { background-color: var(--raise-3); }
+.ui-select:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.ui-select option { background: var(--surface-1); color: var(--foreground); }
+.ui-link-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 1.6rem;
+  padding: 0 0.55rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--hairline-soft);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  transition: background 140ms ease, color 140ms ease;
+}
+.ui-link-btn:hover { background: var(--raise-3); color: var(--foreground); }
+.ui-link-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }

@@ -17,7 +17,7 @@ const IMPACT_STYLE: Record<EconEvent["impact"], string> = {
   medium: "bg-sky-500/15 text-sky-800 dark:text-sky-200 ring-sky-400/40",
   low: "bg-[color:var(--raise-3)] text-muted-foreground ring-[color:var(--hairline-mid)]",
 }
-const sel = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+const sel = "ui-select"
 
 function addDays(isoDay: string, n: number): string {
   const d = new Date(`${isoDay}T12:00:00Z`)
@@ -102,7 +102,7 @@ export function CalendarPage() {
                   <span className="flex-1">{e.title}{e.note && <span className="text-muted-foreground"> - {e.note}</span>}</span>
                   <span className="text-xs text-muted-foreground">{e.source}</span>
                   {e.source === "manual" && (
-                    <button type="button" className="text-xs underline" aria-label={`Delete ${e.title}`}
+                    <button type="button" className="ui-link-btn" aria-label={`Delete ${e.title}`}
                             onClick={() => del.mutate(e.uid)}>Delete</button>
                   )}
                 </li>

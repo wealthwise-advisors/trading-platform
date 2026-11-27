@@ -17,7 +17,7 @@ import { describe, loadConditionAlerts, loadScans, saveConditionAlerts, saveScan
 
 const TIMEFRAMES = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "4h", "1d"]
 const DEFAULT: ScanCondition = { kind: "indicator", name: "rsi2", op: "below", value: 10 }
-const sel = "h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+const sel = "ui-select"
 
 function ConditionEditor({ value, onChange }: { value: ScanCondition; onChange: (c: ScanCondition) => void }) {
   const c = value as Record<string, unknown> & ScanCondition
@@ -131,11 +131,11 @@ export function ScannerPage() {
             <div key={i} className="flex items-center gap-2">
               <span className="w-10 text-xs text-muted-foreground">{i === 0 ? "If" : combine === "all" ? "and" : "or"}</span>
               <ConditionEditor value={c} onChange={(n) => setConditions((l) => l.map((x, j) => (j === i ? n : x)))} />
-              <button type="button" aria-label={`Remove condition ${i + 1}`} className="text-xs text-muted-foreground hover:text-foreground"
+              <button type="button" aria-label={`Remove condition ${i + 1}`} className="ui-link-btn"
                       onClick={() => setConditions((l) => l.filter((_, j) => j !== i))}>Remove</button>
             </div>
           ))}
-          {conditions.length < 10 && <button type="button" className="text-xs underline underline-offset-2"
+          {conditions.length < 10 && <button type="button" className="ui-link-btn"
                                               onClick={() => setConditions((l) => [...l, DEFAULT])}>Add a condition</button>}
         </div>
         <details className="mt-3 text-xs">
@@ -180,7 +180,7 @@ export function ScannerPage() {
             {condAlerts.map((a) => (
               <li key={a.id} className="flex items-center gap-2">
                 <span className="flex-1"><b>{a.name}</b> on {a.timeframe}: {a.symbols.join(", ")} ({a.repeat ? "every bar" : "once each"})</span>
-                <button type="button" className="underline" aria-label={`Delete alert ${a.name}`}
+                <button type="button" className="ui-link-btn" aria-label={`Delete alert ${a.name}`}
                         onClick={() => keepAlerts(condAlerts.filter((x) => x.id !== a.id))}>Delete</button>
               </li>
             ))}
@@ -210,7 +210,7 @@ export function ScannerPage() {
                 {conditions.map((_, i) => { const v = r.values[i]; return (
                   <td key={i} className="text-right" style={{ color: v ? (v.met ? "var(--gain)" : undefined) : undefined }}>
                     {v ? (v.value == null ? "n/a" : v.value.toFixed(2)) + (v.met ? " met" : "") : ""}</td>) })}
-                <td className="text-right">{!r.error && <button type="button" className="underline underline-offset-2"
+                <td className="text-right">{!r.error && <button type="button" className="ui-link-btn"
                   onClick={() => { setField("symbol", r.symbol); setField("timeframe", timeframe); goTo("backtest", "price") }}>Chart</button>}</td>
               </tr>))}</tbody>
           </table>
