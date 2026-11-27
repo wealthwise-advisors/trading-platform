@@ -178,7 +178,7 @@ function App({ user }: { user: Me }) {
             and right-aligns instead -- every section visible, nothing
             overlapping, and one row rather than two as soon as the window is
             wide enough to hold them. */}
-        <header className="px-3 pt-2 pb-1 flex flex-wrap items-center gap-x-2 gap-y-1 shrink-0">
+        <header className="app-header px-3 pt-2 pb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 shrink-0">
           {/* The brand artwork rather than the name in text. The monogram and the
               wordmark are separate crops of the same poster: dropping the whole
               1536x1024 image into a 56px header would render the lettering about

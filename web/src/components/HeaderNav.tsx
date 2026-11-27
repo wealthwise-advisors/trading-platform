@@ -95,7 +95,7 @@ export function HeaderNav() {
     ?? NAV.find((n) => n.page === page)
 
   return (
-    <nav className="flex items-center gap-0.5 min-w-0 overflow-x-auto tabs-scroll" aria-label="Sections">
+    <nav className="nav-track flex items-center gap-0.5 min-w-0 overflow-x-auto tabs-scroll" aria-label="Sections">
       {NAV.map((n) => (
         <button
           key={navKey(n)}
