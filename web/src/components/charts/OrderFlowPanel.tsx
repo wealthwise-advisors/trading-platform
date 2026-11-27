@@ -13,11 +13,13 @@ const ROWS: { key: keyof OrderFlowToggles; label: string; note: string }[] = [
     note: "Price vs CVD at consecutive 10 Leg highs / lows. Under 1.5 not shown, over 3 strong." },
 ]
 
-export function OrderFlowPanel({ value, onChange, cvdStyle, onCvdStyle, onClose, className }: {
+export function OrderFlowPanel({ value, onChange, cvdStyle, onCvdStyle, divergenceStatus, onClose, className }: {
   value: OrderFlowToggles
   onChange: (next: OrderFlowToggles) => void
   cvdStyle: CvdStyle
   onCvdStyle: (s: CvdStyle) => void
+  /** How many divergences the chart has and the newest -- shown here, not on the chart. */
+  divergenceStatus?: string | null
   onClose: () => void
   className?: string
 }) {
@@ -39,6 +41,9 @@ export function OrderFlowPanel({ value, onChange, cvdStyle, onCvdStyle, onClose,
           <span>
             <span className="text-sm">{r.label}</span>
             <span className="block text-[11px] text-muted-foreground">{r.note}</span>
+            {r.key === "divergence" && divergenceStatus && (
+              <span className="block text-[11px] font-semibold text-amber-300">{divergenceStatus}</span>
+            )}
           </span>
         </label>
       ))}

@@ -289,7 +289,7 @@ function MenuToggle({
  * Daily and longer candles are stamped at midnight and keep their date.
  */
 const DELTA_KEY = "autotrader.studies.delta", CVD_KEY = "autotrader.studies.cvd", DIV_KEY = "autotrader.studies.cvddiv"
-const CVD_STYLE_KEY = "autotrader.studies.cvdstyle"
+const CVD_STYLE_KEY = "autotrader.studies.cvdstyle", SWING_COUNT_KEY = "autotrader.studies.swingcount"
 // CVD bars: cyan above zero, pink below; the divergence ("confluence") bars in gold.
 const CVD_UP = "#22D3EE", CVD_DOWN = "#F472B6", CVD_CONFLUENCE = "#FFD54F"
 function readFlag(key: string): boolean {
@@ -333,7 +333,7 @@ export function CandlestickChart({
   // renders ChartHeader itself, so that the instrument line and the chart's
   // own controls can share one row rather than being two siblings in a page
   // that cannot put them on the same line.
-  symbol, live, liveSignals = [], econEvents = [], nextEvent = null, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag = true, zoneOffset = 0,
+  symbol, live, liveSignals = [], econEvents = [], nextEvent = null, bars, indicators, volumeContext, fetchCompare, zigzag, trades, showZigzag: showZigzagProp = true, zoneOffset = 0,
   // VOLUME PROFILE STARTS OFF.
   //
   // It is the reason the candles used to sit in a band across the middle of
@@ -488,6 +488,13 @@ export function CandlestickChart({
   const [cvdOn, setCvdOn] = useState(() => readFlag(CVD_KEY))
   const [divOn, setDivOn] = useState(() => readFlag(DIV_KEY))
   const [flowPanel, setFlowPanel] = useState(false)
+  // The swing count (numbers, HH/LL tags, zigzag lines) behind its own box, on by
+  // default: unticked, the chart is the candles alone (user, 2026-11-27: "keep it clean").
+  const [swingCountOn, setSwingCountOn] = useState(() => {
+    try { return localStorage.getItem(SWING_COUNT_KEY) !== "0" } catch { return true }
+  })
+  useEffect(() => { try { localStorage.setItem(SWING_COUNT_KEY, swingCountOn ? "1" : "0") } catch { /* still works */ } }, [swingCountOn])
+  const showZigzag = showZigzagProp && swingCountOn
   // CVD as bars by default (sir, 2026-11-27); the line stays one click away.
   const [cvdStyle, setCvdStyle] = useState<CvdStyle>(() => {
     try { return localStorage.getItem(CVD_STYLE_KEY) === "line" ? "line" : "bars" } catch { return "bars" }
@@ -1913,10 +1920,11 @@ export function CandlestickChart({
   }
   // CVD: the running total of Delta, restarting at 6 PM, midnight and 8 AM ET.
   // CVD Divergence, sir's third study, its own switch: between consecutive 10 Leg swing
-  // highs / lows (lib/cvdDivergence.ts), a dashed line joining the two points on price
-  // -- and on the CVD row when that is on -- named at the second point.
+  // highs / lows (lib/cvdDivergence.ts). Drawn on the CVD row when that row is on, and
+  // only then on price -- one place, not two (user, 2026-11-27: "keep it clean").
+  // From the swing points themselves, so hiding the swing count does not hide them.
   const divergences = divOn && (indicators.cvd ?? []).some((v) => v != null)
-    ? cvdDivergences(zz10, t, indicators.cvd ?? [], volAvg, zoneOffset) : []
+    ? cvdDivergences(showZigzagProp ? zigzag.zigzag_10 : [], t, indicators.cvd ?? [], volAvg, zoneOffset) : []
   if (cvdRow) {
     const s = suffixOf("cvd")
     if (cvdStyle === "bars") {
@@ -1944,24 +1952,22 @@ export function CandlestickChart({
       // Bold enough to read at a glance (user, 2026-11-27: the thin dashed line and
       // small label went unseen): thick line, a dot on both swing points.
       const line = { color, width: d.strong ? 3 : 2, dash: "dash" }
-      const [x0, x1] = onCandle([d.from, d.to])
-      data.push({ type: "scatter", mode: "lines+markers", x: [x0, x1], y: [d.from, d.to].map(drawnEdge), line,
-                  marker: { size: 10, color, line: { color: "#ffffff", width: 1.5 } },
-                  hoverinfo: "skip", showlegend: false, xaxis: "x", yaxis: "y" } as unknown as Data)
-      if (s) {
-        data.push({ type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo], line,
-                    marker: { size: 10, color, line: { color: "#ffffff", width: 1.5 } }, hoverinfo: "skip",
-                    showlegend: false, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
-      }
-      // A filled label with an arrow to the second swing point. On the CVD row when it is
-      // shown -- the price row's swing tags (LH, the circled number, "Swing H starts") sat
-      // under it there (user, 2026-11-27); on price only without that row, set well clear.
+      const marker = { size: 10, color, line: { color: "#ffffff", width: 1.5 } }
       const up = d.to.type === "H"
       const label = { text: `<b>${text}</b>`, showarrow: true, arrowhead: 2, arrowwidth: 2, arrowcolor: color,
                       ax: 0, font: { size: 12, color: "#ffffff" },
                       bgcolor: color, bordercolor: "#ffffff", borderwidth: 1, borderpad: 4 }
-      if (s) annotations.push({ ...label, x: d.to.t, y: d.cvdTo, xref: `x${s}`, yref: `y${s}`, ay: up ? -30 : 30 } as Partial<Annotations>)
-      else annotations.push({ ...label, x: x1, y: drawnEdge(d.to), xref: "x", yref: "y", ay: up ? -95 : 95 } as Partial<Annotations>)
+      if (s) {
+        data.push({ type: "scatter", mode: "lines+markers", x: [d.from.t, d.to.t], y: [d.cvdFrom, d.cvdTo], line, marker,
+                    hoverinfo: "skip", showlegend: false, xaxis: `x${s}`, yaxis: `y${s}` } as unknown as Data)
+        annotations.push({ ...label, x: d.to.t, y: d.cvdTo, xref: `x${s}`, yref: `y${s}`, ay: up ? -30 : 30 } as Partial<Annotations>)
+      } else {
+        // No CVD row: on price instead, the label set well clear of the swing tags.
+        const [x0, x1] = onCandle([d.from, d.to])
+        data.push({ type: "scatter", mode: "lines+markers", x: [x0, x1], y: [d.from, d.to].map(drawnEdge), line, marker,
+                    hoverinfo: "skip", showlegend: false, xaxis: "x", yaxis: "y" } as unknown as Data)
+        annotations.push({ ...label, x: x1, y: drawnEdge(d.to), xref: "x", yref: "y", ay: up ? -95 : 95 } as Partial<Annotations>)
+      }
     }
   }
 
@@ -2010,20 +2016,13 @@ export function CandlestickChart({
     name === "vol" ? [0, volAxisTop] : name === "delta" ? [-deltaTop, deltaTop]
       : name === "cvd" ? [cvdExt[0] - cvdPad, cvdExt[1] + cvdPad] : name === "rsi13" ? rsi13Range : [0, 100]
   const freeScale = (name: string) => name === "vol" || name === "delta" || name === "cvd"
-  // CVD Divergence on but none on screen: say so, so an empty chart is not read as
-  // the study not working (user, 2026-11-27) -- and point at the newest one off screen.
-  if (divOn && !divergences.some((d) => { const ms = new Date(d.to.t).getTime(); return ms >= axisStartMs && ms <= axisEndMs })) {
-    const last = divergences.at(-1)
-    annotations.push({
-      // Bottom centre: the bottom-left corner holds the Swing key button.
-      xref: "x domain" as Annotations["xref"], yref: "y domain" as Annotations["yref"], x: 0.5, y: 0.02,
-      xanchor: "center", yanchor: "bottom", showarrow: false, align: "center",
-      text: last
-        ? `CVD Divergence: none in view · ${divergences.length} on this chart, newest <b>${last.kind}</b> at ${last.to.t.slice(5, 16).replace("T", " ")}`
-        : "CVD Divergence: none on this chart (needs strength 1.5 or more)",
-      font: { size: 10, color: "#9ca3af" }, bgcolor: "rgba(10,14,22,0.85)", borderpad: 3,
-    } as Partial<Annotations>)
-  }
+  // How many divergences, and where the newest is -- in the Order Flow panel, not on the
+  // chart: a note over the candles was clutter (user, 2026-11-27: "keep it clean").
+  const lastDiv = divergences.at(-1)
+  const divStatus = !divOn ? null
+    : !lastDiv ? "None on this chart (needs strength 1.5 or more)."
+    : `${divergences.length} on this chart${divergences.some((d) => { const ms = new Date(d.to.t).getTime(); return ms >= axisStartMs && ms <= axisEndMs })
+        ? "" : " (none in view)"}; newest ${lastDiv.kind} ${lastDiv.strength.toFixed(1)} at ${lastDiv.to.t.slice(5, 16).replace("T", " ")}.`
   // The fit always includes both level lines, as thinkorswim's does.
   const rsi13Fit = fittedRange(indicators.rsi13, t.map((x) => new Date(x).getTime()), axisStartMs, axisEndMs)
   const rsi13Levels = OSC_STUDIES.rsi13.levels!
@@ -2364,14 +2363,15 @@ export function CandlestickChart({
       ...spikeAxis,
     }
     dynamicAxes[`yaxis${suffix}`] = {
-      gridcolor: GRID, showgrid: isPrice,
+      // Volume Delta and CVD get grid lines too: bare bars with two numbers read as empty (2026-11-27).
+      gridcolor: GRID, showgrid: isPrice || name === "delta" || name === "cvd",
       // "Left axis" from the reference dialog. Left is Plotly's default, so
       // unticking it moves the price scale to the right-hand side.
       side: (vpLeftAxis ? "left" : "right") as "left" | "right",
       title: { text: rowTitles[name], font: { size: 9, color: INK_DIM } },
       domain: domains[idx], anchor: `x${suffix}`,
       fixedrange: !isPrice,
-      ...(freeScale(name) ? { tickformat: ",.0f", nticks: 3 } : {}),
+      ...(freeScale(name) ? { tickformat: ",.0f", nticks: name === "vol" ? 3 : 6, tickfont: { size: 10 } } : {}),
       // Oscillator numbers INSIDE the row, never on its edges: 0 and 100 sat on the
       // borders, so one row's "0" printed over the next row's "100" and the rows'
       // numbers could not be read (user, 2026-11-22).
@@ -3116,6 +3116,17 @@ export function CandlestickChart({
             />
           </div>
 
+          {showZigzagProp && (
+            <div className={`${STUDY_CHIP} pr-2`}>
+              <label className="flex items-center gap-1.5 cursor-pointer"
+                     title="Sir's swing count: 10 Leg / 3 Leg / 1 Leg numbers, HH / HL / LH / LL tags and the zigzag lines">
+                <input type="checkbox" checked={swingCountOn}
+                       aria-label="Show swing count"
+                       onChange={(e) => setSwingCountOn(e.target.checked)} />
+                <span>Swing count</span>
+              </label>
+            </div>
+          )}
           {showZigzag && (
             <div className={`${STUDY_CHIP} pr-2`}>
               <label className="flex items-center gap-1.5 cursor-pointer"
@@ -3514,7 +3525,7 @@ export function CandlestickChart({
         {flowPanel && (
           <OrderFlowPanel value={{ delta: deltaOn, cvd: cvdOn, divergence: divOn }}
                           onChange={(v) => { setDeltaOn(v.delta); setCvdOn(v.cvd); setDivOn(v.divergence) }}
-                          cvdStyle={cvdStyle} onCvdStyle={setCvdStyle}
+                          cvdStyle={cvdStyle} onCvdStyle={setCvdStyle} divergenceStatus={divStatus}
                           onClose={() => setFlowPanel(false)} className="absolute right-0 top-7 z-20" />
         )}
       </div>
