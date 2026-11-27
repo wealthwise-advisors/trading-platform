@@ -7,7 +7,7 @@ import { useThemeStore } from "@/store/themeStore"
 import type { Data, Layout } from "plotly.js"
 import type { EquityPoint } from "@/lib/types"
 
-const BLUE = "#7c6cf5"
+const BLUE = "#14b8a6"
 const RED = "#f0576b"
 // Chart chrome comes from the theme, not from a literal here. BG and GRID used
 // to be module constants, which meant a light theme still painted a near-black
@@ -38,7 +38,7 @@ export function EquityChart({ points, initialCapital }: EquityChartProps) {
   const data: Data[] = [
     {
       type: "scatter", mode: "lines", x: t, y: equity, name: "Portfolio Value",
-      line: { color: BLUE, width: 2 }, fill: "tozeroy", fillcolor: "rgba(124,108,245,0.12)",
+      line: { color: BLUE, width: 2 }, fill: "tozeroy", fillcolor: "rgba(20, 184, 166,0.12)",
       xaxis: "x", yaxis: "y",
     } as Data,
     {

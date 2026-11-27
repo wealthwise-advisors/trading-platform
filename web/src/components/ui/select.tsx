@@ -110,14 +110,14 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer items-center gap-1.5 rounded-lg py-2 pr-9 pl-2.5 text-sm outline-hidden select-none transition-colors border-b border-[color:var(--hairline-soft)] last:border-b-0 hover:bg-[color:var(--raise-3)] focus:bg-[color:var(--raise-3)] focus:text-foreground data-[state=checked]:bg-violet-500/15 data-[state=checked]:text-violet-900 dark:data-[state=checked]:text-violet-100 not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-pointer items-center gap-1.5 rounded-lg py-2 pr-9 pl-2.5 text-sm outline-hidden select-none transition-colors border-b border-[color:var(--hairline-soft)] last:border-b-0 hover:bg-[color:var(--raise-3)] focus:bg-[color:var(--raise-3)] focus:text-foreground data-[state=checked]:bg-teal-500/15 data-[state=checked]:text-teal-900 dark:data-[state=checked]:text-teal-100 not-data-[variant=destructive]:focus:**:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}
     >
       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="pointer-events-none text-violet-800 dark:text-violet-400" />
+          <CheckIcon className="pointer-events-none text-teal-800 dark:text-teal-400" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

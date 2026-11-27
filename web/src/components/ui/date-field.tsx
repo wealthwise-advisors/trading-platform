@@ -57,11 +57,11 @@ function monthGrid(year: number, month: number): (Date | null)[] {
  */
 const TONES = {
   violet: {
-    trigger: "hover:border-violet-500/40 focus-visible:ring-violet-500/40",
-    icon: "text-violet-800 dark:text-violet-400",
-    selected: "bg-violet-500 text-white hover:bg-violet-500",
-    today: "ring-1 ring-violet-500/50",
-    todayButton: "hover:border-violet-500/40 hover:text-violet-300",
+    trigger: "hover:border-teal-500/40 focus-visible:ring-teal-500/40",
+    icon: "text-teal-800 dark:text-teal-400",
+    selected: "bg-teal-500 text-white hover:bg-teal-500",
+    today: "ring-1 ring-teal-500/50",
+    todayButton: "hover:border-teal-500/40 hover:text-teal-300",
   },
   teal: {
     trigger: "hover:border-teal-400/40 focus-visible:ring-teal-400/40",

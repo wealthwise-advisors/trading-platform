@@ -219,7 +219,7 @@ export function ChartCrosshair({ hostRef, bars, rows, volumeAxis, interval, swin
                width: PANEL_WIDTH,
                padding: "5px 8px", fontSize: 11, lineHeight: `${LINE_HEIGHT}px`,
                // Solid: at 96% the swing boxes behind showed through and read as merged text (2026-11-17).
-               background: "#0b0e16", border: "1px solid rgba(148,163,184,0.28)", color: "#e5e7eb",
+               background: "#0f1112", border: "1px solid rgba(148,163,184,0.28)", color: "#e5e7eb",
                boxShadow: "0 6px 18px rgba(2, 6, 18, 0.55)",
              }}>
           {/* A titled box with sections (the swing box) gets a solid rule

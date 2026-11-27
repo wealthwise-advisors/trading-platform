@@ -2086,7 +2086,7 @@ export function ReplayPage() {
               had is still there when you switch back on. */}
           <div className="custom-session cfg-col" data-on={session24h ? "false" : "true"}>
             <div className="custom-session-head">
-              <Clock size={14} strokeWidth={2.2} className="text-violet-800 dark:text-violet-300" />
+              <Clock size={14} strokeWidth={2.2} className="text-teal-800 dark:text-teal-300" />
               <span className="custom-session-title">Custom session</span>
               <InfoDot label="Custom session" className="ml-1.5">
                 The window every pane is cut to. Bars outside From–To are dropped
@@ -3366,7 +3366,7 @@ export function ReplayPage() {
         <SetupFooterHint active={status === "loading"}>
           {status === "loading"
             ? <>Fetching {symbol} bars from {sourceLabel}…</>
-            : <>Press <b className="text-violet-800 dark:text-violet-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
+            : <>Press <b className="text-teal-800 dark:text-teal-300">⬇ Load Data</b> to begin, or adjust the settings above.</>}
         </SetupFooterHint>
       )}
     </div>

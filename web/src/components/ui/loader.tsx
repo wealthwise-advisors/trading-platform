@@ -11,7 +11,7 @@
 // by the strict CSP the app is served under.
 //
 // Colours come from the existing theme tokens rather than new constants:
-// --primary (#7c6cf5) into --accent (#9b8afb), the same pair used by the
+// --primary (#14b8a6) into --accent (#2dd4bf), the same pair used by the
 // buttons and badges.
 
 import { useId } from "react"
@@ -56,8 +56,8 @@ export function Loader({ size = 24, label = "Loading", tone = "brand", className
   const R_TICKS = 23
   const circ = (r: number) => 2 * Math.PI * r
 
-  const solid = tone === "current" ? "currentColor" : "#7c6cf5"
-  const second = tone === "current" ? "currentColor" : "#9b8afb"
+  const solid = tone === "current" ? "currentColor" : "#14b8a6"
+  const second = tone === "current" ? "currentColor" : "#2dd4bf"
   const sweepStroke = tone === "current" ? "currentColor" : `url(#${gradient})`
 
   return (
@@ -70,9 +70,9 @@ export function Loader({ size = 24, label = "Loading", tone = "brand", className
       <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
         <defs>
           <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#7c6cf5" stopOpacity="0" />
-            <stop offset="45%" stopColor="#7c6cf5" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#9b8afb" />
+            <stop offset="0%" stopColor="#14b8a6" stopOpacity="0" />
+            <stop offset="45%" stopColor="#14b8a6" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#2dd4bf" />
           </linearGradient>
           <filter id={glow} x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur stdDeviation="1.4" result="blur" />

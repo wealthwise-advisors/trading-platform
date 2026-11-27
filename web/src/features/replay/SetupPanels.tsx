@@ -46,16 +46,16 @@ export function makeSummaryRows(opts: {
 
 export function SummaryPanel({ rows }: { rows: SummaryRow[] }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-violet-400/25
-                    bg-gradient-to-b from-violet-500/[0.07] to-transparent px-4 py-2.5">
+    <div className="relative overflow-hidden rounded-xl border border-teal-400/25
+                    bg-gradient-to-b from-teal-500/[0.07] to-transparent px-4 py-2.5">
       <div className="space-y-2">
         {rows.map((r) => (
           <div key={r.label} className="flex items-center gap-2.5">
-            <r.Icon size={14} strokeWidth={2} className="text-violet-800 dark:text-violet-400 shrink-0" />
+            <r.Icon size={14} strokeWidth={2} className="text-teal-800 dark:text-teal-400 shrink-0" />
             <span className="text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
               {r.label}
             </span>
-            <span className="ml-auto text-[13.5px] font-bold text-violet-800 dark:text-violet-300 tabular-nums whitespace-nowrap">
+            <span className="ml-auto text-[13.5px] font-bold text-teal-800 dark:text-teal-300 tabular-nums whitespace-nowrap">
               {r.value}
             </span>
           </div>
@@ -81,7 +81,7 @@ const PARAM_TONE: Record<string, { bar: string; text: string; ring: string }> = 
   rsi_overbought: { bar: "#ef4444", text: "text-red-800 dark:text-red-400", ring: "border-red-400/45" },
   rsi_oversold: { bar: "#22c55e", text: "text-emerald-800 dark:text-emerald-400", ring: "border-emerald-400/45" },
 }
-const DEFAULT_TONE = { bar: "var(--primary)", text: "text-violet-800 dark:text-violet-300", ring: "border-violet-400/40" }
+const DEFAULT_TONE = { bar: "var(--primary)", text: "text-teal-800 dark:text-teal-300", ring: "border-teal-400/40" }
 
 export function ParamCard({
   name, label, value, min, max, step, disabled, title, onChange, Icon, info,

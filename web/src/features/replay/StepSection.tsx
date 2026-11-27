@@ -37,7 +37,7 @@ export function StepSection({
                            border-b border-[color:var(--hairline-soft)] bg-[var(--grid-head)]">
           {Icon ? (
             <span aria-hidden className="grid place-items-center h-7 w-7 rounded-lg
-                                         bg-violet-500/12 text-violet-800 dark:text-violet-300 ring-1 ring-violet-400/25">
+                                         bg-teal-500/12 text-teal-800 dark:text-teal-300 ring-1 ring-teal-400/25">
               <Icon size={15} strokeWidth={2.2} />
             </span>
           ) : (
@@ -46,7 +46,7 @@ export function StepSection({
               className={`relative grid place-items-center h-7 w-7 rounded-full text-[11px]
                           font-bold transition-colors duration-300
                           ${done
-                            ? "bg-violet-500/12 text-violet-800 dark:text-violet-300 ring-1 ring-violet-400/35"
+                            ? "bg-teal-500/12 text-teal-800 dark:text-teal-300 ring-1 ring-teal-400/35"
                             : "bg-[color:var(--raise-3)] text-muted-foreground ring-1 ring-[color:var(--hairline-mid)]"}`}
             >
               <AnimatePresence mode="wait" initial={false}>
@@ -83,8 +83,8 @@ export function StepSection({
           </h2>
 
           {hint && (
-            <span className="ml-auto flex items-center gap-2 rounded-lg border border-violet-400/20
-                             bg-violet-500/[0.07] px-3 py-1.5 text-[12px] font-semibold text-foreground">
+            <span className="ml-auto flex items-center gap-2 rounded-lg border border-teal-400/20
+                             bg-teal-500/[0.07] px-3 py-1.5 text-[12px] font-semibold text-foreground">
               {hint}
             </span>
           )}

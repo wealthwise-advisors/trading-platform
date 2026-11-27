@@ -212,7 +212,7 @@ export function WorkspaceBadge({ user }: { user: Me }) {
       role="img"
       aria-label={`Workspace: ${user.full_name || user.username}`}
       title={user.full_name || user.username}
-      className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,var(--accent),#5a49d8)]
+      className="grid h-8 w-8 place-items-center rounded-full bg-[linear-gradient(135deg,var(--accent),#0f766e)]
                  text-[11px] font-bold text-white ring-1 ring-[color:var(--hairline-firm)] select-none"
     >
       {initials(user)}

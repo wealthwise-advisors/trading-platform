@@ -20,8 +20,8 @@
  */
 import { motion, useReducedMotion } from "framer-motion"
 
-const VIOLET = "#9b8afb"
-const VIOLET_DEEP = "#7c6cf5"
+const VIOLET = "#2dd4bf"
+const VIOLET_DEEP = "#14b8a6"
 const RISE = "#34d399"
 const FALL = "#f87171"
 

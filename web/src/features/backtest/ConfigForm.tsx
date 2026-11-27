@@ -301,7 +301,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               title={`${intervalName(tf)} bars`}
               className={`rounded px-1 py-1 text-[11px] transition-colors ${
                 cfg.timeframe === tf
-                  ? "bg-[#2563eb] text-white font-medium"
+                  ? "sel-on font-medium"
                   : "bg-[color:var(--raise-2)] text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
               }`}
             >
@@ -409,7 +409,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
               against a units bug that made every value 100x weaker than it read. */}
           <SliderField
             label="3-Leg Deviation %"
-            dot="#a78bfa"
+            dot="#5eead4"
             help="Minimum move, as a percentage, before a new 3-leg swing is recorded. Drawn on the chart as the yellow dotted line."
             value={cfg.zigzagDev3}
             onChange={(v) => cfg.setField("zigzagDev3", v)}
@@ -608,9 +608,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <Button
         // bg-none and hover:shadow-lg: the Button's default variant paints a
         // violet gradient and glow over any background colour set here.
-        className="w-full h-12 rounded-xl bg-none bg-[#2563eb] hover:bg-[#1d4ed8]
-                   text-white text-base font-semibold
-                   shadow-lg shadow-blue-900/40 hover:shadow-lg transition-colors"
+        className="w-full h-12 rounded-xl bg-none btn-solid text-base font-semibold"
         size="lg"
         disabled={runMutation.isPending || !rangeIsValid}
         onClick={() => runMutation.mutate()}

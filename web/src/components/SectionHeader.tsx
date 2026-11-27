@@ -76,7 +76,7 @@ export function SectionHeader({
         </button>
       )}
       <h3 className="text-[13px] font-bold uppercase tracking-[0.09em]
-                     text-violet-800 dark:text-violet-300 whitespace-nowrap">
+                     text-teal-800 dark:text-teal-300 whitespace-nowrap">
         {title}
       </h3>
       {live !== undefined && <LiveBadge on={live} />}

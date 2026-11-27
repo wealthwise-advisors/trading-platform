@@ -65,7 +65,7 @@
      * Two rules held the whole theme together:
      *
      *   1. The violet primary is the SAME HUE as the dark theme's, darkened
-     *      to #5b4bd6 so it clears 4.5:1 against white. The brand does not
+     *      to #0f766e so it clears 4.5:1 against white. The brand does not
      *      change with the lights.
      *   2. Surfaces are near-white but never pure white except --card. A
      *      trading screen is mostly panels; #ffffff everywhere removes every
@@ -79,18 +79,18 @@
     --card-foreground: #16181f;
     --popover: #ffffff;
     --popover-foreground: #16181f;
-    --primary: #5b4bd6;
+    --primary: #0f766e;
     --primary-foreground: #ffffff;
     --secondary: #eceef4;
     --secondary-foreground: #2b2f3c;
     --muted: #eceef4;
     --muted-foreground: #5c6175;
-    --accent: #5b4bd6;
+    --accent: #0f766e;
     --accent-foreground: #ffffff;
     --destructive: #c62828;
     --border: rgba(22, 24, 31, 0.13);
     --input: rgba(22, 24, 31, 0.18);
-    --ring: #5b4bd6;
+    --ring: #0f766e;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -106,7 +106,7 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
   /* --- Surface / elevation scale (added in the polish pass) -----------------
-     Panels across the app had each grown their own literal: #0e1424, #0b1325,
+     Panels across the app had each grown their own literal: #16191c, #15181b,
      border-white/6, rgba(255,255,255,0.06)... so "a card" looked slightly
      different on every page. These four tokens are the single source now. */
   --surface-1: #ffffff;
@@ -206,7 +206,7 @@
   --sec-green: #047857;
   --sec-orange: #c2410c;
   --sec-ember: #92400e;
-  --sec-violet: #6d28d9;
+  --sec-violet: #0f766e;
   --sec-ember-on: #7c3208;
   /* A card's drop shadow. Softer on paper -- the dark theme's 0.35 black
      under a white card reads as dirt rather than as elevation. */
@@ -216,7 +216,7 @@
 .dark {
     /* AutoTrader dark theme — graphite, deliberately cool.
      *
-     * The previous palette was navy (#060b18 / #0b1325). Navy is not gold, but
+     * The previous palette was navy (#0d0f11 / #15181b). Navy is not gold, but
      * against a warm amber photograph it reads as belonging to it: similar
      * lightness, and the eye groups them, so the interface stopped looking
      * like a layer in front of the picture.
@@ -234,18 +234,18 @@
     --popover: #16171f;
     --popover-foreground: #e8e9f2;
     /* #2f80ff leaned warm enough to harmonise with amber. This does not. */
-    --primary: #7c6cf5;
+    --primary: #14b8a6;
     --primary-foreground: #ffffff;
     --secondary: #1e2029;
     --secondary-foreground: #d4d6e4;
     --muted: #1e2029;
     --muted-foreground: #9296ad;
-    --accent: #9b8afb;
+    --accent: #2dd4bf;
     --accent-foreground: #ffffff;
     --destructive: #ef4444;
     --border: rgba(190, 190, 214, 0.13);
     --input: rgba(190, 190, 214, 0.17);
-    --ring: #7c6cf5;
+    --ring: #14b8a6;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -289,7 +289,7 @@
   --flat: #e8e9f2;
 
   --chart-paper: var(--surface-1);
-  --chart-grid: #1a2340;
+  --chart-grid: #282d32;
   --chart-ink: var(--foreground);
   --chart-ink-dim: #8b8ba0;
   --chart-hover: rgba(20, 21, 28, 0.92);
@@ -298,10 +298,10 @@
   --page-ground-from: #0d0e13;
   --page-ground-to: #131419;
 
-  --surface-deep: #0b0c11;
-  --grid-head: #101827;
-  --grid-line: #16213a;
-  --grid-hover: #12203a;
+  --surface-deep: #0c0e10;
+  --grid-head: #181c1f;
+  --grid-line: #23282d;
+  --grid-hover: #21262b;
   --sidebar-ground-from: #16171f;
   --sidebar-ground-to: #0d0e13;
   --pick-accent: #7dd3fc;
@@ -310,7 +310,7 @@
   --pick-on-faint: #9dc0aa;
   --pick-hover-faint: #a7b8cc;
   --shadow-dialog: rgba(0, 0, 0, 0.85);
-  --dialog-surface: #0a1120;
+  --dialog-surface: #121518;
   --nav-active: #2563eb;
   --nav-active-deep: #1d4ed8;
   --nav-active-lift: #3b82f6;
@@ -322,7 +322,7 @@
   --sec-green: #34d399;
   --sec-orange: #fb923c;
   --sec-ember: #e9a26b;
-  --sec-violet: #a78bfa;
+  --sec-violet: #5eead4;
   --sec-ember-on: #f3c19b;
   --shadow-card: rgba(0, 0, 0, 0.35);
 }
@@ -665,7 +665,7 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), #6d5df0);
+  background: linear-gradient(135deg, var(--accent), #0f766e);
   padding: 2px 8px;
   border-radius: 999px;
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent);
@@ -975,7 +975,7 @@ input:focus-visible {
   background-color: rgba(59, 130, 246, 0.12);
   color: #dbeafe;
 }
-.cfg-scope [data-slot="select-item"] .text-violet-400 { color: #60a5fa; }
+.cfg-scope [data-slot="select-item"] .text-teal-400 { color: #60a5fa; }
 
 /* Tabs (the interval picker's Favorites / Time frame): no gradient, no glow. */
 .cfg-scope [data-slot="tabs-trigger"][data-state="active"],
@@ -1525,7 +1525,7 @@ button, [role="button"] {
 .tz-pill:active { transform: scale(0.93); }
 .tz-pill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .tz-pill-on {
-  background: linear-gradient(180deg, var(--primary), #5a49d8);
+  background: linear-gradient(180deg, var(--primary), #0f766e);
   border-color: rgba(120, 170, 255, 0.55);
   color: #ffffff;
   box-shadow: 0 1px 8px -1px color-mix(in srgb, var(--primary) 60%, transparent);
@@ -1577,7 +1577,7 @@ button, [role="button"] {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #c4b5fd;
+  color: #99f6e4;
 }
 .custom-session[data-on="false"] .custom-session-title { color: var(--muted-foreground); }
 .custom-session[data-on="false"] .custom-session-head svg { color: var(--muted-foreground); }
@@ -1589,15 +1589,15 @@ button, [role="button"] {
   height: 23px;
   border-radius: 999px;
   border: 1px solid var(--raise-4);
-  background: #1b2233;
+  background: #22272c;
   cursor: pointer;
   flex: 0 0 auto;
   transition: background 220ms var(--ease-out), border-color 220ms var(--ease-out);
 }
 .session-switch[aria-checked="true"] {
-  background: linear-gradient(180deg, #a855f7, #7c3aed);
-  border-color: rgba(196, 181, 253, 0.5);
-  box-shadow: 0 0 12px -2px rgba(168, 85, 247, 0.65);
+  background: linear-gradient(180deg, #2dd4bf, #0d9488);
+  border-color: rgba(153, 246, 228, 0.5);
+  box-shadow: 0 0 12px -2px rgba(45, 212, 191, 0.65);
 }
 .session-switch:disabled { opacity: 0.45; cursor: not-allowed; }
 .session-switch:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -1658,15 +1658,15 @@ button, [role="button"] {
   transition: background 160ms var(--ease-out), color 160ms var(--ease-out),
               border-color 160ms var(--ease-out), transform 70ms var(--ease-out);
 }
-.ampm-seg:hover:not(:disabled) { background: #1c2540; color: var(--foreground); }
+.ampm-seg:hover:not(:disabled) { background: #282e34; color: var(--foreground); }
 .ampm-seg:active:not(:disabled) { transform: scale(0.93); }
 .ampm-seg:disabled { opacity: 0.5; cursor: not-allowed; }
 .ampm-seg:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .ampm-seg-on {
-  background: linear-gradient(180deg, #a855f7, #7c3aed);
-  border-color: rgba(196, 181, 253, 0.55);
+  background: linear-gradient(180deg, #2dd4bf, #0d9488);
+  border-color: rgba(153, 246, 228, 0.55);
   color: #ffffff;
-  box-shadow: 0 1px 9px -1px rgba(168, 85, 247, 0.6);
+  box-shadow: 0 1px 9px -1px rgba(45, 212, 191, 0.6);
 }
 
 /* =========================================================================
@@ -1961,7 +1961,7 @@ button, [role="button"] {
   border-radius: 13px;
   background:
     linear-gradient(180deg, var(--raise-1), rgba(255, 255, 255, 0)),
-    #0c1524;
+    #15181b;
 }
 
 /* The caption sits inside the group rather than above it, so the label cannot
@@ -2065,7 +2065,7 @@ button, [role="button"] {
    stops entirely rather than breathing while doing nothing. */
 @keyframes cs-edge {
   0%, 100% { border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: 0 0 22px -12px color-mix(in srgb, var(--accent) 55%, transparent); }
-  50%      { border-color: rgba(167, 139, 250, 0.62); box-shadow: 0 0 30px -10px color-mix(in srgb, var(--accent) 80%, transparent); }
+  50%      { border-color: rgba(45, 212, 191, 0.62); box-shadow: 0 0 30px -10px color-mix(in srgb, var(--accent) 80%, transparent); }
 }
 .custom-session[data-on="true"] { animation: cs-edge 6s ease-in-out infinite; }
 .custom-session[data-on="false"] { animation: none; }
@@ -2137,7 +2137,7 @@ button, [role="button"] {
   padding-top: 9px;
   padding-bottom: 9px;
   white-space: nowrap;
-  background: linear-gradient(180deg, #101a2c, #0c1424);
+  background: linear-gradient(180deg, #1a1e22, #15181b);
   box-shadow: inset 0 -1px 0 rgba(148, 178, 255, 0.14);
 }
 
@@ -2226,7 +2226,7 @@ button, [role="button"] {
   border-radius: 7px;
   font-size: 11.5px;
   font-weight: 600;
-  /* TOKENS, NOT LITERALS. These were #8ea3bd on #111c30 -- a dark-navy pill
+  /* TOKENS, NOT LITERALS. These were #8ea3bd on #1d2124 -- a dark-navy pill
      with pale blue text, written when dark was the only theme. On the light
      theme that is a near-black pill on a white page: it still reads, but it
      reads as a different component from everything around it, and it is the
@@ -2239,7 +2239,7 @@ button, [role="button"] {
   transition: background-color 140ms var(--ease-out), border-color 140ms var(--ease-out),
               color 140ms var(--ease-out), box-shadow 160ms var(--ease-out);
 }
-.tape-pill:hover:not(:disabled) { background: #17263f; color: #cbd5e1; }
+.tape-pill:hover:not(:disabled) { background: #262b30; color: #cbd5e1; }
 .tape-pill-on {
   color: #ffffff;
   background: linear-gradient(180deg, #3b82f6, #2563eb);
@@ -2363,7 +2363,7 @@ button, [role="button"] {
 .studies-btn {
   display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 12px;
   border-radius: 9999px; border: 1px solid rgba(148, 163, 184, 0.35); color: #e5e7eb;
-  font-size: 13px; font-weight: 600; background: rgba(30, 41, 59, 0.55);
+  font-size: 13px; font-weight: 600; background: rgba(36, 40, 46, 0.55);
   transition: border-color 150ms ease, background-color 150ms ease;
 }
 .studies-btn:hover, .studies-btn-open { border-color: #3b82f6; background: rgba(37, 99, 235, 0.18); }
@@ -2405,7 +2405,7 @@ button, [role="button"] {
 /* A real checkbox drawn as a switch: grey track off, blue track on -- two clearly different states. */
 .study-switch {
   appearance: none; -webkit-appearance: none; flex: none; position: relative; cursor: pointer;
-  width: 30px; height: 17px; border-radius: 9999px; background: #334155; transition: background-color 150ms ease;
+  width: 30px; height: 17px; border-radius: 9999px; background: #3c444c; transition: background-color 150ms ease;
 }
 .study-switch::after {
   content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 9999px;
@@ -2437,18 +2437,18 @@ button, [role="button"] {
 .grp-note { display: block; font-size: 9px; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: 0.85; margin-top: 1px; }
 /* Specific enough to beat the tape's own heading colours; group cells are opaque (sticky). */
 table.grid-table thead tr.grp-row th.grp-time { color: #a5f3fc; background: #123a40; }
-table.grid-table thead tr.grp-row th.grp-ohlc { color: #e0e7ff; background: #232c58; }
+table.grid-table thead tr.grp-row th.grp-ohlc { color: #e0e7ff; background: #363e45; }
 table.grid-table thead tr.grp-row th.grp-vol { color: #bbf7d0; background: #17402a; }
 table.grid-table thead tr.grp-row th.grp-trade { color: #fde68a; background: #463812; }
 table.grid-table thead tr.grp-row th.grp-pz { color: #f5f5f5; background: #3f3f46; }
 table.grid-table thead tr.grp-row th.grp-swing { color: #99f6e4; background: #0f3d38; }
 table.grid-table thead tr.grp-row th.grp-sig { color: #fbcfe8; background: #4a1d3a; }
 /* Sir's order flow (Volume Delta, CVD, CVD Divergence), 2026-11-26: blue, unlike its neighbours. */
-table.grid-table thead tr.grp-row th.grp-flow { color: #93c5fd; background: #13294b; }
+table.grid-table thead tr.grp-row th.grp-flow { color: #93c5fd; background: #292f35; }
 table.grid-table thead tr.grp-row th.grp-res { color: #fbbf24; background: #4a3207; }
 table.grid-table thead tr.grp-row th.grp-brk { color: #c084fc; background: #2c2140; }
 table.grid-table thead tr.grp-row th.grp-core { color: #d1d5db; background: #262a33; }
-table.grid-table thead tr.grp-row th.grp-sup { color: #5a9bff; background: #172744; }
+table.grid-table thead tr.grp-row th.grp-sup { color: #5a9bff; background: #282e33; }
 /* The first group spans several columns: pinning it to the left edge covered the others when scrolled. */
 table.grid-table thead tr.grp-row th:first-child { left: auto; }
 /* Two heading rows: the group row sticks at the top, the column names just under it. */
@@ -2612,3 +2612,111 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 .sf-seg { display: inline-flex; padding: 2px; border-radius: 0.45rem; background: var(--raise-2); border: 1px solid var(--hairline-soft); }
 .sf-seg > button { padding: 0.15rem 0.6rem; border-radius: 0.35rem; font-size: 12px; color: var(--muted-foreground); }
 .sf-seg > button.sf-seg-on { background: var(--surface-1); color: var(--foreground); box-shadow: inset 0 0 0 1px var(--hairline-mid); }
+
+/* ══ DESIGN SYSTEM 2026-11-27 ═══════════════════════════════════════════════
+   One look for the whole app (user: "nothing has changed ... the selection,
+   the buttons, the sidebar"). Three rules, everywhere:
+     1. Surfaces are neutral graphite -- no violet or blue tint, no glows.
+     2. The one action that matters on a screen is SOLID TEAL with dark ink.
+     3. Anything SELECTED is a teal ring over a soft teal fill, teal ink --
+        timeframes, sessions, AM/PM, tabs, rows -- never a solid blue block.
+   Teal stays clear of the logo's blue-violet glow and of the chart's green.
+   Last in the file and unlayered, so it wins over the older rules above. */
+:root {
+  --sel-fill: rgba(13, 148, 136, 0.10);
+  --sel-ring: #0d9488;
+  --sel-ink: #0f766e;
+  --solid: #0d9488;
+  --solid-hover: #0f766e;
+  --solid-ink: #ffffff;
+  --nav-active: #0d9488;
+  --nav-active-deep: #0f766e;
+  --nav-active-lift: #14b8a6;
+}
+.dark {
+  --background: #0a0c0f;
+  --card: #111418;
+  --popover: #111418;
+  --secondary: #181c22;
+  --muted: #181c22;
+  --surface-1: #111418;
+  --surface-2: #161a1f;
+  --surface-deep: #08090c;
+  --page-ground-from: #0a0c0f;
+  --page-ground-to: #0c0e12;
+  --sidebar-ground-from: #0f1216;
+  --sidebar-ground-to: #0a0c0f;
+  --dialog-surface: #0f1216;
+  --grid-head: #10151b;
+  --grid-line: #161c24;
+  --grid-hover: #131a22;
+  --chart-grid: #161c24;
+  --sel-fill: rgba(45, 212, 191, 0.12);
+  --sel-ring: #2dd4bf;
+  --sel-ink: #99f6e4;
+  --solid: #2dd4bf;
+  --solid-hover: #5eead4;
+  --solid-ink: #04201c;
+}
+
+/* 2. The solid action: Run Backtest, Export Report, Play, Run scan, Done ... */
+.btn-solid,
+[data-slot="button"][data-variant="default"],
+.cfg-scope [data-slot="button"][data-variant="default"]:not(.bg-none) {
+  background: var(--solid) !important;
+  background-image: none !important;
+  color: var(--solid-ink) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.btn-solid:hover:not(:disabled),
+[data-slot="button"][data-variant="default"]:hover:not(:disabled) {
+  background: var(--solid-hover) !important;
+  filter: none;
+}
+
+/* 3. Selected, one style for all of it. */
+.sel-on,
+.tf-pill-on, .tf-pill-on:hover,
+.tz-pill-on, .ampm-seg-on, .cat-chip-on, .instr-row-on, .instr-row-on:hover, .exch-tag-on,
+.nav-pill-on, .nav-pill-on:hover,
+.tape-pill-on,
+.preset-card-on,
+.study-open-on,
+.sf-seg > button.sf-seg-on,
+.cfg-scope [data-slot="tabs-trigger"][data-state="active"],
+.cfg-scope [data-slot="tabs-trigger"][data-active] {
+  background: var(--sel-fill) !important;
+  background-image: none !important;
+  color: var(--sel-ink) !important;
+  border-color: var(--sel-ring) !important;
+  box-shadow: inset 0 0 0 1px var(--sel-ring) !important;
+}
+.nav-pill-on svg, .sel-on svg { color: var(--sel-ring); }
+.nav-pill-on::after { background: var(--sel-ring); }
+.preset-card-on .preset-name { color: var(--sel-ink) !important; }
+.preset-card-on .preset-range { color: var(--muted-foreground) !important; }
+.cfg-scope [data-slot="select-item"][data-state="checked"] { background-color: var(--sel-fill); color: var(--sel-ink); }
+.cfg-scope { --primary: var(--sel-ring); --ring: var(--sel-ring); --accent: var(--sel-ring); --slider-accent: var(--sel-ring); }
+.study-switch:checked { background: var(--sel-ring) !important; }
+.studies-count { background: var(--sel-ring) !important; color: var(--solid-ink) !important; }
+.studies-btn:hover, .studies-btn-open { border-color: var(--sel-ring) !important; background: var(--sel-fill) !important; }
+
+/* 1. Surfaces: one radius, one hairline, no coloured halo under any card. */
+[data-slot="card"] {
+  border-radius: 14px;
+  box-shadow: none;
+  --tw-ring-color: var(--hairline-mid);
+}
+.cfg-section { border-radius: 12px; background: var(--surface-1); }
+.cfg-section-head:hover { background: var(--raise-2); }
+.preset-radio-on { background: var(--sel-ring) !important; border-color: var(--sel-ring) !important; }
+.preset-card-on .preset-icon { background: var(--sel-fill) !important; color: var(--sel-ring) !important; }
+.preset-card-on .preset-why { color: var(--muted-foreground) !important; }
+/* Selected things hold still: the endless glow on the chosen timeframe and session was decoration. */
+.tf-pill-on, .preset-card-on { animation: none !important; }
+/* Sidebar headings: one calm style. The five accent colours made the panel read as
+   a patchwork; the step number and the chevron carry the structure now. */
+.cfg-section-head h3 { color: var(--foreground) !important; letter-spacing: 0.08em; }
+.cfg-section-head > svg:not(.cfg-chevron) { color: var(--muted-foreground) !important; }
+.cfg-step { color: var(--sel-ink) !important; border-color: var(--sel-ring) !important; background: var(--sel-fill); }

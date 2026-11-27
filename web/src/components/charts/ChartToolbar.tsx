@@ -157,7 +157,7 @@ export function ChartToolbar({
             className={`grid chart-pill place-items-center rounded-lg px-2 transition-colors
                         disabled:opacity-50 ${
               cfg.timeframe === tf
-                ? "bg-[#2563eb] text-white font-medium"
+                ? "sel-on font-medium"
                 : "text-muted-foreground hover:bg-[color:var(--raise-3)] hover:text-foreground"
             }`}
           >
@@ -202,7 +202,7 @@ export function ChartToolbar({
                         onClick={() => setDirection(d)}
                         className={`flex-1 rounded px-2 py-0.5 text-[11px] ${
                           direction === d
-                            ? "bg-[#2563eb] text-white"
+                            ? "sel-on"
                             : "bg-[color:var(--raise-3)] text-muted-foreground hover:text-foreground"}`}>
                   {d}
                 </button>
@@ -219,7 +219,7 @@ export function ChartToolbar({
             />
             <div className="flex gap-1">
               <button type="button" onClick={addAlert}
-                      className="flex-1 rounded bg-[#2563eb] px-2 py-0.5 text-[11px] text-white hover:bg-[#1d4ed8]">
+                      className="flex-1 rounded btn-solid px-2 py-0.5 text-[11px]">
                 <Plus className="mr-0.5 inline h-3 w-3" aria-hidden /> Add
               </button>
               <button type="button" onClick={() => setAlertOpen(false)}

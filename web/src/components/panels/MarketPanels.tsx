@@ -280,7 +280,7 @@ export function MarketSummaryPanel() {
             onClick={() => setTab(t.id)}
             className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors ${
               t.id === tab
-                ? "bg-[#1d4ed8]/25 text-sky-800 dark:text-sky-200 ring-1 ring-sky-400/30"
+                ? "sel-on"
                 : "text-muted-foreground hover:text-foreground hover:bg-[color:var(--raise-3)]"}`}
           >
             {t.label}
@@ -614,7 +614,7 @@ export function AlertsBell() {
       <Bell className="h-4 w-4" aria-hidden />
       {count > 0 && (
         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center
-                         rounded-full bg-[#2563eb] px-1 text-[9px] font-semibold text-white">
+                         rounded-full btn-solid px-1 text-[9px] font-semibold">
           {count}
         </span>
       )}

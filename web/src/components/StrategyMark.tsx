@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
 
 const TONE: Record<string, string> = {
   ma_crossover: "text-amber-800 dark:text-amber-400",
-  rsi_mean_reversion: "text-violet-800 dark:text-violet-400",
+  rsi_mean_reversion: "text-teal-800 dark:text-teal-400",
   breakout: "text-emerald-800 dark:text-emerald-400",
   rsi_divergence: "text-blue-800 dark:text-blue-400",
   regime_adaptive: "text-foreground",
@@ -98,7 +98,7 @@ export function StrategyMark({ id, size = 20 }: { id: string; size?: number }) {
   return (
     <span
       aria-hidden
-      className={cn("shrink-0 grid place-items-center", TONE[id] ?? "text-violet-800 dark:text-violet-400")}
+      className={cn("shrink-0 grid place-items-center", TONE[id] ?? "text-teal-800 dark:text-teal-400")}
       style={{ width: size, height: size }}
     >
       <Glyph id={id} />

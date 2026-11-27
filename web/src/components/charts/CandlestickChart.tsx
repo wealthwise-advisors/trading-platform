@@ -1578,7 +1578,7 @@ export function CandlestickChart({
         if (last) {
           data.push({
             type: "scatter", mode: "markers", x: [last], y: [marks.breakeven],
-            marker: { size: 7, color: tone, line: { color: "#0b0d14", width: 1 } },
+            marker: { size: 7, color: tone, line: { color: "#0e1011", width: 1 } },
             showlegend: false, hoverinfo: "skip", xaxis: "x", yaxis: "y",
           } as unknown as Data)
         }
@@ -2433,7 +2433,7 @@ export function CandlestickChart({
       : p.price
     const k = markScale(priceRowPx)
     const LEVELS = [
-      { name: "10 Leg", pick: (p: (typeof swingLabels)[number]) => p.big && !p.fine, size: 26 * k, font: 13 * k, fill: "#0d2238", ring: 2.2 },
+      { name: "10 Leg", pick: (p: (typeof swingLabels)[number]) => p.big && !p.fine, size: 26 * k, font: 13 * k, fill: "#1e2327", ring: 2.2 },
       { name: "3 Leg", pick: (p: (typeof swingLabels)[number]) => !p.big && !p.fine, size: 22 * k, font: 11.5 * k, fill: "#2b250c", ring: 1.8 },
       { name: "1 Leg", pick: (p: (typeof swingLabels)[number]) => !!p.fine, size: 18 * k, font: 10 * k, fill: "#2c1022", ring: 1.4 },
     ]
@@ -3214,7 +3214,7 @@ export function CandlestickChart({
                               className={`flex w-full items-center justify-between px-2 py-1 text-left
                                           transition-colors disabled:cursor-wait ${
                                 on
-                                  ? "bg-[#2563eb] text-white"
+                                  ? "sel-on"
                                   : "odd:bg-[color:var(--raise-1)] hover:bg-[color:var(--raise-4)]"}`}>
                         <span className="font-mono tabular-nums">{tf}</span>
                         <span className={`font-mono tabular-nums ${
