@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  xWindowMs, followLiveEdge,
+  xWindowMs, followLiveEdge, windowIndices,
   DEFAULT_WINDOW_BARS, DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs,
 } from "./chartWindow"
 
@@ -144,5 +144,22 @@ describe("followLiveEdge", () => {
     expect(followLiveEdge(null, last, next)).toBeNull()
     const v = { start: last - 30 * min, end: last }
     expect(followLiveEdge(v, last, last)).toBe(v)
+  })
+})
+
+// User, 2026-11-27: zoomed in between two 1m candles, Delta / CVD scaled to ±1 and drew
+// solid blocks -- nothing was "on screen" to fit. The nearest candles are used instead.
+describe("windowIndices", () => {
+  const ms = [0, 60_000, 120_000, 180_000]
+  it("the bars inside the window", () => {
+    expect(windowIndices(ms, 50_000, 130_000)).toEqual([1, 2])
+  })
+  it("none inside: the nearest bar on each side", () => {
+    expect(windowIndices(ms, 70_000, 100_000)).toEqual([1, 2])
+  })
+  it("past either end: the one bar there is", () => {
+    expect(windowIndices(ms, 200_000, 300_000)).toEqual([3])
+    expect(windowIndices(ms, -100_000, -50_000)).toEqual([0])
+    expect(windowIndices([], 0, 1)).toEqual([])
   })
 })

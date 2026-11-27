@@ -44,7 +44,7 @@ const markScale = (rowPx: number) => Math.max(0.75, Math.min(1, rowPx / 420))
 const TAG_MIN_ROW_PX = 220
 import { buildSessionProfileShapes } from "@/lib/volumeProfileShapes"
 import { computeVolumeProfiles } from "@/lib/volumeProfile"
-import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs, followLiveEdge, xWindowMs } from "@/lib/chartWindow"
+import { DEFAULT_WINDOW_MS, barStepMs, chartRunKey, defaultAggregationSpanMs, defaultWindowMs, followLiveEdge, windowIndices, xWindowMs } from "@/lib/chartWindow"
 import type { TimePerProfile, RowHeightMode } from "@/lib/volumeProfile"
 import {
   PLOT_LABEL, applyPlotPatch, bubbleAnnotation, defaultPlotStyles, levelTrace,
@@ -1982,18 +1982,24 @@ export function CandlestickChart({
   // Delta and CVD have no fixed scale: fitted to what is on screen. CVD is fitted to
   // the line alone, not forced to show 0, so its swings read (forcing 0 flattened it).
   const tMs = t.map((x) => new Date(x).getTime())
+  // The bars on screen -- or, zoomed in between two candles, the nearest ones; a window
+  // with no bar in it scaled Delta and CVD to ±1 and drew them as solid blocks (2026-11-27).
+  const shownIdx = windowIndices(tMs, axisStartMs, axisEndMs)
   const visibleExtent = (vals: readonly (number | null)[] | undefined): [number, number] => {
     let lo = Infinity, hi = -Infinity
-    vals?.forEach((v, i) => {
-      if (v == null || tMs[i] < axisStartMs || tMs[i] > axisEndMs) return
+    for (const i of shownIdx) {
+      const v = vals?.[i]
+      if (v == null) continue
       lo = Math.min(lo, v); hi = Math.max(hi, v)
-    })
+    }
     return Number.isFinite(lo) ? [lo, hi] : [0, 1]
   }
   // Delta: fitted to the 98th percentile of the bars on screen, so one closing-bell
   // spike (+32,553 on 24 Nov 1m) does not flatten every other bar; a spike runs off the top.
-  const visibleAbs = (indicators.delta ?? []).flatMap((v, i) =>
-    v == null || tMs[i] < axisStartMs || tMs[i] > axisEndMs ? [] : [Math.abs(v)]).sort((a, b) => a - b)
+  const visibleAbs = shownIdx.flatMap((i) => {
+    const v = indicators.delta?.[i]
+    return v == null ? [] : [Math.abs(v)]
+  }).sort((a, b) => a - b)
   const deltaTop = Math.max(visibleAbs[Math.floor((visibleAbs.length - 1) * 0.98)] ?? 0, 1) * 1.15
   const cvdFit = visibleExtent(indicators.cvd)
   // Bars rise from 0, so their scale has to show 0; the line is fitted to itself.
@@ -2090,11 +2096,10 @@ export function CandlestickChart({
         const shownWindow = xWindowMs(tShown, viewShown, defaultWindow, 0)
         const windowStartMs = shownWindow ? shownWindow[0] : lastMs - defaultWindow
         const windowEndMs = shownWindow ? shownWindow[1] : lastMs
-        const visible = bars.filter((b) => {
-          const ms = new Date(b.t).getTime()
-          return ms >= windowStartMs && ms <= windowEndMs
-        })
-        const scope = visible.length ? visible : bars
+        // Zoomed in between two candles, nothing is inside the window: fit the nearest
+        // ones rather than every bar on the chart (user, 2026-11-27).
+        const scope = windowIndices(bars.map((b) => new Date(b.t).getTime()), windowStartMs, windowEndMs)
+          .map((i) => bars[i])
         let lo = Math.min(...scope.map((b) => b.l))
         let hi = Math.max(...scope.map((b) => b.h))
         const barLo = lo, barHi = hi

@@ -80,6 +80,23 @@ export function followLiveEdge<V extends { start: number; end: number }>(
   return { ...view, start: view.start + d, end: view.end + d }
 }
 
+/**
+ * Indices of the bars inside [start, end]. Zoomed in so far that none is inside --
+ * the window falls between two candles -- the nearest bar on each side instead, so a
+ * scale fitted to "what is on screen" always has something real to fit.
+ */
+export function windowIndices(ms: readonly number[], start: number, end: number): number[] {
+  const inside: number[] = []
+  for (let i = 0; i < ms.length; i++) if (ms[i] >= start && ms[i] <= end) inside.push(i)
+  if (inside.length || !ms.length) return inside
+  let before = -1, after = -1
+  for (let i = 0; i < ms.length; i++) {
+    if (ms[i] < start) before = i
+    else if (ms[i] > end && after < 0) after = i
+  }
+  return [before, after].filter((i) => i >= 0)
+}
+
 export function xWindowMs(
   t: readonly string[],
   view: { start: number; end: number } | null,
