@@ -60,7 +60,8 @@ import { StatTile } from "@/components/cards/StatTile"
 import { SectionHeader } from "@/components/SectionHeader"
 import { FullscreenButton, PanelToolButton } from "@/components/PanelTools"
 import { usePanelFullscreen } from "@/lib/usePanelFullscreen"
-import { Settings2 } from "lucide-react"
+import { Settings2, Columns3 } from "lucide-react"
+import { StudiesPanel, type StudyItem } from "@/components/charts/StudiesPanel"
 import { Layers, Wallet, Coins, ClipboardList, Target, ArrowUpRight,
          ArrowDownRight, TriangleAlert } from "lucide-react"
 import { StepSection } from "./StepSection"
@@ -344,6 +345,14 @@ const SPEED_OPTIONS = [
   { label: "0.5s", value: 0.5 }, { label: "1s", value: 1.0 },
 ]
 
+const HIDDEN_COLS_KEY = "autotrader.grid.hiddenCols"
+/** How the Columns settings nest the table's groups (user, 2026-11-27). */
+const COLUMN_SETS: [string, string[]][] = [
+  ["Bar", ["Time", "OHLC", "Volume"]],
+  ["Levels", ["Price zone", "Resistance level", "Breakout zone", "Equilibrium core · POC", "Support floor"]],
+  ["Analysis", ["Trade", "Swing", "Order flow", "Signal"]],
+]
+
 export function ReplayPage() {
   const { data: strategies } = useQuery({ queryKey: ["strategies"], queryFn: api.strategies })
   const { data: dataSources } = useQuery({ queryKey: ["data-sources"], queryFn: api.dataSources })
@@ -519,6 +528,13 @@ export function ReplayPage() {
    * markup rather than unsubscribing anything.
    */
   const [liveOpen, setLiveOpen] = useState(true)
+  /** Market Grid column groups switched off in the Columns settings (user, 2026-11-27:
+   *  "setting inside setting", to free the space). Both tables share one list. */
+  const [hiddenCols, setHiddenCols] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_COLS_KEY) ?? "[]") } catch { return [] }
+  })
+  useEffect(() => { try { localStorage.setItem(HIDDEN_COLS_KEY, JSON.stringify(hiddenCols)) } catch { /* private window */ } }, [hiddenCols])
+  const [colsOpen, setColsOpen] = useState<"live" | "tape" | null>(null)
   const [tapeOpen, setTapeOpen] = useState(true)
   const [tradesOpen, setTradesOpen] = useState(true)
   const livePanelRef = useRef<HTMLDivElement>(null)
@@ -1453,7 +1469,7 @@ export function ReplayPage() {
 
   /** The heading row over a Market Grid table: every column under a group, sir's four
    *  zones in price order, a border between groups (user, 2026-11-20). */
-  const groupRow = (lead: [string, number, string][], tail: [string, number, string][], past = false) => {
+  const gridGroups = (lead: [string, number, string][], tail: [string, number, string][], past = false) => {
     const g: [string, number, string, string?][] = [
       ...lead,
       ...(showVp && showVwap ? [["Price zone", 1, "grp-pz", past ? "where price was at that candle" : "where price is now"]] as [string, number, string, string][] : []),
@@ -1463,6 +1479,9 @@ export function ReplayPage() {
                     ["Support floor", 2, "grp-sup", "below = short / reversal"]] as [string, number, string, string][] : []),
       ...tail,
     ]
+    return g
+  }
+  const groupRow = (g: [string, number, string, string?][]) => {
     return (
       <tr className="grp-row">
         {g.map(([name, span, cls, note]) => (
@@ -1471,6 +1490,48 @@ export function ReplayPage() {
           </th>
         ))}
       </tr>
+    )
+  }
+  const liveGroups = gridGroups([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"], ["Trade", 3, "grp-trade"]],
+                                [["Swing", 7, "grp-swing"], ["Order flow", 4, "grp-flow"], ["Signal", 1, "grp-sig"]])
+  const tapeGroups = gridGroups([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"]], [["Trade", 2, "grp-trade"]], true)
+  /** Hides a switched-off group's cells by position. display:none, not a collapsed
+   *  <col>: Chrome still sizes the row from collapsed cells, which left rows 200px tall.
+   *  Rows with a colSpan cell (an empty-table message) are left alone. */
+  const hideColsStyle = (g: [string, number, string, string?][], cls: string) => {
+    const rules: string[] = []
+    let col = 0
+    g.forEach(([name, span], gi) => {
+      if (hiddenCols.includes(name)) {
+        rules.push(`table.${cls} tr.grp-row > :nth-child(${gi + 1})`)
+        for (let i = 1; i <= span; i++)
+          rules.push(`table.${cls} tr:not(.grp-row):not(:has(> [colspan])) > :nth-child(${col + i})`)
+      }
+      col += span
+    })
+    return rules.length ? <style>{`${rules.join(",\n")} { display: none; }`}</style> : null
+  }
+  /** The Columns settings: the table's groups, nested under Bar / Levels / Analysis. */
+  const columnsPanel = (g: [string, number, string, string?][], table: string) => {
+    const names = g.map(([n]) => n)
+    const show = (ns: string[], on: boolean) =>
+      setHiddenCols((h) => on ? h.filter((x) => !ns.includes(x)) : [...new Set([...h, ...ns])])
+    const items: StudyItem[] = COLUMN_SETS.map(([title, members]) => {
+      const here = members.filter((m) => names.includes(m))
+      return {
+        key: title, label: title, aria: `Show ${title} columns`,
+        checked: here.some((m) => !hiddenCols.includes(m)), onChange: (on: boolean) => show(here, on),
+        children: here.map((m) => ({
+          key: m, label: m, aria: `Show ${m} columns`,
+          summary: `${g.find(([n]) => n === m)?.[1]} column${g.find(([n]) => n === m)?.[1] === 1 ? "" : "s"}`,
+          checked: !hiddenCols.includes(m), onChange: (on: boolean) => show([m], on),
+        })),
+      }
+    }).filter((i) => i.children.length)
+    return (
+      <StudiesPanel title="Columns" inline className="cols-panel"
+                    groups={[{ title: table, items }]} expanded={null} onExpand={() => {}}
+                    onClose={() => setColsOpen(null)} />
     )
   }
   /** "X vs Avg" header: the name, and the average it measures from in brackets. */
@@ -2578,6 +2639,10 @@ export function ReplayPage() {
                                      onClick={() => setSettingsOpen((v) => !v)}>
                       <Settings2 size={12} strokeWidth={2.2} />
                     </PanelToolButton>
+                    <PanelToolButton label="Live state columns" pressed={colsOpen === "live"}
+                                     onClick={() => setColsOpen((o) => o === "live" ? null : "live")}>
+                      <Columns3 size={12} strokeWidth={2.2} />
+                    </PanelToolButton>
                     <FullscreenButton isFull={liveFs.isFull} onToggle={liveFs.toggle}
                                       what="live state" />
                   </>
@@ -2654,6 +2719,7 @@ export function ReplayPage() {
                   Ticking one that is not loaded adds it and backfills it, the
                   same handler the page selector uses -- these are one
                   selection, not a filter layered on top of it. */}
+              {colsOpen === "live" && liveOpen && columnsPanel(liveGroups, "Live state")}
               <div className="tape-bar" hidden={!liveOpen}>
                 <div className="space-y-1">
                   <span className="tape-bar-lbl">
@@ -2687,10 +2753,10 @@ export function ReplayPage() {
                   maxHeight is already here and the two belong together. */}
               <div hidden={!liveOpen}
                    style={{ overflow: "auto", maxHeight: liveFs.isFull ? undefined : 420 }}>
-                <table className="w-full text-sm grid-table table-sticky">
+                {hideColsStyle(liveGroups, "grid-live")}
+                <table className="w-full text-sm grid-table table-sticky grid-live">
                   <thead className="grid-thead">
-                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"], ["Trade", 3, "grp-trade"]],
-                             [["Swing", 7, "grp-swing"], ["Order flow", 4, "grp-flow"], ["Signal", 1, "grp-sig"]])}
+                    {groupRow(liveGroups)}
                     <tr>
                       <th className="text-left p-2 font-medium">TF</th>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
@@ -2970,8 +3036,14 @@ export function ReplayPage() {
                 collapsed={!tapeOpen}
                 onToggle={() => setTapeOpen((v) => !v)}
                 tools={
-                  <FullscreenButton isFull={tapeFs.isFull} onToggle={tapeFs.toggle}
-                                    what="consolidated tape" />
+                  <>
+                    <PanelToolButton label="Consolidated tape columns" pressed={colsOpen === "tape"}
+                                     onClick={() => setColsOpen((o) => o === "tape" ? null : "tape")}>
+                      <Columns3 size={12} strokeWidth={2.2} />
+                    </PanelToolButton>
+                    <FullscreenButton isFull={tapeFs.isFull} onToggle={tapeFs.toggle}
+                                      what="consolidated tape" />
+                  </>
                 }
               />
 
@@ -2983,6 +3055,7 @@ export function ReplayPage() {
                   deliberately no paging here: three navigation buttons for a
                   table mostly read at its newest end were more to understand
                   than they were worth. */}
+              {colsOpen === "tape" && tapeOpen && columnsPanel(tapeGroups, "Consolidated tape")}
               <div className="tape-bar" hidden={!tapeOpen}>
                 <div className="space-y-1">
                   <span className="tape-bar-lbl">Jump to date</span>
@@ -3048,9 +3121,10 @@ export function ReplayPage() {
                   the main thing making this table hard to read. */}
               <div hidden={!tapeOpen}
                    style={{ overflow: "auto", maxHeight: tapeFs.isFull ? undefined : 460 }}>
-                <table className="w-full text-sm table-sticky grid-table tape-table">
+                {hideColsStyle(tapeGroups, "grid-tape")}
+                <table className="w-full text-sm table-sticky grid-table tape-table grid-tape">
                   <thead className="grid-thead sticky top-0">
-                    {groupRow([["Time", 3, "grp-time"], ["OHLC", 5, "grp-ohlc"], ["Volume", 4, "grp-vol"]], [["Trade", 2, "grp-trade"]], true)}
+                    {groupRow(tapeGroups)}
                     <tr>
                       <th className="text-left p-2 font-medium">Bar close ({TZ_LABEL})</th>
                       <th className="text-left p-2 font-medium">Opened ({TZ_LABEL})</th>

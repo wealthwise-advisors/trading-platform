@@ -27,7 +27,7 @@ import { useCallback, useEffect, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { ArrowLeft, ArrowRight, BarChart3, Download, Zap } from "lucide-react"
 
-import brandWordmark from "@/assets/brand-wordmark.png"
+import { BrandLogo } from "@/components/BrandLogo"
 import { auth, type Me } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { BacktestArt, ExportArt, ReplayArt } from "@/components/onboarding-art"
@@ -106,7 +106,7 @@ export function Onboarding({ user, onDone }: { user: Me; onDone: () => void }) {
     <div className="min-h-screen grid place-items-center bg-background p-5">
       <div className="w-full" style={{ maxWidth: 560 }}>
         <div className="flex items-center justify-between mb-6">
-          <img src={brandWordmark} alt="AutoTrader" className="h-6 w-auto object-contain" />
+          <BrandLogo />
           <Button variant="ghost" size="sm" onClick={finish} disabled={saving}>
             Skip
           </Button>

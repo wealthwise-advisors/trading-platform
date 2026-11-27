@@ -2467,3 +2467,61 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 .grid-table th, .grid-table td { border: 0; border-right: 1px solid var(--hairline-soft); border-bottom: 1px solid var(--hairline-soft); }
 /* Price Zone cells: the word in its zone's colour, as the group headings. */
 .pz-res { color: #fbbf24; } .pz-brk { color: #c084fc; } .pz-core { color: #d1d5db; } .pz-sup { color: #5a9bff; }
+
+/* ── Backtest Config sections fold, step by step (2026-11-27) ─────────────── */
+.cfg-section {
+  border-radius: 0.75rem;
+  border: 1px solid var(--hairline-soft);
+  background: var(--raise-1);
+  transition: border-color 150ms ease;
+}
+.cfg-section[open] { border-color: var(--hairline-mid); }
+.cfg-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 0.75rem;
+}
+.cfg-section-head::-webkit-details-marker { display: none; }
+.cfg-section-head:hover { background: var(--raise-2); }
+.cfg-section-head:focus-visible { outline: 2px solid var(--sec-blue); outline-offset: -2px; }
+.cfg-step {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cfg-section-sum {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.cfg-section[open] .cfg-section-sum { display: none; }
+.cfg-chevron { transition: transform 150ms ease; transform: rotate(-90deg); }
+.cfg-section[open] .cfg-chevron { transform: none; }
+.cfg-section-body { padding: 0 0.7rem 0.7rem; display: flex; flex-direction: column; gap: 0.375rem; }
+
+/* ── Market Grid Columns settings (2026-11-27) ─────────────────────────────── */
+.studies-panel.cols-panel { position: static; width: auto; margin: 0.5rem 0.75rem; box-shadow: none; }
+/* Bar / Levels / Analysis side by side, so the table stays on screen under it. */
+.cols-panel .studies-body { max-height: none; }
+.cols-panel .study-group > .pb-2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1rem; }
+@media (max-width: 760px) { .cols-panel .study-group > .pb-2 { grid-template-columns: 1fr; } }
+
+/* ── Brand logo (2026-11-27) ───────────────────────────────────────────────── */
+.brand-name { display: block; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--foreground); }
+.brand-name-accent { color: #1d5fd6; }
+.dark .brand-name-accent { color: #4f8dff; }
+.brand-tagline { display: block; margin-top: 3px; font-size: 10.5px; color: var(--muted-foreground); }

@@ -1,5 +1,4 @@
-import brandMark from "@/assets/brand-mark.png"
-import brandWordmark from "@/assets/brand-wordmark.png"
+import { BrandLogo } from "@/components/BrandLogo"
 import { ConfigForm } from "@/features/backtest/ConfigForm"
 import { ResultsPage } from "@/features/backtest/ResultsPage"
 import { ReplayPage } from "@/features/replay/ReplayPage"
@@ -135,8 +134,8 @@ function App({ user }: { user: Me }) {
                       // The panel may be mounting this tick; wait a frame so
                       // the target exists before scrolling to it.
                       requestAnimationFrame(() => {
-                        document.querySelector(`[data-cfg-section="${anchor}"]`)
-                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        const el = document.querySelector<HTMLDetailsElement>(`[data-cfg-section="${anchor}"]`)
+                        if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }) }
                       })
                     }}
                     className="rounded p-1.5 text-muted-foreground hover:bg-[color:var(--raise-3)]
@@ -185,29 +184,8 @@ function App({ user }: { user: Me }) {
               1536x1024 image into a 56px header would render the lettering about
               four pixels tall. The h1 is kept for the document outline, with the
               wordmark carrying its alt text. */}
-          <div className="flex items-center gap-2 min-w-0 shrink-0">
-            <img
-              src={brandMark}
-              alt=""
-              aria-hidden
-              className="h-9 w-9 shrink-0 rounded-lg object-cover
-                         ring-1 ring-violet-400/20 shadow-lg shadow-violet-900/30"
-            />
-            <div className="min-w-0">
-              <h1 className="min-w-0">
-                <img
-                  src={brandWordmark}
-                  alt="AutoTrader"
-                  className="h-6 sm:h-7 w-auto object-contain"
-                />
-              </h1>
-              {/* What the product is, in four words, for someone who has just
-                  been sent a link to it. */}
-              <p className="hidden sm:block text-[10.5px] leading-tight text-muted-foreground/75">
-                Research. Backtest. Trade Smarter.
-              </p>
-            </div>
-          </div>
+          {/* The h1 keeps the document outline; its text is the name in the logo. */}
+          <h1 className="min-w-0 shrink-0"><BrandLogo tagline /></h1>
 
           {/* The sections, immediately after the brand.
               NOT centred any more. xl:justify-center pushed the nav into the

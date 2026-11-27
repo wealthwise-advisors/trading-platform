@@ -178,7 +178,8 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       <div className="h-px bg-[color:var(--raise-4)]" />
 
       {/* ── data source ──────────────────────────────────────────────────── */}
-      <Section icon="source" label="Data Source" step={1} anchor="source" accent="sky">
+      <Section icon="source" label="Data Source" step={1} anchor="source" accent="sky"
+               summary={(dataSources ?? []).find((d) => d.id === cfg.dataSource)?.label}>
         <Select value={cfg.dataSource} onValueChange={(v) => cfg.setField("dataSource", v)}>
           {/* A Radix select trigger is a button whose only content is the chosen
               value, so without a label it announces as that value and nothing
@@ -204,7 +205,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       {cfg.dataSource === "schwab" && <SchwabAuthWidget />}
 
       {/* ── symbol ───────────────────────────────────────────────────────── */}
-      <Section icon="symbol" label="Symbol" step={2} anchor="symbol" accent="teal">
+      <Section icon="symbol" label="Symbol" step={2} anchor="symbol" accent="teal" summary={cfg.symbol}>
         {/* A dropdown was fine at five symbols. Schwab offers twenty-one across
             five asset classes, which is a list you hunt rather than scan --
             hence a searchable dialog with the same row markup inside. */}
@@ -232,7 +233,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── timeframe ────────────────────────────────────────────────────── */}
-      <Section icon="timeframe" label="Timeframe Selector" step={3} anchor="timeframe" accent="blue">
+      <Section icon="timeframe" label="Timeframe Selector" step={3} anchor="timeframe" accent="blue" summary={intervalName(cfg.timeframe)}>
         <Select
           value={cfg.timeframe}
           onValueChange={(v) => {
@@ -317,7 +318,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── strategy ─────────────────────────────────────────────────────── */}
-      <Section icon="strategy" label="Strategy" step={5} anchor="strategy" accent="green">
+      <Section icon="strategy" label="Strategy" step={5} anchor="strategy" accent="green" summary={currentStrategy?.label}>
         <Select
           value={cfg.strategyId}
           onValueChange={(v) => {
@@ -368,7 +369,8 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       )}
 
       {/* ── capital & risk ───────────────────────────────────────────────── */}
-      <Section icon="capital" label="Capital & Risk" step={7} anchor="capital" accent="blue">
+      <Section icon="capital" label="Capital & Risk" step={7} anchor="capital" accent="blue"
+               summary={`$${cfg.initialCapital.toLocaleString()} · ${cfg.contractsPerTrade} contract${cfg.contractsPerTrade === 1 ? "" : "s"}`}>
         <Panel>
           <FieldRow icon={<Wallet className="h-4 w-4 text-[#60a5fa]" />} label="Initial Capital ($)">
             <Input type="number" step={10000} aria-label="Initial capital in dollars" value={cfg.initialCapital}
@@ -392,7 +394,8 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           session window decide which bars go in, and read as a group
           after it. Nothing moved out of the panel -- Capital & Risk and
           Session Hours are still here, below. */}
-      <Section icon="zigzag" label="ZigZag Swings" step={8} anchor="zigzag" accent="violet">
+      <Section icon="zigzag" label="ZigZag Swings" step={8} anchor="zigzag" accent="violet"
+               summary={`10 Leg ${cfg.zigzagDev10} · 3 Leg ${cfg.zigzagDev3}`}>
         <Panel>
           {/* The dots tell the two sliders apart. The 10-leg dot is the chart's
               #2196f3. The 3-leg dot is the section's purple rather than the
@@ -433,7 +436,7 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
           />
         </Panel>
       </Section>
-      <Section icon="dates" label="Date Range" step={9} anchor="dates" accent="teal">
+      <Section icon="dates" label="Date Range" step={9} anchor="dates" accent="teal" summary={`${cfg.startDate} → ${cfg.endDate}`}>
         <Panel>
           {/* ONE PER ROW once the rail is narrow.
               The rail is 290px wide from lg up, which leaves about 129px a
@@ -501,7 +504,8 @@ export function ConfigForm({ onCollapse }: { onCollapse?: () => void } = {}) {
       </Section>
 
       {/* ── session hours ────────────────────────────────────────────────── */}
-      <Section icon="session" step={10} anchor="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember">
+      <Section icon="session" step={10} anchor="session" label={`Session Hours (${zoneShort(zoneOffset)})`} accent="ember"
+               summary={cfg.session24h ? "24 hours" : `${toZone(cfg.sessionStart, zoneOffset)} – ${toZone(cfg.sessionEnd, zoneOffset)}`}>
         <Panel>
           {/* The Market Grid's two presets, one click each (user, 2026-11-20: the
               Backtest page had only the custom window). Times read in the zone

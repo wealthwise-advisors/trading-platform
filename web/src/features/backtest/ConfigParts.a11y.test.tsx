@@ -13,7 +13,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import axe from "axe-core"
 
-import { SliderField } from "./ConfigParts"
+import { Section, SliderField } from "./ConfigParts"
 
 beforeAll(() => {
   // Radix measures with ResizeObserver, which jsdom does not provide.
@@ -76,5 +76,22 @@ describe("SliderField", () => {
     renderField("Level above which RSI counts as overbought.")
     const r = await axe.run(document.body, { rules: UNDECIDABLE_IN_JSDOM })
     expect(r.violations.map((v) => `${v.id} (${v.nodes.length})`)).toEqual([])
+  })
+})
+
+describe("Section folds, step by step", () => {
+  it("shows its summary when folded, and remembers the fold across a reload", () => {
+    localStorage.clear()
+    const { container, unmount } = render(
+      <Section icon="symbol" label="Symbol" anchor="symbol" summary="/ES"><p>body</p></Section>)
+    const d = container.querySelector("details")!
+    expect(d.open).toBe(true)
+    expect(screen.getByText("/ES")).toBeTruthy()
+    d.open = false
+    d.dispatchEvent(new Event("toggle"))
+    expect(localStorage.getItem("autotrader.cfg.fold.symbol")).toBe("1")
+    unmount()
+    const again = render(<Section icon="symbol" label="Symbol" anchor="symbol"><p>body</p></Section>)
+    expect(again.container.querySelector("details")!.open).toBe(false)
   })
 })

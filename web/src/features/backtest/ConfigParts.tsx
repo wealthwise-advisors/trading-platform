@@ -20,7 +20,7 @@ import type { CSSProperties, ReactNode } from "react"
 import { Slider } from "@/components/ui/slider"
 import {
   Database, CandlestickChart, Clock, Target, SlidersHorizontal, ShieldCheck,
-  CalendarRange, Sunrise, Activity, Info,
+  CalendarRange, Sunrise, Activity, Info, ChevronDown,
 } from "lucide-react"
 
 /**
@@ -87,32 +87,40 @@ interface SectionProps {
   step?: number
   /** Scroll target for the icon rail in App.tsx. */
   anchor?: string
+  /** The current choice, shown in the heading so a folded section still says what is set. */
+  summary?: string
 }
 
 /**
  * One labelled group. The heading is the only place a section name is styled, so
  * they cannot diverge.
  */
-export function Section({ icon, label, accent = "blue", children, aside, step, anchor }: SectionProps) {
+export function Section({ icon, label, accent = "blue", children, aside, step, anchor, summary }: SectionProps) {
   const Icon = SECTION_ICON[icon]
   const { text, hex } = ACCENT[accent]
+  // Each section folds (user, 2026-11-27: "step by step"), and remembers it per anchor.
+  const key = `autotrader.cfg.fold.${anchor ?? label}`
+  let folded = false
+  try { folded = localStorage.getItem(key) === "1" } catch { /* private window */ }
   return (
     // --slider-accent: a slider in this section fills in the section's colour
     // unless the field sets its own (see .cfg-scope in index.css).
-    <section className="space-y-1.5" data-cfg-section={anchor}
+    // <details>: native fold, keyboard-ready; App's rail opens it before scrolling.
+    <details className="cfg-section" data-cfg-section={anchor} open={!folded}
+             onToggle={(e) => { try { localStorage.setItem(key, e.currentTarget.open ? "0" : "1") } catch { /* ignore */ } }}
              style={{ "--slider-accent": hex } as CSSProperties}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${text}`} aria-hidden />
-          <h3 className={`text-[11px] font-bold uppercase tracking-[0.14em] ${text}`}>
-            {step != null && <span className="opacity-70">{step}. </span>}
-            {label}
-          </h3>
-        </div>
+      <summary className="cfg-section-head">
+        <span className="cfg-step" style={{ color: hex, borderColor: hex }}>{step ?? <Icon className="h-3 w-3" aria-hidden />}</span>
+        <Icon className={`h-4 w-4 shrink-0 ${text}`} aria-hidden />
+        <span className="min-w-0 flex-1">
+          <h3 className={`text-[11px] font-bold uppercase tracking-[0.14em] ${text}`}>{label}</h3>
+          {summary && <span className="cfg-section-sum">{summary}</span>}
+        </span>
         {aside}
-      </div>
-      {children}
-    </section>
+        <ChevronDown className="cfg-chevron h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      </summary>
+      <div className="cfg-section-body">{children}</div>
+    </details>
   )
 }
 

@@ -93,8 +93,11 @@ export function studiesOn(groups: StudyGroup[]): number {
   return groups.reduce((n, g) => n + countOn(g.items), 0)
 }
 
-export function StudiesPanel({ groups, expanded, onExpand, onClose, className }: {
+export function StudiesPanel({ groups, expanded, onExpand, onClose, className, title = "Studies", inline = false }: {
   groups: StudyGroup[]
+  title?: string
+  /** Sits in the page (Market Grid columns): no outside-click close. */
+  inline?: boolean
   expanded: string | null
   onExpand: (key: string | null) => void
   onClose: () => void
@@ -102,6 +105,7 @@ export function StudiesPanel({ groups, expanded, onExpand, onClose, className }:
 }) {
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    if (inline) return
     const away = (e: MouseEvent) => {
       const t = e.target as HTMLElement
       // Native colour pickers and selects open outside the panel's box.
@@ -110,16 +114,16 @@ export function StudiesPanel({ groups, expanded, onExpand, onClose, className }:
     }
     document.addEventListener("mousedown", away)
     return () => document.removeEventListener("mousedown", away)
-  }, [onClose])
+  }, [onClose, inline])
   return (
-    <div ref={box} role="dialog" aria-label="Studies" onKeyDown={(e) => { if (e.key === "Escape") onClose() }}
+    <div ref={box} role="dialog" aria-label={title} onKeyDown={(e) => { if (e.key === "Escape") onClose() }}
          className={cn("studies-panel", className)}>
       <div className="flex items-center justify-between border-b border-[color:var(--hairline-soft)] px-4 py-3">
         <div>
-          <div className="text-sm font-semibold">Studies</div>
-          <div className="text-[11px] text-muted-foreground">{studiesOn(groups)} on · Settings opens each one in place</div>
+          <div className="text-sm font-semibold">{title}</div>
+          <div className="text-[11px] text-muted-foreground">{studiesOn(groups)} on{inline ? "" : " · Settings opens each one in place"}</div>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close studies"
+        <button type="button" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`}
                 className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-[color:var(--raise-4)] hover:text-foreground">
           <X className="h-4 w-4" aria-hidden />
         </button>
