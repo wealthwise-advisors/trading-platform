@@ -664,3 +664,16 @@ test("Columns settings: groups nested under Bar / Levels / Analysis, hidden colu
   await page.getByRole("dialog", { name: "Columns" }).getByRole("checkbox", { name: "Show Levels columns" }).check()
   await page.close()
 })
+
+test("Live state rows stay short: the Last signal sentence is clamped to two lines, full text on hover", async ({ browser }) => {
+  test.setTimeout(240_000)
+  const page = await browser.newPage({ viewport: { width: 1500, height: 900 } })
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+  const row = page.locator("table.grid-live tbody tr").first()
+  expect(await row.evaluate((tr) => tr.getBoundingClientRect().height)).toBeLessThan(80)
+  const cell = row.locator("td.signal-cell")
+  if (await cell.locator(".signal-clamp").count()) expect(await cell.getAttribute("title")).toMatch(/^(BUY|SELL|\w+) /)
+  await page.close()
+})

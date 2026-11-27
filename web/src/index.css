@@ -2593,3 +2593,7 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 }
 .ui-link-btn:hover { background: var(--raise-3); color: var(--foreground); }
 .ui-link-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+
+/* Market Grid Last signal: two lines at most, full text on hover (2026-11-27). */
+.signal-cell { min-width: 280px; max-width: 360px; }
+.signal-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

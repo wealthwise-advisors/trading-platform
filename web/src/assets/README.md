@@ -40,9 +40,7 @@
 | File | ➜ What it does | Lines |
 |:--|:--|--:|
 | [`app-background.jpg`](app-background.jpg) | 🌅 The golden trading-floor background behind the app. | 2,479 |
-| [`brand-mark.png`](brand-mark.png) | 🔶 The AutoTrader mark. | 107 |
-| [`brand-wordmark.png`](brand-wordmark.png) | 🔤 The wordmark beside it. | 392 |
-| [`brand-favicon.png`](brand-favicon.png) | 🔖 Tab icon. | 51 |
+| — | 🔖 The logo is now vector: [`BrandLogo.tsx`](../components/BrandLogo.tsx) in the app, [`public/favicon.svg`](../../public/favicon.svg) as the tab icon. | — |
 | [`hero.png`](hero.png) | 🖼 Hero image. | 98 |
 | [`vite.svg`](vite.svg) | Vite's default logo. | 1 |
 

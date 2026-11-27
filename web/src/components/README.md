@@ -57,6 +57,7 @@
 | [`SchwabAuthWidget.tsx`](SchwabAuthWidget.tsx) | 🏦 The Schwab connect/refresh control. | 102 |
 | [`ErrorBoundary.tsx`](ErrorBoundary.tsx) | 🧯 Catches a render crash and shows something other than a blank page. | 99 |
 | [`VerifyEmailNotice.tsx`](VerifyEmailNotice.tsx) | ✉️ The "confirm your address" notice. | 98 |
+| [`BrandLogo.tsx`](BrandLogo.tsx) | 🔷 The logo: a rising swing on a blue-to-violet tile, beside the name. Vector, sharp at any size. | 39 |
 | [`DayCountStepper.tsx`](DayCountStepper.tsx) | 📅 Day-range stepper. The ceiling depends on the interval — 180 days intraday, 7,305 for daily and weekly. | 95 |
 | [`OfflineBanner.tsx`](OfflineBanner.tsx) | 📴 Says so when the browser loses the network. | 77 |
 | [`SectionHeader.tsx`](SectionHeader.tsx) | 📑 The bar at the top of each Market Grid panel. | 61 |

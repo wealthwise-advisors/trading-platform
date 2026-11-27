@@ -2996,9 +2996,11 @@ export function ReplayPage() {
                               </>
                             )
                           })()}
-                          <td className="p-2 text-xs">
+                          {/* Two lines at most; the full reason is on hover. Unclamped, the
+                              sentence wrapped ~190px tall and stretched the whole row. */}
+                          <td className="p-2 text-xs signal-cell" title={pane.lastSignal ? `${pane.lastSignal.type} ${pane.lastSignal.reason}` : undefined}>
                             {pane.lastSignal ? (
-                              <span style={{ color: pane.lastSignal.type === "BUY" ? GOOD : pane.lastSignal.type === "SELL" ? CRITICAL : "#e3b341" }}>
+                              <span className="signal-clamp" style={{ color: pane.lastSignal.type === "BUY" ? GOOD : pane.lastSignal.type === "SELL" ? CRITICAL : "#e3b341" }}>
                                 <b>{pane.lastSignal.type}</b>{" "}
                                 <span className="text-muted-foreground">{pane.lastSignal.reason}</span>
                               </span>
