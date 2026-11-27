@@ -5,6 +5,7 @@ import { ResultsPage } from "@/features/backtest/ResultsPage"
 import { ReplayPage } from "@/features/replay/ReplayPage"
 import { DataExportPage } from "@/features/export/DataExportPage"
 import { useConfigStore } from "@/store/configStore"
+import { useLayoutStore } from "@/store/layoutStore"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import { Button } from "@/components/ui/button"
 import { type Me } from "@/lib/api"
@@ -56,6 +57,9 @@ function App({ user }: { user: Me }) {
   // full-width chart and "Backtest" is the config. See goTo in configStore.
   const configOpen = useConfigStore((s) => s.configOpen)
   const setConfigOpen = useConfigStore((s) => s.setConfigOpen)
+  // Focus mode hides the configuration column too; opening it from the rail ends Focus.
+  const focus = useLayoutStore((s) => s.focus)
+  const setFocus = useLayoutStore((s) => s.setFocus)
   const setPage = useConfigStore((s) => s.setPage)
   const backtestId = useConfigStore((s) => s.backtestId)
   // Sent with Export Report so the report draws what the price chart shows.
@@ -111,7 +115,7 @@ function App({ user }: { user: Me }) {
                           border-[color:var(--hairline-soft)] py-2"
                style={{ background: "var(--sidebar-ground-from)" }}
                aria-label="Backtest configuration sections">
-          <button type="button" onClick={() => setConfigOpen(!configOpen)}
+          <button type="button" onClick={() => { if (focus) { setFocus(false); setConfigOpen(true) } else setConfigOpen(!configOpen) }}
                   title={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
                   aria-label={configOpen ? "Hide the backtest configuration" : "Show the backtest configuration"}
                   aria-expanded={configOpen}
@@ -126,6 +130,7 @@ function App({ user }: { user: Me }) {
             <button key={label} type="button"
                     title={label} aria-label={`Go to ${label}`}
                     onClick={() => {
+                      setFocus(false)
                       setConfigOpen(true)
                       // The panel may be mounting this tick; wait a frame so
                       // the target exists before scrolling to it.
@@ -141,7 +146,7 @@ function App({ user }: { user: Me }) {
           ))}
         </aside>
       )}
-      {page === "backtest" && configOpen && (
+      {page === "backtest" && configOpen && !focus && (
         <aside className="relative w-full lg:w-[290px] shrink-0 border-b lg:border-b-0 lg:border-r border-[color:var(--hairline-soft)] px-3 py-3 lg:overflow-y-auto lg:h-full lg:min-h-0"
                style={{ background: "var(--sidebar-ground-from)" }}>
           <ConfigForm onCollapse={() => setConfigOpen(false)} />

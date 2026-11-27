@@ -56,7 +56,7 @@ import {
 } from "@/lib/chartExportSettings"
 import { useChartSettingsStore } from "@/store/chartSettingsStore"
 import {
-  OSC_ORDER, OSC_STUDIES, activeOscillatorRows, fittedRange, levelLines, oscillatorRowHeights, zoneOverlays,
+  OSC_STUDIES, activeOscillatorRows, fittedRange, levelLines, oscillatorRowHeights, zoneOverlays,
   type OscKey, type OscRowKey, type OscToggles,
 } from "@/lib/oscillatorStudies"
 import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs"
@@ -64,6 +64,7 @@ import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { OrderFlowPanel, type CvdStyle } from "@/components/charts/OrderFlowPanel"
 import { StudiesButton, StudiesPanel, studiesOn, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
+import { useLayoutStore } from "@/store/layoutStore"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
 import { fibShapes, lastDrawingSize } from "@/lib/fibonacci"
@@ -214,28 +215,6 @@ function MenuHeader({ title, onClose }: { title: string; onClose: () => void }) 
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>
     </div>
-  )
-}
-
-/** One study in the Indicators menu: a checkbox row that reads as a menu item. */
-function MenuToggle({
-  label, checked, onChange, disabled, hint,
-}: {
-  label: string
-  checked: boolean
-  onChange: (v: boolean) => void
-  disabled?: boolean
-  hint?: string
-}) {
-  return (
-    <label role="menuitemcheckbox" aria-checked={checked}
-           title={hint}
-           className={`flex items-center gap-2 px-3 py-1.5 ${disabled
-             ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[color:var(--raise-3)]"}`}>
-      <input type="checkbox" checked={checked} disabled={disabled}
-             onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
-    </label>
   )
 }
 
@@ -477,7 +456,8 @@ export function CandlestickChart({
   // dialog ("Left axis"), so anyone who wants it back has it.
   const [vpLeftAxis, setVpLeftAxis] = useState(false)
   const [vpSavedNote, setVpSavedNote] = useState("")
-  const [indicatorMenu, setIndicatorMenu] = useState(false)
+  const focus = useLayoutStore((s) => s.focus)
+  const toggleFocus = useLayoutStore((s) => s.toggleFocus)
   const [chartStyle, setChartStyle] = useState(loadChartStyle)
   useEffect(() => { saveChartStyle(chartStyle) }, [chartStyle])
   const [stylePanel, setStylePanel] = useState(false)
@@ -487,12 +467,12 @@ export function CandlestickChart({
   const menusRef = useRef<HTMLSpanElement>(null)
 
   /* The two header menus had no way out but the button that opened them --
-     no close button, no outside click, no Escape -- so an open Indicators
+     no close button, no outside click, no Escape -- so an open Save
      menu sat over the chart until the user found that button again. All
      three now close it. */
   useEffect(() => {
-    if (!indicatorMenu && !saveMenu) return
-    const close = () => { setIndicatorMenu(false); setSaveMenu(false) }
+    if (!saveMenu) return
+    const close = () => setSaveMenu(false)
     const onDown = (e: MouseEvent) => {
       if (menusRef.current && !menusRef.current.contains(e.target as Node)) close()
     }
@@ -503,7 +483,7 @@ export function CandlestickChart({
       document.removeEventListener("mousedown", onDown)
       document.removeEventListener("keydown", onKey)
     }
-  }, [indicatorMenu, saveMenu])
+  }, [saveMenu])
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Fullscreen is driven by the BROWSER, not by this state -- Escape and the
@@ -2829,45 +2809,24 @@ export function CandlestickChart({
 
       {/* "Style": chart type, colours, background, extended hours, Compare. */}
       <button type="button" aria-haspopup="dialog" aria-expanded={stylePanel}
-              onClick={() => { setStylePanel((v) => !v); setIndicatorMenu(false); setSaveMenu(false) }}
+              onClick={() => { setStylePanel((v) => !v); setSaveMenu(false) }}
               className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
                          bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
         Style <ChevronDown className="h-3 w-3" aria-hidden />
       </button>
 
       <span ref={menusRef} className="contents">
-      {/* "Indicators": every study in one menu. The checkboxes to the left
-                stay exactly as they are -- this is a second way to reach the same
-                state, for a narrow window where the row wraps, not a replacement. */}
-            <span className="relative">
-              <button type="button"
-                      aria-haspopup="menu" aria-expanded={indicatorMenu}
-                      onClick={() => { setIndicatorMenu((v) => !v); setSaveMenu(false) }}
-                      className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
-                                 bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
-                Indicators <ChevronDown className="h-3 w-3" aria-hidden />
-              </button>
-              {indicatorMenu && (
-                <div role="menu" aria-label="Indicators"
-                     className="absolute right-0 top-7 z-30 w-52 rounded-lg border border-[color:var(--hairline-mid)]
-                                bg-[var(--surface-1)] py-1 shadow-xl">
-                  <MenuHeader title="Indicators" onClose={() => setIndicatorMenu(false)} />
-                  <MenuToggle label="VWAP" checked={vwapOn} onChange={setVwapOn} />
-                  <MenuToggle label="Economic events" checked={eventsOn} onChange={setEventsOn} />
-                  {showZigzag && <MenuToggle label="Swing levels" checked={swingLevelsOn} onChange={setSwingLevelsOn} />}
-                  <MenuToggle label="Volume Profile" checked={vpOn} onChange={setVpOn} />
-                  {OSC_ORDER.map((key) => (
-                    <MenuToggle key={key}
-                                label={OSC_STUDIES[key].label}
-                                checked={osc[key]}
-                                disabled={!OSC_STUDIES[key].available}
-                                hint={OSC_STUDIES[key].available ? undefined : OSC_STUDIES[key].pending}
-                                onChange={(v) => setOsc((o) => ({ ...o, [key]: v }))} />
-                  ))}
-                  <MenuToggle label={`VolumeAvg (${volLength})`} checked={volOn} onChange={setVolOn} />
-                </div>
-              )}
-            </span>
+      {/* Focus (2026-11-27): hide the configuration, the metric cards and the market
+          panels so the chart has the whole screen; again to bring them back. The old
+          "Indicators" menu repeated the Studies panel and is gone. */}
+            <button type="button" aria-pressed={focus} onClick={toggleFocus}
+                    title={focus ? "Bring the panels back" : "Hide the panels: the chart gets the whole screen"}
+                    className={`flex items-center gap-1 rounded border px-2 py-0.5 ${focus
+                      ? "border-sky-400 bg-sky-500/20 text-foreground"
+                      : "border-[color:var(--hairline-mid)] bg-[color:var(--raise-3)] hover:bg-[color:var(--raise-4)]"}`}>
+              {focus ? <Minimize className="h-3 w-3" aria-hidden /> : <Maximize className="h-3 w-3" aria-hidden />}
+              Focus
+            </button>
 
             {/* "Save": the two things there are to save here. Both already
                 existed -- the defaults writer and Plotly's own PNG export -- and
@@ -2875,7 +2834,7 @@ export function CandlestickChart({
             <span className="relative">
               <button type="button"
                       aria-haspopup="menu" aria-expanded={saveMenu}
-                      onClick={() => { setSaveMenu((v) => !v); setIndicatorMenu(false); void loadTemplates() }}
+                      onClick={() => { setSaveMenu((v) => !v); void loadTemplates() }}
                       className="flex items-center gap-1 rounded border border-[color:var(--hairline-mid)]
                                  bg-[color:var(--raise-3)] px-2 py-0.5 hover:bg-[color:var(--raise-4)]">
                 <Save className="h-3 w-3" aria-hidden /> Save <ChevronDown className="h-3 w-3" aria-hidden />
@@ -2981,6 +2940,8 @@ export function CandlestickChart({
   }
   const studyGroups: StudyGroup[] = [
     { title: "Price", items: [
+      { key: "events", label: "Economic events", aria: "Show economic events", checked: eventsOn, onChange: setEventsOn,
+        title: "FOMC, CPI, NFP and the like, marked on the chart" },
       { key: "vwap", label: "VWAP", aria: "Show VWAP", checked: vwapOn, onChange: setVwapOn,
         title: `Deviations ${vwapLevels.map((l) => `±${l.toFixed(1)}`).join(" ") || "none"}`,
         gear: { label: "VWAP settings", onClick: () => { setVwapOn(true); setVwapPanelOpen(true); closeStudies() } } },

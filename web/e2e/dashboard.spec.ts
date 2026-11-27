@@ -427,7 +427,9 @@ test("every drawing tool on the rail puts something on the chart", async ({ brow
   await p.close()
 })
 
-test("the Indicators and Save menus close by their ×, by Escape and by clicking away", async ({ browser }) => {
+// The Indicators menu is gone (2026-11-27): it repeated the Studies panel, which closes
+// by its ×, Escape and a click away -- checked at the end of this test.
+test("the Save menu and the Studies panel close by their ×, by Escape and by clicking away", async ({ browser }) => {
   test.setTimeout(180_000)
   const p = await browser.newPage({ viewport: { width: 1700, height: 1000 } })
   await openApp(p)
@@ -436,7 +438,7 @@ test("the Indicators and Save menus close by their ×, by Escape and by clicking
     await p.locator('button[aria-haspopup="menu"]', { hasText: name }).first().click()
     await expect(p.getByRole("menu", { name })).toBeVisible()
   }
-  for (const name of ["Indicators", "Save"]) {
+  for (const name of ["Save"]) {
     await open(name)
     await p.getByRole("button", { name: `Close ${name} menu` }).click()
     await expect(p.getByRole("menu", { name })).toHaveCount(0)
@@ -447,6 +449,39 @@ test("the Indicators and Save menus close by their ×, by Escape and by clicking
     await p.mouse.click(5, 5)
     await expect(p.getByRole("menu", { name })).toHaveCount(0)
   }
+  const studies = p.getByRole("dialog", { name: "Studies" })
+  await openStudies(p)
+  await p.getByRole("button", { name: "Close studies" }).click()
+  await expect(studies).toHaveCount(0)
+  await openStudies(p)
+  await studies.getByLabel("Show VWAP").focus()
+  await p.keyboard.press("Escape")
+  await expect(studies).toHaveCount(0)
+  await openStudies(p)
+  await p.mouse.click(5, 5)
+  await expect(studies).toHaveCount(0)
+  await p.close()
+})
+
+test("Focus hides the configuration, the metric cards and the market panels, and brings them back", async ({ browser }) => {
+  // User, 2026-11-27: give the chart the whole screen in one click.
+  const p = await browser.newPage({ viewport: { width: 1700, height: 1000 } })
+  await openApp(p)
+  await runBacktest(p)
+  await waitForChartSettled(p)
+  const plotWidth = async () => (await p.locator(".js-plotly-plot").first().boundingBox())!.width
+  const before = await plotWidth()
+  const focusBtn = p.getByRole("button", { name: "Focus" })
+  await focusBtn.click()
+  await expect(focusBtn).toHaveAttribute("aria-pressed", "true")
+  await expect(p.getByText("Sharpe Ratio").first()).toBeHidden()
+  await expect(p.getByRole("button", { name: "Run Backtest" })).toBeHidden()
+  await expect(p.getByLabel("Market and trade panels", { exact: true })).toBeHidden()
+  await expect.poll(plotWidth).toBeGreaterThan(before + 300)
+  await focusBtn.click()
+  await expect(focusBtn).toHaveAttribute("aria-pressed", "false")
+  await expect(p.getByText("Sharpe Ratio").first()).toBeVisible()
+  await expect(p.getByRole("button", { name: "Run Backtest" }).first()).toBeVisible()
   await p.close()
 })
 

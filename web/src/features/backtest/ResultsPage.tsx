@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { lazy, Suspense, useEffect, useMemo, useState } from "react"
 import { api } from "@/lib/api"
 import { useConfigStore } from "@/store/configStore"
+import { useLayoutStore } from "@/store/layoutStore"
 import { StatCard, ACCENTS, GOOD, CRITICAL, NEUTRAL } from "@/components/cards/StatCard"
 import {
   WatchlistPanel, MarketSummaryPanel, TradeStatsPanel, AccountSummaryPanel, AlertsPanel,
@@ -102,7 +103,13 @@ export function ResultsPage() {
   const resultsTab = useConfigStore((s) => s.resultsTab)
   /** The right rail's open state. Per session rather than persisted: it is a
    *  "give the chart room for a moment" control, not a preference. */
-  const [railOpen, setRailOpen] = useState(true)
+  const [railOpenState, setRailOpenState] = useState(true)
+  // Focus mode (store/layoutStore.ts) hides the metric cards and this rail; opening
+  // the rail from its collapsed strip ends Focus.
+  const focus = useLayoutStore((st) => st.focus)
+  const setFocus = useLayoutStore((st) => st.setFocus)
+  const railOpen = railOpenState && !focus
+  const setRailOpen = (open: boolean) => { if (open) setFocus(false); setRailOpenState(open) }
   const setResultsTab = useConfigStore((s) => s.setResultsTab)
   const [ewScale, setEwScale] = useState<number | "all">("all")
 
@@ -293,7 +300,7 @@ export function ResultsPage() {
            as the other six by construction -- not by two sets of numbers being
            kept in agreement. Nothing was renamed and no value is computed
            differently; only the box each one sits in changed. */}
-      <div className="shrink-0 min-w-0">
+      <div className={`shrink-0 min-w-0 ${focus ? "hidden" : ""}`}>
       <div className="grid kpi-row gap-2 min-w-0 items-stretch">
         <StatCard label="Total Return" icon={<TrendingUp className="h-4 w-4" />} accent={ACCENTS[0]}
                   value={`${s.total_return_pct >= 0 ? "+" : ""}${s.total_return_pct.toFixed(1)}%`}
