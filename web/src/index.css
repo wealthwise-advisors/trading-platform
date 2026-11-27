@@ -2522,8 +2522,8 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 
 /* ── Brand logo (2026-11-27) ───────────────────────────────────────────────── */
 .brand-name { display: block; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; color: var(--foreground); }
-.brand-name-accent { color: #1d5fd6; }
-.dark .brand-name-accent { color: #4f8dff; }
+.brand-name-accent { background: linear-gradient(90deg, #1d6bff, #8b3dff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dark .brand-name-accent { background-image: linear-gradient(90deg, #39a6ff, #a855f7); }
 .brand-tagline { display: block; margin-top: 3px; font-size: 10.5px; color: var(--muted-foreground); }
 
 /* ── Top bar (redesign 2026-11-27) ─────────────────────────────────────────

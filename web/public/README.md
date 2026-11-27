@@ -43,7 +43,8 @@
 | [`privacy.html`](privacy.html) | 🔏 Privacy Policy. | 196 |
 | [`help.html`](help.html) | 💬 Help Center. | 193 |
 | [`icons.svg`](icons.svg) | Sprite sheet. | 24 |
-| [`favicon.svg`](favicon.svg) | Tab icon. | 1 |
+| [`favicon.png`](favicon.png) | Tab icon: the AutoTrader logo at 64 px. | — |
+| [`apple-touch-icon.png`](apple-touch-icon.png) | The same logo at 180 px, for a phone's home screen. | — |
 
 
 ---

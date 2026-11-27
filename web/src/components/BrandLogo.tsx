@@ -1,28 +1,14 @@
-// The AutoTrader logo (redesigned 2026-11-27, user: "redesign the logo also").
-//
-// A rising swing (the app's core idea: swings counted leg by leg) in white on a
-// blue-to-violet tile, beside the name set in the app's own type. Vector, so it
-// stays sharp at 16px and at 64px; the old poster crops blurred below 36px.
-// public/favicon.svg is the same mark.
+// The AutoTrader logo: the user's own artwork (2026-11-27, sent on WhatsApp) -- the
+// silver "A" with the rising blue arrow over candles. Cropped to its rounded tile,
+// so no black corners show in the light theme. The name beside it carries the
+// logo's own colours: silver "Auto", blue-to-violet "Trader".
+// public/favicon.png and apple-touch-icon.png are the same tile.
 
+import logo from "@/assets/brand-logo.png"
 import { cn } from "@/lib/utils"
 
 export function BrandMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 32 32" className={cn("h-9 w-9 shrink-0", className)} aria-hidden focusable="false">
-      <defs>
-        <linearGradient id="brand-tile" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2F80FF" />
-          <stop offset="1" stopColor="#7C3AED" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8" fill="url(#brand-tile)" />
-      <path d="M6.5 22 L12 15.5 L16 19 L24.5 9.5" fill="none" stroke="#fff" strokeWidth="2.6"
-            strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="24.5" cy="9.5" r="2.4" fill="#fff" />
-      <path d="M6.5 26 H25.5" stroke="#fff" strokeOpacity=".35" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  )
+  return <img src={logo} alt="" aria-hidden className={cn("h-10 w-10 shrink-0 select-none", className)} draggable={false} />
 }
 
 /** Mark + name. `tagline` adds the one-line description under the name. */
