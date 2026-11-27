@@ -208,7 +208,10 @@ class MultiReplaySession:
         session_start=None,
         source_timeframe: Optional[str] = None,
         allow_empty: bool = False,
+        zigzag_dev_10: float = 0.0010,
+        zigzag_dev_3: float = 0.0005,
     ):
+        self.zigzag_devs = (zigzag_dev_10, zigzag_dev_3)
         # allow_empty exists for ONE caller: a session created before its chosen
         # session hours have opened. Someone who sets up at 03:00 for a
         # 09:30-16:00 window has picked a window that is legitimately empty right
@@ -671,7 +674,8 @@ class MultiReplaySession:
             closed = pane.df.iloc[:pane.cursor]
             if closed.empty:
                 continue
-            zz10, _ = calc_swing_count(closed["high"], closed["low"], closed["close"], open_=closed["open"])
+            zz10, _ = calc_swing_count(closed["high"], closed["low"], closed["close"],
+                                       dev_10=self.zigzag_devs[0], dev_3=self.zigzag_devs[1], open_=closed["open"])
             stretch = current_swing_stretch(zz10, closed.index[-1])
             if stretch:
                 # The newest 10 Leg points, for the grid's CVD Divergence column (sir, 2026-11-26).

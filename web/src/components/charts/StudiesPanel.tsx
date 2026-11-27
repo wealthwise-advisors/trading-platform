@@ -5,6 +5,7 @@
 // The checkboxes keep their "Show …" names and the gears their "… settings" names, so
 // keyboard users, screen readers and the tests find the same controls as before.
 import { useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { ChevronDown, ChevronRight, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -149,5 +150,109 @@ export function StudiesPanel({ groups, expanded, onExpand, onClose, className, t
         ))}
       </div>
     </div>
+  )
+}
+
+// ── The settings window (user, 2026-11-27: "like thinkorswim, but more professional") ──
+// A proper window, not a dropdown: the studies on the left, grouped, each with its
+// switch; the selected one's page on the right -- what it is, then its settings in
+// sections, then Reset. The controls keep their names ("Show VWAP", "VWAP settings").
+
+function flatten(items: StudyItem[]): StudyItem[] {
+  return items.flatMap((i) => [i, ...flatten(i.children ?? [])])
+}
+
+function WindowRow({ item, depth, selected, onSelect }: {
+  item: StudyItem; depth: number; selected: string | null; onSelect: (k: string) => void
+}) {
+  const on = selected === item.key
+  return (
+    <>
+      <div className={cn("sw-row", on && "sw-row-on")} style={{ paddingLeft: 10 + depth * 18 }}>
+        {item.noSwitch ? <span className="sw-switch-gap" aria-hidden /> : (
+          <input type="checkbox" className="study-switch" checked={item.checked} disabled={item.disabled}
+                 aria-label={item.aria} onChange={(e) => item.onChange(e.target.checked)} />
+        )}
+        <button type="button" className="sw-pick" aria-current={on ? "true" : undefined}
+                aria-label={item.settings ? (item.settingsLabel ?? `${item.label} settings`) : `${item.label} details`}
+                onClick={() => onSelect(item.key)}>
+          <span className={cn("block truncate", item.children?.length ? "font-semibold" : "font-medium")}>{item.label}</span>
+          {item.summary && <span className="block truncate text-[11px] text-muted-foreground">{item.summary}</span>}
+        </button>
+        {item.settings && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />}
+      </div>
+      {item.children?.map((c) => <WindowRow key={c.key} item={c} depth={depth + 1} selected={selected} onSelect={onSelect} />)}
+    </>
+  )
+}
+
+export function SettingsWindow({ title, groups, selected, onSelect, onClose, descriptions = {} }: {
+  title: string
+  groups: StudyGroup[]
+  selected: string | null
+  onSelect: (key: string | null) => void
+  onClose: () => void
+  descriptions?: Record<string, string>
+}) {
+  const all = groups.flatMap((g) => flatten(g.items))
+  const current = all.find((i) => i.key === selected) ?? all.find((i) => i.settings) ?? all[0]
+  const closeRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => { closeRef.current?.focus() }, [])
+  const desc = current ? descriptions[current.key] ?? current.title : undefined
+  // At the page's top level: inside the chart card a blur or transform would trap a fixed window.
+  return createPortal(
+    <div className="sw-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="sw-window"
+           onKeyDown={(e) => { if (e.key === "Escape") onClose() }}>
+        <header className="sw-head">
+          <div>
+            <div className="text-[15px] font-semibold">{title}</div>
+            <div className="text-[11px] text-muted-foreground">{studiesOn(groups)} on · changes apply at once and are remembered</div>
+          </div>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`} className="sw-close">
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </header>
+        <div className="sw-body">
+          <nav className="sw-list" aria-label={`${title} list`}>
+            {groups.filter((g) => g.items.length).map((g) => (
+              <section key={g.title} aria-label={g.title}>
+                <div className="sw-group">
+                  <span>{g.title}</span>
+                  {g.items.some((i) => !i.noSwitch) && <span className="sw-group-n">{countOn(g.items)} on</span>}
+                </div>
+                {g.items.map((i) => <WindowRow key={i.key} item={i} depth={0} selected={current?.key ?? null} onSelect={onSelect} />)}
+              </section>
+            ))}
+          </nav>
+          {current && (
+            <section className="sw-page" aria-label={`${current.label} page`}>
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-[17px] font-semibold leading-tight">{current.label}</h3>
+                {!current.noSwitch && (
+                  <span className={cn("sw-state", current.checked && "sw-state-on")}>{current.checked ? "On" : "Off"}</span>
+                )}
+              </div>
+              {desc && <p className="sw-desc">{desc}</p>}
+              {current.note && <p className="text-[12px] font-semibold text-amber-300">{current.note}</p>}
+              {current.extra && current.checked && <div>{current.extra}</div>}
+              {current.settings ? (
+                <div className="sw-settings" role="group" aria-label={current.settingsLabel ?? `${current.label} settings`}>
+                  {current.settings}
+                </div>
+              ) : current.children?.length ? (
+                <p className="text-[12px] text-muted-foreground">Pick one of its studies on the left: {current.children.map((c) => c.label).join(", ")}.</p>
+              ) : (
+                <p className="text-[12px] text-muted-foreground">No settings: switch it on or off on the left.</p>
+              )}
+            </section>
+          )}
+        </div>
+        <footer className="sw-foot">
+          <button type="button" className="btn-solid sw-done" onClick={onClose}>Done</button>
+        </footer>
+      </div>
+    </div>,
+    document.body,
   )
 }

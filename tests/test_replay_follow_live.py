@@ -125,6 +125,22 @@ class TestTheExtendAction:
             # `points`: the newest 10 Leg points, for the grid's CVD Divergence column (2026-11-26).
             assert set(st) == {"swing", "name", "up", "label", "from", "to", "points"} and st["from"] <= st["to"]
 
+    def test_swings_use_the_charts_deviations(self):
+        """The grid's swings follow the chart's ZigZag settings (2026-11-27); a larger
+        turn size finds fewer, larger swings on the same bars."""
+        def points(**dev):
+            replay_id = _create(**dev)
+            with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:
+                ws.send_json({"action": "seek", "ticks": 300})
+                for _ in range(3):
+                    ws.receive_json()
+                ws.send_json({"action": "swings"})
+                return ws.receive_json()["swings"]["5m"]
+        fine = points(zigzag_dev_10=0.0005, zigzag_dev_3=0.0002)
+        coarse = points(zigzag_dev_10=0.01, zigzag_dev_3=0.005)
+        assert fine["points"] != coarse["points"]
+        assert client.post("/api/replay", json=_body(zigzag_dev_10=0)).status_code == 422
+
     def test_the_socket_survives_repeated_extends(self):
         replay_id = _create()
         with client.websocket_connect(f"/api/replay/ws/{replay_id}") as ws:

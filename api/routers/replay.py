@@ -388,6 +388,8 @@ def create_replay(req: ReplayCreateRequest):
             tick_value=spec["tick_value"],
             point_value=spec["point_value"],
             allow_empty=waiting,
+            zigzag_dev_10=req.zigzag_dev_10,
+            zigzag_dev_3=req.zigzag_dev_3,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc))

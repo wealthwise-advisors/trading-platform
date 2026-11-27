@@ -2720,3 +2720,45 @@ table.grid-table { border-collapse: separate; border-spacing: 0;
 .cfg-section-head h3 { color: var(--foreground) !important; letter-spacing: 0.08em; }
 .cfg-section-head > svg:not(.cfg-chevron) { color: var(--muted-foreground) !important; }
 .cfg-step { color: var(--sel-ink) !important; border-color: var(--sel-ring) !important; background: var(--sel-fill); }
+/* The Studies panel fits INSIDE the chart card (which clips): top to bottom of the
+   chart area, its list scrolling within. At 74vh it ran past the card's bottom edge,
+   so Volume Delta, CVD and CVD Divergence were cut off and unreachable (2026-11-27). */
+.studies-panel:not(.cols-panel) { bottom: 8px; display: flex; flex-direction: column; }
+.studies-panel:not(.cols-panel) > .studies-body { flex: 1 1 auto; min-height: 0; max-height: none; }
+/* Market Grid settings: one column; a study's settings need the full width. */
+.grid-settings .study-group > .pb-2 { display: block; }
+.grid-settings { max-width: 760px; }
+
+/* ── Settings window (2026-11-27): list on the left, the study's page on the right ── */
+.sw-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px;
+               background: rgba(4, 6, 9, 0.62); backdrop-filter: blur(3px); }
+.sw-window { width: min(1040px, 100%); height: min(720px, 100%); display: flex; flex-direction: column;
+             border-radius: 16px; border: 1px solid var(--hairline-mid); background: var(--surface-1);
+             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); overflow: hidden; }
+.sw-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px;
+           border-bottom: 1px solid var(--hairline-soft); }
+.sw-close { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--muted-foreground); }
+.sw-close:hover { background: var(--raise-4); color: var(--foreground); }
+.sw-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 330px minmax(0, 1fr); }
+.sw-list { overflow-y: auto; padding: 8px 8px 14px; border-right: 1px solid var(--hairline-soft); background: var(--surface-deep); }
+.sw-group { display: flex; justify-content: space-between; padding: 14px 10px 6px; font-size: 10.5px; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); }
+.sw-group-n { font-weight: 500; letter-spacing: 0; text-transform: none; }
+.sw-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; }
+.sw-row:hover { background: var(--raise-2); }
+.sw-row-on { background: var(--sel-fill); box-shadow: inset 0 0 0 1px var(--sel-ring); }
+.sw-switch-gap { width: 34px; flex-shrink: 0; }
+.sw-pick { flex: 1 1 auto; min-width: 0; text-align: left; padding: 2px 0; }
+.sw-pick:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+.sw-page { overflow-y: auto; padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 12px; }
+.sw-desc { font-size: 13px; line-height: 1.55; color: var(--muted-foreground); max-width: 62ch; }
+.sw-state { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--hairline-mid);
+            color: var(--muted-foreground); }
+.sw-state-on { color: var(--sel-ink); border-color: var(--sel-ring); background: var(--sel-fill); }
+.sw-settings { max-width: 560px; }
+.sw-foot { display: flex; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--hairline-soft); }
+.sw-done { height: 34px; padding: 0 22px; border-radius: 9px; font-weight: 600; font-size: 13px; }
+@media (max-width: 760px) {
+  .sw-body { grid-template-columns: 1fr; grid-template-rows: 40% 60%; }
+  .sw-list { border-right: none; border-bottom: 1px solid var(--hairline-soft); }
+}

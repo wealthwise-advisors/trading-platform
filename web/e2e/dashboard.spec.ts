@@ -894,3 +894,20 @@ test("Backtest Session Hours: one-click Globex and RTH, shown in the chosen zone
   await page.getByRole("button", { name: "times in ET" }).click()
   await expect(rth).toContainText("9:30 AM – 4:00 PM")
 })
+
+test("Studies window: the last study (CVD Divergence) can be reached, and opens its page", async ({ page }) => {
+  // User, 2026-11-27: the list stopped at VolumeAvg; now a window with its own scrolling list.
+  await page.setViewportSize({ width: 1400, height: 800 })
+  await openApp(page)
+  await runBacktest(page)
+  await openStudies(page)
+  const win = page.getByRole("dialog", { name: "Studies" })
+  const last = win.getByRole("button", { name: "CVD Divergence settings", exact: true })
+  await last.scrollIntoViewIfNeeded()
+  await expect(last).toBeInViewport()
+  await last.click()
+  await expect(win.getByRole("region", { name: "CVD Divergence page" })).toContainText("Where price and CVD disagree")
+  await expect(win.getByLabel("minimum strength")).toBeVisible()
+  await win.getByRole("button", { name: "Done" }).click()
+  await expect(win).toBeHidden()
+})

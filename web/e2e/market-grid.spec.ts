@@ -207,7 +207,9 @@ test.describe("once a session is loaded", () => {
     const gear = page.locator("button[aria-label='VWAP and Volume Profile settings']").first()
     await gear.click()
     await expect(page.locator("button[aria-label='deviation 3']").first()).toBeVisible()
-    await gear.click()
+    // A settings window now (2026-11-27): Done closes it.
+    await page.getByRole("dialog", { name: "Market Grid settings" }).getByRole("button", { name: "Done" }).click()
+    await expect(page.getByRole("dialog", { name: "Market Grid settings" })).toBeHidden()
   })
 
   test("the tables are dense, ruled, and mark the newest bar", async () => {
@@ -675,5 +677,36 @@ test("Live state rows stay short: the Last signal sentence is clamped to two lin
   expect(await row.evaluate((tr) => tr.getBoundingClientRect().height)).toBeLessThan(80)
   const cell = row.locator("td.signal-cell")
   if (await cell.locator(".signal-clamp").count()) expect(await cell.getAttribute("title")).toMatch(/^(BUY|SELL|\w+) /)
+  await page.close()
+})
+
+test("Market Grid settings: every column group with its own settings, shared with the chart", async ({ browser }) => {
+  // User, 2026-11-27: "check the table's columns ... what is missing in settings".
+  test.setTimeout(240_000)
+  const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } })
+  await openApp(page)
+  await goToMarketGrid(page)
+  await loadAndPlay(page)
+  await page.locator("button[aria-label='VWAP and Volume Profile settings']").first().click()
+  const panel = page.getByRole("dialog", { name: "Market Grid settings" })
+  for (const name of ["Volume settings", "VWAP deviation settings", "Volume Profile settings", "Swing settings",
+                      "Volume Delta settings", "CVD Divergence settings"])
+    await expect(panel.getByRole("button", { name, exact: true })).toBeVisible()
+  await expect(panel.getByRole("button", { name: "deviation 3" })).toBeVisible()          // VWAP open first
+  await panel.getByRole("button", { name: "Volume settings", exact: true }).click()
+  await panel.getByLabel("VolumeAvg length").fill("25")
+  await expect(page.locator("table.grid-live thead th", { hasText: "Vol Avg (25)" })).toHaveCount(1)
+  await panel.getByRole("button", { name: "Volume Profile settings", exact: true }).click()
+  await expect(panel.getByText("Profile days per timeframe")).toBeVisible()
+  await panel.getByRole("button", { name: "CVD Divergence settings", exact: true }).click()
+  await expect(panel.getByLabel("minimum strength")).toHaveValue("1.5")
+  // The switch beside a group hides its columns, the same state as the Columns panel.
+  await panel.getByRole("checkbox", { name: "Show Order flow columns" }).uncheck()
+  await expect(page.locator("table.grid-live thead th", { hasText: "CVD Divergence" })).toBeHidden()
+  await panel.getByRole("button", { name: "Volume Delta settings", exact: true }).click()
+  await panel.screenshot({ path: "test-results/41b-grid-settings.png" })
+  await panel.getByRole("checkbox", { name: "Show Order flow columns" }).check()
+  await panel.getByRole("button", { name: "Volume settings", exact: true }).click()
+  await panel.getByLabel("VolumeAvg length").fill("20")
   await page.close()
 })

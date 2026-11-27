@@ -18,7 +18,7 @@ export function SwingCountSettings() {
         <NumberField label="1 Leg (i, ii, iii)" value={cfg.zigzagDev1} min={0} max={ZIGZAG_DEV_MAX}
                      step={ZIGZAG_DEV_STEP} aria="1 Leg deviation" onChange={(v) => cfg.setField("zigzagDev1", v)} />
       </FieldGroup>
-      <p className="text-[11px] text-muted-foreground">Applies on the next Run Backtest. Same values as the sidebar's ZigZag Swings.</p>
+      <p className="text-[11px] text-muted-foreground">Applies on the next Run Backtest or Load Data. Same values everywhere: sidebar, chart and Market Grid.</p>
     </div>
   )
 }

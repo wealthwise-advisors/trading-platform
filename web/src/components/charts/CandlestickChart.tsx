@@ -63,10 +63,11 @@ import { VolumeProfilePlotTabs } from "@/components/charts/VolumeProfilePlotTabs
 import { OscillatorStudyPanel } from "@/components/charts/OscillatorStudyPanel"
 import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
 import { DEFAULT_STUDY_SETTINGS, useStudySettings } from "@/store/studySettingsStore"
+import { STUDY_DESCRIPTIONS } from "@/lib/studyDescriptions"
 import { mfi as calcMfi, rsi as calcRsi, stochRsi as calcStochRsi } from "@/lib/oscCalc"
 import { CvdSettings, DeltaSettings, DivergenceSettings } from "@/components/charts/OrderFlowSettings"
 import { EventsSettings, SwingCountSettings } from "@/components/charts/SwingEventSettings"
-import { StudiesButton, StudiesPanel, studiesOn, type CvdStyle, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
+import { SettingsWindow, StudiesButton, studiesOn, type CvdStyle, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
 import { useLayoutStore } from "@/store/layoutStore"
 import { ALL_VWAP_LEVELS, loadVwapLevels, saveVwapLevels, toggleVwapLevel, vwapLevelColors } from "@/lib/vwapLevels"
 import { ChartCrosshair } from "@/components/charts/ChartCrosshair"
@@ -3379,8 +3380,8 @@ export function CandlestickChart({
           the plot nothing when they are all closed. */}
       <div className="relative">
         {studiesOpen && (
-          <StudiesPanel groups={studyGroups} expanded={studyExpanded} onExpand={setStudyExpanded}
-                        onClose={() => setStudiesOpen(false)} className="right-2 top-1" />
+          <SettingsWindow title="Studies" groups={studyGroups} selected={studyExpanded} onSelect={setStudyExpanded}
+                          onClose={() => setStudiesOpen(false)} descriptions={STUDY_DESCRIPTIONS} />
         )}
         {stylePanel && (
           <ChartStylePanel style={chartStyle} onChange={setChartStyle} onClose={() => setStylePanel(false)}

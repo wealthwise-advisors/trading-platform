@@ -328,6 +328,9 @@ export interface ReplayCreateRequest {
   commission_per_contract?: number
   session_start?: string | null
   session_end?: string | null
+  /** Swing turn sizes as fractions (0.001 = 0.1%), the chart's own; omitted = the defaults. */
+  zigzag_dev_10?: number
+  zigzag_dev_3?: number
   /** Multi-timeframe grid; omit for the legacy single-timeframe session. */
   timeframes?: string[]
   data_source?: string

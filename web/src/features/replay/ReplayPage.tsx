@@ -36,7 +36,7 @@ import { SESSION_PRESETS, SESSION_ZONES, fromZone, toZone, useZoneOffset } from 
 import { buildDeviationColorGroups, colorFor } from "@/lib/deviationColors"
 import { averageColumn, buildLevelColorMap, buildPocColumns, sideVsAverage } from "@/lib/pocColumns"
 import { avgWord, priceZone } from "@/lib/structureZones"
-import { buyerSellerSplit, loadVolumeAvgSettings, volumeAverageAtWithContext } from "@/lib/volumeAverage"
+import { buyerSellerSplit, loadVolumeAvgSettings, saveVolumeAvgSettings, volumeAverageAtWithContext } from "@/lib/volumeAverage"
 import { profileWindowStart } from "@/lib/profileWindow"
 import { InfoDot } from "@/components/ui/info-dot"
 import {
@@ -61,7 +61,13 @@ import { SectionHeader } from "@/components/SectionHeader"
 import { FullscreenButton, PanelToolButton } from "@/components/PanelTools"
 import { usePanelFullscreen } from "@/lib/usePanelFullscreen"
 import { Settings2, Columns3 } from "lucide-react"
-import { StudiesPanel, type StudyItem } from "@/components/charts/StudiesPanel"
+import { SettingsWindow, StudiesPanel, type StudyGroup, type StudyItem } from "@/components/charts/StudiesPanel"
+import { STUDY_DESCRIPTIONS } from "@/lib/studyDescriptions"
+import { VolumeAvgPanel } from "@/components/charts/VolumeAvgPanel"
+import { DeltaSettings, DivergenceSettings } from "@/components/charts/OrderFlowSettings"
+import { SwingCountSettings } from "@/components/charts/SwingEventSettings"
+import { useConfigStore } from "@/store/configStore"
+import { daysFor } from "@/lib/chartSetup"
 import { useStudySettings } from "@/store/studySettingsStore"
 import { Layers, Wallet, Coins, ClipboardList, Target, ArrowUpRight,
          ArrowDownRight, TriangleAlert } from "lucide-react"
@@ -471,7 +477,11 @@ export function ReplayPage() {
   // Consolidated, newest-first log of every bar every pane has emitted.
   const [tape, setTape] = useState<TapeRow[]>([])
   // The same setting the Chart's VolumeAvg gear writes.
-  const [volLength] = useState(() => loadVolumeAvgSettings().length)
+  const [volLength, setVolLength] = useState(() => loadVolumeAvgSettings().length)
+  useEffect(() => { saveVolumeAvgSettings({ ...loadVolumeAvgSettings(), length: volLength }) }, [volLength])
+  const [gridExpanded, setGridExpanded] = useState<string | null>("vwap")
+  const deltaSet = useStudySettings((st) => st.s.delta)
+  const zzDev10 = useConfigStore((c) => c.zigzagDev10), zzDev3 = useConfigStore((c) => c.zigzagDev3)
 
   // ---- indicator settings (mirror the Backtest page's gear panels) --------
   // VWAP bands arrive at 2 sigma; sigma is recovered as (upper - vwap) / 2 and
@@ -662,6 +672,7 @@ export function ReplayPage() {
         start_date: startDate, end_date: endDate,
         session_start: session24h ? null : sessionStart,
         session_end: session24h ? null : sessionEnd,
+        zigzag_dev_10: zzDev10 / 100, zigzag_dev_3: zzDev3 / 100,
       })
       setStrategyName(resp.strategy_name)
       setTotalTicks(resp.total_bars)
@@ -1537,6 +1548,107 @@ export function ReplayPage() {
                     onClose={() => setColsOpen(null)} />
     )
   }
+  // Market Grid settings (user, 2026-11-27: "check the table's columns ... what is missing
+  // in settings"): one entry per column group, its switch shows / hides the columns,
+  // its Settings opens what drives them. Shares the chart's VolumeAvg length, swing
+  // deviations, Delta and CVD Divergence settings -- one value, every place it shows.
+  const showCols = (ns: string[], on: boolean) =>
+    setHiddenCols((h) => on ? h.filter((x) => !ns.includes(x)) : [...new Set([...h, ...ns])])
+  const colsOn = (ns: string[]) => ns.some((n) => !hiddenCols.includes(n))
+  const vwapGridSettings = (
+    <div className="space-y-3">
+      <div className="space-y-1 col-span-2">
+                  <span className="text-xs text-muted-foreground">
+                    deviations (&plusmn;&sigma;) &mdash; {devLevels.length} selected
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALL_DEV_LEVELS.map((d) => {
+                      const on = devLevels.includes(d)
+                      return (
+                        <Button
+                          key={d} type="button" size="sm"
+                          variant={on ? "default" : "secondary"}
+                          aria-pressed={on}
+                          aria-label={`deviation ${d}`}
+                          onClick={() => setDevLevels((prev) =>
+                            prev.includes(d)
+                              ? prev.filter((x) => x !== d)
+                              : [...prev, d].sort((a, b) => a - b))}
+                        >
+                          {on ? "✓ " : ""}&plusmn;{d.toFixed(1)}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
+      <p className="text-[11px] text-muted-foreground">Bands re-scale from the session sigma already computed for these bars, so changes apply immediately.</p>
+                <div className="col-span-full">
+                  <DeviationColorSettings
+                    palettes={devPalettes}
+                    onChange={updateDevPalettes}
+                    onReset={resetDevPalettes}
+                    upperColumns={devColors.perColumn
+                      .filter((c) => c.side === "upper").map((c) => c.groups)}
+                    lowerColumns={devColors.perColumn
+                      .filter((c) => c.side === "lower").map((c) => c.groups)}
+                    savedNote={devColorNote}
+                  />
+                </div>
+
+    </div>
+  )
+  const vpGridSettings = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1">
+                  <span className="text-xs text-muted-foreground">rows (bins)</span>
+                  <Input type="number" min={4} max={200} value={vpBins} aria-label="rows (bins)"
+                         onChange={(e) => setVpBins(Math.max(4, Number(e.target.value)))} />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs text-muted-foreground">value area percent</span>
+                  <Input type="number" min={1} max={100} value={vpValueArea} aria-label="value area percent"
+                         onChange={(e) => setVpValueArea(Number(e.target.value))} />
+                </label>
+      </div>
+      <div className="sf-group">
+        <div className="sf-legend">Profile days per timeframe</div>
+        <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 font-mono text-[12px]">
+          {ALL_TIMEFRAMES.map((tf) => (
+            <span key={tf} className="flex justify-between gap-2"><span className="text-muted-foreground">{tf}</span><span>{daysFor(tf) ? `${daysFor(tf)} D` : "all"}</span></span>
+          ))}
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">VA High, POC and VA Low, and their Match columns, use each timeframe's own days, up to the candle.</p>
+      </div>
+    </div>
+  )
+  const gridSettingGroups: StudyGroup[] = [{ title: "Column groups", items: [
+    { key: "volume", label: "Volume", aria: "Show Volume columns", checked: colsOn(["Volume"]), onChange: (on) => showCols(["Volume"], on),
+      summary: `Vol Avg ${volLength} · buyers / sellers by where each candle closes`, settingsLabel: "Volume settings",
+      settings: <VolumeAvgPanel length={volLength} onLength={setVolLength} inline onClose={() => {}} /> },
+    { key: "vwap", label: "Breakout zone · VWAP", aria: "Show Breakout zone columns", checked: colsOn(["Breakout zone"]),
+      onChange: (on) => showCols(["Breakout zone"], on),
+      summary: `Deviations ${devLevels.map((d) => `±${d}`).join(" ") || "none"}`, settingsLabel: "VWAP deviation settings",
+      settings: vwapGridSettings },
+    { key: "vp", label: "Levels · Volume Profile", aria: "Show Volume Profile columns",
+      checked: colsOn(["Price zone", "Resistance level", "Equilibrium core · POC", "Support floor"]),
+      onChange: (on) => showCols(["Price zone", "Resistance level", "Equilibrium core · POC", "Support floor"], on),
+      summary: `${vpBins} rows · value area ${vpValueArea}% · each timeframe's own days`, settingsLabel: "Volume Profile settings",
+      settings: vpGridSettings },
+    { key: "swing", label: "Swing", aria: "Show Swing columns", checked: colsOn(["Swing"]), onChange: (on) => showCols(["Swing"], on),
+      summary: `Deviation 10 Leg ${zzDev10} · 3 Leg ${zzDev3}`, settingsLabel: "Swing settings", settings: <SwingCountSettings /> },
+    { key: "flow", label: "Order flow", aria: "Show Order flow columns", checked: colsOn(["Order flow"]),
+      onChange: (on) => showCols(["Order flow"], on),
+      children: [
+        { key: "gdelta", label: "Volume Delta · Delta %", aria: "Volume Delta", checked: true, onChange: () => {}, noSwitch: true,
+          summary: `Strong past ±${deltaSet.filter}%`, settingsLabel: "Volume Delta settings", settings: <DeltaSettings /> },
+        { key: "gcvd", label: "CVD", aria: "CVD", checked: true, onChange: () => {}, noSwitch: true,
+          summary: "Restarts 6 PM, 12 AM, 8 AM ET" },
+        { key: "gdiv", label: "CVD Divergence", aria: "CVD Divergence", checked: true, onChange: () => {}, noSwitch: true,
+          summary: `10 Leg swings · min ${divSet.minStrength} · strong > ${divSet.strongAbove}`, settingsLabel: "CVD Divergence settings",
+          settings: <DivergenceSettings /> },
+      ] },
+  ] }]
   /** "X vs Avg" header: the name, and the average it measures from in brackets. */
   const vsAvgHeader = (name: string, average: number | null, title: string) => (
     <th className="text-right p-2 font-medium whitespace-nowrap" title={title}>
@@ -2548,67 +2660,8 @@ export function ReplayPage() {
             </div>
 
             {settingsOpen && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3 pt-3 border-t border-[color:var(--hairline-soft)]">
-                {/* Multi-select, the same pattern as the timeframe buttons.
-                    Every checked level gets its own pair of band columns in both
-                    tables, so +/-1 and +/-2 can be read side by side instead of
-                    by switching a single number back and forth -- which is how a
-                    2-sigma band came to be compared against someone else's
-                    1-sigma band. */}
-                <div className="space-y-1 col-span-2">
-                  <span className="text-xs text-muted-foreground">
-                    deviations (&plusmn;&sigma;) &mdash; {devLevels.length} selected
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ALL_DEV_LEVELS.map((d) => {
-                      const on = devLevels.includes(d)
-                      return (
-                        <Button
-                          key={d} type="button" size="sm"
-                          variant={on ? "default" : "secondary"}
-                          aria-pressed={on}
-                          aria-label={`deviation ${d}`}
-                          onClick={() => setDevLevels((prev) =>
-                            prev.includes(d)
-                              ? prev.filter((x) => x !== d)
-                              : [...prev, d].sort((a, b) => a - b))}
-                        >
-                          {on ? "✓ " : ""}&plusmn;{d.toFixed(1)}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                </div>
-                <label className="space-y-1">
-                  <span className="text-xs text-muted-foreground">rows (bins)</span>
-                  <Input type="number" min={4} max={200} value={vpBins} aria-label="rows (bins)"
-                         onChange={(e) => setVpBins(Math.max(4, Number(e.target.value)))} />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-xs text-muted-foreground">value area percent</span>
-                  <Input type="number" min={1} max={100} value={vpValueArea} aria-label="value area percent"
-                         onChange={(e) => setVpValueArea(Number(e.target.value))} />
-                </label>
-                <div className="text-xs text-muted-foreground self-end pb-2">
-                  Bands re-scale from the session sigma already computed for
-                  these bars, so changes apply immediately.
-                </div>
-                {/* Full-width row inside the settings grid: the swatches need
-                    the space, and they belong beside the deviation controls
-                    whose output they recolour. */}
-                <div className="col-span-full">
-                  <DeviationColorSettings
-                    palettes={devPalettes}
-                    onChange={updateDevPalettes}
-                    onReset={resetDevPalettes}
-                    upperColumns={devColors.perColumn
-                      .filter((c) => c.side === "upper").map((c) => c.groups)}
-                    lowerColumns={devColors.perColumn
-                      .filter((c) => c.side === "lower").map((c) => c.groups)}
-                    savedNote={devColorNote}
-                  />
-                </div>
-              </div>
+              <SettingsWindow title="Market Grid settings" groups={gridSettingGroups} selected={gridExpanded}
+                              onSelect={setGridExpanded} onClose={() => setSettingsOpen(false)} descriptions={STUDY_DESCRIPTIONS} />
             )}
           </Card>
 
@@ -2975,13 +3028,13 @@ export function ReplayPage() {
                             const p = of?.pct ?? 0
                             // The chart's Delta bar colours: green / red, blue / orange past ±60 %.
                             const dc = of?.delta == null ? undefined
-                              : of.delta >= 0 ? (p > 60 ? "#2979FF" : GOOD) : (p < -60 ? "#FF9100" : CRITICAL)
+                              : of.delta >= 0 ? (p > deltaSet.filter ? deltaSet.bigUp : deltaSet.up) : (p < -deltaSet.filter ? deltaSet.bigDown : deltaSet.down)
                             const dv = of?.divergence ?? null
                             const sign = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n).toLocaleString()}`
                             return (
                               <>
                                 <td className="p-2 text-right font-mono" data-testid={`delta-${tf}`}
-                                    style={dc ? { color: dc, fontWeight: Math.abs(p) > 60 ? 700 : undefined } : undefined}>
+                                    style={dc ? { color: dc, fontWeight: Math.abs(p) > deltaSet.filter ? 700 : undefined } : undefined}>
                                   {of?.delta != null ? sign(of.delta) : "—"}
                                 </td>
                                 <td className="p-2 text-right font-mono" style={dc ? { color: dc } : undefined}>

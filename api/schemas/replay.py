@@ -34,6 +34,10 @@ class ReplayCreateRequest(BaseModel):
     #: an overnight window like 18:00-17:00 must not reset at midnight.
     session_start: Optional[time] = time(9, 30)
     session_end: Optional[time] = time(16, 0)
+    #: The swings' turn sizes, as fractions -- the chart's ZigZag settings, so the
+    #: grid's Swing and CVD Divergence columns count the same swings (2026-11-27).
+    zigzag_dev_10: float = Field(default=0.0010, gt=0, le=0.05)
+    zigzag_dev_3: float = Field(default=0.0005, gt=0, le=0.05)
 
     @model_validator(mode="after")
     def _default_timeframes(self):
